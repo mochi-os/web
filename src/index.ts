@@ -164,6 +164,7 @@ export * from './lib/places-api'
 export * from './lib/attachment-utils'
 export * from './lib/toast-utils'
 export * from './lib/permission-utils'
+export * from './lib/safe-navigation'
 export * as push from './lib/push'
 
 // Types
