@@ -8,20 +8,21 @@ import { authManager } from '../lib/auth-manager'
  */
 export function useVerifySession() {
   const token = useAuthStore((state) => state.token)
+  const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
 
   useEffect(() => {
     // 1. Proactive verification on load/token change.
-    if (token) {
+    if (token && !isLogoutInProgress) {
       authManager.loadIdentity(true)
     }
 
     // 2. Background check (every 30 mins) if tab stays open
     const interval = setInterval(() => {
-      if (token) {
+      if (token && !isLogoutInProgress) {
         authManager.loadIdentity(true)
       }
     }, 30 * 60 * 1000)
 
     return () => clearInterval(interval)
-  }, [token])
+  }, [token, isLogoutInProgress])
 }

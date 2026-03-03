@@ -5,11 +5,16 @@ export function useAuth() {
   const identity = useAuthStore((state) => state.identity)
   const name = useAuthStore((state) => state.name)
   const isLoading = useAuthStore((state) => state.isLoading)
+  const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isInitialized = useAuthStore((state) => state.isInitialized)
 
   const setLoading = useAuthStore((state) => state.setLoading)
   const setProfile = useAuthStore((state) => state.setProfile)
+  const startLogoutTransition = useAuthStore(
+    (state) => state.startLogoutTransition
+  )
+  const endLogoutTransition = useAuthStore((state) => state.endLogoutTransition)
 
   const initialize = useAuthStore((state) => state.initialize)
 
@@ -18,12 +23,15 @@ export function useAuth() {
     identity,
     name,
     isLoading,
+    isLogoutInProgress,
     isAuthenticated,
     isInitialized,
 
     // Actions
     setLoading,
     setProfile,
+    startLogoutTransition,
+    endLogoutTransition,
     initialize,
     
     logout: async () => {

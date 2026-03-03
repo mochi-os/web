@@ -73,12 +73,26 @@ export function AuthenticatedLayout({
   }, [title])
 
   const isLoggedIn = useAuthStore((state) => state.isAuthenticated)
+  const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
 
   const defaultOpen = getCookie('sidebar_state') !== 'false'
   const hasSidebar = !!(sidebarData && sidebarData.navGroups.length > 0)
   const hasRightPanel =
     !!rightPanel &&
     !!(rightPanel.header || rightPanel.content || rightPanel.footer)
+
+  if (isLogoutInProgress) {
+    return (
+      <div className='flex h-svh w-full items-center justify-center bg-background px-4'>
+        <div className='text-center'>
+          <p className='text-sm font-medium'>Signing out...</p>
+          <p className='text-muted-foreground mt-1 text-sm'>
+            Redirecting to login.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   /* ------------------------------------------------------------------
    * Anonymous users (logged out)

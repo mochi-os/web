@@ -4,6 +4,9 @@ import { requestHelpers } from './request'
 import { removeCookie } from './cookies'
 import { getAuthLoginUrl } from './app-path'
 import { mergeProfileCookie } from './profile-cookie'
+import { toast } from './toast-utils'
+
+const LOGOUT_REDIRECT_FAILSAFE_MS = 4000
 
 class AuthManager {
   private static instance: AuthManager
@@ -26,12 +29,26 @@ class AuthManager {
     return AuthManager.instance
   }
 
+  private getLogoutRedirectUrl(reason?: string, redirectUrl?: string): string {
+    const loginUrl = getAuthLoginUrl()
+    if (redirectUrl) {
+      return `${loginUrl}?redirect=${encodeURIComponent(redirectUrl)}`
+    }
+
+    if (reason) {
+      return `${loginUrl}?reauth=1&redirect=${encodeURIComponent(window.location.href)}`
+    }
+
+    return loginUrl
+  }
+
   public async logout(reason?: string, redirectUrl?: string): Promise<void> {
     // 1. Idempotency check
     if (this.isLoggingOut) {
       return
     }
     this.isLoggingOut = true
+    useAuthStore.getState().startLogoutTransition()
     
     if (reason) {
       console.log(`[AuthManager] Logout initiated: ${reason}`)
@@ -54,24 +71,29 @@ class AuthManager {
     useAuthStore.getState().clearAuth()
 
     // 4. Redirect (full reload clears in-memory state)
-    const loginUrl = getAuthLoginUrl()
-    if (redirectUrl) {
-      window.location.href = `${loginUrl}?redirect=${encodeURIComponent(redirectUrl)}`
-    } else {
-      // Default to current page as return URL if not specified, 
-      // but only if we are not already on the login page? 
-      // The user wants clean logout.
-      // If triggered by 401, we usually want to return.
-      // If triggered by user click, we usually go to login home.
-      
-      // Let's match the old behavior: if reason is provided (likely 401), we return.
-      // If no reason (user click), we just go to login.
-      if (reason) {
-         window.location.href = `${loginUrl}?reauth=1&redirect=${encodeURIComponent(window.location.href)}`
-      } else {
-         window.location.href = loginUrl
+    const redirectTarget = this.getLogoutRedirectUrl(reason, redirectUrl)
+    try {
+      window.location.replace(redirectTarget)
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[AuthManager] Redirect failed:', error)
       }
+      useAuthStore.getState().endLogoutTransition()
+      this.isLoggingOut = false
+      toast.error('Unable to redirect to login. Please try again.')
+      return
     }
+
+    window.setTimeout(() => {
+      const store = useAuthStore.getState()
+      if (!store.isLogoutInProgress) {
+        return
+      }
+
+      store.endLogoutTransition()
+      this.isLoggingOut = false
+      toast.error('Unable to redirect to login. Please try again.')
+    }, LOGOUT_REDIRECT_FAILSAFE_MS)
   }
 
   public async loadIdentity(force = false): Promise<void> {

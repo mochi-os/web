@@ -11,11 +11,14 @@ interface AuthState {
   name: string
   isLoading: boolean
   isInitialized: boolean
+  isLogoutInProgress: boolean
 
   isAuthenticated: boolean
 
   setLoading: (isLoading: boolean) => void
   setProfile: (identity: string, name: string) => void
+  startLogoutTransition: () => void
+  endLogoutTransition: () => void
   clearAuth: () => void
   initialize: () => void
   loadIdentity: (force?: boolean) => Promise<void>
@@ -30,6 +33,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     name: '',
     isLoading: false,
     isInitialized: false,
+    isLogoutInProgress: false,
     isAuthenticated: Boolean(initialToken),
 
     setLoading: (isLoading) => {
@@ -38,6 +42,14 @@ export const useAuthStore = create<AuthState>()((set, get) => {
 
     setProfile: (identity, name) => {
       set({ identity, name })
+    },
+
+    startLogoutTransition: () => {
+      set({ isLogoutInProgress: true })
+    },
+
+    endLogoutTransition: () => {
+      set({ isLogoutInProgress: false })
     },
 
     clearAuth: () => {
@@ -67,12 +79,14 @@ export const useAuthStore = create<AuthState>()((set, get) => {
           name: cookieToken ? profileName : '',
           isAuthenticated: Boolean(cookieToken),
           isInitialized: true,
+          isLogoutInProgress: false,
         })
       } else {
         set({
           identity: cookieToken ? get().identity : '',
           name: cookieToken ? profileName : '',
           isInitialized: true,
+          isLogoutInProgress: false,
         })
       }
     },
