@@ -8,7 +8,7 @@ export interface User {
 }
 
 export interface Session {
-  code: string
+  id: string
   expires: number
   created: number
   accessed: number
