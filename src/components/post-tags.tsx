@@ -13,16 +13,16 @@ interface PostTagsTooltipProps {
   onRemove?: (tagId: string) => void
   onFilter?: (label: string) => void
   onAdd?: (label: string) => Promise<void> | void
-  onInterestUp?: (qid: string) => void
-  onInterestDown?: (qid: string) => void
+  onInterestUp?: (qidOrLabel: string, isLabel?: boolean) => void
+  onInterestDown?: (qidOrLabel: string, isLabel?: boolean) => void
 }
 
 interface PostTagsProps {
   tags: PostTag[]
   onRemove?: (tagId: string) => void
   onFilter?: (label: string) => void
-  onInterestUp?: (qid: string) => void
-  onInterestDown?: (qid: string) => void
+  onInterestUp?: (qidOrLabel: string, isLabel?: boolean) => void
+  onInterestDown?: (qidOrLabel: string, isLabel?: boolean) => void
 }
 
 const TAG_PATTERN = /^[a-z0-9 /\-]+$/
@@ -123,27 +123,27 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
             #{tag.label}
           </button>
           <span className='ml-auto inline-flex shrink-0 items-center opacity-0 group-hover/tag:opacity-100 transition-opacity'>
-            {tag.qid && onInterestUp && (
+            {onInterestUp && (
               <button
                 type='button'
                 className='text-muted-foreground/60 hover:text-foreground transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onInterestUp(tag.qid!)
+                  onInterestUp(tag.qid || tag.label, !tag.qid)
                 }}
               >
                 <Plus className='size-4' />
               </button>
             )}
-            {tag.qid && onInterestDown && (
+            {onInterestDown && (
               <button
                 type='button'
                 className='text-muted-foreground/60 hover:text-foreground transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onInterestDown(tag.qid!)
+                  onInterestDown(tag.qid || tag.label, !tag.qid)
                 }}
               >
                 <Minus className='size-4' />
