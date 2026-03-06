@@ -6,6 +6,7 @@ export interface PostTag {
   id: string
   label: string
   qid?: string
+  relevance?: number
 }
 
 interface PostTagsTooltipProps {
@@ -33,13 +34,12 @@ export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp,
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open && onAdd) {
+    if (open) {
       setTimeout(() => inputRef.current?.focus(), 0)
-    }
-    if (!open) {
+    } else {
       setValue('')
     }
-  }, [open, onAdd])
+  }, [open])
 
   const submit = async () => {
     const cleaned = value.trim().toLowerCase()
@@ -78,24 +78,22 @@ export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp,
         onClick={(e) => e.stopPropagation()}
       >
         <PostTags tags={tags} onRemove={onRemove} onFilter={onFilter} onInterestUp={onInterestUp} onInterestDown={onInterestDown} />
-        {onAdd && (
-          <div className={tags.length > 0 ? 'mt-1.5 border-t pt-1.5' : ''}>
-            <input
-              ref={inputRef}
-              type='text'
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  submit()
-                }
-              }}
-              className='text-foreground placeholder:text-muted-foreground h-6 w-full bg-transparent text-xs outline-none'
-              placeholder='Add tag...'
-            />
-          </div>
-        )}
+        <div className={tags.length > 0 ? 'mt-1.5 border-t pt-1.5' : ''}>
+          <input
+            ref={inputRef}
+            type='text'
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                submit()
+              }
+            }}
+            className='text-foreground placeholder:text-muted-foreground h-7 w-full bg-transparent text-sm outline-none'
+            placeholder='Add tag...'
+          />
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -105,11 +103,11 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
   if (!tags.length) return null
 
   return (
-    <div className='flex flex-col gap-0.5'>
+    <div className='flex flex-col gap-1'>
       {tags.map((tag) => (
         <div
           key={tag.id}
-          className='group/tag flex items-center gap-1 text-muted-foreground text-xs'
+          className='group/tag flex items-center gap-1 text-sm'
         >
           <button
             type='button'
@@ -120,7 +118,7 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
               onFilter?.(tag.label)
             }}
           >
-            #{tag.label}
+            #{tag.label}{tag.relevance ? ` (${tag.relevance})` : ''}
           </button>
           <span className='ml-auto inline-flex shrink-0 items-center opacity-0 group-hover/tag:opacity-100 transition-opacity'>
             {onInterestUp && (
