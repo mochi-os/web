@@ -5,8 +5,7 @@ import {
   DoubleArrowRightIcon,
 } from '@radix-ui/react-icons'
 import { type Table } from '@tanstack/react-table'
-import { cn } from '../../lib/utils'
-import { getPageNumbers } from '../../lib/utils'
+import { cn, getPageNumbers } from '../../lib/utils'
 import { Button } from '../ui/button'
 import {
   Select,

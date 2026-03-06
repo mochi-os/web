@@ -20,8 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select'
-import type { AccessLevel, UserSearchResult, Group } from './types'
-import { SPECIAL_SUBJECTS } from './types'
+import {
+  SPECIAL_SUBJECTS,
+  type AccessLevel,
+  type Group,
+  type UserSearchResult,
+} from './types'
 import { GeneralError } from '../errors/general-error'
 
 export interface AccessDialogProps {

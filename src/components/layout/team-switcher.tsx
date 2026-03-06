@@ -13,8 +13,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '../ui/sidebar'
-import { useSidebar } from '../ui/sidebar'
 
 type TeamSwitcherProps = {
   teams: {

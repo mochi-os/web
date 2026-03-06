@@ -100,7 +100,9 @@ export function NotificationsSection({
                 notification={n}
                 onClick={(notif) => {
                   markAsRead(notif.id)
-                  notif.link && (window.location.href = notif.link)
+                  if (notif.link) {
+                    window.location.href = notif.link
+                  }
                 }}
               />
             ))}

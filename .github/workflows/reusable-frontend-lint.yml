@@ -39,4 +39,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint frontend
-        run: pnpm -C ${{ inputs.web_dir }} exec eslint src --max-warnings=0
+        run: pnpm -C ${{ inputs.web_dir }} lint --max-warnings=0

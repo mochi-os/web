@@ -25,7 +25,7 @@ interface PostTagsProps {
   onInterestDown?: (qidOrLabel: string, isLabel?: boolean) => void
 }
 
-const TAG_PATTERN = /^[a-z0-9 /\-]+$/
+const TAG_PATTERN = /^[a-z0-9 /-]+$/
 
 export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp, onInterestDown }: PostTagsTooltipProps) {
   const [open, setOpen] = useState(false)

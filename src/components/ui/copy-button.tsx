@@ -52,7 +52,7 @@ export function CopyButton({
           toast.error('Failed to copy')
         }
       }
-    } catch (err) {
+    } catch (_err) {
       // Final fallback attempt
       try {
         const textArea = document.createElement('textarea')
@@ -74,7 +74,7 @@ export function CopyButton({
         } else {
           toast.error('Failed to copy')
         }
-      } catch (fallbackErr) {
+      } catch (_fallbackErr) {
         toast.error('Failed to copy')
       }
     }
