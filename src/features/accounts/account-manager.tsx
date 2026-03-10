@@ -140,7 +140,13 @@ function AccountItem({
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" disabled={isRemoving}>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={isRemoving}
+            aria-label="Open account actions"
+            title="Open account actions"
+          >
             {isRemoving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

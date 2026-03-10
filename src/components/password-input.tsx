@@ -34,6 +34,8 @@ export function PasswordInput({
         disabled={disabled}
         className="text-muted-foreground absolute end-1 top-1/2 h-6 w-6 -translate-y-1/2 rounded-md"
         onClick={() => setShowPassword((prev) => !prev)}
+        aria-label={showPassword ? 'Hide password' : 'Show password'}
+        title={showPassword ? 'Hide password' : 'Show password'}
       >
         {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
       </Button>

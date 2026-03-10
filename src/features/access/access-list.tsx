@@ -237,6 +237,8 @@ export function AccessList({
                         variant="ghost"
                         size="icon"
                         disabled={isUpdating}
+                        aria-label="Remove access rule"
+                        title="Remove access rule"
                       >
                         <X className="h-4 w-4" />
                       </Button>
