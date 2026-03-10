@@ -6,6 +6,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./realtime-shell": "./src/entrypoints/realtime-shell.ts",
+    "./realtime-websocket-manager": "./src/lib/realtime-websocket-manager.ts",
     "./vite": {
       "types": "./src/vite/mochi-plugin.d.ts",
       "default": "./src/vite/mochi-plugin.js"
