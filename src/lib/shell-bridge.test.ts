@@ -37,13 +37,13 @@ describe('shellRequestPermission', () => {
   it('sends correct postMessage to parent', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'account/read', false)
+    const promise = shellRequestPermission('feeds', 'accounts/read', false)
 
     expect(parentPostMessage).toHaveBeenCalledTimes(1)
     const msg = parentPostMessage.mock.calls[0][0]
     expect(msg.type).toBe('request-permission')
     expect(msg.app).toBe('feeds')
-    expect(msg.permission).toBe('account/read')
+    expect(msg.permission).toBe('accounts/read')
     expect(msg.restricted).toBe(false)
     expect(typeof msg.id).toBe('number')
 
@@ -60,7 +60,7 @@ describe('shellRequestPermission', () => {
   it('resolves with denied when shell denies', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'account/read', false)
+    const promise = shellRequestPermission('feeds', 'accounts/read', false)
     const id = parentPostMessage.mock.calls[0][0].id
 
     window.dispatchEvent(
@@ -84,8 +84,8 @@ describe('shellRequestPermission', () => {
   it('assigns unique IDs to concurrent requests', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    shellRequestPermission('feeds', 'account/read', false)
-    shellRequestPermission('people', 'group/manage', false)
+    shellRequestPermission('feeds', 'accounts/read', false)
+    shellRequestPermission('people', 'groups/manage', false)
 
     expect(parentPostMessage).toHaveBeenCalledTimes(2)
     const id1 = parentPostMessage.mock.calls[0][0].id
@@ -96,8 +96,8 @@ describe('shellRequestPermission', () => {
   it('resolves correct promise when multiple requests are pending', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise1 = shellRequestPermission('feeds', 'account/read', false)
-    const promise2 = shellRequestPermission('people', 'group/manage', false)
+    const promise1 = shellRequestPermission('feeds', 'accounts/read', false)
+    const promise2 = shellRequestPermission('people', 'groups/manage', false)
 
     const id1 = parentPostMessage.mock.calls[0][0].id
     const id2 = parentPostMessage.mock.calls[1][0].id
@@ -122,7 +122,7 @@ describe('shellRequestPermission', () => {
   it('ignores messages with non-matching type', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'account/read', false)
+    const promise = shellRequestPermission('feeds', 'accounts/read', false)
     const id = parentPostMessage.mock.calls[0][0].id
 
     // Send unrelated message

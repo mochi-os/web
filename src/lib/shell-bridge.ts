@@ -300,6 +300,46 @@ export function shellRequestPermission(
   })
 }
 
+/** Proxy a fetch request through the shell (menu app handles it with auth) */
+let fetchIdCounter = 0
+const fetchCallbacks = new Map<number, (result: { ok: boolean; status: number; data: unknown }) => void>()
+
+export function shellFetch<T = unknown>(path: string, init?: { method?: string; body?: string }): Promise<T> {
+  if (!isInShell()) {
+    // Outside shell, fetch directly
+    return fetch(path, {
+      credentials: 'same-origin',
+      method: init?.method,
+      headers: init?.body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
+      body: init?.body,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error((body as { error?: string }).error || `Error ${res.status}`)
+      }
+      return res.json() as Promise<T>
+    })
+  }
+
+  const id = ++fetchIdCounter
+  return new Promise((resolve, reject) => {
+    fetchCallbacks.set(id, (result) => {
+      if (result.ok) {
+        resolve(result.data as T)
+      } else {
+        reject(new Error((result.data as { error?: string })?.error || `Error ${result.status}`))
+      }
+    })
+    window.parent.postMessage({
+      type: 'shell-fetch',
+      id,
+      path,
+      method: init?.method || 'GET',
+      body: init?.body,
+    }, '*')
+  })
+}
+
 // Global message listener — routes shell messages to registered listeners
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (event: MessageEvent) => {
@@ -326,6 +366,15 @@ if (typeof window !== 'undefined') {
       if (cb) {
         subscribeCallbacks.delete(data.id as number)
         cb(data.result as string)
+      }
+    }
+
+    // Handle shell-fetch result
+    if (data.type === 'shell-fetch-result') {
+      const cb = fetchCallbacks.get(data.id as number)
+      if (cb) {
+        fetchCallbacks.delete(data.id as number)
+        cb(data as { ok: boolean; status: number; data: unknown })
       }
     }
 

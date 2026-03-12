@@ -36,12 +36,12 @@ describe('isPermissionError', () => {
     const result = isPermissionError({
       error: 'permission_required',
       app: 'feeds',
-      permission: 'account/read',
+      permission: 'accounts/read',
       restricted: false,
     })
     expect(result).toEqual({
       app: 'feeds',
-      permission: 'account/read',
+      permission: 'accounts/read',
       restricted: false,
     })
   })
@@ -79,7 +79,7 @@ describe('isPermissionError', () => {
   it('defaults app to empty string when missing', () => {
     const result = isPermissionError({
       error: 'permission_required',
-      permission: 'account/read',
+      permission: 'accounts/read',
     })
     expect(result?.app).toBe('')
   })
@@ -87,7 +87,7 @@ describe('isPermissionError', () => {
   it('defaults restricted to false when missing', () => {
     const result = isPermissionError({
       error: 'permission_required',
-      permission: 'account/read',
+      permission: 'accounts/read',
     })
     expect(result?.restricted).toBe(false)
   })
@@ -146,12 +146,12 @@ describe('handlePermissionError', () => {
       const result = handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
-        permission: 'account/read',
+        permission: 'accounts/read',
         restricted: false,
       })
 
       expect(result).toBe(true)
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'account/read', false)
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'accounts/read', false)
     })
 
     it('calls shellRequestPermission for restricted permissions too', () => {
@@ -168,21 +168,21 @@ describe('handlePermissionError', () => {
 
     it('uses provided appId when error has no app', () => {
       handlePermissionError(
-        { error: 'permission_required', permission: 'account/read' },
+        { error: 'permission_required', permission: 'accounts/read' },
         'my-app'
       )
 
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('my-app', 'account/read', false)
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('my-app', 'accounts/read', false)
     })
 
     it('falls back to URL app ID when no app provided', () => {
       handlePermissionError({
         error: 'permission_required',
-        permission: 'account/read',
+        permission: 'accounts/read',
       })
 
       // getCurrentAppId() returns 'feeds' from our mock pathname
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'account/read', false)
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'accounts/read', false)
     })
 
     it('reloads the page when permission is granted', async () => {
@@ -191,7 +191,7 @@ describe('handlePermissionError', () => {
       handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
-        permission: 'account/read',
+        permission: 'accounts/read',
         restricted: false,
       })
 
@@ -207,7 +207,7 @@ describe('handlePermissionError', () => {
       handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
-        permission: 'account/read',
+        permission: 'accounts/read',
         restricted: false,
       })
 
@@ -226,7 +226,7 @@ describe('handlePermissionError', () => {
       handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
-        permission: 'account/read',
+        permission: 'accounts/read',
         restricted: false,
       })
 
@@ -237,7 +237,7 @@ describe('handlePermissionError', () => {
       const result = handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
-        permission: 'account/read',
+        permission: 'accounts/read',
         restricted: false,
       })
 
