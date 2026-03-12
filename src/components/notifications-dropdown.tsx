@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Bell, Check, ExternalLink } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { shellNavigateExternal } from '../lib/shell-bridge'
 import { useScreenSize } from '../hooks/use-screen-size'
 import { Button } from './ui/button'
 
@@ -127,7 +128,7 @@ export function NotificationsDropdown({
     onNotificationClick?.(notification)
     if (notification.link) {
       setOpen(false)
-      window.location.href = notification.link
+      shellNavigateExternal(notification.link)
     }
   }
 

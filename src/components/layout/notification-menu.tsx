@@ -1,5 +1,6 @@
 import { Check, ExternalLink } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { shellNavigateExternal } from '../../lib/shell-bridge'
 import type { Notification } from '../notifications-dropdown'
 import { ScrollArea } from '../ui/scroll-area'
 
@@ -101,7 +102,7 @@ export function NotificationsSection({
                 onClick={(notif) => {
                   markAsRead(notif.id)
                   if (notif.link) {
-                    window.location.href = notif.link
+                    shellNavigateExternal(notif.link)
                   }
                 }}
               />

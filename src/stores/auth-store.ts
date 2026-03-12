@@ -1,9 +1,6 @@
 import { create } from 'zustand'
-import { removeCookie, getCookie } from '../lib/cookies'
-import { clearProfileCookie, readProfileCookie } from '../lib/profile-cookie'
-
-
-const TOKEN_COOKIE = 'token'
+import { clearProfileCookie } from '../lib/profile-cookie'
+import { initShellBridge, onShellMessage } from '../lib/shell-bridge'
 
 interface AuthState {
   token: string
@@ -16,28 +13,34 @@ interface AuthState {
   isAuthenticated: boolean
 
   setLoading: (isLoading: boolean) => void
+  setToken: (token: string) => void
   setProfile: (identity: string, name: string) => void
   startLogoutTransition: () => void
   endLogoutTransition: () => void
   clearAuth: () => void
-  initialize: () => void
+  initialize: () => Promise<void>
   loadIdentity: (force?: boolean) => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => {
-  const initialToken = getCookie(TOKEN_COOKIE) || ''
-
+export const useAuthStore = create<AuthState>()((set) => {
   return {
-    token: initialToken,
+    token: '',
     identity: '',
     name: '',
     isLoading: false,
     isInitialized: false,
     isLogoutInProgress: false,
-    isAuthenticated: Boolean(initialToken),
+    isAuthenticated: false,
 
     setLoading: (isLoading) => {
       set({ isLoading })
+    },
+
+    setToken: (token) => {
+      set({
+        token,
+        isAuthenticated: Boolean(token),
+      })
     },
 
     setProfile: (identity, name) => {
@@ -53,7 +56,6 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     },
 
     clearAuth: () => {
-      removeCookie(TOKEN_COOKIE)
       clearProfileCookie()
 
       set({
@@ -66,27 +68,25 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       })
     },
 
-    initialize: () => {
-      const cookieToken = getCookie(TOKEN_COOKIE) || ''
-      const storeToken = get().token
-      const profile = readProfileCookie()
-      const profileName = profile.name || ''
+    initialize: async () => {
+      // Token is always delivered via postMessage from the shell.
+      // initShellBridge() handles both shell mode (waits for init message)
+      // and non-shell mode (returns immediately with empty token for public pages).
+      const data = await initShellBridge()
+      set({
+        token: data.token,
+        name: data.user?.name || '',
+        isAuthenticated: Boolean(data.token),
+        isInitialized: true,
+        isLogoutInProgress: false,
+      })
 
-      if (cookieToken !== storeToken) {
-        set({
-          token: cookieToken,
-          identity: '',
-          name: cookieToken ? profileName : '',
-          isAuthenticated: Boolean(cookieToken),
-          isInitialized: true,
-          isLogoutInProgress: false,
-        })
-      } else {
-        set({
-          identity: cookieToken ? get().identity : '',
-          name: cookieToken ? profileName : '',
-          isInitialized: true,
-          isLogoutInProgress: false,
+      // Listen for token refreshes from shell
+      if (data.inShell) {
+        onShellMessage((msg) => {
+          if (msg.type === 'token-refresh' && typeof msg.token === 'string') {
+            set({ token: msg.token, isAuthenticated: Boolean(msg.token) })
+          }
         })
       }
     },

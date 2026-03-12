@@ -5,6 +5,7 @@ import { handlePermissionError } from '../lib/permission-utils'
 import * as push from '../lib/push'
 import { getBrowserName } from '../lib/push'
 import { NOTIFICATIONS_PATH } from '../lib/app-path'
+import { isInShell } from '../lib/shell-bridge'
 
 // All push API calls go to notifications app
 const NOTIFICATIONS_APP = 'notifications'
@@ -44,16 +45,45 @@ interface PushState {
   subscribed: boolean
 }
 
+/**
+ * Request push registration via the shell (postMessage to parent).
+ * The menu app in the shell handles the service worker, VAPID, and account creation.
+ */
+let shellPushIdCounter = 0
+
+function shellPushSubscribe(): Promise<void> {
+  const id = ++shellPushIdCounter
+  return new Promise((resolve, reject) => {
+    function onMessage(event: MessageEvent) {
+      const data = event.data
+      if (!data || data.type !== 'push-result' || data.id !== id) return
+      window.removeEventListener('message', onMessage)
+      if (data.ok) {
+        resolve()
+      } else {
+        reject(new Error(data.reason || 'Push registration failed'))
+      }
+    }
+    window.addEventListener('message', onMessage)
+    window.parent.postMessage({ type: 'push-subscribe', id }, '*')
+  })
+}
+
 export function usePush() {
   const queryClient = useQueryClient()
+  const inShell = isInShell()
+
   const [state, setState] = useState<PushState>({
-    supported: false,
-    supportChecked: false,
+    // In the shell, push is always supported (the shell page handles registration).
+    // The SubscribeDialog uses the destinations API to check if a browser account
+    // already exists — this flag only controls whether to show the "enable push" option.
+    supported: inShell,
+    supportChecked: inShell,
     permission: push.getPermission(),
     subscribed: false,
   })
 
-  // Fetch VAPID key from accounts endpoint
+  // Fetch VAPID key from accounts endpoint (only outside shell — direct mode)
   const { data: vapidKey } = useQuery({
     queryKey: ['accounts', 'vapid'],
     queryFn: async () => {
@@ -63,10 +93,12 @@ export function usePush() {
       return res?.data?.key || ''
     },
     staleTime: Infinity,
+    enabled: !inShell,
   })
 
-  // Check if browser is subscribed by comparing local subscription with accounts
+  // Check if browser is subscribed (only outside shell — direct mode)
   useEffect(() => {
+    if (inShell) return
     push.isSupported().then((supported) => {
       setState((s) => ({ ...s, supported, supportChecked: true }))
       if (supported && push.getPermission() === 'granted') {
@@ -77,10 +109,17 @@ export function usePush() {
         )
       }
     })
-  }, [])
+  }, [inShell])
 
   const subscribeMutation = useMutation({
     mutationFn: async () => {
+      if (inShell) {
+        // Proxy through the shell — the menu app handles the actual registration
+        await shellPushSubscribe()
+        return
+      }
+
+      // Direct mode (not in shell)
       if (!vapidKey) throw new Error('No VAPID key')
       const permission = await push.requestPermission()
       if (permission !== 'granted') throw new Error('Permission denied')
@@ -121,6 +160,12 @@ export function usePush() {
 
   const unsubscribeMutation = useMutation({
     mutationFn: async () => {
+      if (inShell) {
+        // In shell mode, push is managed at the shell level.
+        // Unsubscription should be done from the notifications settings.
+        return
+      }
+
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
       if (sub) {

@@ -10,6 +10,7 @@ import { Label } from './ui/label'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from './ui/dialog'
@@ -137,6 +138,7 @@ export function TravellingPicker({
             <Plane className="h-5 w-5" />
             Travelling
           </DialogTitle>
+          <DialogDescription className="sr-only">Set origin and destination</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto flex-1 min-h-0 px-1">

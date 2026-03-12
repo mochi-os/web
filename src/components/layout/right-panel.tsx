@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { cn } from '../../lib/utils'
+import { safeCookieGet, safeCookieSet } from '../../lib/shell-bridge'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from '../ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet'
@@ -52,7 +53,7 @@ function RightPanelProvider({
   // Internal state
   const [_open, _setOpen] = React.useState(() => {
     if (typeof document !== 'undefined') {
-      const cookie = document.cookie
+      const cookie = safeCookieGet()
         .split('; ')
         .find((row) => row.startsWith(`${RIGHT_PANEL_COOKIE_NAME}=`))
       if (cookie) {
@@ -72,7 +73,7 @@ function RightPanelProvider({
         _setOpen(openState)
       }
       // Persist to cookie
-      document.cookie = `${RIGHT_PANEL_COOKIE_NAME}=${openState}; path=/; max-age=${RIGHT_PANEL_COOKIE_MAX_AGE}`
+      safeCookieSet(`${RIGHT_PANEL_COOKIE_NAME}=${openState}; path=/; max-age=${RIGHT_PANEL_COOKIE_MAX_AGE}`)
     },
     [setOpenProp, open]
   )

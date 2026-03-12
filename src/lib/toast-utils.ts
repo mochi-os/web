@@ -1,6 +1,7 @@
 import { createElement } from 'react'
 import { toast as sonnerToast, type ExternalToast } from 'sonner'
 import { Copy } from 'lucide-react'
+import { shellClipboardWrite } from './shell-bridge'
 
 // Error toasts stay longer (10s vs default 6s)
 const ERROR_DURATION = 10000
@@ -32,10 +33,10 @@ export const toast = {
         ? {
             label: createElement(Copy, { className: 'h-4 w-4' }),
             onClick: async () => {
-              try {
-                await navigator.clipboard.writeText(textToCopy)
+              const ok = await shellClipboardWrite(textToCopy)
+              if (ok) {
                 sonnerToast.success('Copied')
-              } catch {
+              } else {
                 sonnerToast.error('Failed to copy')
               }
             },

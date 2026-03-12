@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogFooter,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog'
@@ -111,6 +112,7 @@ export function AccountAdd({
         <form onSubmit={handleSubmit} autoComplete="off">
           <DialogHeader>
             <DialogTitle>Add account</DialogTitle>
+            <DialogDescription className="sr-only">Add a new account</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">

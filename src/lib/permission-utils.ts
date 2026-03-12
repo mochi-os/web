@@ -1,5 +1,7 @@
 // Permission error handling utilities
 
+import { isInShell, shellRequestPermission } from './shell-bridge'
+
 export interface PermissionError {
   app: string
   permission: string
@@ -33,27 +35,12 @@ export function getCurrentAppId(): string {
   return match ? match[1] : ''
 }
 
-// Redirect to the permission request page in the Apps app
-// Only works for standard permissions - restricted permissions must be enabled in settings
-export function redirectToPermissionRequest(
-  appId: string,
-  permission: string,
-  returnUrl?: string
-): void {
-  // Use pathname + search to get a relative URL (getSafeReturnUrl only accepts relative paths)
-  const currentUrl = returnUrl || window.location.pathname + window.location.search
-  // Always redirect to the Apps app's permission request page
-  const requestUrl = `/apps/permissions/request?app=${encodeURIComponent(appId)}&permission=${encodeURIComponent(permission)}&return=${encodeURIComponent(currentUrl)}`
-  window.location.href = requestUrl
-}
-
-// Handle a permission error by redirecting to the request page (standard) or showing an error (restricted)
+// Handle a permission error by showing the shell permission dialog (standard) or notifying about restricted permissions
 // Returns true if the error was handled, false otherwise
 export function handlePermissionError(
   responseData: unknown,
   appId?: string,
   options?: {
-    returnUrl?: string
     onRestricted?: (permission: string) => void
   }
 ): boolean {
@@ -65,14 +52,23 @@ export function handlePermissionError(
   // Use app ID from error response, fall back to provided appId, then URL path
   const resolvedAppId = permError.app || appId || getCurrentAppId()
 
-  if (!permError.restricted) {
-    redirectToPermissionRequest(resolvedAppId, permError.permission, options?.returnUrl)
+  if (isInShell()) {
+    shellRequestPermission(resolvedAppId, permError.permission, permError.restricted)
+      .then((result) => {
+        if (result === 'granted') {
+          window.location.reload()
+        }
+      })
     return true
   }
 
   // Restricted permission - call the callback if provided
-  if (options?.onRestricted) {
-    options.onRestricted(permError.permission)
+  if (permError.restricted) {
+    if (options?.onRestricted) {
+      options.onRestricted(permError.permission)
+    }
+    return true
   }
+
   return true
 }

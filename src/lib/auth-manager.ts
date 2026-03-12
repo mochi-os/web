@@ -1,7 +1,6 @@
 import { useAuthStore } from '../stores/auth-store'
 import { authEndpoints } from './auth-endpoints'
 import { requestHelpers } from './request'
-import { removeCookie } from './cookies'
 import { getAuthLoginUrl } from './app-path'
 import { mergeProfileCookie } from './profile-cookie'
 import { toast } from './toast-utils'
@@ -66,8 +65,7 @@ class AuthManager {
       }
     }
 
-    // 3. Clear local state (Atomic)
-    removeCookie('token')
+    // 3. Clear local state
     useAuthStore.getState().clearAuth()
 
     // 4. Redirect (full reload clears in-memory state)

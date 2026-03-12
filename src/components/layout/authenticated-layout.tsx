@@ -4,6 +4,7 @@ import { Outlet } from '@tanstack/react-router'
 import { cn } from '../../lib/utils'
 import { getCookie } from '../../lib/cookies'
 import { isDomainEntityRouting } from '../../lib/app-path'
+import { isInShell, installShellLinkInterceptor, installShellNavigationSync, installShellClipboardProxy, getShellInitData } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
 
 import { LayoutProvider } from '../../context/layout-provider'
@@ -66,7 +67,18 @@ export function AuthenticatedLayout({
   rightPanelDefaultOpen = true,
   isLoadingSidebar,
 }: AuthenticatedLayoutProps) {
-  useVerifySession()
+  // Skip session verification when in shell — shell guarantees authentication
+  const inShell = isInShell()
+  useVerifySession(!inShell)
+
+  // Install shell interceptors (link clicks + navigation sync via pushState monkey-patch)
+  useEffect(() => {
+    if (inShell) {
+      installShellLinkInterceptor()
+      installShellNavigationSync()
+      installShellClipboardProxy()
+    }
+  }, [inShell])
 
   useEffect(() => {
     if (title) document.title = title
@@ -75,7 +87,13 @@ export function AuthenticatedLayout({
   const isLoggedIn = useAuthStore((state) => state.isAuthenticated)
   const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
 
-  const defaultOpen = getCookie('sidebar_state') !== 'false'
+  // When in shell, suppress notifications in the app (menu app handles them)
+  const effectiveShowNotifications = inShell ? false : showNotifications
+
+  const shellInit = getShellInitData()
+  const defaultOpen = inShell
+    ? shellInit?.sidebarOpen !== false
+    : getCookie('sidebar_state') !== 'false'
   const hasSidebar = !!(sidebarData && sidebarData.navGroups.length > 0)
   const hasRightPanel =
     !!rightPanel &&
@@ -134,27 +152,30 @@ export function AuthenticatedLayout({
           {/* Desktop sidebar */}
           <AppSidebar
             data={sidebarData}
-            showNotifications={showNotifications}
+            showNotifications={effectiveShowNotifications}
             sidebarFooter={sidebarFooter}
             isLoading={isLoadingSidebar}
+            hideMenu={inShell}
           />
 
-          {/* Mobile TopBar */}
-          <header className='fixed top-0 left-0 right-0 z-[60] h-12 border-b bg-background md:hidden overflow-visible'>
-            <div className='flex h-full items-center px-2 overflow-visible'>
-              <TopBar
-                showNotifications={showNotifications}
-                showSidebarTrigger
-              />
-            </div>
-          </header>
+          {/* Mobile TopBar (hidden in shell — menu app provides the header) */}
+          {!inShell && (
+            <header className='fixed top-0 left-0 right-0 z-[60] h-12 border-b bg-background md:hidden overflow-visible'>
+              <div className='flex h-full items-center px-2 overflow-visible'>
+                <TopBar
+                  showNotifications={effectiveShowNotifications}
+                  showSidebarTrigger
+                />
+              </div>
+            </header>
+          )}
 
           {/* Main content */}
           <SidebarInset
             className={cn(
               '@container/content',
               'flex-1 h-full overflow-auto',
-              'pt-12 md:pt-0'
+              !inShell && 'pt-12 md:pt-0'
             )}
           >
             {children ?? <Outlet />}
@@ -188,24 +209,28 @@ export function AuthenticatedLayout({
         <>
           {/* No sidebar layout */}
 
-          {/* Mobile */}
-          <div className='flex h-12 items-center border-b px-2 md:hidden'>
-            <TopBar showNotifications={showNotifications} />
-            {_mobileTitle && (
-              <>
-                <div className='flex-1' />
-                <div className='pr-2'>{_mobileTitle}</div>
-              </>
-            )}
-          </div>
+          {/* Mobile (hidden in shell — menu app provides the header) */}
+          {!inShell && (
+            <div className='flex h-12 items-center border-b px-2 md:hidden'>
+              <TopBar showNotifications={showNotifications} />
+              {_mobileTitle && (
+                <>
+                  <div className='flex-1' />
+                  <div className='pr-2'>{_mobileTitle}</div>
+                </>
+              )}
+            </div>
+          )}
 
-          {/* Desktop vertical TopBar */}
-          <div className='hidden md:flex h-full'>
-            <TopBar showNotifications={showNotifications} vertical />
-          </div>
+          {/* Desktop vertical TopBar (hidden in shell) */}
+          {!inShell && (
+            <div className='hidden md:flex h-full'>
+              <TopBar showNotifications={showNotifications} vertical />
+            </div>
+          )}
 
-          {/* Content */}
-          <div className={cn('@container/content', 'flex-1 overflow-auto')}>
+          {/* Content — add left padding in shell to clear the fixed menu overlay */}
+          <div className={cn('@container/content', 'flex-1 overflow-auto', inShell && 'pl-12')}>
             {children ?? <Outlet />}
           </div>
 

@@ -9,7 +9,11 @@ export interface CookieOptions {
 }
 
 export function getCookie(name: string): string | undefined {
-  return Cookies.get(name)
+  try {
+    return Cookies.get(name)
+  } catch {
+    return undefined // Sandboxed iframe — no cookie access
+  }
 }
 
 export function setCookie(
@@ -17,13 +21,21 @@ export function setCookie(
   value: string,
   options: CookieOptions = {}
 ): void {
-  const { maxAge, ...rest } = options
-  const cookieOptions = maxAge
-    ? { ...rest, expires: maxAge / 86400 } // Convert seconds to days for js-cookie
-    : rest
-  Cookies.set(name, value, cookieOptions)
+  try {
+    const { maxAge, ...rest } = options
+    const cookieOptions = maxAge
+      ? { ...rest, expires: maxAge / 86400 } // Convert seconds to days for js-cookie
+      : rest
+    Cookies.set(name, value, cookieOptions)
+  } catch {
+    // Sandboxed iframe — no cookie access
+  }
 }
 
 export function removeCookie(name: string, path: string = '/'): void {
-  Cookies.remove(name, { path })
+  try {
+    Cookies.remove(name, { path })
+  } catch {
+    // Sandboxed iframe — no cookie access
+  }
 }

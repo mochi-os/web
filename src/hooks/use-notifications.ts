@@ -4,6 +4,7 @@ import { requestHelpers } from '../lib/request'
 import type { Notification } from '../components/notifications-dropdown'
 import { useAuthStore } from '../stores/auth-store'
 import { NOTIFICATIONS_PATH } from '../lib/app-path'
+import { isInShell } from '../lib/shell-bridge'
 
 export interface NotificationCount {
   count: number
@@ -55,7 +56,7 @@ export function useNotificationsQuery() {
   return useQuery<NotificationsListResponse>({
     queryKey: notificationKeys.list(),
     queryFn: fetchNotifications,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isInShell(),
   })
 }
 
@@ -169,7 +170,9 @@ export function useNotificationWebSocket() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    // In sandboxed iframe, WebSocket can't connect (opaque origin, no cookies).
+    // The menu app in the shell owns the WebSocket connection.
+    if (!isAuthenticated || isInShell()) return
 
     // Store queryClient reference for message handling
     wsState.queryClientRef = queryClient
@@ -198,7 +201,7 @@ export function useNotifications() {
   const markAsReadMutation = useMarkAsReadMutation()
   const markAllAsReadMutation = useMarkAllAsReadMutation()
 
-  // Connect WebSocket for real-time updates
+  // Connect WebSocket for real-time updates (disabled in shell — menu app owns it)
   useNotificationWebSocket()
 
   const notifications = data?.data ?? []

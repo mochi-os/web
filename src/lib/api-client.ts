@@ -6,8 +6,8 @@ import axios, {
 } from 'axios'
 import { toast } from './toast-utils'
 import { useAuthStore } from '../stores/auth-store'
-import { getCookie, removeCookie } from './cookies'
-import { getApiBasepath, getAuthLoginUrl } from './app-path'
+import { getApiBasepath } from './app-path'
+import { isInShell } from './shell-bridge'
 
 const devConsole = globalThis.console
 const DEFAULT_TOAST_DEDUPE_TTL_MS = 10_000
@@ -144,18 +144,17 @@ apiClient.interceptors.request.use(
       config.baseURL = ''
     }
 
-    const storeToken = useAuthStore.getState().token
-    const cookieToken = getCookie('token')
-    const token = storeToken || cookieToken
+    // In sandboxed iframe, cookies are unavailable — always use Bearer auth only
+    if (isInShell()) {
+      config.withCredentials = false
+    }
+
+    const token = useAuthStore.getState().token
 
     config.headers = config.headers ?? {}
     if (token) {
       ;(config.headers as Record<string, string>).Authorization =
         token.startsWith('Bearer ') ? token : `Bearer ${token}`
-
-      if (import.meta.env.DEV) {
-        devConsole?.log?.(`[API Auth] Using Bearer scheme with token`)
-      }
     }
 
     if (import.meta.env.DEV) {
@@ -213,19 +212,16 @@ apiClient.interceptors.response.use(
 
         // Only redirect if user had a session that expired
         // Don't redirect if user was never authenticated (anonymous access)
-        const hadSession = getCookie('token') || useAuthStore.getState().token
+        const hadSession = useAuthStore.getState().token
 
         if (!isAuthEndpoint && hadSession) {
           if (logoutHandler) {
             logoutHandler('Session expired')
           } else {
-            // Fallback if no handler registered
-            removeCookie('token')
+            // Fallback: page reload gets fresh token if session valid
             useAuthStore.getState().clearAuth()
             toast.error('Session expired')
-            const currentUrl = window.location.href
-            const authLoginUrl = getAuthLoginUrl()
-            window.location.href = `${authLoginUrl}?reauth=1&redirect=${encodeURIComponent(currentUrl)}`
+            window.location.reload()
           }
         }
 

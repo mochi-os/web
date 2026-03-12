@@ -3,6 +3,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { safeCookieSet, shellSetSidebarState } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from './button'
@@ -80,8 +81,9 @@ function SidebarProvider({
         _setOpen(openState)
       }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      // Persist sidebar state: cookie for non-shell, postMessage for shell
+      safeCookieSet(`${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`)
+      shellSetSidebarState(openState)
     },
     [setOpenProp, open]
   )

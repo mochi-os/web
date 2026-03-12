@@ -1,7 +1,7 @@
-// Routing helpers that read server-injected meta tags
-// The Mochi server injects <meta name="mochi:*"> tags into HTML responses
-// to communicate routing context. On dev servers these are absent and we
-// fall back to URL parsing.
+// Routing helpers that derive context from server-injected meta tags or URL path.
+// Authenticated users always run inside the shell's sandboxed iframe, where no
+// meta tags are injected — routing context comes from the URL path.
+// Unauthenticated/public pages may still have meta tags for OG and routing.
 
 // Read a server-injected meta tag value (null when absent)
 function getMeta(name: string): string | null {
@@ -37,7 +37,7 @@ export function getAppPath(): string {
   if (app !== null) return '/' + app
   // Domain routing or direct entity routing — no app in URL
   if (hasMeta('mochi:domain') || hasMeta('mochi:fingerprint')) return ''
-  // Fallback for dev server: first path segment
+  // Derive from URL path: first path segment
   const match = window.location.pathname.match(/^\/([^/]+)/)
   return match ? '/' + match[1] : ''
 }
@@ -53,7 +53,7 @@ export function getRouterBasepath(): string {
   if (fingerprint) return `/${fingerprint}/`
   if (app) return `/${app}/`
 
-  // Fallback for dev server
+  // Derive from URL path
   const match = window.location.pathname.match(/^\/([^/]+)/)
   return match ? '/' + match[1] + '/' : '/'
 }
@@ -73,7 +73,7 @@ export function getApiBasepath(): string {
   if (fingerprint) return `/${fingerprint}/-/`
   if (app) return `/${app}/`
 
-  // Fallback for dev server
+  // Derive from URL path
   const match = window.location.pathname.match(/^\/([^/]+)/)
   return match ? '/' + match[1] + '/' : '/'
 }

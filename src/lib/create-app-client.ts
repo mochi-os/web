@@ -2,7 +2,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import { getAppPath, isDomainEntityRouting, getCookie, useAuthStore } from '@mochi/common'
+import { getAppPath, isDomainEntityRouting, useAuthStore, isInShell } from '@mochi/common'
 
 export interface AppClientOptions {
   /**
@@ -53,10 +53,13 @@ export function createAppClient({
       delete config.headers['Content-Type']
     }
 
+    // In sandboxed iframe, cookies are unavailable — always use Bearer auth only
+    if (isInShell()) {
+      config.withCredentials = false
+    }
+
     // Add auth token
-    const storeToken = useAuthStore.getState().token
-    const cookieToken = getCookie('token')
-    const token = storeToken || cookieToken
+    const token = useAuthStore.getState().token
 
     if (token) {
       config.headers.Authorization = token.startsWith('Bearer ')
