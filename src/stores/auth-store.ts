@@ -1,6 +1,36 @@
 import { create } from 'zustand'
 import { clearProfileCookie } from '../lib/profile-cookie'
 import { initShellBridge, onShellMessage } from '../lib/shell-bridge'
+import { getAppPath } from '../lib/app-path'
+
+type TokenResponse = { token?: unknown }
+
+function resolveCurrentAppPath(): string {
+  const appPath = getAppPath()
+  return appPath.startsWith('/') ? appPath.slice(1) : appPath
+}
+
+async function fetchNonShellAppToken(app: string): Promise<string> {
+  try {
+    const response = await fetch('/_/token', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ app }),
+    })
+
+    if (!response.ok) {
+      return ''
+    }
+
+    const data = (await response.json()) as TokenResponse
+    return typeof data.token === 'string' ? data.token : ''
+  } catch {
+    return ''
+  }
+}
 
 interface AuthState {
   token: string
@@ -69,14 +99,21 @@ export const useAuthStore = create<AuthState>()((set) => {
     },
 
     initialize: async () => {
-      // Token is always delivered via postMessage from the shell.
-      // initShellBridge() handles both shell mode (waits for init message)
-      // and non-shell mode (returns immediately with empty token for public pages).
+      // initShellBridge() handles shell mode (waits for init message)
+      // and non-shell mode (returns immediately with empty token).
       const data = await initShellBridge()
+      let token = data.token
+
+      // In standalone (non-shell) mode, fetch an app-scoped token from the
+      // backend so authenticated API requests include Bearer auth.
+      if (!data.inShell && !token) {
+        token = await fetchNonShellAppToken(resolveCurrentAppPath())
+      }
+
       set({
-        token: data.token,
+        token,
         name: data.user?.name || '',
-        isAuthenticated: Boolean(data.token),
+        isAuthenticated: Boolean(token),
         isInitialized: true,
         isLogoutInProgress: false,
       })
