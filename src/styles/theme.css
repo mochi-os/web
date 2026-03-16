@@ -17,6 +17,8 @@
   --hover-foreground: oklch(0.55 0.2 250);
   --destructive: oklch(0.5 0.2 25);
   --destructive-foreground: oklch(1 0 0);
+  --warning: oklch(0.82 0.16 84);
+  --warning-foreground: oklch(0.22 0.02 84);
   --border: oklch(0.92 0 0);
   --input: oklch(0.92 0 0);
   --ring: oklch(0.55 0.2 250);
@@ -116,6 +118,8 @@
   --hover-foreground: oklch(0.97 0.003 250);
   --destructive: oklch(0.5 0.2 25);
   --destructive-foreground: oklch(1 0 0);
+  --warning: oklch(0.76 0.15 82);
+  --warning-foreground: oklch(0.18 0.01 82);
   --border: oklch(0.33 0.01 250);
   --input: oklch(0.29 0.01 250);
   --ring: oklch(0.66 0.16 252);
