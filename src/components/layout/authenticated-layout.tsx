@@ -160,7 +160,7 @@ export function AuthenticatedLayout({
 
           {/* Mobile TopBar (hidden in shell — menu app provides the header) */}
           {!inShell && (
-            <header className='fixed top-0 left-0 right-0 z-[60] h-12 border-b bg-background md:hidden overflow-visible'>
+            <header className='fixed top-0 left-0 right-0 z-[60] h-12 border-b bg-background lg:hidden overflow-visible'>
               <div className='flex h-full items-center px-2 overflow-visible'>
                 <TopBar
                   showNotifications={effectiveShowNotifications}
@@ -175,7 +175,7 @@ export function AuthenticatedLayout({
             className={cn(
               '@container/content',
               'flex-1 h-full overflow-auto',
-              !inShell && 'pt-12 md:pt-0'
+              !inShell && 'pt-12 lg:pt-0'
             )}
           >
             {children ?? <Outlet />}
@@ -211,7 +211,7 @@ export function AuthenticatedLayout({
 
           {/* Mobile (hidden in shell — menu app provides the header) */}
           {!inShell && (
-            <div className='flex h-12 items-center border-b px-2 md:hidden'>
+            <div className='flex h-12 items-center border-b px-2 lg:hidden'>
               <TopBar showNotifications={showNotifications} />
               {_mobileTitle && (
                 <>
@@ -224,7 +224,7 @@ export function AuthenticatedLayout({
 
           {/* Desktop vertical TopBar (hidden in shell) */}
           {!inShell && (
-            <div className='hidden md:flex h-full'>
+            <div className='hidden lg:flex h-full'>
               <TopBar showNotifications={showNotifications} vertical />
             </div>
           )}
