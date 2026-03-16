@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
-import { useRouter } from '@tanstack/react-router'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 
@@ -18,17 +17,11 @@ export function BackButton({
   className,
 }: HeaderBackConfig) {
   // Back is intentionally icon-only; contextual text is provided via aria-label/title.
-  const { history } = useRouter()
   const [isFallbackPending, setIsFallbackPending] = useState(false)
   const isFallbackPendingRef = useRef(false)
 
   const handleClick = async () => {
     if (isFallbackPendingRef.current) return
-
-    if (history.canGoBack()) {
-      history.back()
-      return
-    }
 
     isFallbackPendingRef.current = true
     setIsFallbackPending(true)
