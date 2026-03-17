@@ -20,7 +20,10 @@ export function PageHeader({
   const { isMobile } = useScreenSize()
 
   return (
-    <header className='bg-background sticky top-0 z-10'>
+    <header
+      className='bg-background sticky top-0 z-10'
+      style={{ paddingRight: 'var(--removed-body-scroll-bar-size, 0px)' }}
+    >
       {/* Title and actions row */}
       <div className={`flex items-start justify-between gap-3 px-4 py-2 md:items-center md:px-6 ${description ? '' : 'md:min-h-[48px]'}`}>
         <div className='min-w-0 flex-1'>

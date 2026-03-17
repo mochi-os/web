@@ -81,6 +81,9 @@ export * from './components/place-picker'
 export * from './components/travelling-picker'
 
 // Shared Components
+export * from './components/tree-row'
+export * from './components/timezone-select'
+export * from './lib/preference-utils'
 export * from './components/coming-soon'
 export * from './components/command-menu'
 export * from './components/load-more-trigger'

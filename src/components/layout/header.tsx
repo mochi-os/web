@@ -42,6 +42,7 @@ export function Header({
         'border-b bg-background',
         className
       )}
+      style={fixed ? { paddingRight: 'var(--removed-body-scroll-bar-size, 0px)' } : undefined}
       {...props}
     >
       <div
