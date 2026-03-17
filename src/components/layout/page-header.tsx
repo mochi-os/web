@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { useScreenSize } from '../../hooks/use-screen-size'
 import { BackButton, type HeaderBackConfig } from './back-button'
 
 interface PageHeaderProps {
@@ -17,8 +16,6 @@ export function PageHeader({
   actions,
   back,
 }: PageHeaderProps) {
-  const { isMobile } = useScreenSize()
-
   return (
     <header
       className='bg-background sticky top-0 z-10'
@@ -31,11 +28,7 @@ export function PageHeader({
             {/* Back button remains opt-in and icon-only via `PageHeader.back`. */}
             {back && <BackButton {...back} />}
             {icon}
-            <h1
-              className={`truncate ${
-                isMobile ? 'text-base font-semibold' : 'text-lg font-semibold'
-              }`}
-            >
+            <h1 className='truncate text-base font-semibold md:text-lg'>
               {title}
             </h1>
           </div>

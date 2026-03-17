@@ -85,12 +85,15 @@ export function TopBar({
       )}
     >
       {showSidebarTrigger && isMobile && (
-        <button
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
           onClick={toggleSidebar}
-          className='rounded p-1 hover:bg-interactive-hover active:bg-interactive-active'
+          aria-label='Toggle sidebar'
         >
           <PanelLeft className='size-5 text-muted-foreground' />
-        </button>
+        </Button>
       )}
 
       <MochiMenu

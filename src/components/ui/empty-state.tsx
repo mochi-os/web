@@ -30,7 +30,7 @@ export function EmptyState({
       <div className='mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/[0.08]'>
         <Icon className='h-7 w-7 text-primary/60' />
       </div>
-      <p className='text-muted-foreground mb-1 text-base font-medium'>{title}</p>
+      <h3 className='text-muted-foreground mb-1 text-base font-medium'>{title}</h3>
       {description && (
         <p className='text-muted-foreground text-xs'>{description}</p>
       )}
