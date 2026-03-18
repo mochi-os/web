@@ -146,7 +146,12 @@ export function AuthenticatedLayout({
    * ------------------------------------------------------------------ */
 
   const layoutContent = (
-    <div className='flex h-svh w-full'>
+    <div
+      className={cn(
+        'h-svh w-full',
+        hasSidebar ? 'flex' : 'flex flex-col lg:flex-row'
+      )}
+    >
       {hasSidebar ? (
         <>
           {/* Desktop sidebar */}
@@ -211,26 +216,35 @@ export function AuthenticatedLayout({
 
           {/* Mobile (hidden in shell — menu app provides the header) */}
           {!inShell && (
-            <div className='flex h-12 items-center border-b px-2 lg:hidden'>
-              <TopBar showNotifications={showNotifications} />
-              {_mobileTitle && (
-                <>
-                  <div className='flex-1' />
-                  <div className='pr-2'>{_mobileTitle}</div>
-                </>
+            <div
+              className={cn(
+                'flex h-12 shrink-0 items-center px-2 lg:hidden',
+                !_mobileTitle && 'border-b'
               )}
+            >
+              <TopBar
+                showNotifications={showNotifications}
+                className='w-full'
+                mobileTitle={_mobileTitle}
+              />
             </div>
           )}
 
           {/* Desktop vertical TopBar (hidden in shell) */}
           {!inShell && (
-            <div className='hidden lg:flex h-full'>
+            <div className='hidden h-full shrink-0 lg:flex'>
               <TopBar showNotifications={showNotifications} vertical />
             </div>
           )}
 
           {/* Content — add left padding in shell to clear the fixed menu overlay */}
-          <div className={cn('@container/content', 'flex-1 overflow-auto', inShell && 'pl-12')}>
+          <div
+            className={cn(
+              '@container/content',
+              'min-h-0 min-w-0 flex-1 overflow-auto',
+              inShell && 'pl-12'
+            )}
+          >
             {children ?? <Outlet />}
           </div>
 

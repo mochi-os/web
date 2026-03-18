@@ -1,5 +1,5 @@
 import { useLayout } from '../../context/layout-provider'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
   Sidebar,
@@ -64,11 +64,35 @@ export function AppSidebar({
   hideMenu,
 }: AppSidebarProps) {
   const { collapsible } = useLayout()
-  const { isMobile, state } = useSidebar()
+  const { isMobile, state, setOpenMobile } = useSidebar()
 
   return (
     <Sidebar collapsible={collapsible} variant='sidebar'>
-      {!isMobile && (
+      {isMobile ? (
+        <SidebarHeader>
+          <div className='flex items-center gap-2 px-2 py-1'>
+            <a href='/' title='Home' className='flex items-center gap-2'>
+              <img
+                src='/images/logo-header.svg'
+                alt='Mochi'
+                className='h-6 w-6'
+              />
+              <span className='text-sm font-semibold'>mochi</span>
+            </a>
+            <div className='flex-1' />
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='size-7'
+              onClick={() => setOpenMobile(false)}
+              aria-label='Close navigation'
+            >
+              <X className='size-4' />
+            </Button>
+          </div>
+        </SidebarHeader>
+      ) : (
         <SidebarHeader className={hideMenu ? (state === 'collapsed' ? 'min-h-20' : 'min-h-10') : undefined}>
           {!hideMenu && (
             <SidebarMenu>

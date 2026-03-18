@@ -112,8 +112,10 @@ export * from './components/tag-input'
 export * from './components/theme-switch'
 export * from './components/colour-picker'
 export * from './components/comment-tree-layout'
+export * from './components/filter-bar'
 export * from './components/icon-button'
 export * from './components/post-tags'
+export * from './components/view-tabs'
 
 // Context Providers
 export * from './context/direction-provider'

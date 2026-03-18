@@ -29,6 +29,7 @@ import { NotificationsSection } from './notification-menu'
 type MochiMenuProps = {
   direction?: 'horizontal' | 'vertical'
   showNotifications?: boolean
+  showLogo?: boolean
   className?: string
 }
 
@@ -50,6 +51,7 @@ function UserIcon({ unreadCount }: { unreadCount?: number }) {
 export function MochiMenu({
   direction = 'horizontal',
   showNotifications = true,
+  showLogo = true,
   className,
 }: MochiMenuProps) {
   const [signOutOpen, setSignOutOpen] = useDialogState()
@@ -113,9 +115,11 @@ export function MochiMenu({
           className
         )}
       >
-        <a href='/' title='Home'>
-          <MochiLogo />
-        </a>
+        {showLogo && (
+          <a href='/' title='Home'>
+            <MochiLogo />
+          </a>
+        )}
 
         {isMobile ? (
           <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
