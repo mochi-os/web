@@ -3,7 +3,6 @@ import { Outlet } from '@tanstack/react-router'
 
 import { cn } from '../../lib/utils'
 import { getCookie } from '../../lib/cookies'
-import { isDomainEntityRouting } from '../../lib/app-path'
 import { isInShell, installShellLinkInterceptor, installShellNavigationSync, installShellClipboardProxy, getShellInitData } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
 
@@ -116,24 +115,12 @@ export function AuthenticatedLayout({
    * Anonymous users (logged out)
    * ------------------------------------------------------------------ */
   if (!isLoggedIn) {
-    const isDomainRouted = isDomainEntityRouting()
-
     return (
       <SearchProvider>
         <LayoutProvider>
           <SidebarProvider defaultOpen={defaultOpen}>
-            <div className='relative h-svh w-full'>
-              {/* Floating TopBar for main site only */}
-              {!isDomainRouted && (
-                <div className='absolute top-2 left-2 z-50'>
-                  <TopBar showNotifications={false} />
-                </div>
-              )}
-
-              {/* Full-page content */}
-              <div className={cn('@container/content', 'h-full overflow-auto')}>
-                {children ?? <Outlet />}
-              </div>
+            <div className={cn('@container/content', 'h-svh w-full overflow-auto')}>
+              {children ?? <Outlet />}
             </div>
           </SidebarProvider>
         </LayoutProvider>

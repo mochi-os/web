@@ -88,7 +88,7 @@ export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp,
         className='w-auto min-w-[160px] max-w-[320px] p-2'
         align='start'
         onPointerDown={(e) => e.stopPropagation()}
-        onPointerDownOutside={() => setOpen(false)}
+        onPointerDownOutside={(e) => { e.preventDefault(); setOpen(false) }}
         onClick={(e) => e.stopPropagation()}
       >
         <PostTags tags={tags} onRemove={onRemove} onFilter={onFilter} onInterestUp={onInterestUp} onInterestDown={onInterestDown} />
