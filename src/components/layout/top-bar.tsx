@@ -25,7 +25,7 @@ export function TopBar({
   mobileTitle,
 }: TopBarProps) {
   const { theme } = useTheme()
-  const { isMobile } = useScreenSize()
+  const { isMobile, isTablet } = useScreenSize()
   const { toggleSidebar } = useSidebar()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
@@ -39,7 +39,7 @@ export function TopBar({
   }
 
   // Mobile with sidebar: [☰] [Logo] ··spacer·· [User]
-  if (showSidebarTrigger && isMobile) {
+  if (showSidebarTrigger && (isMobile || isTablet)) {
     return (
       <header
         className={cn(
