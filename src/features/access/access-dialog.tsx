@@ -26,6 +26,7 @@ import {
   type Group,
   type UserSearchResult,
 } from './types'
+import { coerceObjectArray } from './normalize'
 import { GeneralError } from '../errors/general-error'
 
 export interface AccessDialogProps {
@@ -67,6 +68,9 @@ export function AccessDialog({
   const [level, setLevel] = useState(defaultLevel)
   const [activeTab, setActiveTab] = useState<'user' | 'group' | 'special'>('user')
   const [isAdding, setIsAdding] = useState(false)
+  const safeLevels = coerceObjectArray<AccessLevel>(levels)
+  const safeUserSearchResults = coerceObjectArray<UserSearchResult>(userSearchResults)
+  const safeGroups = coerceObjectArray<Group>(groups)
 
   // Reset level when dialog opens
   useEffect(() => {
@@ -196,13 +200,13 @@ export function AccessDialog({
                 <p className="text-muted-foreground text-center text-sm">
                   Searching...
                 </p>
-              ) : !userSearchResults.length ? (
+              ) : !safeUserSearchResults.length ? (
                 <p className="text-muted-foreground text-center text-sm">
                   No users found
                 </p>
               ) : (
                 <div className="max-h-48 overflow-y-auto rounded-md border">
-                  {userSearchResults.map((user) => (
+                  {safeUserSearchResults.map((user) => (
                     <div
                       key={user.id}
                       className={`flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors ${
@@ -231,13 +235,13 @@ export function AccessDialog({
                   mode='inline'
                   reset={onRetryGroups}
                 />
-              ) : groups.length === 0 ? (
+              ) : safeGroups.length === 0 ? (
                 <p className="text-muted-foreground text-center text-sm">
                   No groups available
                 </p>
               ) : (
                 <div className="max-h-48 overflow-y-auto rounded-md border">
-                  {groups.map((group) => (
+                  {safeGroups.map((group) => (
                     <div
                       key={group.id}
                       className={`flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors ${
@@ -308,7 +312,7 @@ export function AccessDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {levels.map((lvl) => (
+                {safeLevels.map((lvl) => (
                   <SelectItem key={lvl.value} value={lvl.value}>
                     {lvl.label}
                   </SelectItem>
