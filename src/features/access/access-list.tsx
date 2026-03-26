@@ -29,7 +29,6 @@ import {
   AlertDialogTrigger,
 } from '../../components/ui/alert-dialog'
 import type { AccessLevel, AccessRule } from './types'
-import { coerceObjectArray } from './normalize'
 
 // Subject display labels for special subjects
 const SUBJECT_LABELS: Record<string, string> = {
@@ -97,8 +96,7 @@ export function AccessList({
   selectWidth = 250,
 }: AccessListProps) {
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
-  const safeRules = coerceObjectArray<AccessRule>(rules)
-  const safeLevels = coerceObjectArray<AccessLevel>(levels)
+
 
   const handleLevelChange = async (subject: string, newLevel: string) => {
     setUpdatingSubject(subject)
@@ -130,7 +128,7 @@ export function AccessList({
 
   // Get the label for a level value
   const getLevelLabel = (value: string): string => {
-    const level = safeLevels.find((l) => l.value === value)
+    const level = levels.find((l) => l.value === value)
     return level?.label || value
   }
 
@@ -152,7 +150,7 @@ export function AccessList({
     )
   }
 
-  if (!safeRules.length) {
+  if (!rules.length) {
     return (
       <p className="text-muted-foreground text-sm">
         No access rules configured. Add rules to control who can access this resource.
@@ -164,7 +162,7 @@ export function AccessList({
   // For hierarchical model, there's one rule per subject
   // For permission model, there might be multiple rules per subject
   const subjectData = new Map<string, { rules: AccessRule[]; name?: string; isOwner?: boolean }>()
-  for (const rule of safeRules) {
+  for (const rule of rules) {
     const existing = subjectData.get(rule.subject)
     if (existing) {
       existing.rules.push(rule)
@@ -223,7 +221,7 @@ export function AccessList({
                       <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {safeLevels.map((level) => (
+                      {levels.map((level) => (
                         <SelectItem key={level.value} value={level.value}>
                           {level.label}
                         </SelectItem>

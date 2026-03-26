@@ -1,22 +1,24 @@
 // Mochi: Mention-textarea component for @mention autocomplete
 // Copyright Alistair Cunningham 2026
 
-import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/utils'
-import type { Person } from './person-picker'
 
-export type { Person }
+/** Minimal user shape needed for mentions. */
+export interface MentionUser {
+  id: string
+  name: string
+}
 
 interface MentionTextareaProps
   extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
   value: string
   onValueChange: (value: string) => void
   /** Static list of people to filter client-side (used by CRM/projects). */
-  people?: Person[]
+  people?: MentionUser[]
   /** Async search function for people (used by feeds/forums). */
-  onSearchPeople?: (query: string) => Promise<Person[]>
+  onSearchPeople?: (query: string) => Promise<MentionUser[]>
 }
 
 /** Convert @[name] tokens to styled React nodes. Use for plain-text comment bodies. */
@@ -52,7 +54,8 @@ export function MentionTextarea({
 }: MentionTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
-  const [asyncResults, setAsyncResults] = useState<Person[]>([])
+  const [asyncResults, setAsyncResults] = useState<MentionUser[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
 
   // Debounced async search
@@ -80,6 +83,11 @@ export function MentionTextarea({
             .slice(0, 8)
       : []
   const isOpen = mentionQuery !== null && filtered.length > 0
+
+  // Reset active index when the filtered list changes
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [filtered.length])
 
   useEffect(() => {
     if (!isOpen) {
@@ -139,15 +147,32 @@ export function MentionTextarea({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Escape' && mentionQuery !== null) {
-      e.stopPropagation()
-      setMentionQuery(null)
-      return
+    if (isOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveIndex((i) => (i + 1) % filtered.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length)
+        return
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        insertMention(filtered[activeIndex])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setMentionQuery(null)
+        return
+      }
     }
     onKeyDown?.(e)
   }
 
-  const insertMention = (person: Person) => {
+  const insertMention = (person: MentionUser) => {
     const textarea = textareaRef.current
     if (!textarea) return
     const cursor = textarea.selectionStart ?? value.length
@@ -167,6 +192,9 @@ export function MentionTextarea({
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        aria-activedescendant={
+          isOpen ? `mention-option-${filtered[activeIndex]?.id}` : undefined
+        }
         className={cn(
           'border-input bg-background min-h-16 w-full rounded-lg border px-3 py-2 text-sm',
           className,
@@ -187,16 +215,24 @@ export function MentionTextarea({
             }}
             className='bg-popover max-h-72 overflow-y-auto rounded-md border shadow-md'
           >
-            {filtered.map((person) => (
+            {filtered.map((person, i) => (
               <button
                 key={person.id}
+                id={`mention-option-${person.id}`}
                 role='option'
+                aria-selected={i === activeIndex}
                 type='button'
-                className='hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground flex w-full items-center px-3 py-2 text-left text-sm outline-none'
+                className={cn(
+                  'flex w-full items-center px-3 py-2 text-left text-sm outline-none',
+                  i === activeIndex
+                    ? 'bg-accent text-accent-foreground'
+                    : 'hover:bg-accent hover:text-accent-foreground',
+                )}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   insertMention(person)
                 }}
+                onMouseEnter={() => setActiveIndex(i)}
               >
                 {person.name}
               </button>
