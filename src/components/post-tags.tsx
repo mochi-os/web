@@ -138,7 +138,7 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
               e.stopPropagation()
               onFilter?.(tag.label)
             }}
-            title={tag.interest != null ? `Relevance ${tag.relevance ?? 0}, interest ${tag.interest}` : undefined}
+            title={tag.relevance != null && tag.interest != null ? `Relevance ${tag.relevance}, interest ${tag.interest}` : tag.relevance != null ? `Relevance ${tag.relevance}` : tag.interest != null ? `Interest ${tag.interest}` : undefined}
             style={tag.interest != null ? { color: `hsl(${interestHue(tag.interest)}, 80%, 45%)` } : undefined}
           >
             #{tag.label}
