@@ -7,6 +7,12 @@ export interface PostTag {
   label: string
   qid?: string
   relevance?: number
+  interest?: number
+}
+
+function interestHue(weight: number): number {
+  // Continuous: red(-100) → blue(0) → green(+100)
+  return 240 - (weight / 100) * 120
 }
 
 interface PostTagsTooltipProps {
@@ -132,8 +138,10 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
               e.stopPropagation()
               onFilter?.(tag.label)
             }}
+            title={tag.interest != null ? `Relevance ${tag.relevance ?? 0}, interest ${tag.interest}` : undefined}
+            style={tag.interest != null ? { color: `hsl(${interestHue(tag.interest)}, 80%, 45%)` } : undefined}
           >
-            <span title={tag.relevance ? `Relevance: ${tag.relevance}` : undefined}>#{tag.label}</span>
+            #{tag.label}
           </button>
           <span className='ml-auto inline-flex shrink-0 items-center gap-0.5'>
             {tag.qid && (
