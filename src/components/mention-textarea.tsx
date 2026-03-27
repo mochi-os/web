@@ -41,9 +41,12 @@ export const highlightMentions = (html: string): string =>
     return `<span class="text-primary font-medium">@${safe}</span>`
   })
 
+// Match a mention query at the cursor, supporting Unicode letters, marks, numbers, underscore, and hyphen.
+const mentionQueryPattern = /(^|[\s])@([\p{L}\p{M}\p{N}_-]*)$/u
+
 function getMentionQuery(text: string, cursorPos: number): string | null {
-  const match = text.slice(0, cursorPos).match(/@(\w*)$/)
-  return match ? match[1] : null
+  const match = text.slice(0, cursorPos).match(mentionQueryPattern)
+  return match ? match[2] : null
 }
 
 export function MentionTextarea({
@@ -179,7 +182,9 @@ export function MentionTextarea({
     const textarea = textareaRef.current
     if (!textarea) return
     const cursor = textarea.selectionStart ?? value.length
-    const before = value.slice(0, cursor).replace(/@\w*$/, `@[${person.name}] `)
+    const before = value
+      .slice(0, cursor)
+      .replace(mentionQueryPattern, `$1@[${person.name}] `)
     onValueChange(before + value.slice(cursor))
     setMentionQuery(null)
     setTimeout(() => {
