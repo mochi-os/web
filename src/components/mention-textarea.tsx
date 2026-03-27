@@ -36,7 +36,10 @@ export function renderMentions(content: string): ReactNode {
 
 /** Convert @[name] tokens in sanitized HTML to styled spans. Run AFTER sanitizeHtml. */
 export const highlightMentions = (html: string): string =>
-  html.replace(/@\[([^\]]+)\]/g, '<span class="text-primary font-medium">@$1</span>')
+  html.replace(/@\[([^\]]+)\]/g, (_, name: string) => {
+    const safe = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    return `<span class="text-primary font-medium">@${safe}</span>`
+  })
 
 function getMentionQuery(text: string, cursorPos: number): string | null {
   const match = text.slice(0, cursorPos).match(/@(\w*)$/)
@@ -223,10 +226,10 @@ export function MentionTextarea({
                 aria-selected={i === activeIndex}
                 type='button'
                 className={cn(
-                  'flex w-full items-center px-3 py-2 text-left text-sm outline-none',
+                  'text-foreground flex w-full items-center px-3 py-2 text-left text-sm outline-none transition-colors',
                   i === activeIndex
-                    ? 'bg-accent text-accent-foreground'
-                    : 'hover:bg-accent hover:text-accent-foreground',
+                    ? 'bg-selected'
+                    : 'hover:bg-hover hover:text-hover-foreground',
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault()

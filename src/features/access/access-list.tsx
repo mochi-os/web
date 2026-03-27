@@ -97,7 +97,6 @@ export function AccessList({
 }: AccessListProps) {
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
 
-
   const handleLevelChange = async (subject: string, newLevel: string) => {
     setUpdatingSubject(subject)
     try {

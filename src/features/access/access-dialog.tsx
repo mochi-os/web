@@ -68,7 +68,6 @@ export function AccessDialog({
   const [activeTab, setActiveTab] = useState<'user' | 'group' | 'special'>('user')
   const [isAdding, setIsAdding] = useState(false)
 
-
   // Reset level when dialog opens
   useEffect(() => {
     if (open) {
