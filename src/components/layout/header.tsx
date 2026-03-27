@@ -37,7 +37,7 @@ export function Header({
       className={cn(
         'z-40',
         compact ? 'h-14' : 'h-17',
-        fixed && 'header-fixed peer/header sticky top-0 w-full',
+        fixed && 'header-fixed peer/header sticky top-[var(--sticky-top,0px)] w-full',
         offset > 10 && fixed ? 'shadow' : 'shadow-none',
         'border-b bg-background',
         className
