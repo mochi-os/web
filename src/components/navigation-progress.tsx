@@ -16,10 +16,11 @@ export function NavigationProgress() {
 
   return (
     <LoadingBar
-      color='var(--muted-foreground)'
+      color='hsl(220, 60%, 35%)'
       ref={ref}
       shadow={true}
       height={2}
+      waitingTime={200}
     />
   )
 }
