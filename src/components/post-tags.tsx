@@ -17,24 +17,24 @@ function interestHue(weight: number): number {
 
 interface PostTagsTooltipProps {
   tags: PostTag[]
-  onRemove?: (tagId: string) => void
   onFilter?: (label: string) => void
   onAdd?: (label: string) => Promise<void> | void
   onInterestUp?: (qidOrLabel: string, isLabel?: boolean) => void
   onInterestDown?: (qidOrLabel: string, isLabel?: boolean) => void
+  onInterestRemove?: (qid: string) => void
 }
 
 interface PostTagsProps {
   tags: PostTag[]
-  onRemove?: (tagId: string) => void
   onFilter?: (label: string) => void
   onInterestUp?: (qidOrLabel: string, isLabel?: boolean) => void
   onInterestDown?: (qidOrLabel: string, isLabel?: boolean) => void
+  onInterestRemove?: (qid: string) => void
 }
 
 const TAG_PATTERN = /^[a-z0-9 /-]+$/
 
-export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp, onInterestDown }: PostTagsTooltipProps) {
+export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInterestDown, onInterestRemove }: PostTagsTooltipProps) {
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
@@ -97,7 +97,7 @@ export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp,
         onPointerDownOutside={(e) => { e.preventDefault(); setOpen(false) }}
         onClick={(e) => e.stopPropagation()}
       >
-        <PostTags tags={tags} onRemove={onRemove} onFilter={onFilter} onInterestUp={onInterestUp} onInterestDown={onInterestDown} />
+        <PostTags tags={tags} onFilter={onFilter} onInterestUp={onInterestUp} onInterestDown={onInterestDown} onInterestRemove={onInterestRemove} />
         <div className={tags.length > 0 ? 'mt-1.5 border-t pt-1.5' : ''}>
           <input
             ref={inputRef}
@@ -120,12 +120,17 @@ export function PostTagsTooltip({ tags, onRemove, onFilter, onAdd, onInterestUp,
   )
 }
 
-export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDown }: PostTagsProps) {
+export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemove }: PostTagsProps) {
+  const [adjustments, setAdjustments] = useState<Record<string, number | null>>({})
+
   if (!tags.length) return null
 
   return (
     <div className='flex flex-col gap-1'>
-      {tags.map((tag) => (
+      {tags.map((tag) => {
+        const adjusted = tag.qid && tag.qid in adjustments
+        const interest = adjusted ? adjustments[tag.qid!] : tag.interest
+        return (
         <div
           key={tag.id}
           className='group/tag flex items-center gap-1 text-sm'
@@ -138,8 +143,8 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
               e.stopPropagation()
               onFilter?.(tag.label)
             }}
-            title={tag.relevance != null && tag.interest != null ? `Relevance ${tag.relevance}, interest ${tag.interest}` : tag.relevance != null ? `Relevance ${tag.relevance}` : tag.interest != null ? `Interest ${tag.interest}` : undefined}
-            style={tag.interest != null ? { color: `hsl(${interestHue(tag.interest)}, 80%, 45%)` } : undefined}
+            title={tag.relevance != null && interest != null ? `Relevance ${tag.relevance}, interest ${interest}` : tag.relevance != null ? `Relevance ${tag.relevance}` : interest != null ? `Interest ${interest}` : undefined}
+            style={interest != null ? { color: `hsl(${interestHue(interest)}, 80%, 45%)` } : undefined}
           >
             #{tag.label}
           </button>
@@ -153,6 +158,7 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
                   e.preventDefault()
                   e.stopPropagation()
                   onInterestUp?.(tag.qid!)
+                  setAdjustments((prev) => ({ ...prev, [tag.qid!]: Math.min(100, (prev[tag.qid!] ?? tag.interest ?? 0) + 15) }))
                 }}
               >
                 <Plus className='size-3.5' />
@@ -167,26 +173,31 @@ export function PostTags({ tags, onRemove, onFilter, onInterestUp, onInterestDow
                   e.preventDefault()
                   e.stopPropagation()
                   onInterestDown?.(tag.qid!)
+                  setAdjustments((prev) => ({ ...prev, [tag.qid!]: Math.max(-100, (prev[tag.qid!] ?? tag.interest ?? 0) - 20) }))
                 }}
               >
                 <Minus className='size-3.5' />
               </button>
             )}
-            <button
-              type='button'
-              title='Remove tag'
-              className='text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-0.5 transition-colors'
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onRemove?.(tag.id)
-              }}
-            >
-              <X className='size-3.5' />
-            </button>
+            {tag.qid && onInterestRemove && (
+              <button
+                type='button'
+                title='Remove interest'
+                className='text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-0.5 transition-colors'
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onInterestRemove(tag.qid!)
+                  setAdjustments((prev) => ({ ...prev, [tag.qid!]: null }))
+                }}
+              >
+                <X className='size-3.5' />
+              </button>
+            )}
           </span>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
