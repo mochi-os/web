@@ -211,6 +211,13 @@ export function installShellLinkInterceptor(): void {
     const href = target.getAttribute('href')
     if (!href) return
 
+    // External links — force new tab so they don't load inside the shell iframe
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      target.setAttribute('target', '_blank')
+      target.setAttribute('rel', 'noopener noreferrer')
+      return
+    }
+
     // Only intercept absolute-path links to other apps
     if (!href.startsWith('/')) return
 
