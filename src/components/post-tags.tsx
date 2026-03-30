@@ -81,7 +81,7 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
       <PopoverTrigger asChild>
         <button
           type='button'
-          className='text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors'
+          className='text-muted-foreground hover:text-foreground -m-1 inline-flex items-center gap-1 p-1 transition-colors'
           onClick={(e) => {
             e.stopPropagation()
           }}
