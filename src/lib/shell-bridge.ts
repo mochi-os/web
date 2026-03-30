@@ -3,12 +3,20 @@
 // and cannot access cookies, localStorage, or the parent DOM. All communication
 // happens via postMessage.
 
+type DomainRouteInfo = {
+  method: string
+  entity: string
+  fingerprint: string
+  class: string
+}
+
 type ShellInitData = {
   token: string
   theme?: string
   user: { name: string }
   inShell: boolean
   sidebarOpen?: boolean
+  domain?: DomainRouteInfo | null
 }
 
 type ShellMessage = {

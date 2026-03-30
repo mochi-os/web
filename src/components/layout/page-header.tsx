@@ -18,7 +18,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header
-      className='bg-background sticky top-0 z-10'
+      className='bg-background sticky top-[var(--sticky-top,0px)] z-10'
       style={{ paddingRight: 'var(--removed-body-scroll-bar-size, 0px)' }}
     >
       {/* Title and actions row */}
