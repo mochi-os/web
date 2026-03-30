@@ -9,7 +9,7 @@ type MainProps = React.HTMLAttributes<HTMLElement> & {
 
 const spacingYClasses = {
   xs: 'py-2', // --content-spacing-xs
-  sm: 'py-4', // --content-spacing-sm
+  sm: 'py-2', // --content-spacing-sm
   default: 'py-6', // --content-spacing
   lg: 'py-8', // --content-spacing-lg
   xl: 'py-12', // --content-spacing-xl
@@ -26,7 +26,7 @@ export function Main({
     <main
       data-layout={fixed ? 'fixed' : 'auto'}
       className={cn(
-        'px-4',
+        'px-2 md:px-4',
         spacingYClasses[spacingY],
 
         // If layout is fixed, make the main container flex and grow
