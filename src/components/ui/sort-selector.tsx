@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { Flame, Sparkles, Star, Trophy, Clock } from 'lucide-react'
+import { cn } from '../../lib/utils'
 import {
   Select,
   SelectContent,
@@ -53,7 +54,7 @@ export function SortSelector({
       onValueChange={(v: string) => onValueChange(v as SortType)}
       disabled={disabled}
     >
-      <SelectTrigger className={className}>
+      <SelectTrigger className={cn('border-0 shadow-none', className)}>
         <SelectValue>
           <div className="flex items-center gap-2">
             {currentOption?.icon}
