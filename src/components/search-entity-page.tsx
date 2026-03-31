@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Search, Loader2, type LucideIcon } from 'lucide-react'
 import { Input } from './ui/input'
 import { requestHelpers } from '../lib/request'
+import { getAppPath } from '../lib/app-path'
 import { usePageTitle } from '../hooks/use-page-title'
 import { Header } from './layout/header'
 import { Main } from './layout/main'
@@ -13,6 +14,7 @@ import type { EntityCardItem } from './entity-card'
 interface DirectoryEntry extends EntityCardItem {
   class?: string
   location?: string
+  subscribed?: boolean
 }
 
 interface RecommendedEntity extends EntityCardItem {
@@ -85,8 +87,14 @@ export function FindEntityPage({
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: [entityClass, 'directory-search', debouncedSearch],
     queryFn: async () => {
+      // Build an absolute URL so Axios ignores the entity-context baseURL set by apiClient.
+      // Without this, getApiBasepath() (e.g. /forums/va7kZSfKM/-/) gets prepended to the
+      // relative searchEndpoint, producing double /-/-/ when a fingerprint is in the page meta.
+      const base = `${window.location.origin}${getAppPath()}/`
+      const url = new URL(searchEndpoint, base)
+      url.searchParams.set('search', debouncedSearch)
       const response = await requestHelpers.get<DirectoryEntry[] | { results: DirectoryEntry[] }>(
-        `${searchEndpoint}?search=${encodeURIComponent(debouncedSearch)}`
+        url.href
       )
       return Array.isArray(response) ? response : (response.results || [])
     },
@@ -104,10 +112,13 @@ export function FindEntityPage({
     }
   }
 
-  const isSubscribed = (entity: EntityCardItem) =>
+  const isSubscribed = (entity: DirectoryEntry) =>
+    entity.subscribed || subscribedIds.has(entity.id) || (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
+
+  const isRecommendationSubscribed = (entity: EntityCardItem) =>
     subscribedIds.has(entity.id) || (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
 
-  const filteredRecommendations = recommendations.filter((rec) => !isSubscribed(rec))
+  const filteredRecommendations = recommendations.filter((rec) => !isRecommendationSubscribed(rec))
   const filteredResults = results.filter((entity) => !isSubscribed(entity))
 
   return (

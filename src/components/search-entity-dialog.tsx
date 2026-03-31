@@ -19,6 +19,7 @@ import type { EntityCardItem } from './entity-card'
 interface DirectoryEntry extends EntityCardItem {
   class?: string
   location?: string
+  subscribed?: boolean
 }
 
 interface RecommendedEntity extends EntityCardItem {
@@ -127,10 +128,13 @@ export function SearchEntityDialog({
     onOpenChange(false)
   }
 
-  const isSubscribed = (entity: EntityCardItem) =>
+  const isSubscribed = (entity: DirectoryEntry) =>
+    entity.subscribed || subscribedIds.has(entity.id) || (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
+
+  const isRecommendationSubscribed = (entity: EntityCardItem) =>
     subscribedIds.has(entity.id) || (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
 
-  const filteredRecommendations = recommendations.filter((rec) => !isSubscribed(rec))
+  const filteredRecommendations = recommendations.filter((rec) => !isRecommendationSubscribed(rec))
   const filteredResults = results.filter((entity) => !isSubscribed(entity))
 
   return (
