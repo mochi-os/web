@@ -156,7 +156,7 @@ export * from './hooks/use-debounce'
 // Lib utilities
 export * from './lib/create-app-client'
 export * from './lib/api-client'
-export { getAppPath, getRouterBasepath, getApiBasepath, getAuthLoginUrl, isDomainEntityRouting, getEntityFingerprint, getEntityClass, NOTIFICATIONS_PATH } from './lib/app-path'
+export { getAppPath, getRouterBasepath, getApiBasepath, getAuthLoginUrl, isDomainEntityRouting, getEntityFingerprint, getEntityClass, normalizeEntityUrl, NOTIFICATIONS_PATH } from './lib/app-path'
 export { isInShell, initShellBridge, shellNavigate, shellNavigateExternal, shellSetTitle, shellSetSidebarState, onShellMessage, getShellInitData, safeCookieGet, safeCookieSet, installShellLinkInterceptor, installShellNavigationSync, installShellClipboardProxy, authenticatedUrl, shellClipboardWrite, shellSubscribeNotifications, shellRequestPermission, shellFetch } from './lib/shell-bridge'
 export * as shellStorage from './lib/shell-storage'
 export { useShellStorage } from './hooks/use-shell-storage'

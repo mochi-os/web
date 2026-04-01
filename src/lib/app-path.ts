@@ -87,6 +87,16 @@ export function getApiBasepath(): string {
 }
 
 // Get the auth login URL from environment or default
+// Normalize an entity-scoped URL for the current routing context.
+// API responses return absolute paths like /feeds/<entity>/-/attachments/...
+// On custom domains, the app/entity prefix doesn't exist — strip to /-/...
+export function normalizeEntityUrl(url: string): string {
+  if (!isDomainEntityRouting()) return url
+  const idx = url.indexOf('/-/')
+  if (idx >= 0) return url.slice(idx)
+  return url
+}
+
 export function getAuthLoginUrl(): string {
   return (
     (typeof import.meta !== 'undefined' &&
