@@ -24,9 +24,11 @@ export function formatTimestamp(timestamp: number): string {
 export function NotificationItem({
   notification,
   onClick,
+  onMiddleClick,
 }: {
   notification: Notification
   onClick?: (notification: Notification) => void
+  onMiddleClick?: (notification: Notification) => void
 }) {
   const isUnread = notification.read === 0
 
@@ -34,6 +36,12 @@ export function NotificationItem({
     <button
       type='button'
       onClick={() => onClick?.(notification)}
+      onAuxClick={(e) => {
+        if (e.button === 1) {
+          e.preventDefault()
+          onMiddleClick?.(notification)
+        }
+      }}
       className={cn(
         'flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-interactive-hover active:bg-interactive-active',
         isUnread && 'bg-muted/50'
@@ -103,6 +111,12 @@ export function NotificationsSection({
                   markAsRead(notif.id)
                   if (notif.link) {
                     shellNavigateExternal(notif.link)
+                  }
+                }}
+                onMiddleClick={(notif) => {
+                  markAsRead(notif.id)
+                  if (notif.link) {
+                    window.open(notif.link, '_blank')
                   }
                 }}
               />
