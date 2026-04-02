@@ -120,7 +120,7 @@ export const setLogoutHandler = (handler: (reason?: string) => void) => {
 }
 
 export const apiClient = axios.create({
-  timeout: 30000,
+  timeout: 0,
   withCredentials: true,
   headers: {
     Accept: 'application/json',
