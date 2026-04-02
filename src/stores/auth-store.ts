@@ -112,7 +112,7 @@ export const useAuthStore = create<AuthState>()((set) => {
 
       set({
         token,
-        name: data.user?.name || '',
+        name: '',
         isAuthenticated: Boolean(token),
         isInitialized: true,
         isLogoutInProgress: false,

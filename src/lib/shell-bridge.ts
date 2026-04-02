@@ -13,7 +13,6 @@ type DomainRouteInfo = {
 type ShellInitData = {
   token: string
   theme?: string
-  user: { name: string }
   inShell: boolean
   sidebarOpen?: boolean
   domain?: DomainRouteInfo | null
@@ -53,7 +52,6 @@ export function initShellBridge(): Promise<ShellInitData> {
   if (!isInShell()) {
     return Promise.resolve({
       token: '',
-      user: { name: '' },
       inShell: false,
     })
   }
