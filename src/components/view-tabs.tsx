@@ -31,33 +31,35 @@ export function ViewTabs({
   onAddView,
 }: ViewTabsProps) {
   return (
-    <div className='flex items-center gap-1 border-b border-border'>
-      {views.map((view) => (
-        <button
-          key={view.id}
-          type='button'
-          onClick={() => onViewChange(view.id)}
-          className={cn(
-            'flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-            activeViewId === view.id
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50',
-          )}
-        >
-          {getViewIcon(view.viewtype)}
-          {view.name}
-        </button>
-      ))}
-      {onAddView && (
-        <button
-          type='button'
-          onClick={onAddView}
-          aria-label='Add view'
-          className='flex items-center gap-1 px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors'
-        >
-          <Plus className='size-4' />
-        </button>
-      )}
+    <div className='overflow-x-auto scrollbar-none border-b border-border'>
+      <div className='flex items-center gap-1 min-w-max'>
+        {views.map((view) => (
+          <button
+            key={view.id}
+            type='button'
+            onClick={() => onViewChange(view.id)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap',
+              activeViewId === view.id
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50',
+            )}
+          >
+            {getViewIcon(view.viewtype)}
+            {view.name}
+          </button>
+        ))}
+        {onAddView && (
+          <button
+            type='button'
+            onClick={onAddView}
+            aria-label='Add view'
+            className='flex items-center gap-1 px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors'
+          >
+            <Plus className='size-4' />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
