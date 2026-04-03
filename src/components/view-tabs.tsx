@@ -31,7 +31,7 @@ export function ViewTabs({
   onAddView,
 }: ViewTabsProps) {
   return (
-    <div className='overflow-x-auto scrollbar-none border-b border-border'>
+    <div className='overflow-x-auto no-scrollbar border-b border-border'>
       <div className='flex items-center gap-1 min-w-max'>
         {views.map((view) => (
           <button
