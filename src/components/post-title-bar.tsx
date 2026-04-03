@@ -27,7 +27,7 @@ export function PostTitleBar({
         className
       )}
     >
-      <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
+      <div className='flex flex-col gap-2 md:flex-row md:items-start md:justify-between'>
         <div className='min-w-0 flex-1'>
           <div
             className={cn(
@@ -39,7 +39,7 @@ export function PostTitleBar({
           </div>
         </div>
         {(trailing || meta) && (
-          <div className='flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:ml-4 sm:max-w-[50%] sm:justify-end'>
+          <div className='flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 md:ml-4 md:max-w-[50%] md:justify-end'>
             {trailing && (
               <div
                 className={cn(
@@ -53,7 +53,7 @@ export function PostTitleBar({
             {meta && (
               <div
                 className={cn(
-                  'text-muted-foreground min-w-0 break-words text-xs sm:text-right',
+                  'text-muted-foreground min-w-0 break-words text-xs md:text-right',
                   metaClassName
                 )}
               >
