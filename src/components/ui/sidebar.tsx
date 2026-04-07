@@ -65,14 +65,17 @@ function SidebarProvider({
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
-  // Sidebar treats tablet (<1024px) as mobile — collapses to sheet overlay
-  const { isMobile: isNarrow, isTablet } = useScreenSize()
-  const isMobile = isNarrow || isTablet
+  // Mobile (<768px) uses sheet overlay; tablet (768–1023px) uses inline icon rail
+  const { isMobile: isNarrow, isTablet, width } = useScreenSize()
+  const isMobile = isNarrow
   const [openMobile, setOpenMobile] = React.useState(false)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
+  // Collapse by default between 768–900px; above 900px honour the saved preference.
+  const [_open, _setOpen] = React.useState(
+    isTablet && width < 900 ? false : defaultOpen
+  )
   const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -215,7 +218,7 @@ function Sidebar({
 
   return (
     <div
-      className='group peer text-sidebar-foreground relative hidden h-full lg:block'
+      className='group peer text-sidebar-foreground relative hidden h-full md:block'
       data-state={state}
       data-collapsible={state === 'collapsed' ? collapsible : ''}
       data-variant={variant}
@@ -237,7 +240,7 @@ function Sidebar({
       <div
         data-slot='sidebar-container'
         className={cn(
-          'absolute inset-y-0 z-10 hidden h-full w-(--sidebar-width) overflow-visible transition-[inset-inline,width] duration-200 ease-linear lg:flex',
+          'absolute inset-y-0 z-10 hidden h-full w-(--sidebar-width) overflow-visible transition-[inset-inline,width] duration-200 ease-linear md:flex',
           side === 'left'
             ? 'start-0 group-data-[collapsible=offcanvas]:-start-[calc(var(--sidebar-width))]'
             : 'end-0 group-data-[collapsible=offcanvas]:-end-[calc(var(--sidebar-width))]',
@@ -325,7 +328,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot='sidebar-inset'
       className={cn(
         'bg-background relative w-full flex flex-1 flex-col',
-        'lg:peer-data-[variant=inset]:m-4 lg:peer-data-[variant=inset]:ms-0 lg:peer-data-[variant=inset]:rounded-xl lg:peer-data-[variant=inset]:shadow-sm lg:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2',
+        'md:peer-data-[variant=inset]:m-4 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2',
         className
       )}
       {...props}
