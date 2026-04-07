@@ -1,4 +1,5 @@
 import { useLayout } from '../../context/layout-provider'
+import { useScreenSize } from '../../hooks/use-screen-size'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
@@ -64,10 +65,13 @@ export function AppSidebar({
   hideMenu,
 }: AppSidebarProps) {
   const { collapsible } = useLayout()
+  const { isTablet } = useScreenSize()
   const { isMobile, state, setOpenMobile } = useSidebar()
+  // On tablet, always use icon-rail collapse regardless of user layout preference
+  const effectiveCollapsible = isTablet ? 'icon' : collapsible
 
   return (
-    <Sidebar collapsible={collapsible} variant='sidebar'>
+    <Sidebar collapsible={effectiveCollapsible} variant='sidebar'>
       {isMobile ? (
         <SidebarHeader>
           <div className='flex items-center gap-2 px-2 py-1'>
