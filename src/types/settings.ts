@@ -34,6 +34,7 @@ export interface ThemeInfo {
   icon_mask?: string
   icon_background?: string
   background?: string
+  background_url?: string
   overrides?: Record<string, string>
 }
 
