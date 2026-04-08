@@ -56,13 +56,6 @@
   --selection-foreground: oklch(1 0 0);
 }
 
-/* Theme presets — add class to <html> to switch */
-.theme-teal {
-  --hue: 185;
-  --hue-chroma: 0.12;
-  --hue-bg: 175;
-}
-
 /* Global text selection styling */
 ::selection {
   background-color: var(--selection);

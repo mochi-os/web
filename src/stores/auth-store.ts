@@ -44,6 +44,7 @@ interface AuthState {
 
   setLoading: (isLoading: boolean) => void
   setToken: (token: string) => void
+  setInitialized: () => void
   setProfile: (identity: string, name: string) => void
   startLogoutTransition: () => void
   endLogoutTransition: () => void
@@ -71,6 +72,10 @@ export const useAuthStore = create<AuthState>()((set) => {
         token,
         isAuthenticated: Boolean(token),
       })
+    },
+
+    setInitialized: () => {
+      set({ isInitialized: true })
     },
 
     setProfile: (identity, name) => {
