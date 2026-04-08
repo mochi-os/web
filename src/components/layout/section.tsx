@@ -50,8 +50,8 @@ interface FieldRowProps {
 
 export function FieldRow({ label, children, className, description }: FieldRowProps) {
   return (
-    <div className={cn('grid grid-cols-1 items-center gap-2 py-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-5', className)}>
-      <div>
+    <div className={cn('grid grid-cols-1 items-start gap-2 py-2 sm:grid-cols-[300px_minmax(0,1fr)] sm:gap-5', className)}>
+      <div className="flex min-h-9 flex-col justify-center">
         <dt className='text-muted-foreground text-sm font-medium leading-none sm:leading-tight'>
           {label}
         </dt>
@@ -61,7 +61,7 @@ export function FieldRow({ label, children, className, description }: FieldRowPr
           </p>
         )}
       </div>
-      <dd className='flex min-w-0 items-center gap-2'>
+      <dd className='flex min-h-9 min-w-0 items-center gap-2'>
         {children}
       </dd>
     </div>
