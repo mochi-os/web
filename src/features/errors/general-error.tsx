@@ -41,62 +41,30 @@ function formatErrorMessage(message: string): string | undefined {
   return trimmed
 }
 
-function getInlineCopy(status: number, rawMessage: string, friendlyMessage?: string) {
+function getInlineCopy(status: number, rawMessage: string, errorMessage?: string) {
+  if (errorMessage) {
+    return { title: errorMessage, description: undefined }
+  }
+
   const lowerMessage = rawMessage.toLowerCase()
 
-  if (
-    status === 401 ||
-    status === 403 ||
-    lowerMessage.includes('permission')
-  ) {
-    return {
-      title: 'Permission required',
-      description:
-        friendlyMessage && friendlyMessage !== 'Permission required'
-          ? friendlyMessage
-          : 'You do not have access to this section.',
-    }
+  if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
+    return { title: 'You do not have access to this section.', description: undefined }
   }
 
   if (lowerMessage.includes('network') || lowerMessage.includes('failed to fetch')) {
-    return {
-      title: 'Network issue',
-      description: 'Check your connection and try again.',
-    }
+    return { title: 'Check your connection and try again.', description: undefined }
   }
 
   if (status === 404) {
-    return {
-      title: 'Not found',
-      description: 'This section is unavailable right now.',
-    }
+    return { title: 'Not found', description: undefined }
   }
 
   if (status === 429) {
-    return {
-      title: 'Too many requests',
-      description: 'Please wait a moment and try again.',
-    }
+    return { title: 'Too many requests. Please wait a moment and try again.', description: undefined }
   }
 
-  if (status >= 500) {
-    return {
-      title: 'Server issue',
-      description: 'Something went wrong on our side. Try again in a moment.',
-    }
-  }
-
-  if (friendlyMessage) {
-    return {
-      title: "Couldn't load this section",
-      description: friendlyMessage,
-    }
-  }
-
-  return {
-    title: "Couldn't load this section",
-    description: 'Please try again.',
-  }
+  return { title: 'Please try again.', description: undefined }
 }
 
 export function GeneralError({
@@ -109,15 +77,15 @@ export function GeneralError({
   const normalized = normalizeError(error)
   const statusCode = normalized.status ?? 500
   const message = normalized.message
-  const friendlyMessage = formatErrorMessage(message)
-  const displayMessage = friendlyMessage ?? message
-  const inlineCopy = getInlineCopy(statusCode, message, friendlyMessage)
+  const errorMessage = formatErrorMessage(message)
+  const displayMessage = errorMessage ?? message
+  const inlineCopy = getInlineCopy(statusCode, message, errorMessage)
 
   // Use the error message as the heading if it's descriptive
-  const isDescriptiveMessage = !!friendlyMessage &&
-    !friendlyMessage.toLowerCase().includes('status code') &&
-    !friendlyMessage.toLowerCase().includes('request failed')
-  const heading = isDescriptiveMessage ? friendlyMessage : statusCode.toString()
+  const isDescriptiveMessage = !!errorMessage &&
+    !errorMessage.toLowerCase().includes('status code') &&
+    !errorMessage.toLowerCase().includes('request failed')
+  const heading = isDescriptiveMessage ? errorMessage : statusCode.toString()
   const showHeading = !minimal
   const showMessage = minimal || !isDescriptiveMessage
 
