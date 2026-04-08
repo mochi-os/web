@@ -22,7 +22,23 @@ export interface PreferenceSchema {
   description: string
 }
 
+export interface ThemeInfo {
+  id: string
+  app: string
+  label: string
+  hue: number
+  chroma: number
+  hue_bg: number
+  preview: string
+  border_radius?: string
+  icon_mask?: string
+  icon_background?: string
+  background?: string
+  overrides?: Record<string, string>
+}
+
 export interface PreferencesData {
   preferences: Record<string, string>
   schema: PreferenceSchema[]
+  themes?: ThemeInfo[]
 }

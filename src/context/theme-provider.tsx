@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
-import { getShellInitData, isInShell, onShellMessage } from '../lib/shell-bridge'
+import { type ColorTheme, getShellInitData, isInShell, onShellMessage } from '../lib/shell-bridge'
 
 type Theme = 'dark' | 'light' | 'system'
 type ResolvedTheme = Exclude<Theme, 'system'>
@@ -14,6 +14,8 @@ type ThemeProviderState = {
   theme: Theme
   setTheme: (theme: Theme) => void
   resetTheme: () => void
+  colorTheme: ColorTheme | null
+  setColorTheme: (theme: ColorTheme | null) => void
 }
 
 const initialState: ThemeProviderState = {
@@ -22,6 +24,8 @@ const initialState: ThemeProviderState = {
   theme: 'system',
   setTheme: () => null,
   resetTheme: () => null,
+  colorTheme: null,
+  setColorTheme: () => null,
 }
 
 const ThemeContext = createContext<ThemeProviderState>(initialState)
@@ -38,11 +42,52 @@ function getInitialTheme(): Theme {
   return 'system'
 }
 
+function getInitialColorTheme(): ColorTheme | null {
+  const shellData = getShellInitData()
+  if (shellData?.colorTheme) {
+    return shellData.colorTheme
+  }
+  // Read from server-injected inline style (for non-shell / shell page itself)
+  const root = document.documentElement
+  const hue = root.style.getPropertyValue('--hue')
+  if (hue) {
+    return {
+      hue: hue.trim(),
+      chroma: (root.style.getPropertyValue('--hue-chroma') || '').trim(),
+      hueBg: (root.style.getPropertyValue('--hue-bg') || '').trim(),
+    }
+  }
+  return null
+}
+
+function applyColorThemeToDOM(ct: ColorTheme | null) {
+  const root = document.documentElement
+  // Remove all inline CSS custom properties
+  const props: string[] = []
+  for (let i = 0; i < root.style.length; i++) {
+    if (root.style[i].startsWith('--')) props.push(root.style[i])
+  }
+  for (const prop of props) {
+    root.style.removeProperty(prop)
+  }
+  if (ct) {
+    root.style.setProperty('--hue', ct.hue)
+    root.style.setProperty('--hue-chroma', ct.chroma)
+    root.style.setProperty('--hue-bg', ct.hueBg)
+    if (ct.overrides) {
+      for (const [key, val] of Object.entries(ct.overrides)) {
+        root.style.setProperty(key, val)
+      }
+    }
+  }
+}
+
 export function ThemeProvider({
   children,
   ...props
 }: ThemeProviderProps) {
   const [theme, _setTheme] = useState<Theme>(getInitialTheme)
+  const [colorTheme, _setColorTheme] = useState<ColorTheme | null>(getInitialColorTheme)
 
   // Optimized: Memoize the resolved theme calculation to prevent unnecessary re-computations
   const resolvedTheme = useMemo((): ResolvedTheme => {
@@ -54,13 +99,14 @@ export function ThemeProvider({
     return theme as ResolvedTheme
   }, [theme])
 
+  // Apply appearance (light/dark)
   useEffect(() => {
     const root = window.document.documentElement
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
-      root.classList.remove('light', 'dark') // Remove existing theme classes
-      root.classList.add(currentResolvedTheme) // Add the new theme class
+      root.classList.remove('light', 'dark')
+      root.classList.add(currentResolvedTheme)
     }
 
     const handleChange = () => {
@@ -71,29 +117,44 @@ export function ThemeProvider({
     }
 
     applyTheme(resolvedTheme)
-
     mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [theme, resolvedTheme])
 
-    // Listen for theme messages:
-    // - init/theme-change: from shell to iframe apps
-    // - theme-set: from iframe apps to shell (menu picks this up too)
+  // Apply color theme
+  useEffect(() => {
+    applyColorThemeToDOM(colorTheme)
+  }, [colorTheme])
+
+  // Listen for shell messages
+  useEffect(() => {
     const unsubShell = onShellMessage((msg) => {
+      // Appearance messages
       if ((msg.type === 'init' || msg.type === 'theme-change' || msg.type === 'theme-set') && typeof msg.theme === 'string') {
         _setTheme(msg.theme as Theme)
       }
+      // Color theme messages
+      if (msg.type === 'init' && 'colorTheme' in msg) {
+        _setColorTheme((msg.colorTheme as ColorTheme) || null)
+      }
+      if (msg.type === 'color-theme-change') {
+        _setColorTheme((msg.colorTheme as ColorTheme) || null)
+      }
     })
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleChange)
-      unsubShell()
-    }
-  }, [theme, resolvedTheme])
+    return () => unsubShell()
+  }, [])
 
   const setTheme = (theme: Theme) => {
     _setTheme(theme)
-    // Notify the shell so it can update its own class and sync to other frames
     if (isInShell()) {
       window.parent.postMessage({ type: 'theme-set', theme }, '*')
+    }
+  }
+
+  const setColorTheme = (ct: ColorTheme | null) => {
+    _setColorTheme(ct)
+    if (isInShell()) {
+      window.parent.postMessage({ type: 'color-theme-set', colorTheme: ct }, '*')
     }
   }
 
@@ -103,6 +164,8 @@ export function ThemeProvider({
     theme,
     setTheme,
     resetTheme: () => setTheme('system'),
+    colorTheme,
+    setColorTheme,
   }
 
   return (
