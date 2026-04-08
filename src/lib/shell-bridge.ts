@@ -10,9 +10,17 @@ type DomainRouteInfo = {
   class: string
 }
 
+export type ColorTheme = {
+  hue: string
+  chroma: string
+  hueBg: string
+  overrides?: Record<string, string>
+}
+
 type ShellInitData = {
   token: string
   theme?: string
+  colorTheme?: ColorTheme | null
   inShell: boolean
   sidebarOpen?: boolean
   domain?: DomainRouteInfo | null
