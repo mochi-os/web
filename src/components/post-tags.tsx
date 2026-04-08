@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Minus, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
 
@@ -78,6 +79,10 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+      {open && createPortal(
+        <div className="fixed inset-0 z-[59]" onPointerDown={(e) => { e.preventDefault(); setOpen(false) }} />,
+        document.body
+      )}
       <PopoverTrigger asChild>
         <button
           type='button'
@@ -94,7 +99,6 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
         className='w-auto min-w-[160px] max-w-[320px] p-2'
         align='start'
         onPointerDown={(e) => e.stopPropagation()}
-        onPointerDownOutside={(e) => { e.preventDefault(); setOpen(false) }}
         onClick={(e) => e.stopPropagation()}
       >
         <PostTags tags={tags} onFilter={onFilter} onInterestUp={onInterestUp} onInterestDown={onInterestDown} onInterestRemove={onInterestRemove} />
