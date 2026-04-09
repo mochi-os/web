@@ -1,5 +1,17 @@
-import { createContext, useContext, useEffect, useState, useMemo } from 'react'
-import { type ColorTheme, getShellInitData, isInShell, onShellMessage } from '../lib/shell-bridge'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+} from 'react'
+import {
+  type ColorTheme,
+  getShellInitData,
+  isInShell,
+  onShellMessage,
+} from '../lib/shell-bridge'
 
 type Theme = 'dark' | 'light' | 'system'
 type ResolvedTheme = Exclude<Theme, 'system'>
@@ -38,6 +50,7 @@ function getInitialTheme(): Theme {
   }
   // Respect server-rendered class (shell page sets class="dark" before JS loads)
   if (document.documentElement.classList.contains('dark')) return 'dark'
+  if (document.documentElement.classList.contains('light')) return 'light'
   // Unauthenticated / non-shell: use system preference
   return 'system'
 }
@@ -82,12 +95,11 @@ function applyColorThemeToDOM(ct: ColorTheme | null) {
   }
 }
 
-export function ThemeProvider({
-  children,
-  ...props
-}: ThemeProviderProps) {
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   const [theme, _setTheme] = useState<Theme>(getInitialTheme)
-  const [colorTheme, _setColorTheme] = useState<ColorTheme | null>(getInitialColorTheme)
+  const [colorTheme, _setColorTheme] = useState<ColorTheme | null>(
+    getInitialColorTheme
+  )
 
   // Optimized: Memoize the resolved theme calculation to prevent unnecessary re-computations
   const resolvedTheme = useMemo((): ResolvedTheme => {
@@ -128,9 +140,28 @@ export function ThemeProvider({
 
   // Listen for shell messages
   useEffect(() => {
+    const syncShellInitData = () => {
+      const shellData = getShellInitData()
+      if (!shellData) return
+
+      if (typeof shellData.theme === 'string') {
+        _setTheme(shellData.theme as Theme)
+      }
+      if ('colorTheme' in shellData) {
+        _setColorTheme(shellData.colorTheme || null)
+      }
+    }
+
+    syncShellInitData()
+
     const unsubShell = onShellMessage((msg) => {
       // Appearance messages
-      if ((msg.type === 'init' || msg.type === 'theme-change' || msg.type === 'theme-set') && typeof msg.theme === 'string') {
+      if (
+        (msg.type === 'init' ||
+          msg.type === 'theme-change' ||
+          msg.type === 'theme-set') &&
+        typeof msg.theme === 'string'
+      ) {
         _setTheme(msg.theme as Theme)
       }
       // Color theme messages
@@ -144,19 +175,22 @@ export function ThemeProvider({
     return () => unsubShell()
   }, [])
 
-  const setTheme = (theme: Theme) => {
+  const setTheme = useCallback((theme: Theme) => {
     _setTheme(theme)
     if (isInShell()) {
       window.parent.postMessage({ type: 'theme-set', theme }, '*')
     }
-  }
+  }, [])
 
-  const setColorTheme = (ct: ColorTheme | null) => {
+  const setColorTheme = useCallback((ct: ColorTheme | null) => {
     _setColorTheme(ct)
     if (isInShell()) {
-      window.parent.postMessage({ type: 'color-theme-set', colorTheme: ct }, '*')
+      window.parent.postMessage(
+        { type: 'color-theme-set', colorTheme: ct },
+        '*'
+      )
     }
-  }
+  }, [])
 
   const contextValue = {
     defaultTheme: 'system' as Theme,

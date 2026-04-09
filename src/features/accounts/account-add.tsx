@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog'
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '../../components/ui/responsive-dialog'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import {
@@ -107,13 +107,13 @@ export function AccountAdd({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit} autoComplete="off">
-          <DialogHeader>
-            <DialogTitle>Add account</DialogTitle>
-            <DialogDescription className="sr-only">Add a new account</DialogDescription>
-          </DialogHeader>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Add account</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className="sr-only">Add a new account</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className="grid gap-4 py-4">
             {availableProviders.length > 1 && (
@@ -174,7 +174,7 @@ export function AccountAdd({
             )}
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -190,9 +190,9 @@ export function AccountAdd({
               )}
               Add
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

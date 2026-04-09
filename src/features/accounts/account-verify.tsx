@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog'
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '../../components/ui/responsive-dialog'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import type { Account } from './types'
@@ -50,17 +50,17 @@ export function AccountVerify({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Verify email address</DialogTitle>
-            <DialogDescription>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Verify email address</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               We sent a verification code to{' '}
               <strong>{account.identifier}</strong>. Enter the code below to
               verify your email address.
-            </DialogDescription>
-          </DialogHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -76,7 +76,7 @@ export function AccountVerify({
             </div>
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -104,9 +104,9 @@ export function AccountVerify({
               )}
               Verify
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }
