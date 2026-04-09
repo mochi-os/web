@@ -63,7 +63,15 @@ export * from './components/layout/top-nav'
 export { AppSidebar } from './components/layout/app-sidebar'
 export { NavGroup } from './components/layout/nav-group'
 export { NavUser } from './components/layout/nav-user'
-export type { SidebarData, NavGroup as NavGroupType, NavItem, NavCollapsible, NavSubItem, NavLink, NavAction } from './components/layout/types'
+export type {
+  SidebarData,
+  NavGroup as NavGroupType,
+  NavItem,
+  NavCollapsible,
+  NavSubItem,
+  NavLink,
+  NavAction,
+} from './components/layout/types'
 export {
   RightPanel,
   RightPanelProvider,
@@ -118,6 +126,7 @@ export * from './components/colour-picker'
 export * from './components/comment-tree-layout'
 export * from './components/mention-textarea'
 export * from './components/filter-bar'
+export * from './components/header-search'
 export * from './components/icon-button'
 export * from './components/post-tags'
 export * from './components/view-tabs'
@@ -139,7 +148,10 @@ export * from './stores/auth-store'
 export * from './stores/page-title-store'
 
 // Hooks
-export { useQueryWithError, useInfiniteQueryWithError } from './hooks/use-query-with-error'
+export {
+  useQueryWithError,
+  useInfiniteQueryWithError,
+} from './hooks/use-query-with-error'
 export { default as useDialogState } from './hooks/use-dialog-state'
 export * from './hooks/use-media-query'
 export * from './hooks/use-screen-size'
@@ -161,8 +173,37 @@ export * from './hooks/use-debounce'
 // Lib utilities
 export * from './lib/create-app-client'
 export * from './lib/api-client'
-export { getAppPath, getRouterBasepath, getApiBasepath, getAuthLoginUrl, isDomainEntityRouting, getEntityFingerprint, getEntityClass, normalizeEntityUrl, NOTIFICATIONS_PATH } from './lib/app-path'
-export { isInShell, initShellBridge, shellNavigate, shellNavigateExternal, shellSetTitle, shellSetSidebarState, onShellMessage, getShellInitData, safeCookieGet, safeCookieSet, installShellLinkInterceptor, installShellNavigationSync, installShellClipboardProxy, authenticatedUrl, shellClipboardWrite, shellSubscribeNotifications, shellRequestPermission, shellFetch } from './lib/shell-bridge'
+export {
+  getAppPath,
+  getRouterBasepath,
+  getApiBasepath,
+  getAuthLoginUrl,
+  isDomainEntityRouting,
+  getEntityFingerprint,
+  getEntityClass,
+  normalizeEntityUrl,
+  NOTIFICATIONS_PATH,
+} from './lib/app-path'
+export {
+  isInShell,
+  initShellBridge,
+  shellNavigate,
+  shellNavigateExternal,
+  shellSetTitle,
+  shellSetSidebarState,
+  onShellMessage,
+  getShellInitData,
+  safeCookieGet,
+  safeCookieSet,
+  installShellLinkInterceptor,
+  installShellNavigationSync,
+  installShellClipboardProxy,
+  authenticatedUrl,
+  shellClipboardWrite,
+  shellSubscribeNotifications,
+  shellRequestPermission,
+  shellFetch,
+} from './lib/shell-bridge'
 export * as shellStorage from './lib/shell-storage'
 export { useShellStorage } from './hooks/use-shell-storage'
 export * from './lib/auth-endpoints'
@@ -183,7 +224,12 @@ export * from './lib/safe-navigation'
 export * as push from './lib/push'
 
 // Types
-export type { PlaceData, PostData, TravellingData, PhotonPlace } from './types/places'
+export type {
+  PlaceData,
+  PostData,
+  TravellingData,
+  PhotonPlace,
+} from './types/places'
 export * from './types/settings'
 export * from './types/users'
 

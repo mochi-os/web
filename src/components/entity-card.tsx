@@ -1,5 +1,5 @@
 /**
- * Internal shared component — not exported from lib/common index.
+ * Internal shared component — not exported from lib/web index.
  * Used by search-entity-page and search-entity-dialog.
  */
 import { Loader2, type LucideIcon } from 'lucide-react'
