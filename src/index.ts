@@ -51,6 +51,7 @@ export * from './components/layout/header'
 export * from './components/layout/top-bar'
 export * from './components/layout/authenticated-layout'
 export * from './components/layout/page-header'
+export * from './components/layout/page-utility-bar'
 export * from './components/layout/game-header'
 export * from './components/layout/game-header-stats'
 export * from './components/layout/back-button'
@@ -124,6 +125,7 @@ export * from './components/view-tabs'
 // Context Providers
 export * from './context/direction-provider'
 export * from './context/font-provider'
+export * from './context/mobile-page-header-context'
 export {
   LayoutProvider,
   useLayout,

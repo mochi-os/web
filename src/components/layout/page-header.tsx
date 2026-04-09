@@ -1,13 +1,18 @@
-import type { ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { BackButton, type HeaderBackConfig } from './back-button'
+import { PageUtilityBar } from './page-utility-bar'
+import { cn } from '../../lib/utils'
 
 interface PageHeaderProps {
   icon?: ReactNode
   title: ReactNode
   description?: string
   actions?: ReactNode
+  primaryAction?: ReactNode
   menuAction?: ReactNode
   back?: HeaderBackConfig
+  /** @deprecated The sidebar trigger is rendered by the top bar — this prop is now a no-op */
+  showSidebarTrigger?: boolean
 }
 
 export function PageHeader({
@@ -15,45 +20,60 @@ export function PageHeader({
   title,
   description,
   actions,
+  primaryAction,
   menuAction,
   back,
 }: PageHeaderProps) {
   return (
     <header
-      className='bg-background sticky md:top-[var(--sticky-top,0px)] z-10'
+      className='bg-background sticky top-[var(--sticky-top,0px)] z-30 border-b'
       style={{ paddingRight: 'var(--removed-body-scroll-bar-size, 0px)' }}
     >
-      <div className={`px-4 py-2 md:px-6 ${description ? '' : 'md:min-h-[48px]'}`}>
-        <div className='flex items-start gap-3 md:items-center md:justify-between'>
-          <div className='min-w-0 flex-1'>
-            <div className='flex items-start gap-2 md:items-center md:gap-2.5'>
-              {/* Back button remains opt-in and icon-only via `PageHeader.back`. */}
-              {back && <BackButton {...back} />}
-              {icon && <div className='shrink-0 pt-0.5 md:pt-0'>{icon}</div>}
-              <h1 className='min-w-0 flex-1 line-clamp-2 text-base leading-tight font-semibold md:line-clamp-1 md:text-lg md:leading-tight'>
+      <div className={cn('px-4 md:px-6', description ? 'py-2' : 'py-1.5 md:py-2')}>
+        <div className='flex min-h-14 items-center gap-2 md:min-h-12 md:justify-between'>
+          <div className='flex min-w-0 flex-1 items-center gap-3'>
+            {back && (
+              <BackButton
+                {...back}
+                className={cn('size-11 shrink-0 md:size-8', back.className)}
+              />
+            )}
+            {icon && (
+              <div className='text-foreground shrink-0 [&>svg]:size-5'>
+                {icon}
+              </div>
+            )}
+            <div className='min-w-0 flex-1'>
+              <h1 className='min-w-0 truncate text-[1.125rem] leading-tight font-semibold md:text-lg'>
                 {title}
               </h1>
-              {menuAction && (
-                <div className='ml-auto shrink-0 md:hidden'>{menuAction}</div>
+              {description && (
+                <p className='text-muted-foreground mt-0.5 truncate text-sm'>
+                  {description}
+                </p>
               )}
             </div>
-            {description && (
-              <p className='text-muted-foreground mt-0.5 truncate text-sm'>{description}</p>
-            )}
           </div>
-          {(actions || menuAction) && (
-            <div className='hidden shrink-0 items-center gap-2 md:flex'>
-              {actions}
-              {menuAction}
+
+          {(actions || primaryAction || menuAction) && (
+            <div className='flex shrink-0 items-center gap-2'>
+              {primaryAction && <div className='hidden md:flex'>{primaryAction}</div>}
+              {menuAction && <div className='hidden md:flex'>{menuAction}</div>}
+              {actions && <div className='hidden md:flex md:items-center md:gap-2'>{actions}</div>}
+              {primaryAction && <div className='md:hidden'>{primaryAction}</div>}
+              {menuAction && <div className='md:hidden'>{menuAction}</div>}
             </div>
           )}
         </div>
-        {actions && (
-          <div className='mt-2 flex flex-wrap items-center gap-2 md:hidden'>
-            {actions}
-          </div>
-        )}
       </div>
+
+      {actions && (
+        <div className='md:hidden'>
+          <PageUtilityBar compact sticky={false} className='border-b-0'>
+            {actions}
+          </PageUtilityBar>
+        </div>
+      )}
     </header>
   )
 }

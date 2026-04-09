@@ -44,6 +44,7 @@ type AuthenticatedLayoutProps = {
   sidebarData?: SidebarData
   sidebarFooter?: React.ReactNode
   showNotifications?: boolean
+  usePageHeaderForMobileNav?: boolean
   title?: string
   mobileTitle?: React.ReactNode
   rightPanel?: RightPanelConfig
@@ -133,134 +134,134 @@ export function AuthenticatedLayout({
    * ------------------------------------------------------------------ */
 
   const layoutContent = (
-    <div
-      className={cn(
-        'h-svh w-full',
-        hasSidebar ? 'flex' : 'flex flex-col lg:flex-row'
-      )}
-    >
-      {hasSidebar ? (
-        <>
-          {/* Desktop sidebar */}
-          <AppSidebar
-            data={sidebarData}
-            showNotifications={effectiveShowNotifications}
-            sidebarFooter={sidebarFooter}
-            isLoading={isLoadingSidebar}
-            hideMenu={inShell}
-          />
+      <div
+        className={cn(
+          'h-svh w-full',
+          hasSidebar ? 'flex' : 'flex flex-col lg:flex-row'
+        )}
+      >
+        {hasSidebar ? (
+          <>
+            {/* Desktop sidebar */}
+            <AppSidebar
+              data={sidebarData}
+              showNotifications={effectiveShowNotifications}
+              sidebarFooter={sidebarFooter}
+              isLoading={isLoadingSidebar}
+              hideMenu={inShell}
+            />
 
-          {/* Mobile TopBar (hidden in shell — menu app provides the header) */}
-          {!inShell && (
-            <header className='fixed top-0 left-0 right-0 z-[60] h-12 border-b bg-background md:hidden overflow-visible'>
-              <div className='flex h-full items-center px-2 overflow-visible'>
-                <TopBar
-                  showNotifications={effectiveShowNotifications}
-                  showSidebarTrigger
-                />
-              </div>
-            </header>
-          )}
-
-          {/* Main content */}
-          <SidebarInset
-            className={cn(
-              '@container/content',
-              'flex-1 h-full overflow-auto',
-              !inShell && 'pt-12 md:pt-0'
+            {/* Mobile TopBar (hidden in shell — menu app provides the header) */}
+            {!inShell && (
+              <header className='fixed top-0 left-0 right-0 z-[60] h-12 overflow-visible border-b bg-background md:hidden'>
+                <div className='flex h-full items-center overflow-visible px-2'>
+                  <TopBar
+                    showNotifications={effectiveShowNotifications}
+                    showSidebarTrigger
+                  />
+                </div>
+              </header>
             )}
-          >
-            {children ?? <Outlet />}
-          </SidebarInset>
 
-          {/* Right panel */}
-          {hasRightPanel && (
-            <RightPanel className='h-full'>
-              {(rightPanel.header || rightPanel.showCloseButton) && (
-                <RightPanelHeader className={rightPanel.headerClassName}>
-                  <div className='flex-1'>{rightPanel.header}</div>
-                  {rightPanel.showCloseButton && <RightPanelCloseButton />}
-                </RightPanelHeader>
-              )}
-
-              {rightPanel.content && (
-                <RightPanelContent className={rightPanel.contentClassName}>
-                  {rightPanel.content}
-                </RightPanelContent>
-              )}
-
-              {rightPanel.footer && (
-                <RightPanelFooter className={rightPanel.footerClassName}>
-                  {rightPanel.footer}
-                </RightPanelFooter>
-              )}
-            </RightPanel>
-          )}
-        </>
-      ) : (
-        <>
-          {/* No sidebar layout */}
-
-          {/* Mobile (hidden in shell — menu app provides the header) */}
-          {!inShell && (
-            <div
+            {/* Main content */}
+            <SidebarInset
               className={cn(
-                'flex h-12 shrink-0 items-center px-2 lg:hidden',
-                !_mobileTitle && 'border-b'
+                '@container/content',
+                'flex-1 h-full overflow-auto',
+                !inShell && 'pt-12 md:pt-0'
               )}
             >
-              <TopBar
-                showNotifications={showNotifications}
-                className='w-full'
-                mobileTitle={_mobileTitle}
-              />
-            </div>
-          )}
+              {children ?? <Outlet />}
+            </SidebarInset>
 
-          {/* Desktop vertical TopBar (hidden in shell) */}
-          {!inShell && (
-            <div className='hidden h-full shrink-0 lg:flex'>
-              <TopBar showNotifications={showNotifications} vertical />
-            </div>
-          )}
+            {/* Right panel */}
+            {hasRightPanel && (
+              <RightPanel className='h-full'>
+                {(rightPanel.header || rightPanel.showCloseButton) && (
+                  <RightPanelHeader className={rightPanel.headerClassName}>
+                    <div className='flex-1'>{rightPanel.header}</div>
+                    {rightPanel.showCloseButton && <RightPanelCloseButton />}
+                  </RightPanelHeader>
+                )}
 
-          {/* Content — add left padding in shell to clear the fixed menu overlay */}
-          <div
-            className={cn(
-              '@container/content',
-              'min-h-0 min-w-0 flex-1 overflow-auto',
-              inShell && 'pl-12'
+                {rightPanel.content && (
+                  <RightPanelContent className={rightPanel.contentClassName}>
+                    {rightPanel.content}
+                  </RightPanelContent>
+                )}
+
+                {rightPanel.footer && (
+                  <RightPanelFooter className={rightPanel.footerClassName}>
+                    {rightPanel.footer}
+                  </RightPanelFooter>
+                )}
+              </RightPanel>
             )}
-          >
-            {children ?? <Outlet />}
-          </div>
+          </>
+        ) : (
+          <>
+            {/* No sidebar layout */}
 
-          {/* Right panel */}
-          {hasRightPanel && (
-            <RightPanel className='h-full'>
-              {(rightPanel.header || rightPanel.showCloseButton) && (
-                <RightPanelHeader className={rightPanel.headerClassName}>
-                  <div className='flex-1'>{rightPanel.header}</div>
-                  {rightPanel.showCloseButton && <RightPanelCloseButton />}
-                </RightPanelHeader>
-              )}
+            {/* Mobile (hidden in shell — menu app provides the header) */}
+            {!inShell && (
+              <div
+                className={cn(
+                  'flex h-12 shrink-0 items-center px-2 lg:hidden',
+                  !_mobileTitle && 'border-b'
+                )}
+              >
+                <TopBar
+                  showNotifications={showNotifications}
+                  className='w-full'
+                  mobileTitle={_mobileTitle}
+                />
+              </div>
+            )}
 
-              {rightPanel.content && (
-                <RightPanelContent className={rightPanel.contentClassName}>
-                  {rightPanel.content}
-                </RightPanelContent>
-              )}
+            {/* Desktop vertical TopBar (hidden in shell) */}
+            {!inShell && (
+              <div className='hidden h-full shrink-0 lg:flex'>
+                <TopBar showNotifications={showNotifications} vertical />
+              </div>
+            )}
 
-              {rightPanel.footer && (
-                <RightPanelFooter className={rightPanel.footerClassName}>
-                  {rightPanel.footer}
-                </RightPanelFooter>
+            {/* Content — add left padding in shell to clear the fixed menu overlay */}
+            <div
+              className={cn(
+                '@container/content',
+                'min-h-0 min-w-0 flex-1 overflow-auto',
+                inShell && 'pl-12'
               )}
-            </RightPanel>
-          )}
-        </>
-      )}
-    </div>
+            >
+              {children ?? <Outlet />}
+            </div>
+
+            {/* Right panel */}
+            {hasRightPanel && (
+              <RightPanel className='h-full'>
+                {(rightPanel.header || rightPanel.showCloseButton) && (
+                  <RightPanelHeader className={rightPanel.headerClassName}>
+                    <div className='flex-1'>{rightPanel.header}</div>
+                    {rightPanel.showCloseButton && <RightPanelCloseButton />}
+                  </RightPanelHeader>
+                )}
+
+                {rightPanel.content && (
+                  <RightPanelContent className={rightPanel.contentClassName}>
+                    {rightPanel.content}
+                  </RightPanelContent>
+                )}
+
+                {rightPanel.footer && (
+                  <RightPanelFooter className={rightPanel.footerClassName}>
+                    {rightPanel.footer}
+                  </RightPanelFooter>
+                )}
+              </RightPanel>
+            )}
+          </>
+        )}
+      </div>
   )
 
   /* ------------------------------------------------------------------ */
