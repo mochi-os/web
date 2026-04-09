@@ -111,12 +111,15 @@ export function ImageLightbox({
     onIndexChange(currentIndex < images.length - 1 ? currentIndex + 1 : 0)
   }, [currentIndex, images.length, onIndexChange])
 
-  // Handle keyboard navigation
+  // Handle keyboard navigation (capture phase so Escape fires before parent dialog handlers)
   useEffect(() => {
     if (!open) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation()
+        onOpenChange(false)
+      } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         goToPrevious()
       } else if (e.key === 'ArrowRight') {
@@ -125,9 +128,9 @@ export function ImageLightbox({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, goToPrevious, goToNext])
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
+  }, [open, goToPrevious, goToNext, onOpenChange])
 
   // Handle controls visibility with auto-hide
   const [controlsVisible, setControlsVisible] = useState(true)
