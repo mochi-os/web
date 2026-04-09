@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { IconButton } from './icon-button'
@@ -17,18 +17,8 @@ export function HeaderSearch({
   placeholder,
   label = 'Search',
 }: HeaderSearchProps) {
-  const mobileSearchRef = useRef<HTMLInputElement>(null)
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
   const showMobileSearch = isMobileSearchOpen || value.trim().length > 0
-
-  useEffect(() => {
-    if (!isMobileSearchOpen) {
-      return
-    }
-
-    const timer = setTimeout(() => mobileSearchRef.current?.focus(), 0)
-    return () => clearTimeout(timer)
-  }, [isMobileSearchOpen])
 
   const closeMobileSearch = () => {
     onValueChange('')
@@ -49,7 +39,6 @@ export function HeaderSearch({
       {showMobileSearch ? (
         <div className='flex min-w-0 items-center gap-1.5 md:hidden'>
           <Input
-            ref={mobileSearchRef}
             type='search'
             aria-label={label}
             placeholder={placeholder}
