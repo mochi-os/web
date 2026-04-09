@@ -6,6 +6,7 @@ import {
   GripVertical,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { useFormat } from '../hooks/use-format'
 
 export interface TreeRowField {
   id: string
@@ -89,6 +90,7 @@ export function TreeRow({
   onDragEnd,
 }: TreeRowProps) {
   const rowRef = useRef<HTMLTableRowElement>(null)
+  const { formatDate } = useFormat()
 
   const renderFieldValue = (field: TreeRowField, value: string) => {
     if (!value) {
@@ -115,7 +117,7 @@ export function TreeRow({
 
       case 'date': {
         const date = new Date(value + 'T00:00:00')
-        return <span className='truncate'>{date.toLocaleDateString()}</span>
+        return <span className='truncate'>{formatDate(date)}</span>
       }
 
       case 'user': {

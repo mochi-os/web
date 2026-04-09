@@ -17,6 +17,16 @@ export type ColorTheme = {
   overrides?: Record<string, string>
 }
 
+export type LocalePreferences = {
+  date_format: string
+  time_format: string
+  timestamp_display: string
+  week_start: string
+  number_format: string
+  units: string
+  timezone: string
+}
+
 type ShellInitData = {
   token: string
   theme?: string
@@ -24,6 +34,7 @@ type ShellInitData = {
   inShell: boolean
   sidebarOpen?: boolean
   domain?: DomainRouteInfo | null
+  locale?: LocalePreferences | null
 }
 
 type ShellMessage = {
@@ -120,6 +131,13 @@ export function shellSetTitle(title: string): void {
 export function shellSetSidebarState(open: boolean): void {
   if (isInShell()) {
     window.parent.postMessage({ type: 'sidebar-state', open }, '*')
+  }
+}
+
+/** Broadcast locale preference changes to the shell (which forwards to all iframes) */
+export function shellSetLocale(locale: LocalePreferences): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'locale-set', locale }, '*')
   }
 }
 

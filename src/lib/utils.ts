@@ -38,21 +38,8 @@ export function compareVersions(a: string, b: string): number {
  * - In middle: [1, '...', 4, 5, 6, '...', 10]
  * - Near end: [1, '...', 7, 8, 9, 10]
  */
-// Format a Unix timestamp to locale date + HH:MM:SS time
-export function formatTimestamp(timestamp?: number, fallback = ''): string {
-  if (!timestamp) {
-    return fallback
-  }
-  const date = new Date(timestamp * 1000)
-  const datePart = date.toLocaleDateString()
-  const timePart = date.toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
-  return `${datePart} ${timePart}`
-}
+// Format a Unix timestamp to YYYY-MM-DD HH:MM:SS (system/admin format)
+export { formatSystemTimestamp as formatTimestamp } from './locale-format'
 
 export function getPageNumbers(currentPage: number, totalPages: number) {
   const maxVisiblePages = 5 // Maximum number of page buttons to show

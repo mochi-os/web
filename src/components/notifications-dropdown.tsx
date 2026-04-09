@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Bell, Check, ExternalLink } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { shellNavigateExternal } from '../lib/shell-bridge'
+import { useFormat } from '../hooks/use-format'
 import { useScreenSize } from '../hooks/use-screen-size'
 import { Button } from './ui/button'
 
@@ -29,19 +30,6 @@ export interface Notification {
   read: number
 }
 
-function formatTimestamp(timestamp: number): string {
-  const now = Date.now() / 1000
-  const diff = now - timestamp
-
-  if (diff < 60) return 'Just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d`
-
-  const date = new Date(timestamp * 1000)
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
 interface NotificationItemProps {
   notification: Notification
   onClick?: (notification: Notification) => void
@@ -49,6 +37,7 @@ interface NotificationItemProps {
 
 function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const isUnread = notification.read === 0
+  const { formatTimestamp } = useFormat()
 
   return (
     <button

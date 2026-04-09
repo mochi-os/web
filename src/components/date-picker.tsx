@@ -1,5 +1,5 @@
-import { format } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
+import { useFormat } from '../hooks/use-format'
 import { Button } from './ui/button'
 import { Calendar } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
@@ -15,6 +15,8 @@ export function DatePicker({
   onSelect,
   placeholder = 'Pick a date',
 }: DatePickerProps) {
+  const { formatDate, weekStartsOn } = useFormat()
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -24,7 +26,7 @@ export function DatePicker({
           className="data-[empty=true]:text-muted-foreground w-[240px] justify-start text-start font-normal"
         >
           {selected ? (
-            format(selected, 'MMM d, yyyy')
+            formatDate(selected)
           ) : (
             <span>{placeholder}</span>
           )}
@@ -35,6 +37,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           captionLayout="dropdown"
+          weekStartsOn={weekStartsOn as 0 | 1 | 2 | 3 | 4 | 5 | 6}
           selected={selected}
           onSelect={onSelect}
           disabled={(date: Date) =>

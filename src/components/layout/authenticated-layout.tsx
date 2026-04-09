@@ -7,6 +7,7 @@ import { isInShell, installShellLinkInterceptor, installShellNavigationSync, ins
 import { useAuthStore } from '../../stores/auth-store'
 
 import { LayoutProvider } from '../../context/layout-provider'
+import { LocaleProvider } from '../../context/locale-provider'
 import { SearchProvider } from '../../context/search-provider'
 
 import { SidebarInset, SidebarProvider } from '../ui/sidebar'
@@ -116,15 +117,17 @@ export function AuthenticatedLayout({
    * ------------------------------------------------------------------ */
   if (!isLoggedIn) {
     return (
-      <SearchProvider>
-        <LayoutProvider>
-          <SidebarProvider defaultOpen={defaultOpen}>
-            <div className={cn('@container/content', 'h-svh w-full overflow-auto')}>
-              {children ?? <Outlet />}
-            </div>
-          </SidebarProvider>
-        </LayoutProvider>
-      </SearchProvider>
+      <LocaleProvider>
+        <SearchProvider>
+          <LayoutProvider>
+            <SidebarProvider defaultOpen={defaultOpen}>
+              <div className={cn('@container/content', 'h-svh w-full overflow-auto')}>
+                {children ?? <Outlet />}
+              </div>
+            </SidebarProvider>
+          </LayoutProvider>
+        </SearchProvider>
+      </LocaleProvider>
     )
   }
 
@@ -266,18 +269,20 @@ export function AuthenticatedLayout({
   /* ------------------------------------------------------------------ */
 
   return (
-    <SearchProvider>
-      <LayoutProvider>
-        <SidebarProvider defaultOpen={defaultOpen}>
-          {hasRightPanel ? (
-            <RightPanelProvider defaultOpen={rightPanelDefaultOpen}>
-              {layoutContent}
-            </RightPanelProvider>
-          ) : (
-            layoutContent
-          )}
-        </SidebarProvider>
-      </LayoutProvider>
-    </SearchProvider>
+    <LocaleProvider>
+      <SearchProvider>
+        <LayoutProvider>
+          <SidebarProvider defaultOpen={defaultOpen}>
+            {hasRightPanel ? (
+              <RightPanelProvider defaultOpen={rightPanelDefaultOpen}>
+                {layoutContent}
+              </RightPanelProvider>
+            ) : (
+              layoutContent
+            )}
+          </SidebarProvider>
+        </LayoutProvider>
+      </SearchProvider>
+    </LocaleProvider>
   )
 }
