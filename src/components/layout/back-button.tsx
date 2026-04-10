@@ -42,7 +42,7 @@ export function BackButton({
       disabled={isFallbackPending}
       title={label}
       aria-label={ariaLabel ?? label}
-      className={cn('size-8 shrink-0', className)}
+      className={cn('shrink-0', className)}
     >
       <ArrowLeft className='size-4 shrink-0' />
     </Button>

@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react'
 import { cn } from '../lib/utils'
 
+type PostTitleBarSize = 'card' | 'detail'
+
 interface PostTitleBarProps {
   title: ReactNode
   meta?: ReactNode
   trailing?: ReactNode
+  size?: PostTitleBarSize
   className?: string
   titleClassName?: string
   metaClassName?: string
@@ -15,6 +18,7 @@ export function PostTitleBar({
   title,
   meta,
   trailing,
+  size = 'detail',
   className,
   titleClassName,
   metaClassName,
@@ -31,7 +35,10 @@ export function PostTitleBar({
         <div className='min-w-0 flex-1'>
           <div
             className={cn(
-              'text-lg leading-tight font-semibold break-words text-balance',
+              size === 'card'
+                ? 'text-[clamp(1rem,0.96rem+0.55vw,1.125rem)] leading-[1.2] md:text-lg md:leading-tight'
+                : 'text-[clamp(1.0625rem,1rem+0.8vw,1.25rem)] leading-[1.15] md:text-lg md:leading-tight',
+              'font-semibold break-words text-balance',
               titleClassName
             )}
           >
@@ -53,7 +60,7 @@ export function PostTitleBar({
             {meta && (
               <div
                 className={cn(
-                  'text-muted-foreground min-w-0 break-words text-xs md:text-right',
+                  'text-muted-foreground min-w-0 break-words text-[11px] leading-4 md:text-right md:text-xs',
                   metaClassName
                 )}
               >
