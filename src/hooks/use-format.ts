@@ -5,6 +5,7 @@ import {
   formatDateTime,
   formatUserTimestamp,
   formatNumber,
+  formatFileSize,
 } from '../lib/locale-format'
 
 export function useFormat() {
@@ -15,6 +16,7 @@ export function useFormat() {
     formatDateTime: (date: Date) => formatDateTime(date, locale.dateFormat, locale.timeFormat),
     formatTimestamp: (ts: number, fallback?: string) => formatUserTimestamp(ts, locale, fallback),
     formatNumber: (value: number, decimals?: number) => formatNumber(value, locale.numberFormat, decimals),
+    formatFileSize: (bytes: number) => formatFileSize(bytes, locale.numberFormat),
     weekStartsOn: locale.weekStartsOn,
     units: locale.units,
   }

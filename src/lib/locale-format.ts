@@ -138,6 +138,14 @@ export function formatPrice(amount: number, symbol: string, numberFormat: Number
   return `${symbol}${formatNumber(amount / 100, numberFormat, 2)}`
 }
 
+/** Format a byte count as a human-readable file size (e.g. 1048576 → "1.0 MB") */
+export function formatFileSize(bytes: number, numberFormat: NumberFormat): string {
+  if (bytes < 1024) return `${formatNumber(bytes, numberFormat, 0)} B`
+  if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, numberFormat, 1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${formatNumber(bytes / (1024 * 1024), numberFormat, 1)} MB`
+  return `${formatNumber(bytes / (1024 * 1024 * 1024), numberFormat, 1)} GB`
+}
+
 // --- System formatting (always fixed, ignores preferences) ---
 
 /** Always YYYY-MM-DD HH:MM:SS — for admin pages, logs, diagnostics */
