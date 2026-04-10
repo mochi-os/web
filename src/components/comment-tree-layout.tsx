@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import { Minus, Plus } from 'lucide-react'
+import { cn } from '../lib/utils'
 
-// Grid config - these match the proven Feeds design
-const COL_WIDTH = 'w-5' // 20px
-const AVATAR_SIZE = 'size-5' // 20px
+type CommentTreeDensity = 'compact' | 'comfortable'
 
 export interface CommentTreeLayoutProps {
   /** Nesting depth (0 = top-level) */
   depth?: number
+  /** Controls mobile spacing density for the tree layout */
+  density?: CommentTreeDensity
   /** Whether the node is collapsed */
   isCollapsed: boolean
   /** Toggle collapse state */
@@ -26,6 +27,7 @@ export interface CommentTreeLayoutProps {
 
 export function CommentTreeLayout({
   depth = 0,
+  density = 'compact',
   isCollapsed,
   onToggleCollapse,
   hasChildren,
@@ -54,29 +56,33 @@ export function CommentTreeLayout({
   // Color for the line of THIS level
   const selfColorBg = RAINBOW_COLORS[depth % RAINBOW_COLORS.length]
   const selfColorBorder = RAINBOW_BORDERS[depth % RAINBOW_BORDERS.length]
+  const isComfortable = density === 'comfortable'
 
   return (
     <div className='flex flex-row items-stretch'>
       {/* 1. Sidebar Column: Line + Connector + Button */}
-      <div className={`relative ${COL_WIDTH} shrink-0`}>
-        {/* Continuous Vertical Line (Full Height) */}
-        {/* It stretches automatically because of flex items-stretch */}
-        {/* Added z-0 to ensure it sits behind the button/connector if overlaps occur, though DOM order usually handles this. */}
+      <div
+        className={cn(
+          'relative shrink-0',
+          isComfortable ? 'w-6 md:w-5' : 'w-5'
+        )}
+      >
         <div
-          className={`absolute left-[9px] top-0 bottom-0 w-[2px] ${selfColorBg} z-0`}
+          className={cn(
+            'absolute top-0 bottom-0 z-0 w-[2px]',
+            isComfortable ? 'left-[11px] md:left-[9px]' : 'left-[9px]',
+            selfColorBg
+          )}
         />
 
-        {/* Curved Connector (L-shape) from line to avatar */}
-        {/* Connects top (sibling/parent) to right (avatar) */}
-        {/* Geometry Fix:
-            - Avatar is centered at ~10px vertically (size-5 = 20px).
-            - We want the horizontal line (bottom border) to hit Y=10px.
-            - If div is height 12px, we place it at top -2px. (12 - 2 = 10px).
-            - Width: Needs to reach from left-[9px] to center of next column (30px absolute).
-            - Distance = 21px. w-5 is 20px. Close enough to touch the avatar.
-        */}
         <div
-          className={`absolute -top-0.5 left-[9px] h-3 w-5 rounded-bl-xl border-l-[2px] border-b-[2px] ${selfColorBorder} border-r-0 border-t-0 z-10`}
+          className={cn(
+            'absolute z-10 rounded-bl-xl border-r-0 border-t-0 border-l-[2px] border-b-[2px]',
+            isComfortable
+              ? 'top-0 left-[11px] h-3.5 w-6 md:-top-0.5 md:left-[9px] md:h-3 md:w-5'
+              : '-top-0.5 left-[9px] h-3 w-5',
+            selfColorBorder
+          )}
         />
 
         {/* Collapse/Expand Button */}
@@ -87,10 +93,13 @@ export function CommentTreeLayout({
               e.stopPropagation()
               onToggleCollapse()
             }}
-            // Center the button on the line (left-[9px] + 1px center = 10px).
-            // Button is size-3 (12px). Left = 10 - 6 = 4px.
-            // Top aligned near the curve/avatar center (10px). Top = 10 - 6 = 4px.
-            className={`bg-background hover:bg-muted text-muted-foreground absolute top-[4px] left-[4px] z-20 flex size-3 items-center justify-center rounded-full border transition-colors ${selfColorBorder}`}
+            className={cn(
+              'bg-background hover:bg-muted text-muted-foreground absolute z-20 flex items-center justify-center rounded-full border transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              isComfortable
+                ? 'top-[5px] left-[5px] size-3.5 md:top-[4px] md:left-[4px] md:size-3'
+                : 'top-[4px] left-[4px] size-3',
+              selfColorBorder
+            )}
             aria-label={isCollapsed ? 'Expand' : 'Collapse'}
           >
             {isCollapsed ? (
@@ -103,25 +112,49 @@ export function CommentTreeLayout({
       </div>
 
       {/* 2. Main Content Column */}
-      <div className='flex-1 mb-1 min-w-0'>
+      <div
+        className={cn(
+          'min-w-0 flex-1',
+          isComfortable ? 'mb-2 md:mb-1' : 'mb-1'
+        )}
+      >
         {/* Header Row: Avatar + Body */}
-        <div className='flex gap-2 pb-2'>
+        <div
+          className={cn(
+            'flex',
+            isComfortable ? 'gap-2.5 pb-3 md:gap-2 md:pb-2' : 'gap-2 pb-2'
+          )}
+        >
           {/* Avatar Area - No longer contains the line */}
           <div
-            className={`flex ${AVATAR_SIZE} shrink-0 items-center justify-center`}
+            className={cn(
+              'flex shrink-0 items-center justify-center',
+              isComfortable ? 'size-6 md:size-5' : 'size-5'
+            )}
           >
             {avatar}
           </div>
 
           {/* Content Body */}
-          <div className='min-w-0 flex-1 pt-0.5'>
-            {isCollapsed ? collapsedContent : content}
+          <div className={cn('min-w-0 flex-1', isComfortable ? 'pt-0' : 'pt-0.5')}>
+            <div
+              className={cn(
+                isComfortable &&
+                  'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0'
+              )}
+            >
+              {isCollapsed ? collapsedContent : content}
+            </div>
           </div>
         </div>
 
         {/* Recursive Children - Indented by being in this column */}
         {hasChildren && !isCollapsed && (
-          <div className='w-full mb-2'>{children}</div>
+          <div
+            className={cn('w-full', isComfortable ? 'mb-3 md:mb-2' : 'mb-2')}
+          >
+            {children}
+          </div>
         )}
       </div>
     </div>
