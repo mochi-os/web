@@ -172,6 +172,9 @@ export * from './hooks/use-accounts'
 export * from './hooks/use-destinations'
 export * from './hooks/use-debounce'
 export * from './hooks/use-format'
+export * from './hooks/use-load-more'
+export * from './hooks/use-infinite-scroll'
+export * from './components/ui/load-more'
 // Lib utilities
 export * from './lib/create-app-client'
 export * from './lib/api-client'
@@ -191,6 +194,7 @@ export {
   initShellBridge,
   shellNavigate,
   shellNavigateExternal,
+  shellNavigateTop,
   shellSetTitle,
   shellSetSidebarState,
   shellSetLocale,
