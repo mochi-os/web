@@ -40,6 +40,18 @@ export function useLoadMore<T, P = Record<string, unknown>>(
 
   const firstRun = useRef(true)
   const paramsKeyRef = useRef(paramsKey)
+  const initialRef = useRef(initial)
+
+  // Sync to new `initial` reference (e.g. after a route loader re-run).
+  // Callers must pass a stable reference that only changes when loader data changes.
+  useEffect(() => {
+    if (initial && initial !== initialRef.current) {
+      initialRef.current = initial
+      setItems(initial.items)
+      setTotal(initial.total)
+      setPage(1)
+    }
+  }, [initial])
 
   const fetchPage = useCallback(
     async (nextPage: number, replace: boolean) => {
