@@ -230,6 +230,7 @@ export * from './lib/attachment-utils'
 export * from './lib/toast-utils'
 export * from './lib/permission-utils'
 export * from './lib/safe-navigation'
+export * from './lib/prefetch'
 export * as push from './lib/push'
 
 // Types
