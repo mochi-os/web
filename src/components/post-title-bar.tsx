@@ -60,7 +60,7 @@ export function PostTitleBar({
             {meta && (
               <div
                 className={cn(
-                  'text-muted-foreground min-w-0 break-words text-[11px] leading-4 md:text-right md:text-xs',
+                  'text-primary-foreground/70 min-w-0 break-words text-[11px] leading-4 md:text-right md:text-xs',
                   metaClassName
                 )}
               >
