@@ -11,11 +11,15 @@ interface CopyButtonProps
     VariantProps<typeof buttonVariants> {
   value: string
   successMessage?: string
+  errorMessage?: string
+  onCopyError?: () => void
 }
 
 export function CopyButton({
   value,
   successMessage = 'Copied to clipboard',
+  errorMessage = 'Failed to copy',
+  onCopyError,
   className,
   variant = 'ghost',
   size = 'icon',
@@ -30,9 +34,10 @@ export function CopyButton({
       toast.success(successMessage)
       setTimeout(() => setCopied(false), 2000)
     } else {
-      toast.error('Failed to copy')
+      onCopyError?.()
+      toast.error(errorMessage)
     }
-  }, [value, successMessage])
+  }, [errorMessage, onCopyError, value, successMessage])
 
   return (
     <Button

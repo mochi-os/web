@@ -145,16 +145,72 @@ export function shellSetLocale(locale: LocalePreferences): void {
 let clipboardIdCounter = 0
 const clipboardCallbacks = new Map<number, (ok: boolean) => void>()
 
+function fallbackExecCommandCopy(text: string): boolean {
+  if (typeof document === 'undefined' || !document.body) return false
+  if (typeof document.execCommand !== 'function') return false
+
+  const textArea = document.createElement('textarea')
+  const activeElement = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null
+  const selection = document.getSelection()
+  const selectedRange =
+    selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null
+
+  textArea.value = text
+  textArea.setAttribute('readonly', '')
+  textArea.style.position = 'fixed'
+  textArea.style.left = '-999999px'
+  textArea.style.top = '-999999px'
+  document.body.appendChild(textArea)
+
+  textArea.focus()
+  textArea.select()
+
+  try {
+    return document.execCommand('copy')
+  } catch {
+    return false
+  } finally {
+    document.body.removeChild(textArea)
+
+    if (selection) {
+      selection.removeAllRanges()
+      if (selectedRange) {
+        selection.addRange(selectedRange)
+      }
+    }
+
+    activeElement?.focus()
+  }
+}
+
 export function shellClipboardWrite(text: string): Promise<boolean> {
   // Outside shell, use native API directly
   if (!isInShell()) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text).then(() => true, () => false)
+      return navigator.clipboard.writeText(text).then(() => true, () => fallbackExecCommandCopy(text))
     }
-    return Promise.resolve(false)
+    return Promise.resolve(fallbackExecCommandCopy(text))
   }
 
-  // In shell, proxy through the parent
+  // In shell: the iframe has allow="clipboard-write" and user activation from
+  // the click, so the Clipboard API should work directly.
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(
+      () => true,
+      () => {
+        // Clipboard API failed — fall back to shell proxy
+        const id = ++clipboardIdCounter
+        return new Promise<boolean>((resolve) => {
+          clipboardCallbacks.set(id, resolve)
+          window.parent.postMessage({ type: 'clipboard.write', text, id }, '*')
+        })
+      }
+    )
+  }
+
+  // No Clipboard API — proxy through the parent
   const id = ++clipboardIdCounter
   return new Promise((resolve) => {
     clipboardCallbacks.set(id, resolve)

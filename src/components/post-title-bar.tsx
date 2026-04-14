@@ -27,7 +27,7 @@ export function PostTitleBar({
   return (
     <div
       className={cn(
-        '-mx-4 -mt-4 mb-3 rounded-t-[10px] bg-selected px-4 py-2.5',
+        '-mx-4 -mt-4 mb-3 rounded-t-[10px] bg-primary px-4 py-2.5',
         className
       )}
     >
