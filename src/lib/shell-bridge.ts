@@ -119,6 +119,19 @@ export function shellNavigateExternal(url: string): void {
   window.parent.postMessage({ type: 'navigate-external', url }, '*')
 }
 
+/**
+ * Navigate the top-level window to an arbitrary URL (e.g. an OAuth consent
+ * page on another origin). Required when the iframe can't navigate itself
+ * because the destination refuses to load in frames (X-Frame-Options).
+ */
+export function shellNavigateTop(url: string): void {
+  if (!isInShell()) {
+    window.location.href = url
+    return
+  }
+  window.parent.postMessage({ type: 'navigate-top', url }, '*')
+}
+
 /** Update the document title (syncs to shell) */
 export function shellSetTitle(title: string): void {
   document.title = title
