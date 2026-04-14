@@ -63,12 +63,26 @@ function getInitialColorTheme(): ColorTheme | null {
   // Read from server-injected inline style (for non-shell / shell page itself)
   const root = document.documentElement
   const hue = root.style.getPropertyValue('--hue')
+  // Collect non-anchor overrides (e.g. --radius from border_radius pref)
+  const overrides: Record<string, string> = {}
+  for (let i = 0; i < root.style.length; i++) {
+    const prop = root.style[i]
+    if (prop.startsWith('--') && prop !== '--hue' && prop !== '--hue-chroma' && prop !== '--hue-bg') {
+      overrides[prop] = root.style.getPropertyValue(prop).trim()
+    }
+  }
+  const hasOverrides = Object.keys(overrides).length > 0
   if (hue) {
     return {
       hue: hue.trim(),
       chroma: (root.style.getPropertyValue('--hue-chroma') || '').trim(),
       hueBg: (root.style.getPropertyValue('--hue-bg') || '').trim(),
+      ...(hasOverrides && { overrides }),
     }
+  }
+  if (hasOverrides) {
+    // No color theme, but has CSS var overrides (e.g. border_radius) — preserve them
+    return { hue: '', chroma: '', hueBg: '', overrides }
   }
   return null
 }
@@ -84,9 +98,11 @@ function applyColorThemeToDOM(ct: ColorTheme | null) {
     root.style.removeProperty(prop)
   }
   if (ct) {
-    root.style.setProperty('--hue', ct.hue)
-    root.style.setProperty('--hue-chroma', ct.chroma)
-    root.style.setProperty('--hue-bg', ct.hueBg)
+    if (ct.hue) {
+      root.style.setProperty('--hue', ct.hue)
+      root.style.setProperty('--hue-chroma', ct.chroma)
+      root.style.setProperty('--hue-bg', ct.hueBg)
+    }
     if (ct.overrides) {
       for (const [key, val] of Object.entries(ct.overrides)) {
         root.style.setProperty(key, val)
