@@ -38,7 +38,7 @@ export function PostTitleBar({
               size === 'card'
                 ? 'text-[clamp(1rem,0.96rem+0.55vw,1.125rem)] leading-[1.2] md:text-lg md:leading-tight'
                 : 'text-[clamp(1.0625rem,1rem+0.8vw,1.25rem)] leading-[1.15] md:text-lg md:leading-tight',
-              'font-semibold break-words text-balance',
+              'text-primary-foreground font-semibold break-words text-balance',
               titleClassName
             )}
           >
