@@ -9,24 +9,24 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground border border-primary/30 shadow-sm hover:bg-primary/90 hover:shadow-md active:bg-primary/80',
+          'bg-primary text-primary-foreground border-[length:var(--border-width)] border-primary/30 shadow-sm hover:bg-primary/90 hover:shadow-md active:bg-primary/80',
         destructive:
-          'bg-destructive text-destructive-foreground border border-destructive/50 shadow-sm hover:bg-destructive/90 hover:shadow-md active:bg-destructive/80',
+          'bg-destructive text-destructive-foreground border-[length:var(--border-width)] border-destructive/50 shadow-sm hover:bg-destructive/90 hover:shadow-md active:bg-destructive/80',
         warning:
-          'bg-warning text-warning-foreground border border-warning/50 shadow-sm hover:bg-warning/90 hover:shadow-md active:bg-warning/80',
+          'bg-warning text-warning-foreground border-[length:var(--border-width)] border-warning/50 shadow-sm hover:bg-warning/90 hover:shadow-md active:bg-warning/80',
         outline:
-          'border border-border bg-background hover:border-border-strong hover:bg-interactive-hover active:bg-interactive-active dark:bg-surface-1',
+          'border-[length:var(--border-width)] border-border bg-background hover:border-border-strong hover:bg-interactive-hover active:bg-interactive-active dark:bg-surface-1',
         secondary:
-          'border border-border/70 bg-secondary text-secondary-foreground hover:bg-interactive-hover active:bg-interactive-active',
+          'border-[length:var(--border-width)] border-border/70 bg-secondary text-secondary-foreground hover:bg-interactive-hover active:bg-interactive-active',
         ghost: 'hover:bg-interactive-hover active:bg-interactive-active',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-9 px-4 py-2 has-[>svg]:px-3',
-        sm: 'h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
-        lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
-        icon: 'size-9',
-        xs: 'h-7 rounded-md px-2 text-xs',
+        default: 'h-[var(--control-height-md)] px-4 py-2 has-[>svg]:px-3',
+        sm: 'h-[var(--control-height-sm)] rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
+        lg: 'h-[var(--control-height-lg)] rounded-md px-6 has-[>svg]:px-4',
+        icon: 'size-[var(--control-height-md)]',
+        xs: 'h-[var(--control-height-xs)] rounded-md px-2 text-xs',
       },
     },
     defaultVariants: {

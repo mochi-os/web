@@ -5,6 +5,16 @@ export const appearanceLabels: Record<string, string> = {
   auto: 'System',
 }
 
+export const stylePresetLabels: Record<string, string> = {
+  default: 'Default (Maia)',
+  vega: 'Vega',
+  nova: 'Nova',
+  maia: 'Maia',
+  lyra: 'Lyra',
+  mira: 'Mira',
+  luma: 'Luma',
+}
+
 export const dateFormatLabels: Record<string, string> = {
   auto: 'Detect from web browser',
   'YYYY-MM-DD': 'YYYY-MM-DD',
