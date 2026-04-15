@@ -327,16 +327,14 @@ const subscribeCallbacks = new Map<number, (result: string) => void>()
 
 export function shellSubscribeNotifications(
   app: string,
-  subscriptions: Array<{ label: string; type?: string; object?: string; defaultEnabled?: boolean }>
+  subscriptions: Array<{ label: string; topic?: string; object?: string; defaultEnabled?: boolean }>
 ): Promise<'accepted' | 'declined'> {
   const id = ++subscribeIdCounter
   // Collapse to unique (topic, object) pairs; keep first label per pair.
-  // `type` (legacy name for topic) is the notification topic — it's part of the
-  // subscription key so that per-topic routing is possible.
   const items: Array<{ label: string; topic: string; object: string }> = []
   const seen = new Set<string>()
   for (const sub of subscriptions) {
-    const topic = sub.type ?? ''
+    const topic = sub.topic ?? ''
     const object = sub.object ?? ''
     const key = `${topic}\x00${object}`
     if (seen.has(key)) continue
