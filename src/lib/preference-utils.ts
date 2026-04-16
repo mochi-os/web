@@ -6,7 +6,7 @@ export const appearanceLabels: Record<string, string> = {
 }
 
 export const stylePresetLabels: Record<string, string> = {
-  default: 'Default (Luma)',
+  default: 'Luma (Default)',
   vega: 'Vega',
   nova: 'Nova',
   maia: 'Maia',
