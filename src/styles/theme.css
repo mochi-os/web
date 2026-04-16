@@ -70,10 +70,6 @@
 
   /* Large, friendly Twitter-like rounding */
   --radius: 1.25rem;
-  --radius-sm: 0.75rem;
-  --radius-md: 1rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.75rem;
 
   /* Soft shadows (TweekCN style but visible) */
   --shadow-color: rgba(0, 0, 0, 0.08);
