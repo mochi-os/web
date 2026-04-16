@@ -383,12 +383,23 @@ const subscribeCallbacks = new Map<number, (result: string) => void>()
 
 export function shellSubscribeNotifications(
   app: string,
-  subscriptions: Array<{ label: string; type: string; object?: string; defaultEnabled?: boolean }>
+  subscriptions: Array<{ label: string; topic?: string; object?: string; defaultEnabled?: boolean }>
 ): Promise<'accepted' | 'declined'> {
   const id = ++subscribeIdCounter
+  // Collapse to unique (topic, object) pairs; keep first label per pair.
+  const items: Array<{ label: string; topic: string; object: string }> = []
+  const seen = new Set<string>()
+  for (const sub of subscriptions) {
+    const topic = sub.topic ?? ''
+    const object = sub.object ?? ''
+    const key = `${topic}\x00${object}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    items.push({ label: sub.label, topic, object })
+  }
   return new Promise((resolve) => {
     subscribeCallbacks.set(id, resolve as (r: string) => void)
-    window.parent.postMessage({ type: 'subscribe-notifications', id, app, subscriptions }, '*')
+    window.parent.postMessage({ type: 'subscribe-notifications', id, app, items }, '*')
   })
 }
 
