@@ -35,9 +35,9 @@ export function formatTime(date: Date, timeFormat: TimeFormat): string {
     let h = date.getHours()
     const ampm = h >= 12 ? 'PM' : 'AM'
     h = h % 12 || 12
-    return `${h}:${pad(date.getMinutes())} ${ampm}`
+    return `${h}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${ampm}`
   }
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 export function formatDateTime(date: Date, dateFormat: DateFormat, timeFormat: TimeFormat): string {
