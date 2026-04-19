@@ -3,7 +3,7 @@ import { Outlet } from '@tanstack/react-router'
 
 import { cn } from '../../lib/utils'
 import { getCookie } from '../../lib/cookies'
-import { isInShell, installShellLinkInterceptor, installShellNavigationSync, installShellClipboardProxy, getShellInitData } from '../../lib/shell-bridge'
+import { isInShell, installShellLinkInterceptor, installShellNavigationSync, installShellClipboardProxy, getShellInitData, shellSetSidebarPresent } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
 
 import { LayoutProvider } from '../../context/layout-provider'
@@ -96,6 +96,13 @@ export function AuthenticatedLayout({
     ? shellInit?.sidebarOpen !== false
     : getCookie('sidebar_state') !== 'false'
   const hasSidebar = !!(sidebarData && sidebarData.navGroups.length > 0)
+
+  // Inform the shell whether this app has a sidebar. The shell menu uses this
+  // to decide whether to apply the persisted collapse state to its layout —
+  // sidebar-less apps (e.g. home) should always render the menu horizontally.
+  useEffect(() => {
+    if (inShell) shellSetSidebarPresent(hasSidebar)
+  }, [inShell, hasSidebar])
   const hasRightPanel =
     !!rightPanel &&
     !!(rightPanel.header || rightPanel.content || rightPanel.footer)

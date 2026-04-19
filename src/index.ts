@@ -102,6 +102,8 @@ export * from './components/config-drawer'
 export * from './components/confirm-dialog'
 export * from './components/date-picker'
 export * from './components/faceless-avatar'
+export * from './components/entity-avatar'
+export * from './components/entity-banner'
 export * from './components/entity-onboarding-empty-state'
 export * from './components/learn-more'
 export * from './components/long-text'
@@ -197,6 +199,7 @@ export {
   shellNavigateTop,
   shellSetTitle,
   shellSetSidebarState,
+  shellSetSidebarPresent,
   shellSetLocale,
   onShellMessage,
   getShellInitData,

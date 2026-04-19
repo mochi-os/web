@@ -147,6 +147,15 @@ export function shellSetSidebarState(open: boolean): void {
   }
 }
 
+/** Notify the shell whether the current app has a sidebar at all.
+ * When false, the shell menu should render horizontally regardless of the
+ * persisted collapse state. */
+export function shellSetSidebarPresent(present: boolean): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'sidebar-present', present }, '*')
+  }
+}
+
 /** Broadcast locale preference changes to the shell (which forwards to all iframes) */
 export function shellSetLocale(locale: LocalePreferences): void {
   if (isInShell()) {
