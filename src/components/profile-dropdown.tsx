@@ -2,6 +2,7 @@ import { Moon, LogOut } from 'lucide-react'
 import useDialogState from '../hooks/use-dialog-state'
 import { useScreenSize } from '../hooks/use-screen-size'
 import { useTheme } from '../context/theme-provider'
+import { readProfileCookie } from '../lib/profile-cookie'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Button } from './ui/button'
 import {
@@ -28,22 +29,29 @@ export function ProfileDropdown() {
   const [dropdownOpen, setDropdownOpen] = useDialogState()
   const { theme, setTheme } = useTheme()
   const isDark = theme === 'dark'
+  const profile = readProfileCookie()
+  const displayName = profile.name || profile.email || ''
+  const initials = displayName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?'
 
   const avatarButton = (
     <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
       <Avatar className='h-8 w-8'>
-        <AvatarImage src='/avatars/01.png' alt='@shadcn' />
-        <AvatarFallback>SN</AvatarFallback>
+        <AvatarImage src='' alt={displayName} />
+        <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
     </Button>
   )
 
   const userInfo = (
     <div className='flex flex-col gap-1.5'>
-      <p className='text-sm leading-none font-medium'>satnaing</p>
-      <p className='text-muted-foreground text-xs leading-none'>
-        satnaingdev@gmail.com
-      </p>
+      {profile.name && <p className='text-sm leading-none font-medium'>{profile.name}</p>}
+      {profile.email && <p className='text-muted-foreground text-xs leading-none'>{profile.email}</p>}
+      {!profile.name && !profile.email && <p className='text-muted-foreground text-xs leading-none'>No profile</p>}
     </div>
   )
 
