@@ -125,7 +125,7 @@ export function TagInput({
         placeholder={placeholder}
       />
       {showSuggestions && filtered.length > 0 && (
-        <div className='bg-popover absolute top-full left-0 z-10 mt-1 w-48 rounded-[10px] border py-1 shadow-md'>
+        <div className='bg-popover absolute top-full left-0 z-10 mt-1 w-48 rounded-lg border py-1 shadow-md'>
           {filtered.slice(0, 8).map((suggestion) => (
             <button
               key={suggestion.label}

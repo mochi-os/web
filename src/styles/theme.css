@@ -68,8 +68,8 @@
   --font-serif: Georgia, serif;
   --font-mono: 'Menlo', 'Geist Mono', monospace;
 
-  /* Large, friendly Twitter-like rounding */
-  --radius: 1.25rem;
+  /* Default card/component radius; overridable by Mochi themes via border_radius */
+  --radius: 10px;
 
   /* Soft shadows (TweekCN style but visible) */
   --shadow-color: rgba(0, 0, 0, 0.08);
