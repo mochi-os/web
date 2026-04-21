@@ -68,9 +68,11 @@ export function formatRelativeTime(timestamp: number, dateFormat: DateFormat): s
 export function formatUserTimestamp(timestamp: number, locale: ResolvedLocaleForTimestamp, fallback = ''): string {
   if (!timestamp) return fallback
   if (locale.timestampDisplay === 'auto') {
-    // Relative for < 24h, absolute for older
+    // Relative for recent past (< 24h ago), absolute otherwise. Future
+    // timestamps always use absolute so "in 30 days" reads as a real date
+    // rather than "Just now".
     const diff = Date.now() / 1000 - timestamp
-    if (diff < 86400) {
+    if (diff >= 0 && diff < 86400) {
       return formatRelativeTime(timestamp, locale.dateFormat)
     }
     return formatDateTime(new Date(timestamp * 1000), locale.dateFormat, locale.timeFormat)
