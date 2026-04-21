@@ -25,6 +25,18 @@ export function isDomainEntityRouting(): boolean {
   return !!init?.domain
 }
 
+// For domain routing: the matched route path with a trailing slash.
+// '/' for whole-domain routes, '/feed/' for subpath routes like
+// acunningham.org/feed → feed entity. Falls back to '/' for shell mode
+// where route info isn't passed through (shell apps aren't on subpath routes).
+function getDomainRoutePath(): string {
+  const meta = getMeta('mochi:domain')
+  if (meta && meta !== '/') {
+    return meta.endsWith('/') ? meta : meta + '/'
+  }
+  return '/'
+}
+
 // Get the entity fingerprint from server context (null when not in entity context)
 export function getEntityFingerprint(): string | null {
   const meta = getMeta('mochi:fingerprint')
@@ -56,7 +68,7 @@ export function getRouterBasepath(): string {
   const fingerprint = getMeta('mochi:fingerprint')
   const domain = isDomainEntityRouting()
 
-  if (domain) return '/'
+  if (domain) return getDomainRoutePath()
   if (fingerprint && app) return `/${app}/${fingerprint}/`
   if (fingerprint) return `/${fingerprint}/`
   if (app) return `/${app}/`
@@ -73,7 +85,7 @@ export function getApiBasepath(): string {
   const fingerprint = getMeta('mochi:fingerprint')
   const domain = isDomainEntityRouting()
 
-  if (domain) return '/-/'
+  if (domain) return getDomainRoutePath() + '-/'
   if (entity && app) return `/${app}/${entity}/-/`
   if (entity) return `/${entity}/-/`
   // For remote entities, server injects fingerprint without entity/class
@@ -89,12 +101,16 @@ export function getApiBasepath(): string {
 // Get the auth login URL from environment or default
 // Normalize an entity-scoped URL for the current routing context.
 // API responses return absolute paths like /feeds/<entity>/-/attachments/...
-// On custom domains, the app/entity prefix doesn't exist — strip to /-/...
+// On a whole-domain route the app/entity prefix is gone (/-/...); on a
+// subpath route the prefix becomes the route path (/feed/-/...).
 export function normalizeEntityUrl(url: string): string {
   if (!isDomainEntityRouting()) return url
   const idx = url.indexOf('/-/')
-  if (idx >= 0) return url.slice(idx)
-  return url
+  if (idx < 0) return url
+  const suffix = url.slice(idx)
+  const base = getDomainRoutePath()
+  if (base === '/') return suffix
+  return base.slice(0, -1) + suffix
 }
 
 export function getAuthLoginUrl(): string {

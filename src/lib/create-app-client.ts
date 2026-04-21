@@ -2,7 +2,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import { getAppPath, isDomainEntityRouting, useAuthStore, isInShell } from '@mochi/web'
+import { getApiBasepath, getAppPath, isDomainEntityRouting, useAuthStore, isInShell } from '@mochi/web'
 
 export interface AppClientOptions {
   /**
@@ -37,7 +37,13 @@ export function createAppClient({
     // If baseURL is not already set and we have an appName or can getAppPath
     if (!config.baseURL) {
       if (isDomainEntityRouting()) {
-        config.baseURL = '/'
+        // Use the matched route path so subpath-routed domain entities
+        // (e.g. acunningham.org/feed) resolve relative endpoints under
+        // /feed/, not the domain root.
+        const apiBase = getApiBasepath()
+        config.baseURL = apiBase.endsWith('/-/')
+          ? apiBase.slice(0, -2)
+          : apiBase
       } else {
         const appPath = getAppPath()
         if (appPath) {
