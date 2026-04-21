@@ -216,23 +216,9 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
     return Promise.resolve(fallbackExecCommandCopy(text))
   }
 
-  // In shell: the iframe has allow="clipboard-write" and user activation from
-  // the click, so the Clipboard API should work directly.
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    return navigator.clipboard.writeText(text).then(
-      () => true,
-      () => {
-        // Clipboard API failed — fall back to shell proxy
-        const id = ++clipboardIdCounter
-        return new Promise<boolean>((resolve) => {
-          clipboardCallbacks.set(id, resolve)
-          window.parent.postMessage({ type: 'clipboard.write', text, id }, '*')
-        })
-      }
-    )
-  }
-
-  // No Clipboard API — proxy through the parent
+  // In shell (sandboxed iframe, opaque origin): Clipboard API is blocked.
+  // Always proxy through the parent via postMessage to avoid infinite recursion
+  // with the monkey-patch installed by installShellClipboardProxy().
   const id = ++clipboardIdCounter
   return new Promise((resolve) => {
     clipboardCallbacks.set(id, resolve)
