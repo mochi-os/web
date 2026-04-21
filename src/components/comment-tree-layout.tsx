@@ -64,24 +64,14 @@ export function CommentTreeLayout({
       <div
         className={cn(
           'relative shrink-0',
-          isComfortable ? 'w-6 md:w-5' : 'w-5'
+          isComfortable ? 'w-5 md:w-4' : 'w-4'
         )}
       >
         <div
           className={cn(
             'absolute top-0 bottom-0 z-0 w-[2px]',
-            isComfortable ? 'left-[11px] md:left-[9px]' : 'left-[9px]',
+            isComfortable ? 'left-[9px] md:left-[7px]' : 'left-[7px]',
             selfColorBg
-          )}
-        />
-
-        <div
-          className={cn(
-            'absolute z-10 rounded-bl-xl border-r-0 border-t-0 border-l-[2px] border-b-[2px]',
-            isComfortable
-              ? 'top-0 left-[11px] h-3.5 w-6 md:-top-0.5 md:left-[9px] md:h-3 md:w-5'
-              : '-top-0.5 left-[9px] h-3 w-5',
-            selfColorBorder
           )}
         />
 
@@ -96,8 +86,8 @@ export function CommentTreeLayout({
             className={cn(
               'bg-background hover:bg-muted text-muted-foreground absolute z-20 flex items-center justify-center rounded-full border transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               isComfortable
-                ? 'top-[5px] left-[5px] size-3.5 md:top-[4px] md:left-[4px] md:size-3'
-                : 'top-[4px] left-[4px] size-3',
+                ? 'top-[5px] left-[3px] size-3.5 md:top-[4px] md:left-[2px] md:size-3'
+                : 'top-[4px] left-[2px] size-3',
               selfColorBorder
             )}
             aria-label={isCollapsed ? 'Expand' : 'Collapse'}
