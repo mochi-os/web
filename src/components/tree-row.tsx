@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useFormat } from '../hooks/use-format'
+import { EntityAvatar } from './entity-avatar'
 
 export interface TreeRowField {
   id: string
@@ -122,7 +123,12 @@ export function TreeRow({
 
       case 'user': {
         const name = peopleMap[value] || value
-        return <span className='truncate'>{truncate(name, 25)}</span>
+        return (
+          <span className='inline-flex items-center gap-1.5 truncate'>
+            <EntityAvatar fingerprint={value} name={name} size={18} />
+            <span className='truncate'>{truncate(name, 25)}</span>
+          </span>
+        )
       }
 
       case 'checklist': {

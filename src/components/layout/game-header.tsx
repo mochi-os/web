@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { cn } from '../../lib/utils'
+import { EntityAvatar } from '../entity-avatar'
+import { useAccent } from '../../hooks/use-accent'
 
 interface GameHeaderProps {
   title: ReactNode
@@ -12,6 +14,11 @@ interface GameHeaderProps {
   statusLive?: 'off' | 'polite' | 'assertive'
   variant?: 'card' | 'strip'
   className?: string
+  // Opponent entity fingerprint — renders their avatar next to the title and
+  // tints the header border with their accent colour (if set).
+  opponentFingerprint?: string | null
+  // Fallback name for the avatar initials when the opponent has no avatar set.
+  opponentName?: string
 }
 
 export function GameHeader({
@@ -25,7 +32,14 @@ export function GameHeader({
   statusLive = 'polite',
   variant = 'card',
   className,
+  opponentFingerprint,
+  opponentName,
 }: GameHeaderProps) {
+  const { accent } = useAccent(opponentFingerprint)
+  const accentStyle: CSSProperties | undefined = accent
+    ? { borderColor: accent }
+    : undefined
+
   return (
     <section
       className={cn(
@@ -37,29 +51,40 @@ export function GameHeader({
           : 'border-b border-border/50 px-3 py-2.5',
         className
       )}
+      style={accentStyle}
     >
-      <div className='min-w-0 space-y-1'>
-        <h1 className='min-w-0 line-clamp-2 text-base leading-tight font-semibold min-[600px]:line-clamp-1 min-[900px]:text-lg'>
-          {title}
-        </h1>
-        <p
-          aria-live={statusLive}
-          className='text-sm leading-tight font-medium min-[900px]:text-[0.9375rem]'
-        >
-          {myTurn != null && (
-            <span
-              aria-hidden='true'
-              className={cn(
-                'mr-1.5 inline-block size-2 rounded-full align-middle',
-                myTurn ? 'bg-emerald-500' : 'bg-muted-foreground/30'
-              )}
-            />
-          )}
-          {status}
-        </p>
-        {meta ? (
-          <p className='text-sm leading-tight text-muted-foreground'>{meta}</p>
+      <div className='flex min-w-0 items-center gap-3'>
+        {opponentFingerprint ? (
+          <EntityAvatar
+            fingerprint={opponentFingerprint}
+            name={opponentName}
+            size={32}
+            className='shrink-0'
+          />
         ) : null}
+        <div className='min-w-0 space-y-1'>
+          <h1 className='min-w-0 line-clamp-2 text-base leading-tight font-semibold min-[600px]:line-clamp-1 min-[900px]:text-lg'>
+            {title}
+          </h1>
+          <p
+            aria-live={statusLive}
+            className='text-sm leading-tight font-medium min-[900px]:text-[0.9375rem]'
+          >
+            {myTurn != null && (
+              <span
+                aria-hidden='true'
+                className={cn(
+                  'mr-1.5 inline-block size-2 rounded-full align-middle',
+                  myTurn ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                )}
+              />
+            )}
+            {status}
+          </p>
+          {meta ? (
+            <p className='text-sm leading-tight text-muted-foreground'>{meta}</p>
+          ) : null}
+        </div>
       </div>
 
       {actions ? (

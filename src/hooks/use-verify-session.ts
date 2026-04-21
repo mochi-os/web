@@ -12,14 +12,16 @@ export function useVerifySession(enabled: boolean = true) {
   const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
 
   useEffect(() => {
-    if (!enabled) return
-
-    // 1. Proactive verification on load/token change.
+    // Always load the identity once on mount so the auth store has the user's
+    // name available (needed by menu header, optimistic UI, etc.). The periodic
+    // background re-check is gated on `enabled` — shell mode handles session
+    // validity itself and doesn't need the 30-min poll.
     if (token && !isLogoutInProgress) {
-      authManager.loadIdentity(true)
+      authManager.loadIdentity(false)
     }
 
-    // 2. Background check (every 30 mins) if tab stays open
+    if (!enabled) return
+
     const interval = setInterval(() => {
       if (token && !isLogoutInProgress) {
         authManager.loadIdentity(true)

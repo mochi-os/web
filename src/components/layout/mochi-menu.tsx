@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  CircleUser,
   LogOut,
   Settings,
 } from 'lucide-react'
@@ -23,6 +22,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '../ui/drawer'
+import { EntityAvatar } from '../entity-avatar'
 import { SignOutDialog } from '../sign-out-dialog'
 import { NotificationsSection } from './notification-menu'
 
@@ -37,10 +37,18 @@ function MochiLogo() {
   return <img src='/images/logo-header.svg' alt='Mochi' className='h-6 w-6' />
 }
 
-function UserIcon({ unreadCount }: { unreadCount?: number }) {
+function UserIcon({
+  unreadCount,
+  identity,
+  name,
+}: {
+  unreadCount?: number
+  identity?: string
+  name?: string
+}) {
   return (
     <div className='relative'>
-      <CircleUser className='size-6 text-muted-foreground' />
+      <EntityAvatar fingerprint={identity || undefined} name={name} size={24} />
       {!!unreadCount && (
         <span className='absolute -right-0.5 -top-0.5 z-10 h-3 w-3 rounded-full bg-red-500' />
       )}
@@ -60,13 +68,15 @@ export function MochiMenu({
   const { notifications, markAsRead, markAllAsRead } = useNotifications()
 
   const name = useAuthStore((s) => s.name)
+  const identity = useAuthStore((s) => s.identity)
   const unreadCount = notifications.filter((n) => n.read === 0).length
 
   const menuContent = (
     <>
       <DropdownMenuLabel className='p-0 font-normal'>
         <div className='flex items-center justify-between px-2 py-1.5'>
-          <div className='grid text-sm'>
+          <div className='flex items-center gap-2 text-sm'>
+            <EntityAvatar fingerprint={identity || undefined} name={name} size={32} />
             <span className='font-semibold'>{name || 'User'}</span>
           </div>
           <div className='flex items-center gap-1 ml-4'>
@@ -102,7 +112,11 @@ export function MochiMenu({
 
   const trigger = (
     <button className='rounded p-1 hover:bg-interactive-hover active:bg-interactive-active'>
-      <UserIcon unreadCount={showNotifications ? unreadCount : 0} />
+      <UserIcon
+        unreadCount={showNotifications ? unreadCount : 0}
+        identity={identity}
+        name={name}
+      />
     </button>
   )
 
