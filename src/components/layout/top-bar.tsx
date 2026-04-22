@@ -24,15 +24,15 @@ export function TopBar({
   className,
   mobileTitle,
 }: TopBarProps) {
-  const { theme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const { isMobile, isTablet } = useScreenSize()
   const { toggleSidebar } = useSidebar()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
     const meta = document.querySelector("meta[name='theme-color']")
-    meta?.setAttribute('content', theme === 'dark' ? '#020817' : '#fff')
-  }, [theme])
+    meta?.setAttribute('content', resolvedTheme === 'dark' ? '#1a1a1a' : '#fff')
+  }, [resolvedTheme])
 
   if (!isAuthenticated) {
     return null

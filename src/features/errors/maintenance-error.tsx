@@ -11,7 +11,7 @@ export function MaintenanceError() {
           We'll be back online shortly.
         </p>
         <div className='mt-6 flex gap-4'>
-          <Button variant='outline'>Learn more</Button>
+          <Button variant='outline' onClick={() => window.location.reload()}>Try again</Button>
         </div>
       </div>
     </div>

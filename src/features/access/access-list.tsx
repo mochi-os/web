@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from '../../components/ui/alert-dialog'
 import type { AccessLevel, AccessRule } from './types'
+import { GeneralError } from '../errors/general-error'
 
 // Subject display labels for special subjects
 const SUBJECT_LABELS: Record<string, string> = {
@@ -43,6 +44,7 @@ export interface AccessListProps {
   onRevoke: (subject: string) => Promise<void>
   isLoading?: boolean
   error?: Error | null
+  onRetry?: () => void
   /** Width for the level select dropdown (default: 250px) */
   selectWidth?: number
 }
@@ -93,6 +95,7 @@ export function AccessList({
   onRevoke,
   isLoading = false,
   error = null,
+  onRetry,
   selectWidth = 250,
 }: AccessListProps) {
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
@@ -142,11 +145,7 @@ export function AccessList({
   }
 
   if (error) {
-    return (
-      <div className="text-destructive text-sm">
-        Error loading access rules: {error.message}
-      </div>
-    )
+    return <GeneralError mode='inline' minimal error={error} reset={onRetry} />
   }
 
   if (!rules.length) {

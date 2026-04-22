@@ -76,11 +76,18 @@ export function initShellBridge(): Promise<ShellInitData> {
   }
 
   shellInitPromise = new Promise((resolve) => {
+    const timeoutId = window.setTimeout(() => {
+      window.removeEventListener('message', onMessage)
+      shellInitData = { token: '', inShell: true }
+      resolve(shellInitData)
+    }, 5000)
+
     function onMessage(event: MessageEvent) {
       const data = event.data
       if (!data || typeof data !== 'object') return
 
       if (data.type === 'init') {
+        window.clearTimeout(timeoutId)
         window.removeEventListener('message', onMessage)
         shellInitData = data as ShellInitData
         resolve(shellInitData)

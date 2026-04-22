@@ -40,18 +40,18 @@ export function NavUser() {
   const { isDesktop } = useScreenSize()
   const [open, setOpen] = useDialogState()
   const [dropdownOpen, setDropdownOpen] = useDialogState()
-  const { theme, setTheme } = useTheme()
-  const isDark = theme === 'dark'
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
 
   const name = useAuthStore((state) => state.name)
   const displayName = name || 'User'
 
   /* Update theme-color meta tag when theme is updated */
   useEffect(() => {
-    const themeColor = theme === 'dark' ? '#020817' : '#fff'
+    const themeColor = resolvedTheme === 'dark' ? '#1a1a1a' : '#fff'
     const metaThemeColor = document.querySelector("meta[name='theme-color']")
     if (metaThemeColor) metaThemeColor.setAttribute('content', themeColor)
-  }, [theme])
+  }, [resolvedTheme])
 
   const triggerButton = (
     <SidebarMenuButton
@@ -175,7 +175,7 @@ export function NavUser() {
 
 export function NavUserDropdownContent() {
   const [open, setOpen] = useDialogState()
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
 
   const name = useAuthStore((state) => state.name)
   const displayName = name || 'User'
@@ -200,9 +200,9 @@ export function NavUserDropdownContent() {
           <Moon className="size-4" />
           Dark mode
         </div>
-        <Switch 
-          checked={theme === 'dark'} 
-          onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
+        <Switch
+          checked={resolvedTheme === 'dark'}
+          onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
         />
       </div>
       <DropdownMenuSeparator />

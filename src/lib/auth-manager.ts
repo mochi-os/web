@@ -49,8 +49,8 @@ class AuthManager {
     this.isLoggingOut = true
     useAuthStore.getState().startLogoutTransition()
     
-    if (reason) {
-      console.log(`[AuthManager] Logout initiated: ${reason}`)
+    if (reason && import.meta.env.DEV) {
+      console.warn(`[AuthManager] Logout initiated: ${reason}`)
     }
 
     try {
