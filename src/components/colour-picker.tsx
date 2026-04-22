@@ -2,6 +2,7 @@
 // Copyright Alistair Cunningham 2026
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
 export const PRESET_COLOURS = [
@@ -62,19 +63,27 @@ function hueToColour(h: number): string {
 interface ColourPickerProps {
   value: string;
   onChange: (colour: string) => void;
+  onClear?: () => void;
   className?: string;
 }
 
-export function ColourPicker({ value, onChange, className }: ColourPickerProps) {
-  const [hsv, setHsv] = useState<[number, number, number]>(() => hexToHsv(value));
+export function ColourPicker({ value, onChange, onClear, className }: ColourPickerProps) {
+  const hasValue = value !== "";
+  const [hsv, setHsv] = useState<[number, number, number]>(() =>
+    hasValue ? hexToHsv(value) : [0, 0, 1],
+  );
   const svCanvasRef = useRef<HTMLCanvasElement>(null);
   const hueCanvasRef = useRef<HTMLCanvasElement>(null);
   const [draggingSV, setDraggingSV] = useState(false);
   const [draggingHue, setDraggingHue] = useState(false);
   const [hexInput, setHexInput] = useState(value);
 
-  // Sync internal HSV when value prop changes externally
+  // Sync internal state when value prop changes externally
   useEffect(() => {
+    if (value === "") {
+      setHexInput("");
+      return;
+    }
     const normalised = value.toLowerCase();
     if (normalised !== hsvToHex(hsv[0], hsv[1], hsv[2]).toLowerCase()) {
       setHsv(hexToHsv(value));
@@ -194,6 +203,7 @@ export function ColourPicker({ value, onChange, className }: ColourPickerProps) 
 
   // Check if a preset is the selected colour
   const isSelected = (preset: string) => {
+    if (!hasValue) return false;
     return preset.toLowerCase() === hsvToHex(hsv[0], hsv[1], hsv[2]).toLowerCase();
   };
 
@@ -236,13 +246,15 @@ export function ColourPicker({ value, onChange, className }: ColourPickerProps) 
       />
       {/* SV indicator overlay */}
       <div className="relative -mt-40 h-40 pointer-events-none">
-        <div
-          className="absolute size-4 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.3)] -translate-x-1/2 -translate-y-1/2"
-          style={{
-            left: `${hsv[1] * 100}%`,
-            top: `${(1 - hsv[2]) * 100}%`,
-          }}
-        />
+        {hasValue && (
+          <div
+            className="absolute size-4 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.3)] -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${hsv[1] * 100}%`,
+              top: `${(1 - hsv[2]) * 100}%`,
+            }}
+          />
+        )}
       </div>
 
       {/* Hue strip */}
@@ -262,24 +274,32 @@ export function ColourPicker({ value, onChange, className }: ColourPickerProps) 
       />
       {/* Hue indicator overlay */}
       <div className="relative -mt-4 h-4 pointer-events-none">
-        <div
-          className="absolute w-1 h-full rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.3)] -translate-x-1/2"
-          style={{ left: `${(hsv[0] / 360) * 100}%` }}
-        />
+        {hasValue && (
+          <div
+            className="absolute w-1 h-full rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.3)] -translate-x-1/2"
+            style={{ left: `${(hsv[0] / 360) * 100}%` }}
+          />
+        )}
       </div>
 
       {/* Hex input */}
       <div className="flex items-center gap-2 mt-3">
         <span
           className="size-6 rounded-full border border-border shrink-0"
-          style={{ backgroundColor: hsvToHex(hsv[0], hsv[1], hsv[2]) }}
+          style={hasValue ? { backgroundColor: hsvToHex(hsv[0], hsv[1], hsv[2]) } : undefined}
         />
         <Input
           value={hexInput}
           onChange={(e) => handleHexChange(e.target.value)}
           className="w-28 font-mono text-sm"
           maxLength={7}
+          placeholder={hasValue ? "#rrggbb" : "None"}
         />
+        {onClear && hasValue && (
+          <Button type="button" variant="outline" size="sm" onClick={onClear}>
+            Clear
+          </Button>
+        )}
       </div>
     </div>
   );
