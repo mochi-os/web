@@ -19,6 +19,8 @@ type EntityAvatarProps = {
   alt?: string
 }
 
+const avatarValidityCache = new Map<string, boolean>()
+
 function fingerprintUrl(fingerprint: string, version?: string): string {
   const base = `/${fingerprint}/-/avatar`
   return version ? `${base}?v=${encodeURIComponent(version)}` : base
@@ -35,9 +37,12 @@ export function EntityAvatar({
   alt,
 }: EntityAvatarProps) {
   const resolvedSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
-  const [state, setState] = useState<'loading' | 'loaded' | 'error'>(
-    resolvedSrc ? 'loading' : 'error'
-  )
+  const [state, setState] = useState<'loading' | 'loaded' | 'error'>(() => {
+    if (!resolvedSrc) return 'error'
+    const cached = avatarValidityCache.get(resolvedSrc)
+    if (cached !== undefined) return cached ? 'loaded' : 'error'
+    return 'loading'
+  })
 
   // Probe via fetch and require Content-Type: image/*. The backend may return
   // 200 with text/html (SPA shell) for unknown/remote persons, and browsers
@@ -48,20 +53,27 @@ export function EntityAvatar({
       setState('error')
       return
     }
+
+    const cached = avatarValidityCache.get(resolvedSrc)
+    if (cached !== undefined) {
+      setState(cached ? 'loaded' : 'error')
+      return
+    }
+
     setState('loading')
     const controller = new AbortController()
     fetch(resolvedSrc, { method: 'HEAD', credentials: 'same-origin', signal: controller.signal })
       .then((response) => {
         const contentType = response.headers.get('content-type') ?? ''
-        if (response.ok && contentType.startsWith('image/')) {
-          setState('loaded')
-        } else {
-          setState('error')
-        }
+        const valid = response.ok && contentType.startsWith('image/')
+        avatarValidityCache.set(resolvedSrc, valid)
+        setState(valid ? 'loaded' : 'error')
       })
       .catch(() => {
-        // Abort is expected on unmount; any other failure means we should fall back.
-        if (!controller.signal.aborted) setState('error')
+        if (!controller.signal.aborted) {
+          avatarValidityCache.set(resolvedSrc, false)
+          setState('error')
+        }
       })
     return () => controller.abort()
   }, [resolvedSrc])

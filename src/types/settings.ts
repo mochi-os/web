@@ -30,6 +30,7 @@ export interface ThemeInfo {
   chroma: number
   hue_bg: number
   preview: string
+  preview_dark?: string
   border_radius?: string
   icon_mask?: string
   icon_background?: string

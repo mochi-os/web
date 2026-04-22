@@ -79,12 +79,12 @@ function RightPanelProvider({
   )
 
   const togglePanel = React.useCallback(() => {
-    if (isMobile) {
+    if (!isLargeScreen) {
       setOpenMobile((prev) => !prev)
     } else {
       setOpen((prev) => !prev)
     }
-  }, [isMobile, setOpen])
+  }, [isLargeScreen, setOpen])
 
   const contextValue = React.useMemo<RightPanelContextProps>(
     () => ({
@@ -123,10 +123,10 @@ type RightPanelProps = React.ComponentProps<'div'> & {
 }
 
 function RightPanel({ className, children, ...props }: RightPanelProps) {
-  const { isMobile, isLargeScreen, open, openMobile, setOpenMobile } = useRightPanel()
+  const { isLargeScreen, open, openMobile, setOpenMobile } = useRightPanel()
 
-  // Hidden on small/medium screens (shown as drawer on mobile)
-  if (isMobile) {
+  // Tablet and mobile: Sheet drawer
+  if (!isLargeScreen) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
@@ -147,11 +147,6 @@ function RightPanel({ className, children, ...props }: RightPanelProps) {
         </SheetContent>
       </Sheet>
     )
-  }
-
-  // Hidden on medium screens (between mobile and xl)
-  if (!isLargeScreen) {
-    return null
   }
 
   // Desktop: only show when open
@@ -212,12 +207,8 @@ function RightPanelTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { togglePanel, open, isLargeScreen, isMobile } = useRightPanel()
-
-  // Only show on large screens or when there's mobile context
-  if (!isLargeScreen && !isMobile) {
-    return null
-  }
+  const { togglePanel, open, openMobile, isLargeScreen } = useRightPanel()
+  const isOpen = isLargeScreen ? open : openMobile
 
   return (
     <Button
@@ -231,7 +222,7 @@ function RightPanelTrigger({
       }}
       {...props}
     >
-      {open ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
+      {isOpen ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
       <span className="sr-only">Toggle Right Panel</span>
     </Button>
   )
@@ -241,7 +232,7 @@ function RightPanelCloseButton({
   className,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { setOpen, setOpenMobile, isMobile } = useRightPanel()
+  const { setOpen, setOpenMobile, isLargeScreen } = useRightPanel()
 
   return (
     <Button
@@ -250,7 +241,7 @@ function RightPanelCloseButton({
       size="icon"
       className={cn('size-8', className)}
       onClick={() => {
-        if (isMobile) {
+        if (!isLargeScreen) {
           setOpenMobile(false)
         } else {
           setOpen(false)
