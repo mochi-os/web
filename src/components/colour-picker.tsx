@@ -64,10 +64,11 @@ interface ColourPickerProps {
   value: string;
   onChange: (colour: string) => void;
   onClear?: () => void;
+  actions?: React.ReactNode;
   className?: string;
 }
 
-export function ColourPicker({ value, onChange, onClear, className }: ColourPickerProps) {
+export function ColourPicker({ value, onChange, onClear, actions, className }: ColourPickerProps) {
   const hasValue = value !== "";
   const [hsv, setHsv] = useState<[number, number, number]>(() =>
     hasValue ? hexToHsv(value) : [0, 0, 1],
@@ -300,6 +301,7 @@ export function ColourPicker({ value, onChange, onClear, className }: ColourPick
             Clear
           </Button>
         )}
+        {actions}
       </div>
     </div>
   );

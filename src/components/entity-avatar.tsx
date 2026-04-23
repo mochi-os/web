@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAccent } from '../hooks/use-accent'
 import { cn } from '../lib/utils'
 import { FacelessAvatar } from './faceless-avatar'
 
@@ -17,6 +18,10 @@ type EntityAvatarProps = {
   size?: number
   className?: string
   alt?: string
+  // Explicit accent colour for the ring. Takes precedence over the automatic
+  // lookup — pass this when the caller already has the accent value and would
+  // otherwise force a redundant style fetch.
+  accent?: string
 }
 
 const AVATAR_CACHE_MAX = 500
@@ -44,8 +49,11 @@ export function EntityAvatar({
   size = 48,
   className,
   alt,
+  accent,
 }: EntityAvatarProps) {
   const resolvedSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
+  const { accent: fetched } = useAccent(!accent && fingerprint ? fingerprint : undefined)
+  const ring = accent ?? fetched
   const [state, setState] = useState<'loading' | 'loaded' | 'error'>(() => {
     if (!resolvedSrc) return 'error'
     const cached = avatarValidityCache.get(resolvedSrc)
@@ -87,18 +95,14 @@ export function EntityAvatar({
     return () => controller.abort()
   }, [resolvedSrc])
 
-  if (!resolvedSrc || state !== 'loaded') {
-    return (
-      <FacelessAvatar
-        name={name}
-        seed={seed ?? fingerprint ?? undefined}
-        size={size}
-        className={className}
-      />
-    )
-  }
-
-  return (
+  const content = !resolvedSrc || state !== 'loaded' ? (
+    <FacelessAvatar
+      name={name}
+      seed={seed ?? fingerprint ?? undefined}
+      size={size}
+      className={className}
+    />
+  ) : (
     <img
       src={resolvedSrc}
       alt={alt ?? (name ? `Avatar for ${name}` : 'Avatar')}
@@ -111,4 +115,17 @@ export function EntityAvatar({
       style={{ width: size, height: size }}
     />
   )
+
+  if (ring) {
+    return (
+      <span
+        className="inline-flex shrink-0 rounded-full"
+        style={{ boxShadow: `0 0 0 2px ${ring}`, lineHeight: 0 }}
+      >
+        {content}
+      </span>
+    )
+  }
+
+  return content
 }
