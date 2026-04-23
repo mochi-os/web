@@ -19,7 +19,16 @@ type EntityAvatarProps = {
   alt?: string
 }
 
+const AVATAR_CACHE_MAX = 500
 const avatarValidityCache = new Map<string, boolean>()
+
+function rememberValidity(url: string, valid: boolean) {
+  if (avatarValidityCache.size >= AVATAR_CACHE_MAX) {
+    const oldest = avatarValidityCache.keys().next().value
+    if (oldest !== undefined) avatarValidityCache.delete(oldest)
+  }
+  avatarValidityCache.set(url, valid)
+}
 
 function fingerprintUrl(fingerprint: string, version?: string): string {
   const base = `/${fingerprint}/-/avatar`
@@ -66,12 +75,12 @@ export function EntityAvatar({
       .then((response) => {
         const contentType = response.headers.get('content-type') ?? ''
         const valid = response.ok && contentType.startsWith('image/')
-        avatarValidityCache.set(resolvedSrc, valid)
+        rememberValidity(resolvedSrc, valid)
         setState(valid ? 'loaded' : 'error')
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          avatarValidityCache.set(resolvedSrc, false)
+          rememberValidity(resolvedSrc, false)
           setState('error')
         }
       })
