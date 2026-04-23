@@ -442,20 +442,31 @@ function SidebarMenuCollapsedDropdown({
             {item.title} {item.badge ? `(${item.badge})` : ''}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {item.items.map((sub) => (
-            <DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
-              <Link
-                to={sub.url}
-                className={`${checkIsActive(pathname, sub) ? 'bg-secondary' : ''}`}
-              >
-                {sub.icon && <sub.icon />}
-                <span className='max-w-52 text-wrap'>{sub.title}</span>
-                {sub.badge && (
-                  <span className='ms-auto text-xs'>{sub.badge}</span>
-                )}
-              </Link>
-            </DropdownMenuItem>
-          ))}
+          {item.items.map((sub) => {
+            if (isNavSubCollapsible(sub)) return null
+            const key = `${sub.title}-${'url' in sub ? sub.url : 'action'}`
+            if (isNavAction(sub)) {
+              return (
+                <DropdownMenuItem key={key} onClick={sub.onClick}>
+                  {sub.icon && <sub.icon />}
+                  <span className='max-w-52 text-wrap'>{sub.title}</span>
+                  {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
+                </DropdownMenuItem>
+              )
+            }
+            return (
+              <DropdownMenuItem key={key} asChild>
+                <Link
+                  to={sub.url}
+                  className={`${checkIsActive(pathname, sub) ? 'bg-secondary' : ''}`}
+                >
+                  {sub.icon && <sub.icon />}
+                  <span className='max-w-52 text-wrap'>{sub.title}</span>
+                  {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
+                </Link>
+              </DropdownMenuItem>
+            )
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>

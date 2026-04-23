@@ -50,7 +50,7 @@ function UserIcon({
     <div className='relative'>
       <EntityAvatar fingerprint={identity || undefined} name={name} size={24} />
       {!!unreadCount && (
-        <span className='absolute -right-0.5 -top-0.5 z-10 h-3 w-3 rounded-full bg-red-500' />
+        <span className='absolute -right-0.5 -top-0.5 z-10 h-3 w-3 rounded-full bg-notification' />
       )}
     </div>
   )
@@ -110,8 +110,15 @@ export function MochiMenu({
     </>
   )
 
+  const triggerLabel = unreadCount > 0
+    ? `Open menu (${unreadCount} unread notification${unreadCount === 1 ? '' : 's'})`
+    : 'Open menu'
+
   const trigger = (
-    <button className='rounded p-1 hover:bg-interactive-hover active:bg-interactive-active'>
+    <button
+      aria-label={triggerLabel}
+      className='rounded p-1 hover:bg-interactive-hover active:bg-interactive-active'
+    >
       <UserIcon
         unreadCount={showNotifications ? unreadCount : 0}
         identity={identity}
