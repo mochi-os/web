@@ -100,7 +100,7 @@ export function EntityAvatar({
       name={name}
       seed={seed ?? fingerprint ?? undefined}
       size={size}
-      className={className}
+      className={cn(ring && 'border-0', className)}
     />
   ) : (
     <img
@@ -110,6 +110,7 @@ export function EntityAvatar({
       height={size}
       className={cn(
         'border-border inline-block shrink-0 rounded-full border object-cover',
+        ring && 'border-0',
         className
       )}
       style={{ width: size, height: size }}

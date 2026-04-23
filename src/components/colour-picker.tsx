@@ -296,12 +296,16 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
           maxLength={7}
           placeholder={hasValue ? "#rrggbb" : "None"}
         />
-        {onClear && hasValue && (
-          <Button type="button" variant="outline" size="sm" onClick={onClear}>
-            Clear
-          </Button>
+        {((onClear && hasValue) || actions) && (
+          <div className="ml-auto flex items-center gap-2">
+            {onClear && hasValue && (
+              <Button type="button" variant="outline" size="sm" onClick={onClear}>
+                Clear
+              </Button>
+            )}
+            {actions}
+          </div>
         )}
-        {actions}
       </div>
     </div>
   );
