@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as SheetPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { shellSetModalOpen } from '../../lib/shell-bridge'
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot='sheet' {...props} />
@@ -33,7 +34,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot='sheet-overlay'
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-x-0 top-12 sm:top-0 bottom-0 z-[55] bg-black/50',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[65] bg-black/50',
         className
       )}
       {...props}
@@ -49,6 +50,11 @@ function SheetContent({
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
 }) {
+  React.useEffect(() => {
+    shellSetModalOpen(true)
+    return () => shellSetModalOpen(false)
+  }, [])
+
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -56,11 +62,11 @@ function SheetContent({
         data-slot='sheet-content'
         onInteractOutside={(e) => e.preventDefault()}
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[55] flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[65] flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           side === 'right' &&
-            'data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end top-12 sm:top-0 bottom-0 end-0 h-[calc(100vh-3rem)] sm:h-screen w-3/4 border-s sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end top-0 bottom-0 end-0 h-screen w-3/4 border-s sm:max-w-sm',
           side === 'left' &&
-            'data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start top-12 sm:top-0 bottom-0 start-0 h-[calc(100vh-3rem)] sm:h-screen w-3/4 border-e sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start top-0 bottom-0 start-0 h-screen w-3/4 border-e sm:max-w-sm',
           side === 'top' &&
             'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
           side === 'bottom' &&

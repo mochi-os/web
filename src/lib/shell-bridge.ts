@@ -170,6 +170,12 @@ export function shellSetLocale(locale: LocalePreferences): void {
   }
 }
 
+export function shellSetModalOpen(open: boolean): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'modal-open', open }, '*')
+  }
+}
+
 /** Write text to the clipboard. Uses the shell proxy when sandboxed. */
 let clipboardIdCounter = 0
 const clipboardCallbacks = new Map<number, (ok: boolean) => void>()
