@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAccent } from '../hooks/use-accent'
+import { normalizeEntityUrl } from '../lib/app-path'
 import { cn } from '../lib/utils'
+import { authenticatedUrl } from '../lib/shell-bridge'
 import { FacelessAvatar } from './faceless-avatar'
 
 type EntityAvatarProps = {
@@ -13,6 +15,10 @@ type EntityAvatarProps = {
   version?: string
   // Direct URL override. If set, takes precedence over fingerprint.
   src?: string | null
+  // Direct URL for the entity's style endpoint. When rendering an entity owned
+  // by another peer, the consuming app proxies /style through its own action
+  // (same pattern as src). Falls back to /<fingerprint>/-/style when omitted.
+  styleUrl?: string | null
   name?: string
   seed?: string
   size?: number
@@ -44,6 +50,7 @@ export function EntityAvatar({
   fingerprint,
   version,
   src,
+  styleUrl,
   name,
   seed,
   size = 48,
@@ -51,12 +58,16 @@ export function EntityAvatar({
   alt,
   accent,
 }: EntityAvatarProps) {
-  const resolvedSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
-  const { accent: fetched } = useAccent(!accent && fingerprint ? fingerprint : undefined)
+  const rawSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
+  const resolvedSrc = rawSrc ? authenticatedUrl(normalizeEntityUrl(rawSrc)) : null
+  const { accent: fetched } = useAccent(
+    !accent && !styleUrl && fingerprint ? fingerprint : undefined,
+    !accent && styleUrl ? normalizeEntityUrl(styleUrl) : undefined
+  )
   const ring = accent ?? fetched
   const [state, setState] = useState<'loading' | 'loaded' | 'error'>(() => {
-    if (!resolvedSrc) return 'error'
-    const cached = avatarValidityCache.get(resolvedSrc)
+    if (!rawSrc) return 'error'
+    const cached = avatarValidityCache.get(rawSrc)
     if (cached !== undefined) return cached ? 'loaded' : 'error'
     return 'loading'
   })
@@ -66,12 +77,12 @@ export function EntityAvatar({
   // can also report transient aborts as errors on <img>. Checking content-type
   // is deterministic.
   useEffect(() => {
-    if (!resolvedSrc) {
+    if (!rawSrc || !resolvedSrc) {
       setState('error')
       return
     }
 
-    const cached = avatarValidityCache.get(resolvedSrc)
+    const cached = avatarValidityCache.get(rawSrc)
     if (cached !== undefined) {
       setState(cached ? 'loaded' : 'error')
       return
@@ -83,17 +94,17 @@ export function EntityAvatar({
       .then((response) => {
         const contentType = response.headers.get('content-type') ?? ''
         const valid = response.ok && contentType.startsWith('image/')
-        rememberValidity(resolvedSrc, valid)
+        rememberValidity(rawSrc, valid)
         setState(valid ? 'loaded' : 'error')
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          rememberValidity(resolvedSrc, false)
+          rememberValidity(rawSrc, false)
           setState('error')
         }
       })
     return () => controller.abort()
-  }, [resolvedSrc])
+  }, [rawSrc, resolvedSrc])
 
   const content = !resolvedSrc || state !== 'loaded' ? (
     <FacelessAvatar
