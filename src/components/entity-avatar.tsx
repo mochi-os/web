@@ -106,12 +106,15 @@ export function EntityAvatar({
     return () => controller.abort()
   }, [rawSrc, resolvedSrc])
 
-  const content = !resolvedSrc || state !== 'loaded' ? (
+  const ringStyle = ring ? { borderWidth: 2, borderColor: ring } : undefined
+
+  return !resolvedSrc || state !== 'loaded' ? (
     <FacelessAvatar
       name={name}
       seed={seed ?? fingerprint ?? undefined}
       size={size}
-      className={cn(ring && 'border-0', className)}
+      className={className}
+      style={ringStyle}
     />
   ) : (
     <img
@@ -121,23 +124,9 @@ export function EntityAvatar({
       height={size}
       className={cn(
         'border-border inline-block shrink-0 rounded-full border object-cover',
-        ring && 'border-0',
         className
       )}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, ...ringStyle }}
     />
   )
-
-  if (ring) {
-    return (
-      <span
-        className="inline-flex shrink-0 rounded-full"
-        style={{ boxShadow: `0 0 0 2px ${ring}`, lineHeight: 0 }}
-      >
-        {content}
-      </span>
-    )
-  }
-
-  return content
 }

@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { CSSProperties, memo } from 'react'
 import { cn } from '../lib/utils'
 
 type FacelessAvatarProps = {
@@ -6,6 +6,7 @@ type FacelessAvatarProps = {
   name?: string
   size?: number
   className?: string
+  style?: CSSProperties
 }
 
 const backgroundColors = ['#DFE4EA', '#E5E7EB', '#D1D5DB', '#F3F4F6']
@@ -35,6 +36,7 @@ export const FacelessAvatar = memo(function FacelessAvatar({
   name,
   size = 48,
   className,
+  style,
 }: FacelessAvatarProps) {
   const base = name?.trim() || seed || 'mochi-friend'
   const hashed = hashSeed(base)
@@ -53,6 +55,7 @@ export const FacelessAvatar = memo(function FacelessAvatar({
         height: size,
         backgroundColor: bg,
         color,
+        ...style,
       }}
       role="img"
       aria-label={name ? `Initials avatar for ${name}` : 'Initials avatar'}
