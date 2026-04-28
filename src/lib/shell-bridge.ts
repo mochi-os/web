@@ -147,6 +147,14 @@ export function shellSetTitle(title: string): void {
   }
 }
 
+/** Notify the shell that an overlay (Sheet/Dialog) is open, so it can lower
+ *  #menu's z-index below the iframe's stacking layer. */
+export function shellSetOverlay(open: boolean): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'overlay', open }, '*')
+  }
+}
+
 /** Notify the shell of sidebar state changes */
 export function shellSetSidebarState(open: boolean): void {
   if (isInShell()) {

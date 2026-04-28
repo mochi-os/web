@@ -156,6 +156,7 @@ export {
   useInfiniteQueryWithError,
 } from './hooks/use-query-with-error'
 export { default as useDialogState } from './hooks/use-dialog-state'
+export * from './hooks/use-shell-overlay'
 export * from './hooks/use-media-query'
 export * from './hooks/use-screen-size'
 export * from './hooks/use-notifications'
