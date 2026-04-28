@@ -143,7 +143,7 @@ export function MochiMenu({
         )}
 
         {isMobile ? (
-          <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
+          <Drawer open={menuOpen} onOpenChange={setMenuOpen} direction="bottom">
             <DrawerTrigger asChild>{trigger}</DrawerTrigger>
             <DrawerContent>
               <DrawerHeader>

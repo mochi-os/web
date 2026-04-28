@@ -3,7 +3,12 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { safeCookieSet, shellSetSidebarState } from '../../lib/shell-bridge'
+import {
+  isInShell,
+  onShellMessage,
+  safeCookieSet,
+  shellSetSidebarState,
+} from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from './button'
@@ -97,6 +102,16 @@ function SidebarProvider({
   const toggleSidebar = React.useCallback(() => {
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
   }, [isMobile, setOpen, setOpenMobile])
+
+  React.useEffect(() => {
+    if (!isInShell()) return
+
+    return onShellMessage((message) => {
+      if (message.type === 'sidebar-toggle') {
+        toggleSidebar()
+      }
+    })
+  }, [toggleSidebar])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {

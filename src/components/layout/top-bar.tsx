@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Menu } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/auth-store'
@@ -26,7 +26,7 @@ export function TopBar({
 }: TopBarProps) {
   const { resolvedTheme } = useTheme()
   const { isMobile, isTablet } = useScreenSize()
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, open: sidebarOpen } = useSidebar()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function TopBar({
     return null
   }
 
-  // Mobile with sidebar: [☰] [Logo] ··spacer·· [User]
+  // Mobile with sidebar: [navigation] [Logo] ··spacer·· [User]
   if (showSidebarTrigger && (isMobile || isTablet)) {
     return (
       <header
@@ -55,7 +55,7 @@ export function TopBar({
           onClick={toggleSidebar}
           aria-label='Open navigation'
         >
-          <Menu className='size-5' />
+          {sidebarOpen ? <PanelLeftClose className='size-5' /> : <PanelLeftOpen className='size-5' />}
         </Button>
 
         <a href='/' title='Home'>

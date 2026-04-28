@@ -73,29 +73,31 @@ export function AppSidebar({
   return (
     <Sidebar collapsible={effectiveCollapsible} variant='sidebar'>
       {isMobile ? (
-        <SidebarHeader>
-          <div className='flex items-center gap-2 px-2 py-1'>
-            <a href='/' title='Home' className='flex items-center gap-2'>
-              <img
-                src='/images/logo-header.svg'
-                alt='Mochi'
-                className='h-6 w-6'
-              />
-              <span className='text-sm font-semibold'>mochi</span>
-            </a>
-            <div className='flex-1' />
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon'
-              className='size-7'
-              onClick={() => setOpenMobile(false)}
-              aria-label='Close navigation'
-            >
-              <X className='size-4' />
-            </Button>
-          </div>
-        </SidebarHeader>
+        hideMenu ? null : (
+          <SidebarHeader>
+            <div className='flex items-center gap-2 px-2 py-1'>
+              <a href='/' title='Home' className='flex items-center gap-2'>
+                <img
+                  src='/images/logo-header.svg'
+                  alt='Mochi'
+                  className='h-6 w-6'
+                />
+                <span className='text-sm font-semibold'>mochi</span>
+              </a>
+              <div className='flex-1' />
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='size-7'
+                onClick={() => setOpenMobile(false)}
+                aria-label='Close navigation'
+              >
+                <X className='size-4' />
+              </Button>
+            </div>
+          </SidebarHeader>
+        )
       ) : (
         <SidebarHeader className={hideMenu ? (state === 'collapsed' ? 'min-h-20' : 'min-h-10') : undefined}>
           {!hideMenu && (
@@ -184,7 +186,7 @@ export function AppSidebar({
 
       {sidebarFooter && <SidebarFooter>{sidebarFooter}</SidebarFooter>}
 
-      <CollapseBtn />
+      {!isMobile && <CollapseBtn />}
     </Sidebar>
   )
 }

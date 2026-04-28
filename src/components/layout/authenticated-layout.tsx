@@ -85,6 +85,19 @@ export function AuthenticatedLayout({
     if (title) document.title = title
   }, [title])
 
+  useEffect(() => {
+    const root = document.documentElement
+    if (inShell) {
+      root.style.setProperty('--sheet-top-offset', '0px')
+    } else {
+      root.style.removeProperty('--sheet-top-offset')
+    }
+
+    return () => {
+      root.style.removeProperty('--sheet-top-offset')
+    }
+  }, [inShell])
+
   const isLoggedIn = useAuthStore((state) => state.isAuthenticated)
   const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
 
@@ -240,7 +253,7 @@ export function AuthenticatedLayout({
               className={cn(
                 '@container/content',
                 'min-h-0 min-w-0 flex-1 overflow-auto',
-                inShell && 'pl-12'
+                inShell && 'md:pl-12'
               )}
             >
               {children ?? <Outlet />}
