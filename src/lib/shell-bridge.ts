@@ -319,6 +319,8 @@ export function installShellLinkInterceptor(): void {
     const linkApp = href.match(/^\/([^/]+)/)?.[1] || ''
     if (!linkApp || linkApp === currentApp || linkApp.startsWith('_')) return
 
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return
+
     // Cross-app link — route through shell
     event.preventDefault()
     event.stopPropagation()
