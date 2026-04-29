@@ -6,18 +6,13 @@ import { authenticatedUrl } from '../lib/shell-bridge'
 import { FacelessAvatar } from './faceless-avatar'
 
 type EntityAvatarProps = {
-  // Entity fingerprint — resolves to /<fingerprint>/-/avatar. Falls back to the
-  // FacelessAvatar initials placeholder on 404 or load error.
   fingerprint?: string | null
-  // Optional cache-busting token appended as ?v=<version>. Useful when the
-  // caller already knows the upload token (e.g. profile editor after a new
-  // upload).
+  // Optional cache-busting token appended as ?v=<version>
   version?: string
   // Direct URL override. If set, takes precedence over fingerprint.
   src?: string | null
   // Direct URL for the entity's style endpoint. When rendering an entity owned
-  // by another peer, the consuming app proxies /style through its own action
-  // (same pattern as src). Falls back to /<fingerprint>/-/style when omitted.
+  // by another peer, the consuming app proxies /style through its own action.
   styleUrl?: string | null
   name?: string
   seed?: string
@@ -28,17 +23,6 @@ type EntityAvatarProps = {
   // lookup — pass this when the caller already has the accent value and would
   // otherwise force a redundant style fetch.
   accent?: string
-}
-
-const AVATAR_CACHE_MAX = 500
-const avatarValidityCache = new Map<string, boolean>()
-
-function rememberValidity(url: string, valid: boolean) {
-  if (avatarValidityCache.size >= AVATAR_CACHE_MAX) {
-    const oldest = avatarValidityCache.keys().next().value
-    if (oldest !== undefined) avatarValidityCache.delete(oldest)
-  }
-  avatarValidityCache.set(url, valid)
 }
 
 function fingerprintUrl(fingerprint: string, version?: string): string {
@@ -65,50 +49,15 @@ export function EntityAvatar({
     !accent && styleUrl ? normalizeEntityUrl(styleUrl) : undefined
   )
   const ring = accent ?? fetched
-  const [state, setState] = useState<'loading' | 'loaded' | 'error'>(() => {
-    if (!rawSrc) return 'error'
-    const cached = avatarValidityCache.get(rawSrc)
-    if (cached !== undefined) return cached ? 'loaded' : 'error'
-    return 'loading'
-  })
+  const [failed, setFailed] = useState(false)
 
-  // Probe via fetch and require Content-Type: image/*. The backend may return
-  // 200 with text/html (SPA shell) for unknown/remote persons, and browsers
-  // can also report transient aborts as errors on <img>. Checking content-type
-  // is deterministic.
   useEffect(() => {
-    if (!rawSrc || !resolvedSrc) {
-      setState('error')
-      return
-    }
-
-    const cached = avatarValidityCache.get(rawSrc)
-    if (cached !== undefined) {
-      setState(cached ? 'loaded' : 'error')
-      return
-    }
-
-    setState('loading')
-    const controller = new AbortController()
-    fetch(resolvedSrc, { method: 'HEAD', credentials: 'same-origin', signal: controller.signal })
-      .then((response) => {
-        const contentType = response.headers.get('content-type') ?? ''
-        const valid = response.ok && contentType.startsWith('image/')
-        rememberValidity(rawSrc, valid)
-        setState(valid ? 'loaded' : 'error')
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          rememberValidity(rawSrc, false)
-          setState('error')
-        }
-      })
-    return () => controller.abort()
-  }, [rawSrc, resolvedSrc])
+    setFailed(false)
+  }, [resolvedSrc])
 
   const ringStyle = ring ? { borderWidth: 2, borderColor: ring } : undefined
 
-  return !resolvedSrc || state !== 'loaded' ? (
+  return !resolvedSrc || failed ? (
     <FacelessAvatar
       name={name}
       seed={seed ?? fingerprint ?? undefined}
@@ -122,6 +71,7 @@ export function EntityAvatar({
       alt={alt ?? (name ? `Avatar for ${name}` : 'Avatar')}
       width={size}
       height={size}
+      onError={() => setFailed(true)}
       className={cn(
         'border-border inline-block shrink-0 rounded-full border object-cover',
         className
