@@ -4,7 +4,7 @@ export interface User {
   role: string
   status: 'active' | 'suspended'
   methods: string
-  last_login: number | null
+  last: number
 }
 
 export interface Session {
