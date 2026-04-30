@@ -145,6 +145,7 @@ export {
 } from './context/layout-provider'
 export * from './context/theme-provider'
 export * from './context/locale-provider'
+export * from './context/i18n-provider'
 export * from './context/search-provider'
 
 // Stores

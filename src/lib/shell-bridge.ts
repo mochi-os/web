@@ -35,6 +35,12 @@ type ShellInitData = {
   sidebarOpen?: boolean
   domain?: DomainRouteInfo | null
   locale?: LocalePreferences | null
+  /**
+   * BCP 47 language tag for the active i18n catalog. Sourced from the user's
+   * `language` preference if logged in, else the request's Accept-Language,
+   * else "en". Wave 2 of the i18n plan; the I18nProvider in lib/web reads it.
+   */
+  language?: string | null
 }
 
 type ShellMessage = {
@@ -167,6 +173,17 @@ export function shellSetSidebarPresent(present: boolean): void {
 export function shellSetLocale(locale: LocalePreferences): void {
   if (isInShell()) {
     window.parent.postMessage({ type: 'locale-set', locale }, '*')
+  }
+}
+
+/**
+ * Broadcast a language change to the shell, which forwards a 'language-change'
+ * message to all open iframes. Each app's I18nProvider listens for it and
+ * activates the matching Lingui catalog without a full page reload.
+ */
+export function shellSetLanguage(language: string): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'language-set', language }, '*')
   }
 }
 
