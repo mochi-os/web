@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from './ui/skeleton'
 import { cn } from '../lib/utils'
 import { useAuthStore } from '../stores/auth-store'
+import { toast } from '../lib/toast-utils'
+import { getErrorMessage } from '../lib/handle-server-error'
 
 const MENU_PATH = '/menu'
 
@@ -91,8 +93,12 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
         body: params.toString(),
       })
       setRow({ ...row, category: parseInt(value, 10) })
-    } catch {
-      // ignore
+      const cat = categories?.find((c) => String(c.id) === value)
+      const label = row.label || row.topic
+      toast.success(cat ? `${label}: ${cat.label}` : `${label} updated`)
+      setTimeout(() => setOpen(false), 0)
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update category'))
     } finally {
       setSaving(false)
     }

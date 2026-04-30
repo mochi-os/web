@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { type LocalePreferences, getShellInitData, onShellMessage } from '../lib/shell-bridge'
 import type { DateFormat, TimeFormat, TimestampDisplay, NumberFormat } from '../lib/locale-format'
+import { setActiveLocale } from './i18n-provider'
 
 export type ResolvedLocale = {
   dateFormat: DateFormat
@@ -165,6 +166,18 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const locale = useMemo(() => resolveLocale(raw), [raw])
+
+  // Push the resolved locale into the i18n provider's module-level state so
+  // custom Lingui formatters (mochiDate, mochiNumber, etc.) honour the user's
+  // locale preferences.
+  useEffect(() => {
+    setActiveLocale({
+      dateFormat: locale.dateFormat,
+      timeFormat: locale.timeFormat,
+      timestampDisplay: locale.timestampDisplay,
+      numberFormat: locale.numberFormat,
+    })
+  }, [locale])
 
   return (
     <LocaleContext value={{ locale, raw }}>

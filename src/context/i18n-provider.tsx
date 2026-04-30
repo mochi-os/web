@@ -17,19 +17,92 @@
 //     fr: () => import('./locales/fr/messages.po'),
 //   }
 //
-// TODO: register custom Lingui formatters (mochiDate, mochiNumber, etc.) that
-// delegate to useFormat() — Phase 1 step 21. Until then, label authors should
-// pre-format dates/numbers via useFormat() before passing into <Trans>.
+// Custom formatters: mochiDate, mochiTime, mochiDateTime, mochiNumber,
+// mochiFileSize, mochiTimestamp. Used inside ICU MessageFormat as
+// `{value, mochiDate}` etc. They delegate to format helpers via the active
+// locale set by LocaleProvider — see registerLocaleFormatters() below.
 import { useEffect, useState } from 'react'
 import { i18n, type Messages } from '@lingui/core'
 import { I18nProvider as LinguiProvider } from '@lingui/react'
 import { getShellInitData, onShellMessage } from '../lib/shell-bridge'
+import {
+  formatDate as fmtDate,
+  formatTime as fmtTime,
+  formatDateTime as fmtDateTime,
+  formatNumber as fmtNumber,
+  formatFileSize as fmtFileSize,
+  formatUserTimestamp as fmtTimestamp,
+  type NumberFormat,
+  type ResolvedLocaleForTimestamp,
+} from '../lib/locale-format'
 
 export type CatalogLoader = () => Promise<{ messages: Messages }>
 export type Catalogs = Record<string, CatalogLoader>
 
 /** localStorage key for the anonymous-mode language preference. */
 export const LANGUAGE_STORAGE_KEY = 'mochi:language'
+
+// Module-level locale state used by the custom Lingui formatters. Updated
+// by setActiveLocale() whenever LocaleProvider's locale changes. Lingui
+// formatters are registered globally and have no React-context access, so
+// they read this snapshot. Defaults match locale-provider's initial state.
+type ActiveLocale = ResolvedLocaleForTimestamp & {
+  numberFormat: NumberFormat
+}
+
+let activeLocale: ActiveLocale = {
+  dateFormat: 'YYYY-MM-DD',
+  timeFormat: '24h',
+  numberFormat: '1,000.00',
+  timestampDisplay: 'auto',
+}
+
+/**
+ * Update the locale read by custom Lingui formatters (mochiDate, mochiNumber,
+ * etc.). Called by LocaleProvider whenever the user's locale changes; the
+ * next render of any <Trans>/t`` containing a custom formatter will use the
+ * new locale's date/number conventions.
+ */
+export function setActiveLocale(locale: ActiveLocale): void {
+  activeLocale = locale
+}
+
+// Register custom Lingui formatters once at module load. ICU MessageFormat
+// uses these as `{value, mochiDate}`, `{ts, mochiTimestamp}`, etc. They
+// delegate to lib/locale-format with the locale snapshot kept in
+// activeLocale (see setActiveLocale).
+function registerCustomFormatters(): void {
+  i18n._ = i18n._.bind(i18n)
+  // Lingui v5 doesn't expose a stable formatter-registration API, but
+  // i18n.formats is read by the message compiler at activation time.
+  // Custom formatters appear as functions on i18n.formats.<name>.
+  type FormatFn = (value: unknown) => string
+  const formats = (i18n as unknown as { formats?: Record<string, FormatFn> }).formats ?? {}
+  formats.mochiDate = (v: unknown) => {
+    const d = v instanceof Date ? v : new Date(v as string | number)
+    return fmtDate(d, activeLocale.dateFormat)
+  }
+  formats.mochiTime = (v: unknown) => {
+    const d = v instanceof Date ? v : new Date(v as string | number)
+    return fmtTime(d, activeLocale.timeFormat)
+  }
+  formats.mochiDateTime = (v: unknown) => {
+    const d = v instanceof Date ? v : new Date(v as string | number)
+    return fmtDateTime(d, activeLocale.dateFormat, activeLocale.timeFormat)
+  }
+  formats.mochiNumber = (v: unknown) => {
+    return fmtNumber(typeof v === 'number' ? v : Number(v), activeLocale.numberFormat)
+  }
+  formats.mochiFileSize = (v: unknown) => {
+    return fmtFileSize(typeof v === 'number' ? v : Number(v), activeLocale.numberFormat)
+  }
+  formats.mochiTimestamp = (v: unknown) => {
+    return fmtTimestamp(typeof v === 'number' ? v : Number(v), activeLocale)
+  }
+  ;(i18n as unknown as { formats: Record<string, FormatFn> }).formats = formats
+}
+
+registerCustomFormatters()
 
 function readStoredLanguage(): string | null {
   try {
