@@ -28,10 +28,43 @@ import { getShellInitData, onShellMessage } from '../lib/shell-bridge'
 export type CatalogLoader = () => Promise<{ messages: Messages }>
 export type Catalogs = Record<string, CatalogLoader>
 
+/** localStorage key for the anonymous-mode language preference. */
+export const LANGUAGE_STORAGE_KEY = 'mochi:language'
+
+function readStoredLanguage(): string | null {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(LANGUAGE_STORAGE_KEY) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Write the language preference to localStorage. Called by the login page and
+ * anonymous-chrome pickers; in-shell apps use shellSetLanguage instead, which
+ * persists via the menu shell + the user's server-side preference.
+ */
+export function setStoredLanguage(language: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
+    }
+  } catch {
+    /* sandboxed iframes have no storage; ignore */
+  }
+}
+
 function pickInitialLanguage(catalogs: Catalogs): string {
+  // Priority: in-shell init data > localStorage > navigator > 'en'.
+  // localStorage covers the login-page picker and anonymous-browsing chrome:
+  // pre-login users pick a language, we reload, this fallback honours it.
   const shell = getShellInitData()
   if (shell?.language && hasMatchingCatalog(catalogs, shell.language)) {
     return shell.language
+  }
+  const stored = readStoredLanguage()
+  if (stored && hasMatchingCatalog(catalogs, stored)) {
+    return stored
   }
   if (typeof navigator !== 'undefined' && navigator.language) {
     if (hasMatchingCatalog(catalogs, navigator.language)) {
