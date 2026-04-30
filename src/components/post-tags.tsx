@@ -187,7 +187,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
               <button
                 type='button'
                 title='Remove interest'
-                className='text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-0.5 transition-colors'
+                className='text-muted-foreground hover:bg-interactive-hover rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()

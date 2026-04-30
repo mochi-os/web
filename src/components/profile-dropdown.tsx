@@ -58,10 +58,10 @@ export function ProfileDropdown() {
   const logoutButton = (
     <Button
       variant='ghost'
-      className='w-full justify-start px-2 text-sm text-destructive hover:bg-destructive/10 hover:text-destructive'
+      className='w-full justify-start px-2 text-sm'
       onClick={() => setOpen(true)}
     >
-      <LogOut size={16} className='mr-2 text-destructive' />
+      <LogOut size={16} className='mr-2' />
       Log out
     </Button>
   )
@@ -89,11 +89,8 @@ export function ProfileDropdown() {
             </div>
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => setOpen(true)}
-              className="text-destructive focus:text-destructive focus:bg-destructive/10"
-            >
-              <LogOut size={16} className='mr-2 text-destructive' />
+            <DropdownMenuItem onClick={() => setOpen(true)}>
+              <LogOut size={16} className='mr-2' />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
