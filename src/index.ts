@@ -205,6 +205,7 @@ export {
   shellSetSidebarState,
   shellSetSidebarPresent,
   shellSetLocale,
+  shellSetLanguage,
   onShellMessage,
   getShellInitData,
   safeCookieGet,
