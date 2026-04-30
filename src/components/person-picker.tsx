@@ -5,8 +5,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Loader2, X, Check, User } from 'lucide-react'
+import { Search, Loader2, X, Check } from 'lucide-react'
 import { Button } from './ui/button'
+import { EntityAvatar } from './entity-avatar'
 import { Input } from './ui/input'
 import { Checkbox } from './ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
@@ -374,7 +375,12 @@ export function PersonPicker({
                         {isSelected && <Check className="size-4" />}
                       </div>
                     )}
-                    <User className="size-4 shrink-0 text-muted-foreground" />
+                    <EntityAvatar
+                      src={`/people/${person.id}/-/avatar`}
+                      styleUrl={`/people/${person.id}/-/style`}
+                      name={person.name}
+                      size={24}
+                    />
                     <span className="truncate text-sm">{person.name}</span>
                   </div>
                 )

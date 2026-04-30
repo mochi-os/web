@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils'
 import { shellNavigateExternal } from '../../lib/shell-bridge'
 import { useFormat } from '../../hooks/use-format'
 import type { Notification } from '../notifications-dropdown'
+import { NotificationCategoryButton } from '../notification-category-button'
 import { ScrollArea } from '../ui/scroll-area'
 
 export { type Notification }
@@ -20,32 +21,42 @@ export function NotificationItem({
   const { formatTimestamp } = useFormat()
 
   return (
-    <button
-      type='button'
-      onClick={() => onClick?.(notification)}
-      onAuxClick={(e) => {
-        if (e.button === 1) {
-          e.preventDefault()
-          onMiddleClick?.(notification)
-        }
-      }}
+    <div
       className={cn(
-        'flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-interactive-hover active:bg-interactive-active',
+        'flex w-full items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-interactive-hover',
         isUnread && 'bg-muted/50'
       )}
     >
-      <div
-        className={cn('mt-1.5 size-2 rounded-full', isUnread && 'bg-primary')}
+      <button
+        type='button'
+        onClick={() => onClick?.(notification)}
+        onAuxClick={(e) => {
+          if (e.button === 1) {
+            e.preventDefault()
+            onMiddleClick?.(notification)
+          }
+        }}
+        className='flex flex-1 items-start gap-2 text-left'
+      >
+        <div
+          className={cn('mt-1.5 size-2 rounded-full', isUnread && 'bg-primary')}
+        />
+        <div className='flex-1 min-w-0'>
+          <p className={cn('truncate', isUnread && 'font-medium')}>
+            {notification.content}
+          </p>
+          <p className='text-[11px] text-muted-foreground'>
+            {formatTimestamp(notification.created)}
+          </p>
+        </div>
+      </button>
+      <NotificationCategoryButton
+        app={notification.app}
+        topic={notification.topic}
+        object={notification.object}
+        className='mt-0.5 shrink-0'
       />
-      <div className='flex-1 min-w-0'>
-        <p className={cn('truncate', isUnread && 'font-medium')}>
-          {notification.content}
-        </p>
-        <p className='text-[11px] text-muted-foreground'>
-          {formatTimestamp(notification.created)}
-        </p>
-      </div>
-    </button>
+    </div>
   )
 }
 

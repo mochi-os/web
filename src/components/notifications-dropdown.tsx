@@ -21,10 +21,11 @@ import { Label } from './ui/label'
 export interface Notification {
   id: string
   app: string
-  category: string
+  topic: string
   object: string
   content: string
   link: string
+  sender?: string
   count: number
   created: number
   read: number

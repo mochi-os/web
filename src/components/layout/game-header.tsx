@@ -35,7 +35,10 @@ export function GameHeader({
   opponentFingerprint,
   opponentName,
 }: GameHeaderProps) {
-  const { accent } = useAccent(opponentFingerprint)
+  // The opponent's avatar/style live on the people app and need to be proxied
+  // (direct entity URLs only resolve locally; remote opponents 404 there).
+  const proxyBase = opponentFingerprint ? `/people/${opponentFingerprint}` : null
+  const { accent } = useAccent(undefined, proxyBase ? `${proxyBase}/-/style` : undefined)
   const accentStyle: CSSProperties | undefined = accent
     ? { borderColor: accent }
     : undefined
@@ -54,11 +57,12 @@ export function GameHeader({
       style={accentStyle}
     >
       <div className='flex min-w-0 items-center gap-3'>
-        {opponentFingerprint ? (
+        {proxyBase ? (
           <EntityAvatar
-            fingerprint={opponentFingerprint}
+            src={`${proxyBase}/-/avatar`}
+            styleUrl={`${proxyBase}/-/style`}
             name={opponentName}
-            size={32}
+            size="md"
             className='shrink-0'
           />
         ) : null}

@@ -76,7 +76,7 @@ export function MochiMenu({
       <DropdownMenuLabel className='p-0 font-normal'>
         <div className='flex items-center justify-between px-2 py-1.5'>
           <div className='flex items-center gap-2 text-sm'>
-            <EntityAvatar fingerprint={identity || undefined} name={name} size={32} />
+            <EntityAvatar fingerprint={identity || undefined} name={name} size="md" />
             <span className='font-semibold'>{name || 'User'}</span>
           </div>
           <div className='flex items-center gap-1 ml-4'>

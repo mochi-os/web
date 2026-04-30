@@ -108,6 +108,7 @@ export * from './components/entity-onboarding-empty-state'
 export * from './components/learn-more'
 export * from './components/long-text'
 export * from './components/navigation-progress'
+export * from './components/notification-category-button'
 export * from './components/notification-title'
 export * from './components/notifications-dropdown'
 export * from './components/password-input'
@@ -212,7 +213,6 @@ export {
   installShellClipboardProxy,
   authenticatedUrl,
   shellClipboardWrite,
-  shellSubscribeNotifications,
   shellRequestPermission,
   shellFetch,
 } from './lib/shell-bridge'

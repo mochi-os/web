@@ -381,32 +381,6 @@ export function authenticatedUrl(url: string): string {
   return `${url}${separator}token=${encodeURIComponent(rawToken)}`
 }
 
-/** Request the shell to show the subscribe-notifications dialog */
-let subscribeIdCounter = 0
-const subscribeCallbacks = new Map<number, (result: string) => void>()
-
-export function shellSubscribeNotifications(
-  app: string,
-  subscriptions: Array<{ label: string; topic?: string; object?: string; defaultEnabled?: boolean }>
-): Promise<'accepted' | 'declined'> {
-  const id = ++subscribeIdCounter
-  // Collapse to unique (topic, object) pairs; keep first label per pair.
-  const items: Array<{ label: string; topic: string; object: string }> = []
-  const seen = new Set<string>()
-  for (const sub of subscriptions) {
-    const topic = sub.topic ?? ''
-    const object = sub.object ?? ''
-    const key = `${topic}\x00${object}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    items.push({ label: sub.label, topic, object })
-  }
-  return new Promise((resolve) => {
-    subscribeCallbacks.set(id, resolve as (r: string) => void)
-    window.parent.postMessage({ type: 'subscribe-notifications', id, app, items }, '*')
-  })
-}
-
 /** Request the shell to show the permission request dialog */
 let permissionIdCounter = 0
 const permissionCallbacks = new Map<number, (result: string) => void>()
@@ -480,15 +454,6 @@ if (typeof window !== 'undefined') {
       if (cb) {
         clipboardCallbacks.delete(data.id as number)
         cb(data.ok as boolean)
-      }
-    }
-
-    // Handle subscribe-notifications result
-    if (data.type === 'subscribe-notifications-result') {
-      const cb = subscribeCallbacks.get(data.id as number)
-      if (cb) {
-        subscribeCallbacks.delete(data.id as number)
-        cb(data.result as string)
       }
     }
 

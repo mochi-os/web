@@ -5,6 +5,24 @@ import { cn } from '../lib/utils'
 import { authenticatedUrl } from '../lib/shell-bridge'
 import { FacelessAvatar } from './faceless-avatar'
 
+// Standard avatar tiers. Pick by intent, not pixels:
+//   xs  — inline next to text (notifications, mod log, restriction rows)
+//   sm  — sidebar items, list rows
+//   md  — member lists, table cells, search-result rows
+//   lg  — dense feature list rows (friends list, add-friend results)
+//   xl  — page header
+//   2xl — profile hero
+export const AVATAR_SIZES = {
+  xs: 20,
+  sm: 28,
+  md: 32,
+  lg: 40,
+  xl: 48,
+  '2xl': 80,
+} as const
+
+export type AvatarSize = keyof typeof AVATAR_SIZES
+
 type EntityAvatarProps = {
   fingerprint?: string | null
   // Optional cache-busting token appended as ?v=<version>
@@ -16,7 +34,8 @@ type EntityAvatarProps = {
   styleUrl?: string | null
   name?: string
   seed?: string
-  size?: number
+  // Pixel size or tier name (xs/sm/md/lg/xl/2xl). Prefer tier names for new code.
+  size?: number | AvatarSize
   className?: string
   alt?: string
   // Explicit accent colour for the ring. Takes precedence over the automatic
@@ -37,11 +56,12 @@ export function EntityAvatar({
   styleUrl,
   name,
   seed,
-  size = 48,
+  size = 'xl',
   className,
   alt,
   accent,
 }: EntityAvatarProps) {
+  const px = typeof size === 'number' ? size : AVATAR_SIZES[size]
   const rawSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
   const resolvedSrc = rawSrc ? authenticatedUrl(normalizeEntityUrl(rawSrc)) : null
   const { accent: fetched } = useAccent(
@@ -61,7 +81,7 @@ export function EntityAvatar({
     <FacelessAvatar
       name={name}
       seed={seed ?? fingerprint ?? undefined}
-      size={size}
+      size={px}
       className={className}
       style={ringStyle}
     />
@@ -69,14 +89,14 @@ export function EntityAvatar({
     <img
       src={resolvedSrc}
       alt={alt ?? (name ? `Avatar for ${name}` : 'Avatar')}
-      width={size}
-      height={size}
+      width={px}
+      height={px}
       onError={() => setFailed(true)}
       className={cn(
         'border-border inline-block shrink-0 rounded-full border object-cover',
         className
       )}
-      style={{ width: size, height: size, ...ringStyle }}
+      style={{ width: px, height: px, ...ringStyle }}
     />
   )
 }
