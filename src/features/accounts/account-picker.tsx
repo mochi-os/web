@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { CheckCircle2, Clock, Plus } from 'lucide-react'
 import {
   Select,
@@ -94,7 +95,7 @@ export function AccountPicker({
             <SelectItem value="__add__">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Plus className="h-4 w-4" />
-                Add new account
+                <Trans>Add new account</Trans>
               </div>
             </SelectItem>
           )}

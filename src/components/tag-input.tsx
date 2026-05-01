@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { Plus } from 'lucide-react'
 import { getErrorMessage } from '../lib/handle-server-error'
 import { toast } from '../lib/toast-utils'
@@ -87,7 +88,7 @@ export function TagInput({
         }}
       >
         <Plus className='size-3' />
-        Tag
+        <Trans>Tag</Trans>
       </button>
     )
   }

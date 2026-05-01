@@ -1,4 +1,5 @@
 import { type Root, type Content, type Trigger } from '@radix-ui/react-popover'
+import { Trans } from '@lingui/react/macro'
 import { CircleHelp } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
@@ -23,7 +24,7 @@ export function LearnMore({
         className={cn('size-5 rounded-full', triggerProps?.className)}
       >
         <Button variant="outline" size="icon">
-          <span className="sr-only">Learn more</span>
+          <span className="sr-only"><Trans>Learn more</Trans></span>
           <CircleHelp className="size-4" />
         </Button>
       </PopoverTrigger>

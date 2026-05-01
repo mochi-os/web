@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Loader2, Plus } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
@@ -40,6 +41,7 @@ export function AccountAdd({
   appBase: _appBase,
   hasExistingAiAccount = false,
 }: AccountAddProps) {
+  const { t } = useLingui()
   const [selectedType, setSelectedType] = useState<string>('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [addToExisting, setAddToExisting] = useState(true)
@@ -111,17 +113,17 @@ export function AccountAdd({
       <ResponsiveDialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit} autoComplete="off">
           <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle>Add account</ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="sr-only">Add a new account</ResponsiveDialogDescription>
+            <ResponsiveDialogTitle><Trans>Add account</Trans></ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className="sr-only"><Trans>Add a new account</Trans></ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
           <div className="grid gap-4 py-4">
             {availableProviders.length > 1 && (
               <div className="grid gap-2">
-                <Label htmlFor="type">Account type</Label>
+                <Label htmlFor="type"><Trans>Account type</Trans></Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
                   <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Select account type" />
+                    <SelectValue placeholder={t`Select account type`} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableProviders.map((provider) => (
@@ -154,7 +156,7 @@ export function AccountAdd({
 
             {selectedProvider && selectedProvider.capabilities.includes('notify') && (
               <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="font-medium">Add to existing notifications</div>
+                <div className="font-medium"><Trans>Add to existing notifications</Trans></div>
                 <Switch
                   checked={addToExisting}
                   onCheckedChange={setAddToExisting}
@@ -164,7 +166,7 @@ export function AccountAdd({
 
             {selectedProvider && isAiType(selectedType) && (
               <div className="flex items-center justify-between">
-                <Label htmlFor="set-default">Default AI account</Label>
+                <Label htmlFor="set-default"><Trans>Default AI account</Trans></Label>
                 <Switch
                   id="set-default"
                   checked={setAsDefault}
@@ -180,7 +182,7 @@ export function AccountAdd({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              <Trans>Cancel</Trans>
             </Button>
             <Button type="submit" disabled={isAdding || !isFormValid()}>
               {isAdding ? (

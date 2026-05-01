@@ -5,6 +5,7 @@ import {
   EyeNoneIcon,
 } from '@radix-ui/react-icons'
 import { type Column } from '@tanstack/react-table'
+import { Trans } from '@lingui/react/macro'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import {
@@ -52,18 +53,18 @@ export function DataTableColumnHeader<TData, TValue>({
         <DropdownMenuContent align='start'>
           <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
             <ArrowUpIcon className='text-muted-foreground/70 size-3.5' />
-            Asc
+            <Trans>Asc</Trans>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
             <ArrowDownIcon className='text-muted-foreground/70 size-3.5' />
-            Desc
+            <Trans>Desc</Trans>
           </DropdownMenuItem>
           {column.getCanHide() && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
                 <EyeNoneIcon className='text-muted-foreground/70 size-3.5' />
-                Hide
+                <Trans>Hide</Trans>
               </DropdownMenuItem>
             </>
           )}

@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import { Trans } from '@lingui/react/macro'
 import { Button } from './ui/button'
 
 export interface FilterState {
@@ -60,7 +61,7 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
           className='h-6 text-xs text-muted-foreground'
           onClick={clearAllFilters}
         >
-          Clear all
+          <Trans>Clear all</Trans>
         </Button>
       )}
     </div>

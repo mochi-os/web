@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
@@ -229,8 +230,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className='sr-only'>
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle><Trans>Sidebar</Trans></SheetTitle>
+            <SheetDescription><Trans>Displays the mobile sidebar.</Trans></SheetDescription>
           </SheetHeader>
           <div className='flex h-full w-full flex-col'>{children}</div>
         </SheetContent>
@@ -307,22 +308,23 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon className='size-5' />
-      <span className='sr-only'>Toggle Sidebar</span>
+      <span className='sr-only'><Trans>Toggle Sidebar</Trans></span>
     </Button>
   )
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
+  const { t } = useLingui()
   const { toggleSidebar } = useSidebar()
 
   return (
     <button
       data-sidebar='rail'
       data-slot='sidebar-rail'
-      aria-label='Toggle Sidebar'
+      aria-label={t`Toggle Sidebar`}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title='Toggle Sidebar'
+      title={t`Toggle Sidebar`}
       className={cn(
         'absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-end-4 group-data-[side=right]:start-0 sm:flex',
         // Always show the rail line for sidebar variant, brighter on hover

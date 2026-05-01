@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { User, UsersRound, Globe, Users, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -98,6 +99,7 @@ export function AccessList({
   onRetry,
   selectWidth = 250,
 }: AccessListProps) {
+  const { t } = useLingui()
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
 
   const handleLevelChange = async (subject: string, newLevel: string) => {
@@ -151,7 +153,7 @@ export function AccessList({
   if (!rules.length) {
     return (
       <p className="text-muted-foreground text-sm">
-        No access rules configured. Add rules to control who can access this resource.
+        <Trans>No access rules configured. Add rules to control who can access this resource.</Trans>
       </p>
     )
   }
@@ -182,8 +184,8 @@ export function AccessList({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Subject</TableHead>
-          <TableHead>Access level</TableHead>
+          <TableHead><Trans>Subject</Trans></TableHead>
+          <TableHead><Trans>Access level</Trans></TableHead>
           <TableHead className="w-[50px]"></TableHead>
         </TableRow>
       </TableHeader>
@@ -208,7 +210,7 @@ export function AccessList({
               </TableCell>
               <TableCell>
                 {isOwner ? (
-                  <span className="text-sm">Owner</span>
+                  <span className="text-sm"><Trans>Owner</Trans></span>
                 ) : (
                   <Select
                     value={currentLevel}
@@ -236,23 +238,23 @@ export function AccessList({
                         variant="ghost"
                         size="icon"
                         disabled={isUpdating}
-                        aria-label="Remove access rule"
-                        title="Remove access rule"
+                        aria-label={t`Remove access rule`}
+                        title={t`Remove access rule`}
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Remove access?</AlertDialogTitle>
+                        <AlertDialogTitle><Trans>Remove access?</Trans></AlertDialogTitle>
                         <AlertDialogDescription>
                           Remove access rule for "{formatSubject(subject, data.name)}"?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel><Trans>Cancel</Trans></AlertDialogCancel>
                         <AlertDialogAction onClick={() => void handleRevoke(subject)}>
-                          Remove
+                          <Trans>Remove</Trans>
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

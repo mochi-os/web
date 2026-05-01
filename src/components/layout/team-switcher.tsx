@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Trans } from '@lingui/react/macro'
 import { ChevronsUpDown, SquarePlus } from 'lucide-react'
 import {
   DropdownMenu,
@@ -56,7 +57,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
             sideOffset={4}
           >
             <DropdownMenuLabel className='text-muted-foreground text-xs'>
-              Teams/Apps
+              <Trans>Teams/Apps</Trans>
             </DropdownMenuLabel>
             {teams.map((team, index) => (
               <DropdownMenuItem
@@ -76,7 +77,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
               <div className='bg-background flex size-6 items-center justify-center rounded-md border'>
                 <SquarePlus className='size-4' />
               </div>
-              <div className='text-muted-foreground font-medium'>Add team/app</div>
+              <div className='text-muted-foreground font-medium'><Trans>Add team/app</Trans></div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

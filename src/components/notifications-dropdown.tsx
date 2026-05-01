@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Bell, Check, ExternalLink } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { shellNavigateExternal } from '../lib/shell-bridge'
@@ -96,6 +97,7 @@ export function NotificationsDropdown({
   onNotificationClick,
   buttonClassName,
 }: NotificationsDropdownProps) {
+  const { t } = useLingui()
   const { isDesktop } = useScreenSize()
   const [open, setOpen] = useState(false)
   const [showAll, setShowAll] = useState(() => {
@@ -127,7 +129,7 @@ export function NotificationsDropdown({
       variant='ghost'
       size='icon'
       className={cn('relative', buttonClassName)}
-      aria-label='Notifications'
+      aria-label={t`Notifications`}
     >
       <Bell className='size-5' />
       {unreadCount > 0 && (
@@ -141,7 +143,7 @@ export function NotificationsDropdown({
   const headerContent = (
     <div className='flex items-center justify-between border-b bg-muted/30 px-4 py-3'>
       <div className='flex items-center gap-2'>
-        <span className='font-semibold text-sm'>Notifications</span>
+        <span className='font-semibold text-sm'><Trans>Notifications</Trans></span>
         {unreadCount > 0 && (
           <span className='rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
             {unreadCount}
@@ -154,7 +156,7 @@ export function NotificationsDropdown({
             htmlFor='show-all'
             className='text-[10px] uppercase font-medium text-muted-foreground tracking-wider cursor-pointer select-none'
           >
-            All
+            <Trans>All</Trans>
           </Label>
           <Switch
             id='show-all'
@@ -168,7 +170,7 @@ export function NotificationsDropdown({
             href={notificationsUrl}
             onClick={() => setOpen(false)}
             className='text-muted-foreground hover:text-foreground transition-colors'
-            title='View all'
+            title={t`View all`}
           >
             <ExternalLink className='size-4' />
           </a>
@@ -215,7 +217,7 @@ export function NotificationsDropdown({
         onClick={() => onMarkAllAsRead?.()}
       >
         <Check className='mr-2 size-3' />
-        Mark all as read
+        <Trans>Mark all as read</Trans>
       </Button>
     </div>
   )
@@ -242,7 +244,7 @@ export function NotificationsDropdown({
       <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className='sr-only'>
-          <DrawerTitle>Notifications</DrawerTitle>
+          <DrawerTitle><Trans>Notifications</Trans></DrawerTitle>
         </DrawerHeader>
         {headerContent}
         {listContent}

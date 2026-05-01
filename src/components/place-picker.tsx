@@ -1,6 +1,7 @@
 // Place picker with search and map preview
 
 import { useState } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { MapPin, Mountain, Building2, Loader2 } from 'lucide-react'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
@@ -78,7 +79,7 @@ export function PlacePicker({
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">Search for a place</DialogDescription>
+          <DialogDescription className="sr-only"><Trans>Search for a place</Trans></DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto flex-1 min-h-0 p-1">
@@ -125,7 +126,7 @@ export function PlacePicker({
           {/* No results */}
           {!selected && !isLoading && query.length >= 2 && places.length === 0 && (
             <div className="text-center text-muted-foreground py-4">
-              No places found
+              <Trans>No places found</Trans>
             </div>
           )}
 
@@ -148,10 +149,10 @@ export function PlacePicker({
                   className="flex-1"
                   onClick={() => setSelected(null)}
                 >
-                  Back
+                  <Trans>Back</Trans>
                 </Button>
                 <Button className="flex-1" onClick={handleConfirm}>
-                  Confirm
+                  <Trans>Confirm</Trans>
                 </Button>
               </div>
             </div>

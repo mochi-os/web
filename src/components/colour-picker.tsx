@@ -2,6 +2,7 @@
 // Copyright Alistair Cunningham 2026
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Trans } from '@lingui/react/macro'
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
@@ -300,7 +301,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
           <div className="ml-auto flex items-center gap-2">
             {onClear && hasValue && (
               <Button type="button" variant="outline" size="sm" onClick={onClear}>
-                Clear
+                <Trans>Clear</Trans>
               </Button>
             )}
             {actions}

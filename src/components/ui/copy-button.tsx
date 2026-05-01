@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Trans } from '@lingui/react/macro'
 import { Check, Copy } from 'lucide-react'
 import { type VariantProps } from 'class-variance-authority'
 import { Button, buttonVariants } from './button'
@@ -56,7 +57,7 @@ export function CopyButton({
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}
-      <span className="sr-only">Copy</span>
+      <span className="sr-only"><Trans>Copy</Trans></span>
     </Button>
   )
 }

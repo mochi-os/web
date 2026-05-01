@@ -1,4 +1,5 @@
 import { Check, ExternalLink } from 'lucide-react'
+import { useLingui } from '@lingui/react/macro'
 import { cn } from '../../lib/utils'
 import { shellNavigateExternal } from '../../lib/shell-bridge'
 import { useFormat } from '../../hooks/use-format'
@@ -71,6 +72,7 @@ export function NotificationsSection({
   markAsRead: (id: string) => void
   markAllAsRead: () => void
 }) {
+  const { t } = useLingui()
   const unread = notifications.filter((n) => n.read === 0)
 
   return (
@@ -82,7 +84,7 @@ export function NotificationsSection({
         <div className='flex gap-1'>
           {unread.length > 0 && (
             <button
-              aria-label='Mark all as read'
+              aria-label={t`Mark all as read`}
               onClick={markAllAsRead}
               className='rounded p-1.5 hover:bg-interactive-hover active:bg-interactive-active'
             >
@@ -90,7 +92,7 @@ export function NotificationsSection({
             </button>
           )}
           <a
-            aria-label='View all notifications'
+            aria-label={t`View all notifications`}
             href='/notifications/'
             onClick={onClose}
             className='rounded p-1.5 hover:bg-interactive-hover active:bg-interactive-active'

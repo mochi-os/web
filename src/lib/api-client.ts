@@ -220,7 +220,7 @@ apiClient.interceptors.response.use(
           } else {
             // Fallback: page reload gets fresh token if session valid
             useAuthStore.getState().clearAuth()
-            toast.error('Session expired')
+            toast.error("Session expired")
             window.location.reload()
           }
         }

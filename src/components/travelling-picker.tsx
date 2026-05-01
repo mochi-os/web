@@ -1,6 +1,7 @@
 // Travelling picker with origin and destination on the same screen
 
 import { useState, useRef, useEffect } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { MapPin, Mountain, Building2, Loader2, Plane, X } from 'lucide-react'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
@@ -49,6 +50,7 @@ export function TravellingPicker({
   initialOrigin: _initialOrigin,
   initialDestination: _initialDestination,
 }: TravellingPickerProps) {
+  const { t } = useLingui()
   const [originQuery, setOriginQuery] = useState('')
   const [destinationQuery, setDestinationQuery] = useState('')
   const [origin, setOrigin] = useState<PhotonPlace | null>(null)
@@ -136,15 +138,15 @@ export function TravellingPicker({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plane className="h-5 w-5" />
-            Travelling
+            <Trans>Travelling</Trans>
           </DialogTitle>
-          <DialogDescription className="sr-only">Set origin and destination</DialogDescription>
+          <DialogDescription className="sr-only"><Trans>Set origin and destination</Trans></DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto flex-1 min-h-0 px-1">
           {/* Origin field */}
           <div className="space-y-2">
-            <Label>From</Label>
+            <Label><Trans>From</Trans></Label>
             <div className="relative">
               {origin ? (
                 <div className="flex items-center gap-2 border rounded-[8px] px-3 py-2">
@@ -168,7 +170,7 @@ export function TravellingPicker({
                       setActiveField('origin')
                     }}
                     onFocus={() => setActiveField('origin')}
-                    placeholder="Search for origin..."
+                    placeholder={t`Search for origin...`}
                     autoFocus
                   />
                   {originFetching && (
@@ -229,7 +231,7 @@ export function TravellingPicker({
                       setActiveField('destination')
                     }}
                     onFocus={() => setActiveField('destination')}
-                    placeholder="Search for destination..."
+                    placeholder={t`Search for destination...`}
                   />
                   {destinationFetching && (
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -287,14 +289,14 @@ export function TravellingPicker({
               className="flex-1"
               onClick={handleClose}
             >
-              Cancel
+              <Trans>Cancel</Trans>
             </Button>
             <Button
               className="flex-1"
               onClick={handleConfirm}
               disabled={!canConfirm}
             >
-              Confirm
+              <Trans>Confirm</Trans>
             </Button>
           </div>
         </div>

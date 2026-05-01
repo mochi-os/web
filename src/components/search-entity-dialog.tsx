@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Loader2, type LucideIcon } from 'lucide-react'
 import {
@@ -170,7 +171,7 @@ export function SearchEntityDialog({
           {isLoading && debouncedSearch && (
             <div className='flex flex-col items-center justify-center py-12 gap-2'>
               <Loader2 className='text-primary size-8 animate-spin' />
-              <p className='text-sm text-muted-foreground'>Searching...</p>
+              <p className='text-sm text-muted-foreground'><Trans>Searching...</Trans></p>
             </div>
           )}
 
@@ -186,7 +187,7 @@ export function SearchEntityDialog({
                 <Icon className='text-muted-foreground size-8' />
               </div>
               <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
-              <p className='text-muted-foreground text-xs mt-1'>Try adjusting your search terms</p>
+              <p className='text-muted-foreground text-xs mt-1'><Trans>Try adjusting your search terms</Trans></p>
             </div>
           )}
 
@@ -212,7 +213,7 @@ export function SearchEntityDialog({
               ) : (
                 <div>
                   <p className='text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide'>
-                    Recommended
+                    <Trans>Recommended</Trans>
                   </p>
                   <div className='space-y-1'>
                     {filteredRecommendations.map((rec) => (

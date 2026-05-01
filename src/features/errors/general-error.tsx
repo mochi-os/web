@@ -1,4 +1,5 @@
 import { cn } from '../../lib/utils'
+import { Trans } from '@lingui/react/macro'
 import { normalizeError } from '../../lib/error-normalizer'
 import { Button } from '../../components/ui/button'
 import { CircleAlert, RotateCcw } from 'lucide-react'
@@ -121,7 +122,7 @@ export function GeneralError({
                 size='sm'
               >
                 <RotateCcw className='h-4 w-4' />
-                Try again
+                <Trans>Try again</Trans>
               </Button>
             </div>
           )}
@@ -161,7 +162,7 @@ export function GeneralError({
             className='mt-2'
           >
             <RotateCcw className='h-4 w-4' />
-            Try again
+            <Trans>Try again</Trans>
           </Button>
         )}
       </div>

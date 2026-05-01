@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Trans } from '@lingui/react/macro'
 import {
   ChevronsUpDown,
   LogOut,
@@ -77,14 +78,14 @@ export function NavUser() {
       <DropdownMenuItem asChild>
         <a href='/settings/' className='flex items-center gap-2'>
           <Settings size={16} />
-          Settings
+          <Trans>Settings</Trans>
         </a>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <div className="flex items-center justify-between px-2 py-1.5 text-sm select-none">
         <div className="flex items-center gap-2">
           <Moon className="size-4" />
-          Dark mode
+          <Trans>Dark mode</Trans>
         </div>
         <Switch 
           checked={isDark} 
@@ -94,7 +95,7 @@ export function NavUser() {
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => setOpen(true)}>
         <LogOut className='size-4' />
-        Log out
+        <Trans>Log out</Trans>
       </DropdownMenuItem>
     </>
   )
@@ -130,7 +131,7 @@ export function NavUser() {
             <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
             <DrawerContent>
               <DrawerHeader>
-                <DrawerTitle className='sr-only'>Profile</DrawerTitle>
+                <DrawerTitle className='sr-only'><Trans>Profile</Trans></DrawerTitle>
               </DrawerHeader>
               <div className='px-4 pb-4'>
                 <div className='mb-4 pb-4 border-b'>
@@ -141,13 +142,13 @@ export function NavUser() {
                 <div className='flex flex-col gap-2'>
                   <a href='/settings/' className='flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-md'>
                     <Settings size={16} />
-                    Settings
+                    <Trans>Settings</Trans>
                   </a>
                   
                   <div className='flex items-center justify-between px-2 py-1.5 text-sm hover:bg-muted rounded-md'>
                     <div className='flex items-center gap-2'>
                       <Moon size={16} />
-                      Dark mode
+                      <Trans>Dark mode</Trans>
                     </div>
                     <Switch 
                       checked={isDark} 
@@ -160,7 +161,7 @@ export function NavUser() {
                     className='flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-interactive-hover rounded-md'
                   >
                     <LogOut size={16} />
-                    Log out
+                    <Trans>Log out</Trans>
                   </button>
                 </div>
               </div>
@@ -191,14 +192,14 @@ export function NavUserDropdownContent() {
       <DropdownMenuItem asChild>
         <a href='/settings/' className='flex items-center gap-2'>
           <Settings size={16} />
-          Settings
+          <Trans>Settings</Trans>
         </a>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <div className="flex items-center justify-between px-2 py-1.5 text-sm select-none">
         <div className="flex items-center gap-2">
           <Moon className="size-4" />
-          Dark mode
+          <Trans>Dark mode</Trans>
         </div>
         <Switch
           checked={resolvedTheme === 'dark'}
@@ -208,7 +209,7 @@ export function NavUserDropdownContent() {
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => setOpen(true)}>
         <LogOut className='size-4' />
-        Log out
+        <Trans>Log out</Trans>
       </DropdownMenuItem>
       <SignOutDialog open={!!open} onOpenChange={setOpen} />
     </>

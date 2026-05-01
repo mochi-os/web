@@ -78,7 +78,7 @@ class AuthManager {
       }
       useAuthStore.getState().endLogoutTransition()
       this.isLoggingOut = false
-      toast.error('Unable to redirect to login. Please try again.')
+      toast.error("Unable to redirect to login. Please try again.")
       return
     }
 
@@ -90,7 +90,7 @@ class AuthManager {
 
       store.endLogoutTransition()
       this.isLoggingOut = false
-      toast.error('Unable to redirect to login. Please try again.')
+      toast.error("Unable to redirect to login. Please try again.")
     }, LOGOUT_REDIRECT_FAILSAFE_MS)
   }
 

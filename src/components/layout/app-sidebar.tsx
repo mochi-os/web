@@ -1,4 +1,5 @@
 import { useLayout } from '../../context/layout-provider'
+import { useLingui } from '@lingui/react/macro'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -64,6 +65,7 @@ export function AppSidebar({
   isLoading,
   hideMenu,
 }: AppSidebarProps) {
+  const { t } = useLingui()
   const { collapsible } = useLayout()
   const { isTablet } = useScreenSize()
   const { isMobile, state, setOpenMobile } = useSidebar()
@@ -76,7 +78,7 @@ export function AppSidebar({
         hideMenu ? null : (
           <SidebarHeader>
             <div className='flex items-center gap-2 px-2 py-1'>
-              <a href='/' title='Home' className='flex items-center gap-2'>
+              <a href='/' title={t`Home`} className='flex items-center gap-2'>
                 <img
                   src='/images/logo-header.svg'
                   alt='Mochi'
@@ -91,7 +93,7 @@ export function AppSidebar({
                 size='icon'
                 className='size-7'
                 onClick={() => setOpenMobile(false)}
-                aria-label='Close navigation'
+                aria-label={t`Close navigation`}
               >
                 <X className='size-4' />
               </Button>

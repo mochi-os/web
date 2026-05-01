@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import {
   CheckCircle2,
   Clock,
@@ -105,6 +106,7 @@ function AccountItem({
   onVerify: (account: Account) => void
   isRemoving: boolean
 }) {
+  const { t } = useLingui()
   const isVerified = account.verified > 0
   // Defensive check to ensure providers is an array
   const providersList = Array.isArray(providers) ? providers : []
@@ -125,7 +127,7 @@ function AccountItem({
             {needsVerification ? (
               <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                 <Clock className="h-3 w-3" />
-                Unverified
+                <Trans>Unverified</Trans>
               </span>
             ) : isVerified ? (
               <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -144,8 +146,8 @@ function AccountItem({
             variant="ghost"
             size="icon"
             disabled={isRemoving}
-            aria-label="Open account actions"
-            title="Open account actions"
+            aria-label={t`Open account actions`}
+            title={t`Open account actions`}
           >
             {isRemoving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -158,7 +160,7 @@ function AccountItem({
           {needsVerification && (
             <DropdownMenuItem onClick={() => onVerify(account)}>
               <Mail className="mr-2 h-4 w-4" />
-              Verify
+              <Trans>Verify</Trans>
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
@@ -166,7 +168,7 @@ function AccountItem({
             className="text-destructive focus:text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Remove
+            <Trans>Remove</Trans>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -180,6 +182,7 @@ export function AccountManager({
   title = 'Connected accounts',
   description = 'Manage your connected accounts for notifications and services.',
 }: AccountManagerProps) {
+  const { t } = useLingui()
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [verifyAccount, setVerifyAccount] = useState<Account | null>(null)
 
@@ -202,7 +205,7 @@ export function AccountManager({
   const handleAdd = async (type: string, fields: Record<string, string>, addToExisting: boolean) => {
     try {
       const account = await add(type, fields, addToExisting)
-      toast.success('Account added')
+      toast.success(t`Account added`)
       setIsAddOpen(false)
 
       // If verification is required, show verify dialog
@@ -211,16 +214,16 @@ export function AccountManager({
         setVerifyAccount(account)
       }
     } catch {
-      toast.error('Failed to add account')
+      toast.error(t`Failed to add account`)
     }
   }
 
   const handleRemove = async (id: number) => {
     try {
       await remove(id)
-      toast.success('Account removed')
+      toast.success(t`Account removed`)
     } catch {
-      toast.error('Failed to remove account')
+      toast.error(t`Failed to remove account`)
     }
   }
 
@@ -228,22 +231,22 @@ export function AccountManager({
     try {
       const result = await verify(id, code)
       if (result) {
-        toast.success('Account verified')
+        toast.success(t`Account verified`)
         setVerifyAccount(null)
       } else {
-        toast.error('Invalid verification code')
+        toast.error(t`Invalid verification code`)
       }
     } catch {
-      toast.error('Verification failed')
+      toast.error(t`Verification failed`)
     }
   }
 
   const handleResend = async (id: number) => {
     try {
       await verify(id)
-      toast.success('Verification code sent')
+      toast.success(t`Verification code sent`)
     } catch {
-      toast.error('Failed to send verification code')
+      toast.error(t`Failed to send verification code`)
     }
   }
 
@@ -274,16 +277,16 @@ export function AccountManager({
             </div>
             <Button onClick={() => setIsAddOpen(true)} size="sm">
               <Plus className="mr-2 h-4 w-4" />
-              Add account
+              <Trans>Add account</Trans>
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {accounts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p>No connected accounts</p>
+              <p><Trans>No connected accounts</Trans></p>
               <p className="text-sm mt-1">
-                Add an account to receive notifications and use services.
+                <Trans>Add an account to receive notifications and use services.</Trans>
               </p>
             </div>
           ) : (

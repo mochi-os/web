@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLingui } from '@lingui/react/macro'
 import { Search, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { IconButton } from './icon-button'
@@ -17,6 +18,7 @@ export function HeaderSearch({
   placeholder,
   label = 'Search',
 }: HeaderSearchProps) {
+  const { t } = useLingui()
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
   const showMobileSearch = isMobileSearchOpen || value.trim().length > 0
 
@@ -47,7 +49,7 @@ export function HeaderSearch({
             className='h-9 w-32 text-sm'
           />
           <IconButton
-            label='Close search'
+            label={t`Close search`}
             variant='ghost'
             className={cn('size-9', !value && 'text-muted-foreground')}
             onClick={closeMobileSearch}

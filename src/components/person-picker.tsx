@@ -4,6 +4,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Loader2, X, Check } from 'lucide-react'
 import { Button } from './ui/button'
@@ -75,6 +76,7 @@ export function PersonPicker({
   open: controlledOpen,
   onOpenChange,
 }: PersonPickerProps) {
+  const { t } = useLingui()
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
@@ -307,7 +309,7 @@ export function PersonPicker({
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search..."
+              placeholder={t`Search...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 h-8"
@@ -328,7 +330,7 @@ export function PersonPicker({
               className="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-muted-foreground"
             >
               <div className="size-4 shrink-0" />
-              <span className="text-sm">None</span>
+              <span className="text-sm"><Trans>None</Trans></span>
             </div>
           )}
 

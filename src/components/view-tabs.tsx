@@ -1,4 +1,5 @@
 import { cn } from '../lib/utils'
+import { useLingui } from '@lingui/react/macro'
 import { LayoutGrid, ListTree, Plus } from 'lucide-react'
 
 interface View {
@@ -30,6 +31,7 @@ export function ViewTabs({
   onViewChange,
   onAddView,
 }: ViewTabsProps) {
+  const { t } = useLingui()
   return (
     <div className='overflow-x-auto no-scrollbar border-b border-border'>
       <div className='flex items-center gap-1 min-w-max'>
@@ -53,7 +55,7 @@ export function ViewTabs({
           <button
             type='button'
             onClick={onAddView}
-            aria-label='Add view'
+            aria-label={t`Add view`}
             className='flex items-center gap-1 px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors'
           >
             <Plus className='size-4' />

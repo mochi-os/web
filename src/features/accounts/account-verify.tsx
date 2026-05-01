@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
@@ -54,7 +55,7 @@ export function AccountVerify({
       <ResponsiveDialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle>Verify email address</ResponsiveDialogTitle>
+            <ResponsiveDialogTitle><Trans>Verify email address</Trans></ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
               We sent a verification code to{' '}
               <strong>{account.identifier}</strong>. Enter the code below to
@@ -64,7 +65,7 @@ export function AccountVerify({
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="code">Verification code</Label>
+              <Label htmlFor="code"><Trans>Verification code</Trans></Label>
               <Input
                 id="code"
                 value={code}
@@ -82,7 +83,7 @@ export function AccountVerify({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              <Trans>Cancel</Trans>
             </Button>
             <Button
               type="button"

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -241,7 +242,7 @@ export function CreateEntityDialog({
             <ResponsiveDialogFooter className="gap-2">
               <ResponsiveDialogClose asChild>
                 <Button type="button" variant="outline" disabled={isPending}>
-                  Cancel
+                  <Trans>Cancel</Trans>
                 </Button>
               </ResponsiveDialogClose>
               <Button type="submit" disabled={!form.formState.isValid || isPending}>

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Trans } from '@lingui/react/macro'
 import { Outlet } from '@tanstack/react-router'
 
 import { cn } from '../../lib/utils'
@@ -124,9 +125,9 @@ export function AuthenticatedLayout({
     return (
       <div className='flex h-svh w-full items-center justify-center bg-background px-4'>
         <div className='text-center'>
-          <p className='text-sm font-medium'>Signing out...</p>
+          <p className='text-sm font-medium'><Trans>Signing out...</Trans></p>
           <p className='text-muted-foreground mt-1 text-sm'>
-            Redirecting to login.
+            <Trans>Redirecting to login.</Trans>
           </p>
         </div>
       </div>

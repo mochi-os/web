@@ -1,4 +1,5 @@
 import { type SVGProps } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
 import { CircleCheck, RotateCcw, Settings } from 'lucide-react'
 import { IconDir } from '../assets/custom/icon-dir'
@@ -28,6 +29,7 @@ import {
 import { useSidebar } from './ui/sidebar'
 
 export function ConfigDrawer() {
+  const { t } = useLingui()
   const { setOpen } = useSidebar()
   const { resetDir } = useDirection()
   const { resetTheme } = useTheme()
@@ -46,7 +48,7 @@ export function ConfigDrawer() {
         <Button
           size='icon'
           variant='ghost'
-          aria-label='Open theme settings'
+          aria-label={t`Open theme settings`}
           aria-describedby='config-drawer-description'
           className='rounded-full'
         >
@@ -55,9 +57,9 @@ export function ConfigDrawer() {
       </SheetTrigger>
       <SheetContent className='flex flex-col'>
         <SheetHeader className='pb-0 text-start'>
-          <SheetTitle>Theme Settings</SheetTitle>
+          <SheetTitle><Trans>Theme Settings</Trans></SheetTitle>
           <SheetDescription id='config-drawer-description'>
-            Adjust the appearance and layout to suit your preferences.
+            <Trans>Adjust the appearance and layout to suit your preferences.</Trans>
           </SheetDescription>
         </SheetHeader>
         <div className='space-y-6 overflow-y-auto px-4'>
@@ -70,9 +72,9 @@ export function ConfigDrawer() {
           <Button
             variant='destructive'
             onClick={handleReset}
-            aria-label='Reset all settings to default values'
+            aria-label={t`Reset all settings to default values`}
           >
-            Reset
+            <Trans>Reset</Trans>
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -171,11 +173,12 @@ function RadioGroupItem({
 }
 
 function ThemeConfig() {
+  const { t } = useLingui()
   const { defaultTheme, theme, setTheme } = useTheme()
   return (
     <div>
       <SectionTitle
-        title='Theme'
+        title={t`Theme`}
         showReset={theme !== defaultTheme}
         onReset={() => setTheme(defaultTheme)}
       />
@@ -183,7 +186,7 @@ function ThemeConfig() {
         value={theme}
         onValueChange={setTheme}
         className='grid w-full max-w-md grid-cols-3 gap-4'
-        aria-label='Select theme preference'
+        aria-label={t`Select theme preference`}
         aria-describedby='theme-description'
       >
         {[
@@ -207,18 +210,19 @@ function ThemeConfig() {
         ))}
       </Radio>
       <div id='theme-description' className='sr-only'>
-        Choose between system preference, light mode, or dark mode
+        <Trans>Choose between system preference, light mode, or dark mode</Trans>
       </div>
     </div>
   )
 }
 
 function SidebarConfig() {
+  const { t } = useLingui()
   const { defaultVariant, variant, setVariant } = useLayout()
   return (
     <div className='max-md:hidden'>
       <SectionTitle
-        title='Sidebar'
+        title={t`Sidebar`}
         showReset={defaultVariant !== variant}
         onReset={() => setVariant(defaultVariant)}
       />
@@ -226,7 +230,7 @@ function SidebarConfig() {
         value={variant}
         onValueChange={setVariant}
         className='grid w-full max-w-md grid-cols-3 gap-4'
-        aria-label='Select sidebar style'
+        aria-label={t`Select sidebar style`}
         aria-describedby='sidebar-description'
       >
         {[
@@ -250,13 +254,14 @@ function SidebarConfig() {
         ))}
       </Radio>
       <div id='sidebar-description' className='sr-only'>
-        Choose between inset, floating, or standard sidebar layout
+        <Trans>Choose between inset, floating, or standard sidebar layout</Trans>
       </div>
     </div>
   )
 }
 
 function LayoutConfig() {
+  const { t } = useLingui()
   const { open, setOpen } = useSidebar()
   const { defaultCollapsible, collapsible, setCollapsible } = useLayout()
 
@@ -265,7 +270,7 @@ function LayoutConfig() {
   return (
     <div className='max-md:hidden'>
       <SectionTitle
-        title='Layout'
+        title={t`Layout`}
         showReset={radioState !== 'default'}
         onReset={() => {
           setOpen(true)
@@ -283,7 +288,7 @@ function LayoutConfig() {
           setCollapsible(v as Collapsible)
         }}
         className='grid w-full max-w-md grid-cols-3 gap-4'
-        aria-label='Select layout style'
+        aria-label={t`Select layout style`}
         aria-describedby='layout-description'
       >
         {[
@@ -307,18 +312,19 @@ function LayoutConfig() {
         ))}
       </Radio>
       <div id='layout-description' className='sr-only'>
-        Choose between default expanded, compact icon-only, or full layout mode
+        <Trans>Choose between default expanded, compact icon-only, or full layout mode</Trans>
       </div>
     </div>
   )
 }
 
 function DirConfig() {
+  const { t } = useLingui()
   const { defaultDir, dir, setDir } = useDirection()
   return (
     <div>
       <SectionTitle
-        title='Direction'
+        title={t`Direction`}
         showReset={defaultDir !== dir}
         onReset={() => setDir(defaultDir)}
       />
@@ -326,7 +332,7 @@ function DirConfig() {
         value={dir}
         onValueChange={setDir}
         className='grid w-full max-w-md grid-cols-3 gap-4'
-        aria-label='Select site direction'
+        aria-label={t`Select site direction`}
         aria-describedby='direction-description'
       >
         {[
@@ -349,7 +355,7 @@ function DirConfig() {
         ))}
       </Radio>
       <div id='direction-description' className='sr-only'>
-        Choose between left-to-right or right-to-left site direction
+        <Trans>Choose between left-to-right or right-to-left site direction</Trans>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
@@ -30,6 +31,7 @@ interface TimezoneSelectProps {
 }
 
 export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProps) {
+  const { t } = useLingui()
   const [open, setOpen] = useState(false)
   const timezones = useMemo(() => getTimezones(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
@@ -56,9 +58,9 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
       </PopoverTrigger>
       <PopoverContent className='w-[350px] p-0' align='start'>
         <Command>
-          <CommandInput placeholder='Search time zone...' />
+          <CommandInput placeholder={t`Search time zone...`} />
           <CommandList>
-            <CommandEmpty>No time zone found.</CommandEmpty>
+            <CommandEmpty><Trans>No time zone found.</Trans></CommandEmpty>
             <CommandGroup>
               <CommandItem
                 value='auto'

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import {
   LogOut,
   Settings,
@@ -62,6 +63,7 @@ export function MochiMenu({
   showLogo = true,
   className,
 }: MochiMenuProps) {
+  const { t } = useLingui()
   const [signOutOpen, setSignOutOpen] = useDialogState()
   const [menuOpen, setMenuOpen] = useState(false)
   const { isMobile } = useScreenSize()
@@ -137,7 +139,7 @@ export function MochiMenu({
         )}
       >
         {showLogo && (
-          <a href='/' title='Home'>
+          <a href='/' title={t`Home`}>
             <MochiLogo />
           </a>
         )}
@@ -147,7 +149,7 @@ export function MochiMenu({
             <DrawerTrigger asChild>{trigger}</DrawerTrigger>
             <DrawerContent>
               <DrawerHeader>
-                <DrawerTitle className='sr-only'>Menu</DrawerTitle>
+                <DrawerTitle className='sr-only'><Trans>Menu</Trans></DrawerTitle>
               </DrawerHeader>
               <div className='px-4 pb-4'>{menuContent}</div>
             </DrawerContent>

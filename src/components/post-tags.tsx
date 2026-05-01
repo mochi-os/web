@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useLingui } from '@lingui/react/macro'
 import { createPortal } from 'react-dom'
 import { Minus, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
@@ -36,6 +37,7 @@ interface PostTagsProps {
 const TAG_PATTERN = /^[a-z0-9 /-]+$/
 
 export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInterestDown, onInterestRemove }: PostTagsTooltipProps) {
+  const { t } = useLingui()
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
@@ -115,7 +117,7 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
               }
             }}
             className='text-foreground placeholder:text-muted-foreground h-7 w-full bg-transparent text-sm outline-none'
-            placeholder='Add tag...'
+            placeholder={t`Add tag...`}
           />
           {error && <p className='text-destructive text-xs'>{error}</p>}
         </div>
@@ -125,6 +127,7 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
 }
 
 export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemove }: PostTagsProps) {
+  const { t } = useLingui()
   const [adjustments, setAdjustments] = useState<Record<string, number | null>>({})
 
   if (!tags.length) return null
@@ -156,7 +159,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
             {tag.qid && (
               <button
                 type='button'
-                title='Boost interest'
+                title={t`Boost interest`}
                 className='text-muted-foreground hover:bg-accent hover:text-foreground rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
@@ -171,7 +174,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
             {tag.qid && (
               <button
                 type='button'
-                title='Reduce interest'
+                title={t`Reduce interest`}
                 className='text-muted-foreground hover:bg-accent hover:text-foreground rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
@@ -186,7 +189,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
             {tag.qid && onInterestRemove && (
               <button
                 type='button'
-                title='Remove interest'
+                title={t`Remove interest`}
                 className='text-muted-foreground hover:bg-interactive-hover rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()

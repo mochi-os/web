@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Trans } from '@lingui/react/macro'
 import { cn } from '../../lib/utils'
 import { safeCookieGet, safeCookieSet } from '../../lib/shell-bridge'
 import { useScreenSize } from '../../hooks/use-screen-size'
@@ -140,8 +141,8 @@ function RightPanel({ className, children, ...props }: RightPanelProps) {
           side="right"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Details Panel</SheetTitle>
-            <SheetDescription>Contextual information and details.</SheetDescription>
+            <SheetTitle><Trans>Details Panel</Trans></SheetTitle>
+            <SheetDescription><Trans>Contextual information and details.</Trans></SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -223,7 +224,7 @@ function RightPanelTrigger({
       {...props}
     >
       {isOpen ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
-      <span className="sr-only">Toggle Right Panel</span>
+      <span className="sr-only"><Trans>Toggle Right Panel</Trans></span>
     </Button>
   )
 }
@@ -250,7 +251,7 @@ function RightPanelCloseButton({
       {...props}
     >
       <XIcon className="size-4" />
-      <span className="sr-only">Close Panel</span>
+      <span className="sr-only"><Trans>Close Panel</Trans></span>
     </Button>
   )
 }
