@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useLingui } from '@lingui/react/macro'
 import { Flame, Sparkles, Star, Trophy, Clock } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
@@ -17,14 +18,6 @@ interface SortOption {
   icon: React.ReactNode
 }
 
-const SORT_OPTIONS: SortOption[] = [
-  { value: 'ai', label: 'AI', icon: <Sparkles className="size-4" /> },
-  { value: 'interests', label: "Interests", icon: <Star className="size-4" /> },
-  { value: 'new', label: "New", icon: <Clock className="size-4" /> },
-  { value: 'hot', label: "Hot", icon: <Flame className="size-4" /> },
-  { value: 'top', label: "Top", icon: <Trophy className="size-4" /> },
-]
-
 interface SortSelectorProps {
   value: SortType
   onValueChange: (value: SortType) => void
@@ -40,6 +33,14 @@ export function SortSelector({
   disabled,
   className,
 }: SortSelectorProps) {
+  const { t } = useLingui()
+  const SORT_OPTIONS: SortOption[] = [
+    { value: 'ai', label: t`AI`, icon: <Sparkles className="size-4" /> },
+    { value: 'interests', label: t`Interests`, icon: <Star className="size-4" /> },
+    { value: 'new', label: t`New`, icon: <Clock className="size-4" /> },
+    { value: 'hot', label: t`Hot`, icon: <Flame className="size-4" /> },
+    { value: 'top', label: t`Top`, icon: <Trophy className="size-4" /> },
+  ]
   const visibleOptions = options
     ? SORT_OPTIONS.filter((opt) => options.includes(opt.value))
     : SORT_OPTIONS

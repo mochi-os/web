@@ -1,3 +1,4 @@
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Button } from './button'
 
 interface LoadMoreProps {
@@ -17,6 +18,7 @@ export function LoadMore({
   total,
   label,
 }: LoadMoreProps) {
+  const { t } = useLingui()
   if (!hasMore && totalShown === 0) return null
   return (
     <div className='mt-4 flex flex-col items-center gap-2'>
@@ -27,11 +29,11 @@ export function LoadMore({
           onClick={onLoadMore}
           disabled={isLoading}
         >
-          {isLoading ? 'Loading...' : (label ?? 'Load more')}
+          {isLoading ? <Trans>Loading…</Trans> : (label ?? t`Load more`)}
         </Button>
       ) : null}
       <p className='text-xs text-muted-foreground'>
-        Showing {totalShown} of {total}
+        <Trans>Showing {totalShown} of {total}</Trans>
       </p>
     </div>
   )

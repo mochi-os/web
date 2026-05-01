@@ -31,6 +31,12 @@ type LanguageEntry = {
   native: string
 }
 
+function capitalise(s: string): string {
+  if (!s) return s
+  // Use the first character's locale-aware uppercase, then keep the rest.
+  return s.charAt(0).toLocaleUpperCase() + s.slice(1)
+}
+
 function describeLanguages(tags: string[]): LanguageEntry[] {
   const out: LanguageEntry[] = []
   for (const tag of tags) {
@@ -40,7 +46,7 @@ function describeLanguages(tags: string[]): LanguageEntry[] {
     } catch {
       /* fall back to raw tag */
     }
-    out.push({ tag, native })
+    out.push({ tag, native: capitalise(native) })
   }
   out.sort((a, b) => a.native.localeCompare(b.native))
   return out
