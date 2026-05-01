@@ -120,6 +120,21 @@ export function detectNumberFormat(): NumberFormat {
   }
 }
 
+/**
+ * Returns the browser's preferred BCP 47 language tag (lower-cased), or 'en'
+ * if the browser does not expose one. Mirrors detectDateFormat / detectTimeFormat
+ * etc. — used by the settings picker to display "Detect from web browser (X)"
+ * for the `language=auto` option. The actual server-side resolution still
+ * happens in core/server/labels.go::request_language, which falls through the
+ * Accept-Language header when the user's preference is "auto" or unset.
+ */
+export function detectLanguage(): string {
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    return navigator.language.toLowerCase()
+  }
+  return 'en'
+}
+
 export function detectUnits(): 'metric' | 'imperial' | 'usa' {
   try {
     const region = new Intl.Locale(navigator.language).region?.toUpperCase()

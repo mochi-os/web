@@ -113,9 +113,16 @@ function readStoredLanguage(): string | null {
 }
 
 /**
- * Write the language preference to localStorage. Called by the login page and
- * anonymous-chrome pickers; in-shell apps use shellSetLanguage instead, which
- * persists via the menu shell + the user's server-side preference.
+ * Write the language preference to localStorage AND a `mochi_language` cookie.
+ * Called by the login page and anonymous-chrome pickers; in-shell apps use
+ * shellSetLanguage instead, which persists via the menu shell + the user's
+ * server-side preference.
+ *
+ * The cookie lets the server-side language resolver (request_language in
+ * core/server/labels.go) honour the choice for both anonymous traffic and the
+ * logged-in transition: without it, /_/shell would fall through to
+ * Accept-Language after sign-in and the user's pre-login pick would be lost.
+ * The cookie is path=/ so it covers every Mochi app and outlives the session.
  */
 export function setStoredLanguage(language: string): void {
   try {
@@ -124,6 +131,14 @@ export function setStoredLanguage(language: string): void {
     }
   } catch {
     /* sandboxed iframes have no storage; ignore */
+  }
+  try {
+    if (typeof document !== 'undefined') {
+      const oneYear = 60 * 60 * 24 * 365
+      document.cookie = `mochi_language=${encodeURIComponent(language)}; path=/; max-age=${oneYear}; SameSite=Lax`
+    }
+  } catch {
+    /* document not available in some environments; ignore */
   }
 }
 
