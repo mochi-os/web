@@ -9,6 +9,28 @@ export function sleep(ms: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// naturalCompare(a, b) — case-insensitive, accent-insensitive, numeric-aware
+// string comparison for in-memory sorts. Use this in `Array.prototype.sort`
+// for any user-facing list ordered by a name/title/label string.
+//
+// Comparator behaviour:
+//   - "café" sorts equal to "cafe"
+//   - "Über" sorts equal to "uber"
+//   - "Sprint 2" sorts before "Sprint 10" (numeric: true)
+//   - Locale-undefined; uses the engine's root collator so behaviour is
+//     consistent regardless of viewer language.
+//
+// Rule: do not sort by user-facing strings in SQL — fetch unsorted (or order
+// by an intrinsic column like rank/created) and sort with naturalCompare here.
+const naturalCollator = new Intl.Collator(undefined, {
+  sensitivity: 'base',
+  numeric: true,
+})
+
+export function naturalCompare(a: string, b: string): number {
+  return naturalCollator.compare(a, b)
+}
+
 // Compare two version strings semantically (e.g., "1.2" vs "1.13")
 // Returns negative if a < b, positive if a > b, 0 if equal
 export function compareVersions(a: string, b: string): number {

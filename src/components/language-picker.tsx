@@ -24,7 +24,7 @@ import {
 } from './ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { setStoredLanguage } from '../context/i18n-provider'
-import { cn } from '../lib/utils'
+import { cn, naturalCompare } from '../lib/utils'
 
 type LanguageEntry = {
   tag: string
@@ -37,18 +37,38 @@ function capitalise(s: string): string {
   return s.charAt(0).toLocaleUpperCase() + s.slice(1)
 }
 
+// Explicit display-name overrides. Keyed by lower-cased BCP 47 tag.
+// Used when Intl.DisplayNames would return a name that doesn't match Mochi's
+// chosen wording (e.g. en-us → "American English") or that doesn't sort
+// alongside its parent language in the picker.
+//
+// `en` is overridden because Mochi's source `en` catalog uses neutral English
+// (per CLAUDE.md), not UK or US English; "English (international)" reads
+// honestly and treats US English as a sibling localisation, not a deviation
+// from "real" English.
+const displayNameOverrides: Record<string, string> = {
+  'en': 'English (international)',
+  'en-us': 'English (USA)',
+}
+
 function describeLanguages(tags: string[]): LanguageEntry[] {
   const out: LanguageEntry[] = []
   for (const tag of tags) {
+    const override = displayNameOverrides[tag.toLowerCase()]
     let native = tag
-    try {
-      native = new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ?? tag
-    } catch {
-      /* fall back to raw tag */
+    if (override) {
+      native = override
+    } else {
+      try {
+        native = new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ?? tag
+      } catch {
+        /* fall back to raw tag */
+      }
+      native = capitalise(native)
     }
-    out.push({ tag, native: capitalise(native) })
+    out.push({ tag, native })
   }
-  out.sort((a, b) => a.native.localeCompare(b.native))
+  out.sort((a, b) => naturalCompare(a.native, b.native))
   return out
 }
 

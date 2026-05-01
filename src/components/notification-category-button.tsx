@@ -8,6 +8,7 @@ import { cn } from '../lib/utils'
 import { useAuthStore } from '../stores/auth-store'
 import { toast } from '../lib/toast-utils'
 import { getErrorMessage } from '../lib/handle-server-error'
+import { naturalCompare } from '../lib/utils'
 
 const MENU_PATH = '/menu'
 
@@ -67,7 +68,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
         const cats = [...(catsRes.data || [])].sort((a, b) => {
           if (a.id === 0) return 1
           if (b.id === 0) return -1
-          return a.label.localeCompare(b.label)
+          return naturalCompare(a.label, b.label)
         })
         setCategories(cats)
         setRow(rowRes.data || null)

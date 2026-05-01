@@ -28,6 +28,7 @@ import { useAccounts } from '../../hooks/use-accounts'
 import { AccountAdd } from './account-add'
 import { AccountVerify } from './account-verify'
 import { getProviderLabel, type Account, type Provider } from './types'
+import { naturalCompare } from '../../lib/utils'
 
 interface AccountManagerProps {
   appBase: string
@@ -293,11 +294,11 @@ export function AccountManager({
                 .sort((a, b) => {
                   const aName = a.label || getProviderLabel(a.type)
                   const bName = b.label || getProviderLabel(b.type)
-                  const nameCompare = aName.localeCompare(bName)
+                  const nameCompare = naturalCompare(aName, bName)
                   if (nameCompare !== 0) return nameCompare
                   const aType = getProviderLabel(a.type)
                   const bType = getProviderLabel(b.type)
-                  return aType.localeCompare(bType)
+                  return naturalCompare(aType, bType)
                 })
                 .map((account) => (
                   <AccountItem
