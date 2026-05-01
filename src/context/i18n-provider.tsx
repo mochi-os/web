@@ -24,7 +24,7 @@
 import { useEffect, useState } from 'react'
 import { i18n, type Messages } from '@lingui/core'
 import { I18nProvider as LinguiProvider } from '@lingui/react'
-import { getShellInitData, onShellMessage } from '../lib/shell-bridge'
+import { getShellInitData, initShellBridge, onShellMessage } from '../lib/shell-bridge'
 import {
   formatDate as fmtDate,
   formatTime as fmtTime,
@@ -210,6 +210,24 @@ export function I18nProvider({
       }
     })
   }, [])
+
+  // The shell init message (with the user's language preference) arrives
+  // asynchronously after this component first renders. pickInitialLanguage
+  // ran during initial useState and saw shellInitData=null, so it fell back
+  // to navigator.language (or 'en'). Once the init data arrives, re-pick
+  // the initial language.
+  useEffect(() => {
+    let cancelled = false
+    initShellBridge().then((data) => {
+      if (cancelled) return
+      if (data?.language && hasMatchingCatalog(catalogs, data.language)) {
+        setLanguage(data.language)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [catalogs])
 
   if (!ready) return null
   return <LinguiProvider i18n={i18n}>{children}</LinguiProvider>
