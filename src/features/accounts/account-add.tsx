@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { Loader2, Plus } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
@@ -41,7 +41,6 @@ export function AccountAdd({
   appBase: _appBase,
   hasExistingAiAccount = false,
 }: AccountAddProps) {
-  const { t } = useLingui()
   const [selectedType, setSelectedType] = useState<string>('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [addToExisting, setAddToExisting] = useState(true)
@@ -123,7 +122,7 @@ export function AccountAdd({
                 <Label htmlFor="type"><Trans>Account type</Trans></Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
                   <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder={t`Select account type`} />
+                    <SelectValue placeholder={"Select account type"} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableProviders.map((provider) => (

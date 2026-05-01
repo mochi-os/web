@@ -30,7 +30,7 @@ export function SortDirectionButton({
         sizeClasses,
         className
       )}
-      title={direction === 'asc' ? 'Ascending' : 'Descending'}
+      title={direction === 'asc' ? "Ascending" : "Descending"}
     >
       {direction === 'asc' ? (
         <ArrowUp className={iconSize} />

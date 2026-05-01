@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { Bell, Check, ExternalLink } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { shellNavigateExternal } from '../lib/shell-bridge'
@@ -97,7 +97,6 @@ export function NotificationsDropdown({
   onNotificationClick,
   buttonClassName,
 }: NotificationsDropdownProps) {
-  const { t } = useLingui()
   const { isDesktop } = useScreenSize()
   const [open, setOpen] = useState(false)
   const [showAll, setShowAll] = useState(() => {
@@ -129,7 +128,7 @@ export function NotificationsDropdown({
       variant='ghost'
       size='icon'
       className={cn('relative', buttonClassName)}
-      aria-label={t`Notifications`}
+      aria-label={"Notifications"}
     >
       <Bell className='size-5' />
       {unreadCount > 0 && (
@@ -170,7 +169,7 @@ export function NotificationsDropdown({
             href={notificationsUrl}
             onClick={() => setOpen(false)}
             className='text-muted-foreground hover:text-foreground transition-colors'
-            title={t`View all`}
+            title={"View all"}
           >
             <ExternalLink className='size-4' />
           </a>
@@ -186,7 +185,7 @@ export function NotificationsDropdown({
           <div className='flex flex-col items-center justify-center py-12 text-center px-4'>
             <Bell className='size-8 text-muted-foreground/20 mb-3' />
             <p className='text-sm font-medium text-foreground'>
-              {showAll ? 'No notifications yet' : "You're all caught up!"}
+              {showAll ? "No notifications yet" : "You're all caught up!"}
             </p>
             <p className='text-xs text-muted-foreground mt-1 max-w-[180px]'>
               {showAll

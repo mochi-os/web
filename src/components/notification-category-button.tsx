@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { SlidersHorizontal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
@@ -48,7 +48,6 @@ interface Props {
 }
 
 export function NotificationCategoryButton({ app, topic = '', object = '', className }: Props) {
-  const { t } = useLingui()
   const [open, setOpen] = useState(false)
   const [categories, setCategories] = useState<Category[] | null>(null)
   const [row, setRow] = useState<TopicRow | null>(null)
@@ -100,7 +99,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
       toast.success(cat ? `${label}: ${cat.label}` : `${label} updated`)
       setTimeout(() => setOpen(false), 0)
     } catch (error) {
-      toast.error(getErrorMessage(error, t`Failed to update category`))
+      toast.error(getErrorMessage(error, "Failed to update category"))
     } finally {
       setSaving(false)
     }
@@ -111,7 +110,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={t`Change notification category`}
+          aria-label={"Change notification category"}
           onClick={(e) => e.stopPropagation()}
           className={cn(
             'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-interactive-active',
@@ -139,7 +138,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
               disabled={saving}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={t`Unassigned`} />
+                <SelectValue placeholder={"Unassigned"} />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (

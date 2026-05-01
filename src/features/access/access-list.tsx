@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { User, UsersRound, Globe, Users, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -99,7 +99,6 @@ export function AccessList({
   onRetry,
   selectWidth = 250,
 }: AccessListProps) {
-  const { t } = useLingui()
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
 
   const handleLevelChange = async (subject: string, newLevel: string) => {
@@ -238,8 +237,8 @@ export function AccessList({
                         variant="ghost"
                         size="icon"
                         disabled={isUpdating}
-                        aria-label={t`Remove access rule`}
-                        title={t`Remove access rule`}
+                        aria-label={"Remove access rule"}
+                        title={"Remove access rule"}
                       >
                         <X className="h-4 w-4" />
                       </Button>

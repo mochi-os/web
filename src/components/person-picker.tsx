@@ -4,7 +4,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Loader2, X, Check } from 'lucide-react'
 import { Button } from './ui/button'
@@ -76,7 +76,6 @@ export function PersonPicker({
   open: controlledOpen,
   onOpenChange,
 }: PersonPickerProps) {
-  const { t } = useLingui()
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
@@ -185,21 +184,21 @@ export function PersonPicker({
 
     const localPeople = filteredPeople.filter((p) => localIds.has(p.id))
     if (localPeople.length > 0) {
-      groups.push({ label: 'Project members', people: localPeople })
+      groups.push({ label: "Project members", people: localPeople })
     }
 
     const friendPeople = filteredPeople.filter(
       (p) => friendIds.has(p.id) && !localIds.has(p.id)
     )
     if (friendPeople.length > 0) {
-      groups.push({ label: 'Friends', people: friendPeople })
+      groups.push({ label: "Friends", people: friendPeople })
     }
 
     const otherPeople = filteredPeople.filter(
       (p) => !localIds.has(p.id) && !friendIds.has(p.id)
     )
     if (otherPeople.length > 0) {
-      groups.push({ label: 'Directory', people: otherPeople })
+      groups.push({ label: "Directory", people: otherPeople })
     }
 
     return groups
@@ -309,7 +308,7 @@ export function PersonPicker({
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={t`Search...`}
+              placeholder={"Search..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 h-8"

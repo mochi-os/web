@@ -30,8 +30,9 @@ type AppSidebarProps = {
 }
 
 function CollapseBtn() {
+  const { t } = useLingui()
   const { toggleSidebar, state } = useSidebar()
-  const label = state === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'
+  const label = state === 'expanded' ? t`Collapse sidebar` : t`Expand sidebar`
 
   return (
     <Button
@@ -65,7 +66,6 @@ export function AppSidebar({
   isLoading,
   hideMenu,
 }: AppSidebarProps) {
-  const { t } = useLingui()
   const { collapsible } = useLayout()
   const { isTablet } = useScreenSize()
   const { isMobile, state, setOpenMobile } = useSidebar()
@@ -78,7 +78,7 @@ export function AppSidebar({
         hideMenu ? null : (
           <SidebarHeader>
             <div className='flex items-center gap-2 px-2 py-1'>
-              <a href='/' title={t`Home`} className='flex items-center gap-2'>
+              <a href='/' title={"Home"} className='flex items-center gap-2'>
                 <img
                   src='/images/logo-header.svg'
                   alt='Mochi'
@@ -93,7 +93,7 @@ export function AppSidebar({
                 size='icon'
                 className='size-7'
                 onClick={() => setOpenMobile(false)}
-                aria-label={t`Close navigation`}
+                aria-label={"Close navigation"}
               >
                 <X className='size-4' />
               </Button>

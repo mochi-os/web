@@ -11,18 +11,18 @@ export function getWebsocketStatusMeta(
 ): WebsocketStatusMeta {
   switch (status) {
     case 'ready':
-      return { label: 'Connected', color: 'bg-green-500' }
+      return { label: "Connected", color: 'bg-green-500' }
     case 'connecting':
       return {
         label: retries > 0 ? `Reconnecting (${retries})...` : 'Connecting...',
         color: 'bg-yellow-500',
       }
     case 'error':
-      return { label: 'Disconnected', color: 'bg-red-500' }
+      return { label: "Disconnected", color: 'bg-red-500' }
     case 'idle':
     case 'closing':
     default:
-      return { label: 'Disconnected', color: 'bg-slate-500' }
+      return { label: "Disconnected", color: 'bg-slate-500' }
   }
 }
 

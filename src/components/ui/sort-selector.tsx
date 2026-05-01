@@ -19,10 +19,10 @@ interface SortOption {
 
 const SORT_OPTIONS: SortOption[] = [
   { value: 'ai', label: 'AI', icon: <Sparkles className="size-4" /> },
-  { value: 'interests', label: 'Interests', icon: <Star className="size-4" /> },
-  { value: 'new', label: 'New', icon: <Clock className="size-4" /> },
-  { value: 'hot', label: 'Hot', icon: <Flame className="size-4" /> },
-  { value: 'top', label: 'Top', icon: <Trophy className="size-4" /> },
+  { value: 'interests', label: "Interests", icon: <Star className="size-4" /> },
+  { value: 'new', label: "New", icon: <Clock className="size-4" /> },
+  { value: 'hot', label: "Hot", icon: <Flame className="size-4" /> },
+  { value: 'top', label: "Top", icon: <Trophy className="size-4" /> },
 ]
 
 interface SortSelectorProps {

@@ -90,7 +90,7 @@ export function CommentTreeLayout({
                 : 'top-[4px] left-[2px] size-3',
               selfColorBorder
             )}
-            aria-label={isCollapsed ? 'Expand' : 'Collapse'}
+            aria-label={isCollapsed ? "Expand" : "Collapse"}
           >
             {isCollapsed ? (
               <Plus className='size-2' />

@@ -32,6 +32,6 @@ export interface Group {
 
 // Special subject options
 export const SPECIAL_SUBJECTS = [
-  { id: '+', name: 'Authenticated users', description: 'Anyone who is logged in' },
-  { id: '*', name: 'Anyone', description: 'Including anonymous users' },
+  { id: '+', name: "Authenticated users", description: "Anyone who is logged in" },
+  { id: '*', name: "Anyone", description: "Including anonymous users" },
 ]

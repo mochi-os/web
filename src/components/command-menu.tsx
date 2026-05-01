@@ -1,5 +1,5 @@
 import React from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronRight } from 'lucide-react'
 import { useSearch } from '../context/search-provider'
@@ -19,7 +19,6 @@ interface CommandMenuProps {
 }
 
 export function CommandMenu({ sidebarData }: CommandMenuProps) {
-  const { t } = useLingui()
   const navigate = useNavigate()
   const { open, setOpen } = useSearch()
 
@@ -46,7 +45,7 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder={t`Type a command or search...`} />
+      <CommandInput placeholder={"Type a command or search..."} />
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty><Trans>No results found.</Trans></CommandEmpty>

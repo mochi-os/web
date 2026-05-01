@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { useLingui } from '@lingui/react/macro'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
@@ -25,7 +24,6 @@ export function TopBar({
   className,
   mobileTitle,
 }: TopBarProps) {
-  const { t } = useLingui()
   const { resolvedTheme } = useTheme()
   const { isMobile, isTablet } = useScreenSize()
   const { toggleSidebar, open: sidebarOpen } = useSidebar()
@@ -55,12 +53,12 @@ export function TopBar({
           size='icon'
           className='shrink-0'
           onClick={toggleSidebar}
-          aria-label={t`Open navigation`}
+          aria-label={"Open navigation"}
         >
           {sidebarOpen ? <PanelLeftClose className='size-5' /> : <PanelLeftOpen className='size-5' />}
         </Button>
 
-        <a href='/' title={t`Home`}>
+        <a href='/' title={"Home"}>
           <img
             src='/images/logo-header.svg'
             alt='Mochi'
@@ -89,7 +87,7 @@ export function TopBar({
         <div className='grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-1'>
           <a
             href='/'
-            title={t`Home`}
+            title={"Home"}
             className='flex size-10 items-center justify-center rounded-md transition-colors duration-150 hover:bg-interactive-hover active:bg-interactive-active'
           >
             <img

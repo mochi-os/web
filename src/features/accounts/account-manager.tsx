@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import {
   CheckCircle2,
   Clock,
@@ -106,7 +106,6 @@ function AccountItem({
   onVerify: (account: Account) => void
   isRemoving: boolean
 }) {
-  const { t } = useLingui()
   const isVerified = account.verified > 0
   // Defensive check to ensure providers is an array
   const providersList = Array.isArray(providers) ? providers : []
@@ -146,8 +145,8 @@ function AccountItem({
             variant="ghost"
             size="icon"
             disabled={isRemoving}
-            aria-label={t`Open account actions`}
-            title={t`Open account actions`}
+            aria-label={"Open account actions"}
+            title={"Open account actions"}
           >
             {isRemoving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -182,7 +181,6 @@ export function AccountManager({
   title = 'Connected accounts',
   description = 'Manage your connected accounts for notifications and services.',
 }: AccountManagerProps) {
-  const { t } = useLingui()
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [verifyAccount, setVerifyAccount] = useState<Account | null>(null)
 
@@ -205,7 +203,7 @@ export function AccountManager({
   const handleAdd = async (type: string, fields: Record<string, string>, addToExisting: boolean) => {
     try {
       const account = await add(type, fields, addToExisting)
-      toast.success(t`Account added`)
+      toast.success("Account added")
       setIsAddOpen(false)
 
       // If verification is required, show verify dialog
@@ -214,16 +212,16 @@ export function AccountManager({
         setVerifyAccount(account)
       }
     } catch {
-      toast.error(t`Failed to add account`)
+      toast.error("Failed to add account")
     }
   }
 
   const handleRemove = async (id: number) => {
     try {
       await remove(id)
-      toast.success(t`Account removed`)
+      toast.success("Account removed")
     } catch {
-      toast.error(t`Failed to remove account`)
+      toast.error("Failed to remove account")
     }
   }
 
@@ -231,22 +229,22 @@ export function AccountManager({
     try {
       const result = await verify(id, code)
       if (result) {
-        toast.success(t`Account verified`)
+        toast.success("Account verified")
         setVerifyAccount(null)
       } else {
-        toast.error(t`Invalid verification code`)
+        toast.error("Invalid verification code")
       }
     } catch {
-      toast.error(t`Verification failed`)
+      toast.error("Verification failed")
     }
   }
 
   const handleResend = async (id: number) => {
     try {
       await verify(id)
-      toast.success(t`Verification code sent`)
+      toast.success("Verification code sent")
     } catch {
-      toast.error(t`Failed to send verification code`)
+      toast.error("Failed to send verification code")
     }
   }
 

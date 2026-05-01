@@ -10,7 +10,7 @@
 // settings preferences page uses a different code path (server-side
 // preference + shellSetLanguage broadcast) and does NOT use this component.
 import { useMemo, useState } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Globe } from 'lucide-react'
 import { Button } from './ui/button'
@@ -62,7 +62,6 @@ export function LanguagePicker({
   className?: string
   align?: 'start' | 'center' | 'end'
 }) {
-  const { t } = useLingui()
   const [open, setOpen] = useState(false)
   const { data } = useQuery<{ languages: string[] }>({
     queryKey: ['_', 'languages'],
@@ -87,7 +86,7 @@ export function LanguagePicker({
         <Button
           variant='outline'
           size='icon'
-          aria-label={t`Choose language`}
+          aria-label={"Choose language"}
           className={cn('size-9', className)}
         >
           <Globe className='size-4' />
@@ -95,7 +94,7 @@ export function LanguagePicker({
       </PopoverTrigger>
       <PopoverContent align={align} className='w-72 p-0'>
         <Command>
-          <CommandInput placeholder={t`Search…`} />
+          <CommandInput placeholder={"Search…"} />
           <CommandList>
             <CommandEmpty><Trans>No matches.</Trans></CommandEmpty>
             <CommandGroup>

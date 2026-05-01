@@ -1,7 +1,7 @@
 // Travelling picker with origin and destination on the same screen
 
 import { useState, useRef, useEffect } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { MapPin, Mountain, Building2, Loader2, Plane, X } from 'lucide-react'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
@@ -50,7 +50,6 @@ export function TravellingPicker({
   initialOrigin: _initialOrigin,
   initialDestination: _initialDestination,
 }: TravellingPickerProps) {
-  const { t } = useLingui()
   const [originQuery, setOriginQuery] = useState('')
   const [destinationQuery, setDestinationQuery] = useState('')
   const [origin, setOrigin] = useState<PhotonPlace | null>(null)
@@ -170,7 +169,7 @@ export function TravellingPicker({
                       setActiveField('origin')
                     }}
                     onFocus={() => setActiveField('origin')}
-                    placeholder={t`Search for origin...`}
+                    placeholder={"Search for origin..."}
                     autoFocus
                   />
                   {originFetching && (
@@ -231,7 +230,7 @@ export function TravellingPicker({
                       setActiveField('destination')
                     }}
                     onFocus={() => setActiveField('destination')}
-                    placeholder={t`Search for destination...`}
+                    placeholder={"Search for destination..."}
                   />
                   {destinationFetching && (
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />

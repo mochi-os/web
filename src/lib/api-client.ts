@@ -252,7 +252,7 @@ apiClient.interceptors.response.use(
         maybeToastGlobalError({
           config: error.config,
           statusKey: '500',
-          title: 'Server error',
+          title: "Server error",
           description: errorMessage,
         })
         if (import.meta.env.DEV) {
@@ -277,7 +277,7 @@ apiClient.interceptors.response.use(
         maybeToastGlobalError({
           config: error.config,
           statusKey: String(status),
-          title: 'Server error',
+          title: "Server error",
           description: errorMessage,
         })
         break
@@ -293,8 +293,8 @@ apiClient.interceptors.response.use(
             maybeToastGlobalError({
               config: error.config,
               statusKey: 'network',
-              title: 'Network error',
-              description: 'Please check your internet connection and try again.',
+              title: "Network error",
+              description: "Please check your internet connection and try again.",
             })
           }
         } else {

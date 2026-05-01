@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { useLingui } from '@lingui/react/macro'
 import { Menu } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
@@ -20,7 +19,6 @@ type TopNavProps = React.HTMLAttributes<HTMLElement> & {
 }
 
 export function TopNav({ className, links, ...props }: TopNavProps) {
-  const { t } = useLingui()
   return (
     <>
       <div className='lg:hidden'>
@@ -30,8 +28,8 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
                 size='icon'
                 variant='outline'
                 className='md:size-7'
-                aria-label={t`Open navigation menu`}
-                title={t`Open navigation menu`}
+                aria-label={"Open navigation menu"}
+                title={"Open navigation menu"}
               >
                 <Menu />
               </Button>

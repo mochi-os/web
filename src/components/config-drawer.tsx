@@ -192,17 +192,17 @@ function ThemeConfig() {
         {[
           {
             value: 'system',
-            label: 'System',
+            label: t`System`,
             icon: IconThemeSystem,
           },
           {
             value: 'light',
-            label: 'Light',
+            label: t`Light`,
             icon: IconThemeLight,
           },
           {
             value: 'dark',
-            label: 'Dark',
+            label: t`Dark`,
             icon: IconThemeDark,
           },
         ].map((item) => (
@@ -236,17 +236,17 @@ function SidebarConfig() {
         {[
           {
             value: 'inset',
-            label: 'Inset',
+            label: t`Inset`,
             icon: IconSidebarInset,
           },
           {
             value: 'floating',
-            label: 'Floating',
+            label: t`Floating`,
             icon: IconSidebarFloating,
           },
           {
             value: 'sidebar',
-            label: 'Sidebar',
+            label: t`Sidebar`,
             icon: IconSidebarSidebar,
           },
         ].map((item) => (
@@ -294,17 +294,17 @@ function LayoutConfig() {
         {[
           {
             value: 'default',
-            label: 'Default',
+            label: t`Default`,
             icon: IconLayoutDefault,
           },
           {
             value: 'icon',
-            label: 'Compact',
+            label: t`Compact`,
             icon: IconLayoutCompact,
           },
           {
             value: 'offcanvas',
-            label: 'Full layout',
+            label: t`Full layout`,
             icon: IconLayoutFull,
           },
         ].map((item) => (
@@ -338,14 +338,14 @@ function DirConfig() {
         {[
           {
             value: 'ltr',
-            label: 'Left to Right',
+            label: t`Left to Right`,
             icon: (props: SVGProps<SVGSVGElement>) => (
               <IconDir dir='ltr' {...props} />
             ),
           },
           {
             value: 'rtl',
-            label: 'Right to Left',
+            label: t`Right to Left`,
             icon: (props: SVGProps<SVGSVGElement>) => (
               <IconDir dir='rtl' {...props} />
             ),

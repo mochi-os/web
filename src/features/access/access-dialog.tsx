@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import { User, UsersRound, Search, Globe, Users } from 'lucide-react'
 import {
   ResponsiveDialog,
@@ -61,7 +61,6 @@ export function AccessDialog({
   groupsError,
   onRetryGroups,
 }: AccessDialogProps) {
-  const { t } = useLingui()
   const [userSearch, setUserSearch] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
@@ -177,7 +176,7 @@ export function AccessDialog({
                       setUserSearch(e.target.value)
                       setSelectedUser(null)
                     }}
-                    placeholder={t`Type to search...`}
+                    placeholder={"Type to search..."}
                     className="pl-10"
                   />
                 </div>

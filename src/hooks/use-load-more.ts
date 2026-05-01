@@ -68,7 +68,7 @@ export function useLoadMore<T, P = Record<string, unknown>>(
         setTotal(result.total)
         setPage(nextPage)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load')
+        setError(err instanceof Error ? err.message : "Failed to load")
       } finally {
         setIsLoading(false)
       }

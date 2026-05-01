@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Trans } from '@lingui/react/macro'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { ChevronLeft, ChevronRight, Download, FileWarning, ImageOff, Loader2, X } from 'lucide-react'
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
@@ -33,7 +33,6 @@ export function ImageLightbox({
   onOpenChange,
   onIndexChange,
 }: ImageLightboxProps) {
-  const { t } = useLingui()
   const hasMultiple = images.length > 1
   const currentMedia = images[currentIndex]
   const isVideo = currentMedia?.type === 'video'
@@ -221,7 +220,7 @@ export function ImageLightbox({
           aria-describedby={undefined}
         >
           <DialogPrimitive.Title className='sr-only'>
-            {isVideo ? 'Video' : 'Image'} viewer: {currentMedia.name}
+            {isVideo ? "Video" : "Image"} viewer: {currentMedia.name}
           </DialogPrimitive.Title>
 
           {/* Full-screen media area */}
@@ -309,7 +308,7 @@ export function ImageLightbox({
                 href={currentMedia.url}
                 download={currentMedia.name}
                 className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white'
-                title={t`Download`}
+                title={"Download"}
               >
                 <Download className='size-5' />
               </a>
@@ -329,7 +328,7 @@ export function ImageLightbox({
                   'absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:left-4 sm:p-3',
                   controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 )}
-                aria-label={t`Previous image`}
+                aria-label={"Previous image"}
               >
                 <ChevronLeft className='size-6 sm:size-8' />
               </button>
@@ -339,7 +338,7 @@ export function ImageLightbox({
                   'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
                   controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 )}
-                aria-label={t`Next image`}
+                aria-label={"Next image"}
               >
                 <ChevronRight className='size-6 sm:size-8' />
               </button>

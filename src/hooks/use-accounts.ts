@@ -222,7 +222,7 @@ export function useAccounts(
     accountsError,
     add: async (type: string, fields: Record<string, string>, addToExisting = true) => {
       const result = await addMutation.mutateAsync({ type, fields, addToExisting })
-      if (!result) throw new Error('Failed to add account')
+      if (!result) throw new Error("Failed to add account")
       return result
     },
     remove: async (id: number) => {

@@ -50,22 +50,22 @@ function getInlineCopy(status: number, rawMessage: string, errorMessage?: string
   const lowerMessage = rawMessage.toLowerCase()
 
   if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
-    return { title: 'You do not have access to this section.', description: undefined }
+    return { title: "You do not have access to this section.", description: undefined }
   }
 
   if (lowerMessage.includes('network') || lowerMessage.includes('failed to fetch')) {
-    return { title: 'Check your connection and try again.', description: undefined }
+    return { title: "Check your connection and try again.", description: undefined }
   }
 
   if (status === 404) {
-    return { title: 'Not found', description: undefined }
+    return { title: "Not found", description: undefined }
   }
 
   if (status === 429) {
-    return { title: 'Too many requests. Please wait a moment and try again.', description: undefined }
+    return { title: "Too many requests. Please wait a moment and try again.", description: undefined }
   }
 
-  return { title: 'Please try again.', description: undefined }
+  return { title: "Please try again.", description: undefined }
 }
 
 export function GeneralError({
