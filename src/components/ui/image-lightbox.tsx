@@ -331,7 +331,7 @@ export function ImageLightbox({
                 )}
                 aria-label={t`Previous image`}
               >
-                <ChevronLeft className='size-6 sm:size-8' />
+                <ChevronLeft className='size-6 sm:size-8 rtl:rotate-180' />
               </button>
               <button
                 onClick={goToNext}
@@ -341,7 +341,7 @@ export function ImageLightbox({
                 )}
                 aria-label={t`Next image`}
               >
-                <ChevronRight className='size-6 sm:size-8' />
+                <ChevronRight className='size-6 sm:size-8 rtl:rotate-180' />
               </button>
             </>
           )}

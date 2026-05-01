@@ -217,7 +217,7 @@ export function AccessList({
                     onValueChange={(newLevel) => void handleLevelChange(subject, newLevel)}
                     disabled={isUpdating}
                   >
-                    <SelectTrigger style={{ width: selectWidth }} className="h-8 -ml-3">
+                    <SelectTrigger style={{ width: selectWidth }} className="h-8 -ms-3">
                       <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>

@@ -53,7 +53,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
           disabled={disabled}
         >
           <span className='truncate'>{displayValue}</span>
-          <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+          <ChevronsUpDown className='ms-2 h-4 w-4 shrink-0 opacity-50' />
         </Button>
       </PopoverTrigger>
       <PopoverContent className='w-[350px] p-0' align='start'>
@@ -71,7 +71,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
               >
                 <Check
                   className={cn(
-                    'mr-2 h-4 w-4 shrink-0',
+                    'me-2 h-4 w-4 shrink-0',
                     value === 'auto' ? 'opacity-100' : 'opacity-0'
                   )}
                 />
@@ -90,7 +90,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4 shrink-0',
+                      'me-2 h-4 w-4 shrink-0',
                       value === tz ? 'opacity-100' : 'opacity-0'
                     )}
                   />

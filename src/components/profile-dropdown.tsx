@@ -62,7 +62,7 @@ export function ProfileDropdown() {
       className='w-full justify-start px-2 text-sm'
       onClick={() => setOpen(true)}
     >
-      <LogOut size={16} className='mr-2' />
+      <LogOut size={16} className='me-2' />
       <Trans>Log out</Trans>
     </Button>
   )
@@ -91,7 +91,7 @@ export function ProfileDropdown() {
 
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setOpen(true)}>
-              <LogOut size={16} className='mr-2' />
+              <LogOut size={16} className='me-2' />
               <Trans>Log out</Trans>
             </DropdownMenuItem>
           </DropdownMenuContent>

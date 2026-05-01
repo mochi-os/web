@@ -160,7 +160,7 @@ function AccountItem({
         <DropdownMenuContent align="end">
           {needsVerification && (
             <DropdownMenuItem onClick={() => onVerify(account)}>
-              <Mail className="mr-2 h-4 w-4" />
+              <Mail className="me-2 h-4 w-4" />
               <Trans>Verify</Trans>
             </DropdownMenuItem>
           )}
@@ -168,7 +168,7 @@ function AccountItem({
             onClick={() => onRemove(account.id)}
             className="text-destructive focus:text-destructive"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="me-2 h-4 w-4" />
             <Trans>Remove</Trans>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -276,7 +276,7 @@ export function AccountManager({
               <CardDescription>{description}</CardDescription>
             </div>
             <Button onClick={() => setIsAddOpen(true)} size="sm">
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               <Trans>Add account</Trans>
             </Button>
           </div>

@@ -230,7 +230,7 @@ export function TreeRow({
       )}
 
       {/* Drag handle + expand/collapse */}
-      <td className='whitespace-nowrap py-1.5 pl-1 pr-0 w-0'>
+      <td className='whitespace-nowrap py-1.5 ps-1 pe-0 w-0'>
         <div className='flex items-center'>
           <div className='w-5 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab'>
             <GripVertical className='size-3' />
@@ -246,7 +246,7 @@ export function TreeRow({
               {isExpanded ? (
                 <ChevronDown className='size-4' />
               ) : (
-                <ChevronRight className='size-4' />
+                <ChevronRight className='size-4 rtl:rotate-180' />
               )}
             </button>
           ) : anySiblingHasChildren ? (
@@ -258,7 +258,7 @@ export function TreeRow({
       {/* Class badge */}
       {showClass && (
         <td
-          className='whitespace-nowrap pl-1 pr-2 py-1.5'
+          className='whitespace-nowrap ps-1 pe-2 py-1.5'
           style={firstContentCol === 'class' ? indentStyle : undefined}
         >
           <span className='text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded'>
@@ -270,7 +270,7 @@ export function TreeRow({
       {/* Object number */}
       {hasId && (
         <td
-          className='whitespace-nowrap pl-1 pr-2 py-1.5 text-xs text-muted-foreground font-mono'
+          className='whitespace-nowrap ps-1 pe-2 py-1.5 text-xs text-muted-foreground font-mono'
           style={firstContentCol === 'id' ? indentStyle : undefined}
         >
           {prefix}-{object.number}

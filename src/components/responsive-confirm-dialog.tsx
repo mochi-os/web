@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useLingui } from '@lingui/react/macro'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import {
@@ -29,6 +30,7 @@ type ResponsiveConfirmDialogProps = {
 }
 
 export function ResponsiveConfirmDialog(props: ResponsiveConfirmDialogProps) {
+  const { t } = useLingui()
   const {
     title,
     desc,
@@ -59,7 +61,7 @@ export function ResponsiveConfirmDialog(props: ResponsiveConfirmDialogProps) {
         <ResponsiveDialogFooter className='gap-2'>
           <ResponsiveDialogClose asChild>
             <Button variant='outline' disabled={isLoading}>
-              {cancelBtnText ?? 'Cancel'}
+              {cancelBtnText ?? t`Cancel`}
             </Button>
           </ResponsiveDialogClose>
           <Button
@@ -67,7 +69,7 @@ export function ResponsiveConfirmDialog(props: ResponsiveConfirmDialogProps) {
             onClick={handleConfirm}
             disabled={disabled || isLoading}
           >
-            {confirmText ?? 'Continue'}
+            {confirmText ?? t`Continue`}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>

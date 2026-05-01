@@ -78,7 +78,7 @@ export function GameHeader({
               <span
                 aria-hidden='true'
                 className={cn(
-                  'mr-1.5 inline-block size-2 rounded-full align-middle',
+                  'me-1.5 inline-block size-2 rounded-full align-middle',
                   myTurn ? 'bg-emerald-500' : 'bg-muted-foreground/30'
                 )}
               />

@@ -21,8 +21,8 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
       open={open}
       onOpenChange={onOpenChange}
       title={t`Log out`}
-      desc='Are you sure you want to log out? You will need to log in again to access your account.'
-      confirmText={<><LogOut /> {isLoggingOut ? "Logging out..." : "Log out"}</>}
+      desc={t`Are you sure you want to log out? You will need to log in again to access your account.`}
+      confirmText={<><LogOut /> {isLoggingOut ? t`Logging out…` : t`Log out`}</>}
       handleConfirm={handleSignOut}
       className='sm:max-w-sm'
       disabled={isLoggingOut}

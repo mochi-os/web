@@ -47,7 +47,7 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
             type='button'
             onClick={() => clearFilter(filter.key)}
             aria-label={`Remove ${filter.label} filter`}
-            className='ml-0.5'
+            className='ms-0.5'
           >
             <X className='size-3' />
           </button>

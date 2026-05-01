@@ -28,6 +28,6 @@ export function getWebsocketStatusMeta(
 
 export function getChatBubbleToneClass(isSent: boolean): string {
   return isSent
-    ? 'rounded-[14px] rounded-br-[4px] bg-primary text-primary-foreground'
-    : 'rounded-[14px] rounded-bl-[4px] bg-muted text-foreground'
+    ? 'rounded-[14px] rounded-ee-[4px] bg-primary text-primary-foreground'
+    : 'rounded-[14px] rounded-es-[4px] bg-muted text-foreground'
 }

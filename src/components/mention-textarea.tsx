@@ -231,7 +231,7 @@ export function MentionTextarea({
                 aria-selected={i === activeIndex}
                 type='button'
                 className={cn(
-                  'text-foreground flex w-full items-center px-3 py-2 text-left text-sm outline-none transition-colors',
+                  'text-foreground flex w-full items-center px-3 py-2 text-start text-sm outline-none transition-colors',
                   i === activeIndex
                     ? 'bg-selected'
                     : 'hover:bg-hover hover:text-hover-foreground',

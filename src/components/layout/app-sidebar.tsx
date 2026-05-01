@@ -50,9 +50,9 @@ function CollapseBtn() {
       onClick={toggleSidebar}
     >
       {state === 'expanded' ? (
-        <ChevronLeft className='h-3 w-3' />
+        <ChevronLeft className='h-3 w-3 rtl:rotate-180' />
       ) : (
-        <ChevronRight className='h-3 w-3' />
+        <ChevronRight className='h-3 w-3 rtl:rotate-180' />
       )}
       <span className='sr-only'>{label}</span>
     </Button>

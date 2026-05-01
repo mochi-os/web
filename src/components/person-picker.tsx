@@ -312,7 +312,7 @@ export function PersonPicker({
               placeholder={t`Search...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8"
+              className="ps-8 h-8"
               autoFocus
             />
           </div>

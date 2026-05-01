@@ -107,7 +107,7 @@ export function PlacePicker({
                   key={place.osmId || index}
                   type="button"
                   onClick={() => handleSelect(place)}
-                  className="w-full px-3 py-2 text-left hover:bg-muted transition-colors flex items-start gap-2"
+                  className="w-full px-3 py-2 text-start hover:bg-muted transition-colors flex items-start gap-2"
                 >
                   <PlaceIcon category={place.category} />
                   <div className="min-w-0 flex-1">

@@ -142,7 +142,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
         >
           <button
             type='button'
-            className='hover:underline truncate text-left'
+            className='hover:underline truncate text-start'
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -153,7 +153,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
           >
             #{tag.label}
           </button>
-          <span className='ml-auto inline-flex shrink-0 items-center gap-0.5'>
+          <span className='ms-auto inline-flex shrink-0 items-center gap-0.5'>
             {tag.qid && (
               <button
                 type='button'

@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react'
 import { i18n, type Messages } from '@lingui/core'
 import { I18nProvider as LinguiProvider } from '@lingui/react'
 import { getShellInitData, initShellBridge, onShellMessage } from '../lib/shell-bridge'
+import { applyDocumentDir } from '../lib/rtl'
 import {
   formatDate as fmtDate,
   formatTime as fmtTime,
@@ -142,20 +143,29 @@ export function setStoredLanguage(language: string): void {
   }
 }
 
+// Pseudo-locales recognised even when no catalog exists (en-x-pseudo-rtl
+// flips document direction for RTL layout testing; activation falls through
+// to en for content via resolveCatalogTag).
+const PSEUDO_LOCALES = new Set(['en-x-pseudo-rtl', 'en-x-pseudo'])
+
+function isAcceptedLocale(catalogs: Catalogs, language: string): boolean {
+  return PSEUDO_LOCALES.has(language.toLowerCase()) || hasMatchingCatalog(catalogs, language)
+}
+
 function pickInitialLanguage(catalogs: Catalogs): string {
   // Priority: in-shell init data > localStorage > navigator > 'en'.
   // localStorage covers the login-page picker and anonymous-browsing chrome:
   // pre-login users pick a language, we reload, this fallback honours it.
   const shell = getShellInitData()
-  if (shell?.language && hasMatchingCatalog(catalogs, shell.language)) {
+  if (shell?.language && isAcceptedLocale(catalogs, shell.language)) {
     return shell.language
   }
   const stored = readStoredLanguage()
-  if (stored && hasMatchingCatalog(catalogs, stored)) {
+  if (stored && isAcceptedLocale(catalogs, stored)) {
     return stored
   }
   if (typeof navigator !== 'undefined' && navigator.language) {
-    if (hasMatchingCatalog(catalogs, navigator.language)) {
+    if (isAcceptedLocale(catalogs, navigator.language)) {
       return navigator.language
     }
   }
@@ -209,6 +219,7 @@ export function I18nProvider({
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    applyDocumentDir(language)
     let cancelled = false
     activate(catalogs, language).finally(() => {
       if (!cancelled) setReady(true)
@@ -245,7 +256,7 @@ export function I18nProvider({
     async function loadLanguage() {
       const shell = await initShellBridge()
       if (cancelled) return
-      if (shell?.language && hasMatchingCatalog(catalogs, shell.language)) {
+      if (shell?.language && isAcceptedLocale(catalogs, shell.language)) {
         setLanguage(shell.language)
         return
       }
@@ -258,7 +269,7 @@ export function I18nProvider({
         if (!res.ok) return
         const data = (await res.json()) as { language?: string }
         if (cancelled) return
-        if (data.language && hasMatchingCatalog(catalogs, data.language)) {
+        if (data.language && isAcceptedLocale(catalogs, data.language)) {
           setLanguage(data.language)
         }
       } catch {

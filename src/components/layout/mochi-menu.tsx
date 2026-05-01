@@ -81,7 +81,7 @@ export function MochiMenu({
             <EntityAvatar fingerprint={identity || undefined} name={name} size="md" />
             <span className='font-semibold'>{name || 'User'}</span>
           </div>
-          <div className='flex items-center gap-1 ml-4'>
+          <div className='flex items-center gap-1 ms-4'>
             <a
               href='/settings'
               className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-interactive-hover active:bg-interactive-active'

@@ -249,7 +249,7 @@ function SidebarMenuCollapsible({
                 {item.title}
               </span>
               {item.badge && <NavBadge>{item.badge}</NavBadge>}
-             <ChevronRight className='ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden' />
+             <ChevronRight className='ms-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden rtl:rotate-180' />
             </SidebarMenuButton>
           </CollapsibleTrigger>
         )}
@@ -367,7 +367,7 @@ function SidebarMenuSubCollapsible({
                 <ItemIcon icon={item.icon} />
                 <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                 {item.badge && <NavBadge>{item.badge}</NavBadge>}
-                <ChevronRight className='ml-auto size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
+                <ChevronRight className='ms-auto size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
               </SidebarMenuSubButton>
           </CollapsibleTrigger>
         )}
@@ -434,7 +434,7 @@ function SidebarMenuCollapsedDropdown({
             <ItemIcon icon={item.icon} />
             <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
             {item.badge && <NavBadge className='group-data-[collapsible=icon]:hidden'>{item.badge}</NavBadge>}
-            <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden' />
+            <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden rtl:rotate-180' />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent side='right' align='start' sideOffset={4}>

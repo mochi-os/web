@@ -161,7 +161,7 @@ function RightPanel({ className, children, ...props }: RightPanelProps) {
       className={cn(
         'hidden xl:flex',
         'h-full w-(--right-panel-width) flex-shrink-0 flex-col',
-        'border-l border-border bg-background',
+        'border-s border-border bg-background',
         'overflow-hidden',
         'transition-[width,opacity] duration-200 ease-linear',
         className

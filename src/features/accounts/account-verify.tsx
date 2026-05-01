@@ -91,7 +91,7 @@ export function AccountVerify({
               onClick={handleResend}
               disabled={isResending}
             >
-              {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isResending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Send again
             </Button>
             <Button
@@ -99,9 +99,9 @@ export function AccountVerify({
               disabled={isVerifying || code.trim().length < 10}
             >
               {isVerifying ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="me-2 h-4 w-4" />
               )}
               Verify
             </Button>

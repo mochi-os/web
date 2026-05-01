@@ -254,7 +254,7 @@ export function AuthenticatedLayout({
               className={cn(
                 '@container/content',
                 'min-h-0 min-w-0 flex-1 overflow-auto',
-                inShell && 'md:pl-12'
+                inShell && 'md:ps-12'
               )}
             >
               {children ?? <Outlet />}

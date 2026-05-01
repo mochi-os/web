@@ -44,7 +44,7 @@ export function BackButton({
       aria-label={ariaLabel ?? label}
       className={cn('shrink-0', className)}
     >
-      <ArrowLeft className='size-4 shrink-0' />
+      <ArrowLeft className='size-4 shrink-0 rtl:rotate-180' />
     </Button>
   )
 }

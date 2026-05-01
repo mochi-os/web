@@ -23,7 +23,7 @@ export function PasswordInput({
     <div className={cn('relative', className)}>
       <Input
         type={showPassword ? 'text' : 'password'}
-        className="pr-10"
+        className="pe-10"
         ref={ref}
         disabled={disabled}
         {...props}

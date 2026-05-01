@@ -47,7 +47,7 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
       type='button'
       onClick={() => onClick?.(notification)}
       className={cn(
-        'group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50',
+        'group flex w-full items-start gap-3 px-4 py-3 text-start transition-colors hover:bg-muted/50',
         isUnread ? 'bg-muted/30' : 'bg-transparent'
       )}
     >
@@ -68,7 +68,7 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
         >
           {notification.content}
           {notification.count > 1 && (
-            <span className='ml-1 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium'>
+            <span className='ms-1 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium'>
               {notification.count}
             </span>
           )}
@@ -151,7 +151,7 @@ export function NotificationsDropdown({
         )}
       </div>
       <div className='flex items-center gap-2'>
-        <div className='flex items-center gap-2 pr-2 border-r mr-2'>
+        <div className='flex items-center gap-2 pe-2 border-e me-2'>
           <Label
             htmlFor='show-all'
             className='text-[10px] uppercase font-medium text-muted-foreground tracking-wider cursor-pointer select-none'
@@ -216,7 +216,7 @@ export function NotificationsDropdown({
         className='w-full justify-center h-8 text-xs text-muted-foreground hover:text-primary'
         onClick={() => onMarkAllAsRead?.()}
       >
-        <Check className='mr-2 size-3' />
+        <Check className='me-2 size-3' />
         <Trans>Mark all as read</Trans>
       </Button>
     </div>

@@ -138,7 +138,7 @@ export function FindEntityPage({
               placeholder={placeholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all'
+              className='ps-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all'
               autoFocus
             />
           </div>

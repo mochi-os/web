@@ -37,7 +37,7 @@ export function NotificationItem({
             onMiddleClick?.(notification)
           }
         }}
-        className='flex flex-1 items-start gap-2 text-left'
+        className='flex flex-1 items-start gap-2 text-start'
       >
         <div
           className={cn('mt-1.5 size-2 rounded-full', isUnread && 'bg-primary')}

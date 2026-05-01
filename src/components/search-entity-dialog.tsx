@@ -161,13 +161,13 @@ export function SearchEntityDialog({
               placeholder={placeholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all'
+              className='ps-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all'
               autoFocus
             />
           </div>
         </div>
 
-        <ScrollArea className='flex-1 pr-4 bg-muted/10 h-[400px]'>
+        <ScrollArea className='flex-1 pe-4 bg-muted/10 h-[400px]'>
           {isLoading && debouncedSearch && (
             <div className='flex flex-col items-center justify-center py-12 gap-2'>
               <Loader2 className='text-primary size-8 animate-spin' />

@@ -114,7 +114,7 @@ export function GeneralError({
           </div>
 
           {reset && (
-            <div className='pl-9'>
+            <div className='ps-9'>
               <Button
                 type='button'
                 onClick={reset}

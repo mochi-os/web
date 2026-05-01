@@ -73,7 +73,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanPreviousPage()}
           >
             <span className='sr-only'><Trans>Go to first page</Trans></span>
-            <DoubleArrowLeftIcon className='h-4 w-4' />
+            <DoubleArrowLeftIcon className='h-4 w-4 rtl:rotate-180' />
           </Button>
           <Button
             variant='outline'
@@ -82,7 +82,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanPreviousPage()}
           >
             <span className='sr-only'><Trans>Go to previous page</Trans></span>
-            <ChevronLeftIcon className='h-4 w-4' />
+            <ChevronLeftIcon className='h-4 w-4 rtl:rotate-180' />
           </Button>
 
           {/* Page number buttons */}
@@ -110,7 +110,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanNextPage()}
           >
             <span className='sr-only'><Trans>Go to next page</Trans></span>
-            <ChevronRightIcon className='h-4 w-4' />
+            <ChevronRightIcon className='h-4 w-4 rtl:rotate-180' />
           </Button>
           <Button
             variant='outline'
@@ -119,7 +119,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanNextPage()}
           >
             <span className='sr-only'><Trans>Go to last page</Trans></span>
-            <DoubleArrowRightIcon className='h-4 w-4' />
+            <DoubleArrowRightIcon className='h-4 w-4 rtl:rotate-180' />
           </Button>
         </div>
       </div>
