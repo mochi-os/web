@@ -211,19 +211,48 @@ export function I18nProvider({
     })
   }, [])
 
-  // The shell init message (with the user's language preference) arrives
-  // asynchronously after this component first renders. pickInitialLanguage
-  // ran during initial useState and saw shellInitData=null, so it fell back
-  // to navigator.language (or 'en'). Once the init data arrives, re-pick
-  // the initial language.
+  // Fetch the user's language preference from the server.
+  //
+  // Two paths converge here:
+  // - In-shell apps: shell.js fetches /_/shell once and forwards the
+  //   language to each iframe via postMessage. initShellBridge() resolves
+  //   with the forwarded data.
+  // - Top-window apps (e.g. /settings/, /login/ landing): no shell, so we
+  //   call /_/shell directly. The endpoint returns the user's `language`
+  //   preference (or Accept-Language for anonymous requests).
+  //
+  // pickInitialLanguage() runs synchronously during useState init and can
+  // only see synchronous sources (localStorage, navigator.language). The
+  // server-driven preference always wins on arrival.
   useEffect(() => {
     let cancelled = false
-    initShellBridge().then((data) => {
+
+    async function loadLanguage() {
+      const shell = await initShellBridge()
       if (cancelled) return
-      if (data?.language && hasMatchingCatalog(catalogs, data.language)) {
-        setLanguage(data.language)
+      if (shell?.language && hasMatchingCatalog(catalogs, shell.language)) {
+        setLanguage(shell.language)
+        return
       }
-    })
+      // Top window — fetch /_/shell directly to learn the user preference.
+      try {
+        const res = await fetch('/_/shell', {
+          method: 'POST',
+          credentials: 'same-origin',
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as { language?: string }
+        if (cancelled) return
+        if (data.language && hasMatchingCatalog(catalogs, data.language)) {
+          setLanguage(data.language)
+        }
+      } catch {
+        // Network error or anonymous request — leave whatever
+        // pickInitialLanguage() already chose.
+      }
+    }
+
+    void loadLanguage()
     return () => {
       cancelled = true
     }
