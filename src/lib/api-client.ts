@@ -4,6 +4,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios'
+import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
 import { useAuthStore } from '../stores/auth-store'
 import { getApiBasepath } from './app-path'
@@ -220,7 +221,7 @@ apiClient.interceptors.response.use(
           } else {
             // Fallback: page reload gets fresh token if session valid
             useAuthStore.getState().clearAuth()
-            toast.error("Session expired")
+            toast.error(t`Session expired`)
             window.location.reload()
           }
         }

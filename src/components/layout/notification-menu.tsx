@@ -5,6 +5,7 @@ import { useFormat } from '../../hooks/use-format'
 import type { Notification } from '../notifications-dropdown'
 import { NotificationCategoryButton } from '../notification-category-button'
 import { ScrollArea } from '../ui/scroll-area'
+import { t } from '@lingui/core/macro'
 
 export { type Notification }
 
@@ -82,7 +83,7 @@ export function NotificationsSection({
         <div className='flex gap-1'>
           {unread.length > 0 && (
             <button
-              aria-label={"Mark all as read"}
+              aria-label={t`Mark all as read`}
               onClick={markAllAsRead}
               className='rounded p-1.5 hover:bg-interactive-hover active:bg-interactive-active'
             >
@@ -90,7 +91,7 @@ export function NotificationsSection({
             </button>
           )}
           <a
-            aria-label={"View all notifications"}
+            aria-label={t`View all notifications`}
             href='/notifications/'
             onClick={onClose}
             className='rounded p-1.5 hover:bg-interactive-hover active:bg-interactive-active'

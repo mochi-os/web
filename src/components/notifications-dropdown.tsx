@@ -18,6 +18,7 @@ import {
 import { ScrollArea } from './ui/scroll-area'
 import { Switch } from './ui/switch'
 import { Label } from './ui/label'
+import { t } from '@lingui/core/macro'
 
 export interface Notification {
   id: string
@@ -128,7 +129,7 @@ export function NotificationsDropdown({
       variant='ghost'
       size='icon'
       className={cn('relative', buttonClassName)}
-      aria-label={"Notifications"}
+      aria-label={t`Notifications`}
     >
       <Bell className='size-5' />
       {unreadCount > 0 && (
@@ -169,7 +170,7 @@ export function NotificationsDropdown({
             href={notificationsUrl}
             onClick={() => setOpen(false)}
             className='text-muted-foreground hover:text-foreground transition-colors'
-            title={"View all"}
+            title={t`View all`}
           >
             <ExternalLink className='size-4' />
           </a>

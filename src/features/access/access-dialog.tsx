@@ -28,6 +28,7 @@ import {
   type UserSearchResult,
 } from './types'
 import { GeneralError } from '../errors/general-error'
+import { t } from '@lingui/core/macro'
 
 export interface AccessDialogProps {
   open: boolean
@@ -176,7 +177,7 @@ export function AccessDialog({
                       setUserSearch(e.target.value)
                       setSelectedUser(null)
                     }}
-                    placeholder={"Type to search..."}
+                    placeholder={t`Type to search...`}
                     className="pl-10"
                   />
                 </div>

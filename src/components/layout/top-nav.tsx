@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+import { t } from '@lingui/core/macro'
 
 type TopNavProps = React.HTMLAttributes<HTMLElement> & {
   links: {
@@ -28,8 +29,8 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
                 size='icon'
                 variant='outline'
                 className='md:size-7'
-                aria-label={"Open navigation menu"}
-                title={"Open navigation menu"}
+                aria-label={t`Open navigation menu`}
+                title={t`Open navigation menu`}
               >
                 <Menu />
               </Button>

@@ -26,6 +26,7 @@ import {
 import { EntityAvatar } from '../entity-avatar'
 import { SignOutDialog } from '../sign-out-dialog'
 import { NotificationsSection } from './notification-menu'
+import { t } from '@lingui/core/macro'
 
 type MochiMenuProps = {
   direction?: 'horizontal' | 'vertical'
@@ -138,7 +139,7 @@ export function MochiMenu({
         )}
       >
         {showLogo && (
-          <a href='/' title={"Home"}>
+          <a href='/' title={t`Home`}>
             <MochiLogo />
           </a>
         )}

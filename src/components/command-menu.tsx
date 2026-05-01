@@ -13,6 +13,7 @@ import {
 } from './ui/command'
 import { ScrollArea } from './ui/scroll-area'
 import type { SidebarData } from './layout/types'
+import { t } from '@lingui/core/macro'
 
 interface CommandMenuProps {
   sidebarData: SidebarData
@@ -45,7 +46,7 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder={"Type a command or search..."} />
+      <CommandInput placeholder={t`Type a command or search...`} />
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty><Trans>No results found.</Trans></CommandEmpty>

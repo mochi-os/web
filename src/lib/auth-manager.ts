@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro'
 import { useAuthStore } from '../stores/auth-store'
 import { authEndpoints } from './auth-endpoints'
 import { requestHelpers } from './request'
@@ -78,7 +79,7 @@ class AuthManager {
       }
       useAuthStore.getState().endLogoutTransition()
       this.isLoggingOut = false
-      toast.error("Unable to redirect to login. Please try again.")
+      toast.error(t`Unable to redirect to login. Please try again.`)
       return
     }
 
@@ -90,7 +91,7 @@ class AuthManager {
 
       store.endLogoutTransition()
       this.isLoggingOut = false
-      toast.error("Unable to redirect to login. Please try again.")
+      toast.error(t`Unable to redirect to login. Please try again.`)
     }, LOGOUT_REDIRECT_FAILSAFE_MS)
   }
 

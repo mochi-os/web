@@ -14,6 +14,7 @@ import { Checkbox } from './ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { cn } from '../lib/utils'
 import { requestHelpers } from '../lib/request'
+import { t } from '@lingui/core/macro'
 
 export interface Person {
   id: string
@@ -308,7 +309,7 @@ export function PersonPicker({
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={"Search..."}
+              placeholder={t`Search...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 h-8"

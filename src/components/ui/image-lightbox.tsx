@@ -6,6 +6,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { ChevronLeft, ChevronRight, Download, FileWarning, ImageOff, Loader2, X } from 'lucide-react'
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { cn } from '../../lib/utils'
+import { t } from '@lingui/core/macro'
 
 export type LightboxMedia = {
   id: string
@@ -308,7 +309,7 @@ export function ImageLightbox({
                 href={currentMedia.url}
                 download={currentMedia.name}
                 className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white'
-                title={"Download"}
+                title={t`Download`}
               >
                 <Download className='size-5' />
               </a>
@@ -328,7 +329,7 @@ export function ImageLightbox({
                   'absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:left-4 sm:p-3',
                   controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 )}
-                aria-label={"Previous image"}
+                aria-label={t`Previous image`}
               >
                 <ChevronLeft className='size-6 sm:size-8' />
               </button>
@@ -338,7 +339,7 @@ export function ImageLightbox({
                   'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
                   controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 )}
-                aria-label={"Next image"}
+                aria-label={t`Next image`}
               >
                 <ChevronRight className='size-6 sm:size-8' />
               </button>

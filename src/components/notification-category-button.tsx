@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/auth-store'
 import { toast } from '../lib/toast-utils'
 import { getErrorMessage } from '../lib/handle-server-error'
 import { naturalCompare } from '../lib/utils'
+import { t } from '@lingui/core/macro'
 
 const MENU_PATH = '/menu'
 
@@ -100,7 +101,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
       toast.success(cat ? `${label}: ${cat.label}` : `${label} updated`)
       setTimeout(() => setOpen(false), 0)
     } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to update category"))
+      toast.error(getErrorMessage(error, t`Failed to update category`))
     } finally {
       setSaving(false)
     }
@@ -111,7 +112,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={"Change notification category"}
+          aria-label={t`Change notification category`}
           onClick={(e) => e.stopPropagation()}
           className={cn(
             'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-interactive-active',
@@ -139,7 +140,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
               disabled={saving}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={"Unassigned"} />
+                <SelectValue placeholder={t`Unassigned`} />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (

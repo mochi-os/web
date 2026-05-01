@@ -31,6 +31,7 @@ import {
 } from '../../components/ui/alert-dialog'
 import type { AccessLevel, AccessRule } from './types'
 import { GeneralError } from '../errors/general-error'
+import { t } from '@lingui/core/macro'
 
 // Subject display labels for special subjects
 const SUBJECT_LABELS: Record<string, string> = {
@@ -237,8 +238,8 @@ export function AccessList({
                         variant="ghost"
                         size="icon"
                         disabled={isUpdating}
-                        aria-label={"Remove access rule"}
-                        title={"Remove access rule"}
+                        aria-label={t`Remove access rule`}
+                        title={t`Remove access rule`}
                       >
                         <X className="h-4 w-4" />
                       </Button>

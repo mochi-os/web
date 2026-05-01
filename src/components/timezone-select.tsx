@@ -5,6 +5,7 @@ import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { t } from '@lingui/core/macro'
 
 export function getTimezones(): string[] {
   try {
@@ -57,7 +58,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
       </PopoverTrigger>
       <PopoverContent className='w-[350px] p-0' align='start'>
         <Command>
-          <CommandInput placeholder={"Search time zone..."} />
+          <CommandInput placeholder={t`Search time zone...`} />
           <CommandList>
             <CommandEmpty><Trans>No time zone found.</Trans></CommandEmpty>
             <CommandGroup>

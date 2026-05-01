@@ -3,6 +3,7 @@ import { Search, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { IconButton } from './icon-button'
 import { Input } from './ui/input'
+import { t } from '@lingui/core/macro'
 
 interface HeaderSearchProps {
   value: string
@@ -47,7 +48,7 @@ export function HeaderSearch({
             className='h-9 w-32 text-sm'
           />
           <IconButton
-            label={"Close search"}
+            label={t`Close search`}
             variant='ghost'
             className={cn('size-9', !value && 'text-muted-foreground')}
             onClick={closeMobileSearch}

@@ -11,6 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '../ui/tooltip'
+import { t } from '@lingui/core/macro'
 
 type DataTableBulkActionsProps<TData> = {
   table: Table<TData>
@@ -160,8 +161,8 @@ export function DataTableBulkActions<TData>({
                 size='icon'
                 onClick={handleClearSelection}
                 className='size-6 rounded-full'
-                aria-label={"Clear selection"}
-                title={"Clear selection (Escape)"}
+                aria-label={t`Clear selection`}
+                title={t`Clear selection (Escape)`}
               >
                 <X />
                 <span className='sr-only'><Trans>Clear selection</Trans></span>

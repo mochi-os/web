@@ -1,5 +1,6 @@
 import { cn } from '../lib/utils'
 import { LayoutGrid, ListTree, Plus } from 'lucide-react'
+import { t } from '@lingui/core/macro'
 
 interface View {
   id: string
@@ -53,7 +54,7 @@ export function ViewTabs({
           <button
             type='button'
             onClick={onAddView}
-            aria-label={"Add view"}
+            aria-label={t`Add view`}
             className='flex items-center gap-1 px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors'
           >
             <Plus className='size-4' />

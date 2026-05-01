@@ -8,6 +8,7 @@ import { useScreenSize } from '../../hooks/use-screen-size'
 import { useSidebar } from '../ui/sidebar'
 import { Button } from '../ui/button'
 import { MochiMenu } from './mochi-menu'
+import { t } from '@lingui/core/macro'
 
 type TopBarProps = {
   showNotifications?: boolean
@@ -53,12 +54,12 @@ export function TopBar({
           size='icon'
           className='shrink-0'
           onClick={toggleSidebar}
-          aria-label={"Open navigation"}
+          aria-label={t`Open navigation`}
         >
           {sidebarOpen ? <PanelLeftClose className='size-5' /> : <PanelLeftOpen className='size-5' />}
         </Button>
 
-        <a href='/' title={"Home"}>
+        <a href='/' title={t`Home`}>
           <img
             src='/images/logo-header.svg'
             alt='Mochi'
@@ -87,7 +88,7 @@ export function TopBar({
         <div className='grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-1'>
           <a
             href='/'
-            title={"Home"}
+            title={t`Home`}
             className='flex size-10 items-center justify-center rounded-md transition-colors duration-150 hover:bg-interactive-hover active:bg-interactive-active'
           >
             <img

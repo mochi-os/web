@@ -1,6 +1,7 @@
 // Shared QueryClient factory with sensible defaults to prevent caching issues
 import { QueryCache, QueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
+import { t } from '@lingui/core/macro'
 import { ApiError } from './request'
 import { toast } from './toast-utils'
 
@@ -74,7 +75,7 @@ export function createQueryClient(
         onError: (error) => {
           if (error instanceof AxiosError) {
             if (error.response?.status === 304) {
-              toast.error("Content not modified")
+              toast.error(t`Content not modified`)
             }
           }
         },

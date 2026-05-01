@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from './ui/dialog'
 import type { PlaceData, PhotonPlace } from '../types/places'
+import { t } from '@lingui/core/macro'
 
 export interface TravellingPickerProps {
   open: boolean
@@ -169,7 +170,7 @@ export function TravellingPicker({
                       setActiveField('origin')
                     }}
                     onFocus={() => setActiveField('origin')}
-                    placeholder={"Search for origin..."}
+                    placeholder={t`Search for origin...`}
                     autoFocus
                   />
                   {originFetching && (
@@ -230,7 +231,7 @@ export function TravellingPicker({
                       setActiveField('destination')
                     }}
                     onFocus={() => setActiveField('destination')}
-                    placeholder={"Search for destination..."}
+                    placeholder={t`Search for destination...`}
                   />
                   {destinationFetching && (
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />

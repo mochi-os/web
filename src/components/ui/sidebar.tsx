@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './tooltip'
+import { t } from '@lingui/core/macro'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -320,10 +321,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
     <button
       data-sidebar='rail'
       data-slot='sidebar-rail'
-      aria-label={"Toggle Sidebar"}
+      aria-label={t`Toggle Sidebar`}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title={"Toggle Sidebar"}
+      title={t`Toggle Sidebar`}
       className={cn(
         'absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-end-4 group-data-[side=right]:start-0 sm:flex',
         // Always show the rail line for sidebar variant, brighter on hover

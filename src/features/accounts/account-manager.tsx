@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
+import { t } from '@lingui/core/macro'
 import {
   CheckCircle2,
   Clock,
@@ -146,8 +147,8 @@ function AccountItem({
             variant="ghost"
             size="icon"
             disabled={isRemoving}
-            aria-label={"Open account actions"}
-            title={"Open account actions"}
+            aria-label={t`Open account actions`}
+            title={t`Open account actions`}
           >
             {isRemoving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -204,7 +205,7 @@ export function AccountManager({
   const handleAdd = async (type: string, fields: Record<string, string>, addToExisting: boolean) => {
     try {
       const account = await add(type, fields, addToExisting)
-      toast.success("Account added")
+      toast.success(t`Account added`)
       setIsAddOpen(false)
 
       // If verification is required, show verify dialog
@@ -213,16 +214,16 @@ export function AccountManager({
         setVerifyAccount(account)
       }
     } catch {
-      toast.error("Failed to add account")
+      toast.error(t`Failed to add account`)
     }
   }
 
   const handleRemove = async (id: number) => {
     try {
       await remove(id)
-      toast.success("Account removed")
+      toast.success(t`Account removed`)
     } catch {
-      toast.error("Failed to remove account")
+      toast.error(t`Failed to remove account`)
     }
   }
 
@@ -230,22 +231,22 @@ export function AccountManager({
     try {
       const result = await verify(id, code)
       if (result) {
-        toast.success("Account verified")
+        toast.success(t`Account verified`)
         setVerifyAccount(null)
       } else {
-        toast.error("Invalid verification code")
+        toast.error(t`Invalid verification code`)
       }
     } catch {
-      toast.error("Verification failed")
+      toast.error(t`Verification failed`)
     }
   }
 
   const handleResend = async (id: number) => {
     try {
       await verify(id)
-      toast.success("Verification code sent")
+      toast.success(t`Verification code sent`)
     } catch {
-      toast.error("Failed to send verification code")
+      toast.error(t`Failed to send verification code`)
     }
   }
 

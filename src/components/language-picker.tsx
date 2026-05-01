@@ -25,6 +25,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { setStoredLanguage } from '../context/i18n-provider'
 import { cn, naturalCompare } from '../lib/utils'
+import { t } from '@lingui/core/macro'
 
 type LanguageEntry = {
   tag: string
@@ -103,7 +104,7 @@ export function LanguagePicker({
         <Button
           variant='outline'
           size='icon'
-          aria-label={"Choose language"}
+          aria-label={t`Choose language`}
           className={cn('size-9', className)}
         >
           <Globe className='size-4' />
@@ -111,7 +112,7 @@ export function LanguagePicker({
       </PopoverTrigger>
       <PopoverContent align={align} className='w-72 p-0'>
         <Command>
-          <CommandInput placeholder={"Search…"} />
+          <CommandInput placeholder={t`Search…`} />
           <CommandList>
             <CommandEmpty><Trans>No matches.</Trans></CommandEmpty>
             <CommandGroup>
