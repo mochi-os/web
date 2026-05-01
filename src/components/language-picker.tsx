@@ -3,7 +3,7 @@
 //
 // Renders a globe-icon button that opens a popover containing the searchable
 // list of installed catalogs (fetched once from /_/languages, identified by
-// BCP 47 tag). Native names + English exonyms come from Intl.DisplayNames.
+// BCP 47 tag). Native names come from Intl.DisplayNames.
 //
 // On select, the choice is written to localStorage via setStoredLanguage and
 // the page reloads so the I18nProvider picks up the new tag at boot. The
@@ -29,27 +29,18 @@ import { cn } from '../lib/utils'
 type LanguageEntry = {
   tag: string
   native: string
-  exonym: string
-  display: string
 }
 
 function describeLanguages(tags: string[]): LanguageEntry[] {
   const out: LanguageEntry[] = []
   for (const tag of tags) {
     let native = tag
-    let exonym = tag
     try {
       native = new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ?? tag
-      exonym = new Intl.DisplayNames(['en'], { type: 'language' }).of(tag) ?? tag
     } catch {
       /* fall back to raw tag */
     }
-    out.push({
-      tag,
-      native,
-      exonym,
-      display: native === exonym ? native : `${native} - ${exonym}`,
-    })
+    out.push({ tag, native })
   }
   out.sort((a, b) => a.native.localeCompare(b.native))
   return out
@@ -101,10 +92,10 @@ export function LanguagePicker({
               {entries.map((entry) => (
                 <CommandItem
                   key={entry.tag}
-                  value={`${entry.native} ${entry.exonym} ${entry.tag}`}
+                  value={`${entry.native} ${entry.tag}`}
                   onSelect={() => handleSelect(entry.tag)}
                 >
-                  <span className='truncate'>{entry.display}</span>
+                  <span className='truncate'>{entry.native}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
