@@ -55,6 +55,24 @@ function capitalise(s: string): string {
 const displayNameOverrides: Record<string, string> = {
   'en': 'English (international)',
   'en-us': 'English (USA)',
+  'es-419': 'Español (latinoamericano)',
+}
+
+// resolveInstalled walks the parent chain of `tag` and returns the closest
+// match in `installed`. Mirrors the server-side resolver's fallback chain so
+// the Auto entry's display name reflects the catalog the user will actually
+// load — e.g. an `en-gb` browser falls through to `en` and shows the override
+// "English (international)" rather than the Intl.DisplayNames default
+// "British English". Returns the tag unchanged if nothing matches.
+function resolveInstalled(tag: string, installed: Set<string>): string {
+  let t = tag.toLowerCase()
+  while (t !== '') {
+    if (installed.has(t)) return t
+    const i = t.lastIndexOf('-')
+    if (i < 0) break
+    t = t.slice(0, i)
+  }
+  return tag
 }
 
 // Each installed language renders as its native exonym so users recognise
@@ -115,13 +133,15 @@ export function LanguagePicker({
   })
   const entries = useMemo(() => {
     const list = describeLanguages(data?.languages ?? ['en'])
-    // "Auto" pinned to the top: prefix in the active UI language, suffixed
-    // with the browser-detected language rendered in the active UI language
-    // so the parenthetical reads naturally in whatever the user is currently
-    // looking at (e.g. ウェブブラウザから検出 (イギリス英語)).
+    // "Auto" pinned to the top. The suffix shows the catalog the user will
+    // actually load — we walk the detected tag through the installed-locale
+    // fallback chain (mirroring the server-side resolver) so an en-gb
+    // browser shows "English (international)" rather than "British English".
+    const installed = new Set((data?.languages ?? ['en']).map((s) => s.toLowerCase()))
+    const resolved = resolveInstalled(detectLanguage(), installed)
     const auto: LanguageEntry = {
       tag: 'auto',
-      native: `${t`Detect from web browser`} (${nativeName(detectLanguage(), i18n.locale)})`,
+      native: `${t`Detect from web browser`}: ${nativeName(resolved, i18n.locale)}`,
     }
     return [auto, ...list]
   }, [data, t, i18n.locale])
