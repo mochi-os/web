@@ -169,7 +169,7 @@ export function LanguagePicker({
           <Globe className='size-4' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align={align} className='w-72 p-0'>
+      <PopoverContent align={align} className='w-[22rem] p-0'>
         <Command>
           <CommandInput placeholder={t`Search…`} />
           <CommandList>

@@ -40,7 +40,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
   const formatTimezone = (tz: string) => tz.replace(/_/g, ' ')
   const displayValue =
     value === 'auto'
-      ? `${t_`Detect from web browser`} (${formatTimezone(browserTimezone)})`
+      ? `${t_`Detect from web browser`}: ${formatTimezone(browserTimezone)}`
       : formatTimezone(value)
 
   return (
@@ -77,7 +77,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
                   )}
                 />
                 <span className='truncate'>
-                  <Trans>Detect from web browser</Trans> ({formatTimezone(browserTimezone)})
+                  <Trans>Detect from web browser</Trans>: {formatTimezone(browserTimezone)}
                 </span>
               </CommandItem>
               {timezones.map((tz) => (
