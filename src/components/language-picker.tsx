@@ -57,12 +57,16 @@ const displayNameOverrides: Record<string, string> = {
   'en-us': 'English (USA)',
 }
 
-function nativeName(tag: string): string {
+// Each installed language renders as its native exonym so users recognise
+// their own language by sight (Français, 日本語). For the Auto entry's
+// descriptive parenthetical the caller passes the active UI locale so the
+// detected language reads in the user's UI language instead.
+function nativeName(tag: string, displayLocale?: string): string {
   const override = displayNameOverrides[tag.toLowerCase()]
   if (override) return override
   let name = tag
   try {
-    name = new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ?? tag
+    name = new Intl.DisplayNames([displayLocale ?? tag], { type: 'language' }).of(tag) ?? tag
   } catch {
     /* fall back to raw tag */
   }
@@ -82,7 +86,7 @@ export function LanguagePicker({
   className?: string
   align?: 'start' | 'center' | 'end'
 }) {
-  const { t } = useLingui()
+  const { t, i18n } = useLingui()
   const [open, setOpen] = useState(false)
   const { data } = useQuery<{ languages: string[] }>({
     queryKey: ['_', 'languages'],
@@ -92,14 +96,15 @@ export function LanguagePicker({
   const entries = useMemo(() => {
     const list = describeLanguages(data?.languages ?? ['en'])
     // "Auto" pinned to the top: prefix in the active UI language, suffixed
-    // with the browser-detected language's native name in parentheses so the
-    // user can see which language Auto would pick.
+    // with the browser-detected language rendered in the active UI language
+    // so the parenthetical reads naturally in whatever the user is currently
+    // looking at (e.g. ウェブブラウザから検出 (イギリス英語)).
     const auto: LanguageEntry = {
       tag: 'auto',
-      native: `${t`Detect from web browser`} (${nativeName(detectLanguage())})`,
+      native: `${t`Detect from web browser`} (${nativeName(detectLanguage(), i18n.locale)})`,
     }
     return [auto, ...list]
-  }, [data, t])
+  }, [data, t, i18n.locale])
 
   // Hide the picker when only English is installed — there's nothing real to
   // pick (Auto + English alone gives no choice). Phase 2 catalogs reveal it.

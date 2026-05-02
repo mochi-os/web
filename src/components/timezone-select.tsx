@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Trans } from '@lingui/react/macro'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
@@ -32,6 +32,7 @@ interface TimezoneSelectProps {
 }
 
 export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProps) {
+  const { t: t_ } = useLingui()
   const [open, setOpen] = useState(false)
   const timezones = useMemo(() => getTimezones(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
@@ -39,7 +40,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
   const formatTimezone = (tz: string) => tz.replace(/_/g, ' ')
   const displayValue =
     value === 'auto'
-      ? `Detect from web browser (${formatTimezone(browserTimezone)})`
+      ? `${t_`Detect from web browser`} (${formatTimezone(browserTimezone)})`
       : formatTimezone(value)
 
   return (
@@ -76,7 +77,7 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
                   )}
                 />
                 <span className='truncate'>
-                  Detect from web browser ({formatTimezone(browserTimezone)})
+                  <Trans>Detect from web browser</Trans> ({formatTimezone(browserTimezone)})
                 </span>
               </CommandItem>
               {timezones.map((tz) => (
