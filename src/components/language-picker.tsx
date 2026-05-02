@@ -73,9 +73,29 @@ function nativeName(tag: string, displayLocale?: string): string {
   return capitalise(name)
 }
 
+// Sort priority: 0 = Latin-script natives (English, Français, Deutsch, …),
+// 1 = non-Latin-script natives (العربية, 日本語, 한국어, עברית, …). Within each
+// bucket, naturalCompare sorts by the displayed native name. Putting Latin
+// first means English-speaking and most European users find their language
+// near the top; non-Latin readers find theirs grouped together below.
+function scriptBucket(native: string): number {
+  // Find the first letter (skip leading spaces, parens, punctuation).
+  for (const ch of native) {
+    if (/\p{L}/u.test(ch)) {
+      return /[A-Za-zÀ-ÿĀ-ſƀ-ɏ]/.test(ch) ? 0 : 1
+    }
+  }
+  return 0
+}
+
 function describeLanguages(tags: string[]): LanguageEntry[] {
   const out: LanguageEntry[] = tags.map((tag) => ({ tag, native: nativeName(tag) }))
-  out.sort((a, b) => naturalCompare(a.native, b.native))
+  out.sort((a, b) => {
+    const ba = scriptBucket(a.native)
+    const bb = scriptBucket(b.native)
+    if (ba !== bb) return ba - bb
+    return naturalCompare(a.native, b.native)
+  })
   return out
 }
 
