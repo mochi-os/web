@@ -55,6 +55,7 @@ function capitalise(s: string): string {
 const displayNameOverrides: Record<string, string> = {
   'en': 'English (international)',
   'en-us': 'English (USA)',
+  'es': 'Español (España)',
   'es-419': 'Español (latinoamericano)',
 }
 
