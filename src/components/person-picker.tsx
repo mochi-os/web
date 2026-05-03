@@ -48,6 +48,13 @@ export interface PersonPickerProps {
   directory?: boolean
   /** API base path for friends/directory calls */
   apiBasePath?: string
+  /** Custom directory search function. Overrides the default
+   *  `${apiBasePath}/people/-/users/search` URL. Useful for apps whose JWT
+   *  is scoped to themselves and so cannot call the people app directly. */
+  directoryFn?: (query: string) => Promise<Person[]>
+  /** Custom friends fetch function. Overrides the default
+   *  `${apiBasePath}/people/-/friends` URL. */
+  friendsFn?: () => Promise<Person[]>
   /** Placeholder text */
   placeholder?: string
   /** Empty state message */
@@ -70,6 +77,8 @@ export function PersonPicker({
   friends = false,
   directory = false,
   apiBasePath = '',
+  directoryFn,
+  friendsFn,
   placeholder = 'Select person...',
   emptyMessage = 'No people found',
   disabled = false,
@@ -109,8 +118,9 @@ export function PersonPicker({
 
   // Fetch friends when searching
   const { data: friendsData, isLoading: isLoadingFriends } = useQuery({
-    queryKey: ['person-picker', 'friends'],
+    queryKey: ['person-picker', 'friends', apiBasePath, !!friendsFn],
     queryFn: async () => {
+      if (friendsFn) return friendsFn()
       const response = await requestHelpers.get<FriendsResponse>(
         `${apiBasePath}/people/-/friends`
       )
@@ -122,8 +132,9 @@ export function PersonPicker({
 
   // Search directory when query is long enough
   const { data: directoryData, isLoading: isLoadingDirectory } = useQuery({
-    queryKey: ['person-picker', 'directory', debouncedSearch],
+    queryKey: ['person-picker', 'directory', apiBasePath, !!directoryFn, debouncedSearch],
     queryFn: async () => {
+      if (directoryFn) return directoryFn(debouncedSearch)
       const response = await requestHelpers.get<DirectorySearchResponse | Person[]>(
         `${apiBasePath}/people/-/users/search?search=${encodeURIComponent(debouncedSearch)}`
       )
@@ -305,7 +316,7 @@ export function PersonPicker({
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0" align="start">
         {/* Search input */}
-        <div className="p-2 border-b">
+        <div className="p-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -318,10 +329,15 @@ export function PersonPicker({
           </div>
         </div>
 
-        {/* Results */}
-        <div className="max-h-64 overflow-y-auto p-1">
-          {/* None option for single mode when value is selected */}
-          {mode === 'single' && selectedIds.length > 0 && !searchQuery && (
+        {(() => {
+          const showNone = mode === 'single' && selectedIds.length > 0 && !searchQuery
+          const searching = isLoading && !!debouncedSearch
+          const hasPeople = filteredPeople.length > 0
+          const searchedAndEmpty = !isLoading && !!debouncedSearch && !hasPeople
+          if (!showNone && !searching && !hasPeople && !searchedAndEmpty) return null
+          return (
+        <div className="max-h-64 overflow-y-auto border-t p-1">
+          {showNone && (
             <div
               onClick={() => {
                 onChange('')
@@ -334,13 +350,13 @@ export function PersonPicker({
             </div>
           )}
 
-          {isLoading && debouncedSearch && (
+          {searching && (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
             </div>
           )}
 
-          {!isLoading && filteredPeople.length === 0 && (
+          {searchedAndEmpty && (
             <div className="py-6 text-center text-sm text-muted-foreground">
               {emptyMessage}
             </div>
@@ -390,6 +406,8 @@ export function PersonPicker({
             </div>
           ))}
         </div>
+          )
+        })()}
       </PopoverContent>
     </Popover>
   )
