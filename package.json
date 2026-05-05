@@ -22,7 +22,8 @@
     "./hooks/*": "./src/hooks/*",
     "./lib/*": "./src/lib/*",
     "./features/errors/*": "./src/features/errors/*",
-    "./assets/custom/*": "./src/assets/custom/*"
+    "./assets/custom/*": "./src/assets/custom/*",
+    "./eslint-i18n-config": "./eslint-i18n-config.js"
   },
   "scripts": {
     "lint": "eslint .",
