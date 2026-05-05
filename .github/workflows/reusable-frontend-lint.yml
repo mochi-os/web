@@ -40,3 +40,6 @@ jobs:
 
       - name: Lint frontend
         run: pnpm -C ${{ inputs.web_dir }} lint --max-warnings=0
+
+      - name: Check i18n catalogs
+        run: pnpm -C ${{ inputs.web_dir }} i18n:check
