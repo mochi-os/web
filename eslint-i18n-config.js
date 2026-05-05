@@ -21,6 +21,8 @@ export default {
           '^(?![A-Z])\\S+$',
           // UPPERCASE constants
           '^[A-Z0-9_-]+$',
+          // Brand name — intentionally never translated
+          '^Mochi$',
         ],
         ignoreNames: [
           { regex: { pattern: 'className', flags: 'i' } },
@@ -79,6 +81,11 @@ export default {
           'mochi.log.warn',
           'mochi.log.error',
         ],
+        // useTsTypes leverages TS type info to suppress false positives
+        // (e.g. string args to Map/Set/Headers/URLSearchParams methods).
+        // Apps whose eslint.config.js doesn't set parserOptions.project
+        // for typed linting (login, possibly others) need to add it; the
+        // rule errors loudly if the config doesn't support typed linting.
         useTsTypes: true,
         ignoreMethodsOnTypes: [
           'Map.get',
