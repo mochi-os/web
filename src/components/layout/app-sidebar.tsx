@@ -42,7 +42,7 @@ function CollapseBtn() {
       title={label}
       aria-label={label}
       className={cn(
-        'absolute -right-3 top-1/2 -translate-y-1/2 z-50',
+        'absolute -end-3 top-1/2 z-50 -translate-y-1/2',
         'h-6 w-6 rounded-full border bg-background shadow-md',
         'hover:bg-accent hover:text-accent-foreground',
         'inline-flex'
@@ -82,7 +82,7 @@ export function AppSidebar({
               <a href='/' title={t`Home`} className='flex items-center gap-2'>
                 <img
                   src='/images/logo-header.svg'
-                  alt={"Mochi"}
+                  alt={'Mochi'}
                   className='h-6 w-6'
                 />
                 <span className='text-sm font-semibold'>mochi</span>
@@ -102,7 +102,15 @@ export function AppSidebar({
           </SidebarHeader>
         )
       ) : (
-        <SidebarHeader className={hideMenu ? (state === 'collapsed' ? 'min-h-20' : 'min-h-10') : undefined}>
+        <SidebarHeader
+          className={
+            hideMenu
+              ? state === 'collapsed'
+                ? 'min-h-20'
+                : 'min-h-10'
+              : undefined
+          }
+        >
           {!hideMenu && (
             <SidebarMenu>
               <SidebarMenuItem>

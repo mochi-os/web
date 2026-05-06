@@ -32,6 +32,7 @@ export interface ThemeInfo {
   preview: string
   preview_dark?: string
   border_radius?: string
+  spacing?: string
   icon_mask?: string
   icon_background?: string
   background?: string

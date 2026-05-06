@@ -25,7 +25,8 @@ import { useEffect, useState } from 'react'
 import { i18n, type Messages } from '@lingui/core'
 import { I18nProvider as LinguiProvider } from '@lingui/react'
 import { getShellInitData, initShellBridge, onShellMessage } from '../lib/shell-bridge'
-import { applyDocumentDir } from '../lib/rtl'
+import { applyDocumentDir, isRtlLocale } from '../lib/rtl'
+import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
 import {
   formatDate as fmtDate,
   formatTime as fmtTime,
@@ -285,5 +286,10 @@ export function I18nProvider({
   }, [catalogs])
 
   if (!ready) return null
-  return <LinguiProvider i18n={i18n}>{children}</LinguiProvider>
+  const dir = isRtlLocale(language) ? 'rtl' : 'ltr'
+  return (
+    <RdxDirProvider dir={dir}>
+      <LinguiProvider i18n={i18n}>{children}</LinguiProvider>
+    </RdxDirProvider>
+  )
 }
