@@ -45,11 +45,19 @@ export function isRtlLocale(lang: string | null | undefined): boolean {
 }
 
 /**
- * Set document.documentElement.dir based on the language. Idempotent — call
- * on every language change including initial load. Safe in SSR / non-browser
- * contexts (no-op when document is undefined).
+ * Set document.documentElement.dir and document.documentElement.lang based on
+ * the active language. Idempotent — call on every language change including
+ * initial load. Safe in SSR / non-browser contexts (no-op when document is
+ * undefined). The `lang` attribute lets browser features (spellcheck, screen
+ * readers, voice input, the CSS `:lang()` selector) and search engines pick
+ * the right locale rules. The pseudo-locale `en-x-pseudo-rtl` is mapped down
+ * to `en` so screen readers don't choke on the synthetic tag.
  */
 export function applyDocumentDir(lang: string | null | undefined): void {
   if (typeof document === 'undefined') return
   document.documentElement.dir = isRtlLocale(lang) ? 'rtl' : 'ltr'
+  if (lang) {
+    const tag = lang.toLowerCase()
+    document.documentElement.lang = tag.startsWith('en-x-pseudo') ? 'en' : tag
+  }
 }

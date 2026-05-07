@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useLingui } from '@lingui/react/macro'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -21,6 +22,7 @@ function Calendar({
   buttonVariant?: React.ComponentProps<typeof Button>['variant']
 }) {
   const defaultClassNames = getDefaultClassNames()
+  const { i18n } = useLingui()
 
   return (
     <DayPicker
@@ -34,7 +36,7 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString('default', { month: 'short' }),
+          date.toLocaleString(i18n.locale, { month: 'short' }), // i18n-format-ok: passes user's locale
         ...formatters,
       }}
       classNames={{
@@ -187,7 +189,7 @@ function CalendarDayButton({
       ref={ref}
       variant='ghost'
       size='icon'
-      data-day={day.date.toLocaleDateString()}
+      data-day={day.date.toLocaleDateString()} // i18n-format-ok: test/data attr, not user-visible
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&
