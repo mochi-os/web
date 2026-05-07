@@ -19,19 +19,6 @@ export function useAppearanceLabels(): Record<string, string> {
   }
 }
 
-export function useStylePresetLabels(): Record<string, string> {
-  const { t } = useLingui()
-  return {
-    default: t`Luma (Default)`,
-    vega: 'Vega',
-    nova: 'Nova',
-    maia: 'Maia',
-    lyra: 'Lyra',
-    mira: 'Mira',
-    luma: 'Luma',
-  }
-}
-
 export function useDateFormatLabels(): Record<string, string> {
   const { t } = useLingui()
   return {
@@ -104,16 +91,6 @@ export const appearanceLabels: Record<string, string> = {
   light: 'Light',
   dark: 'Dark',
   auto: 'System',
-}
-
-export const stylePresetLabels: Record<string, string> = {
-  default: 'Luma (Default)',
-  vega: 'Vega',
-  nova: 'Nova',
-  maia: 'Maia',
-  lyra: 'Lyra',
-  mira: 'Mira',
-  luma: 'Luma',
 }
 
 export const dateFormatLabels: Record<string, string> = {
