@@ -85,6 +85,46 @@ export function useUnitLabels(): Record<string, string> {
   }
 }
 
+export function useDensityLabels(): Record<string, string> {
+  const { t } = useLingui()
+  return {
+    theme: t`From theme`,
+    compact: t`Compact`,
+    comfortable: t`Comfortable`,
+    spacious: t`Spacious`,
+  }
+}
+
+export function useRadiusLabels(): Record<string, string> {
+  const { t } = useLingui()
+  return {
+    theme: t`From theme`,
+    '0rem': t`None`,
+    '0.375rem': t`Small`,
+    '0.75rem': t`Medium`,
+    '1.75rem': t`Large`,
+  }
+}
+
+export function useBackgroundLabels(): Record<string, string> {
+  const { t } = useLingui()
+  return {
+    theme: t`From theme`,
+    off: t`None`,
+  }
+}
+
+export function useFontSizeLabels(): Record<string, string> {
+  const { t } = useLingui()
+  return {
+    theme: t`From theme`,
+    small: t`Small`,
+    normal: t`Normal`,
+    large: t`Large`,
+    'extra-large': t`Extra large`,
+  }
+}
+
 // English-only fallback consts for any pre-existing consumer that runs
 // outside a React tree. Keep in sync with the hooks above.
 export const appearanceLabels: Record<string, string> = {
@@ -139,4 +179,32 @@ export const unitLabels: Record<string, string> = {
   metric: 'Metric',
   imperial: 'Imperial',
   usa: 'United States',
+}
+
+export const densityLabels: Record<string, string> = {
+  theme: 'From theme',
+  compact: 'Compact',
+  comfortable: 'Comfortable',
+  spacious: 'Spacious',
+}
+
+export const radiusLabels: Record<string, string> = {
+  theme: 'From theme',
+  '0rem': 'None',
+  '0.375rem': 'Small',
+  '0.75rem': 'Medium',
+  '1.75rem': 'Large',
+}
+
+export const backgroundLabels: Record<string, string> = {
+  theme: 'From theme',
+  off: 'None',
+}
+
+export const fontSizeLabels: Record<string, string> = {
+  theme: 'From theme',
+  small: 'Small',
+  normal: 'Normal',
+  large: 'Large',
+  'extra-large': 'Extra large',
 }
