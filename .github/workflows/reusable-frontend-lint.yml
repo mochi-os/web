@@ -43,3 +43,36 @@ jobs:
 
       - name: Check i18n catalogs
         run: pnpm -C ${{ inputs.web_dir }} i18n:check
+
+      - name: Check Android i18n catalogs
+        run: |
+          # Walk the caller repo for any Android module and report missing
+          # string keys per locale. Mirrors lib/android's gradle
+          # checkLocaleCompleteness task. Runs informational only (does not
+          # fail CI) until the residue translation is filled in for new
+          # locales — flip to `--strict` once coverage is complete.
+          python3 - <<'PY'
+          import re, sys
+          from pathlib import Path
+          KEY_RE = re.compile(r'<string name="([^"]+)"')
+          OVERLAYS = {"values-en-rUS"}
+          any_problems = False
+          for source in Path('.').rglob('src/main/res/values/strings.xml'):
+              if 'android' not in source.parts:
+                  continue
+              res = source.parent.parent
+              source_keys = set(KEY_RE.findall(source.read_text(encoding='utf-8')))
+              for vd in sorted(res.iterdir()):
+                  if not vd.is_dir() or not vd.name.startswith('values-') or vd.name in OVERLAYS:
+                      continue
+                  xml = vd / 'strings.xml'
+                  if not xml.exists():
+                      continue
+                  missing = source_keys - set(KEY_RE.findall(xml.read_text(encoding='utf-8')))
+                  if missing:
+                      sample = ', '.join(sorted(missing)[:3])
+                      print(f"::warning::{res.relative_to('.')}/{vd.name}: {len(missing)} missing ({sample}…)")
+                      any_problems = True
+          if not any_problems:
+              print("Android i18n catalogs complete.")
+          PY
