@@ -38,6 +38,7 @@ export interface ThemeInfo {
   background?: string
   background_url?: string
   overrides?: Record<string, string>
+  development?: boolean
 }
 
 export interface PreferencesData {

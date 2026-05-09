@@ -44,35 +44,237 @@ jobs:
       - name: Check i18n catalogs
         run: pnpm -C ${{ inputs.web_dir }} i18n:check
 
-      - name: Check Android i18n catalogs
+      - name: Check i18n glossary (brand/protocol terms)
         run: |
-          # Walk the caller repo for any Android module and report missing
-          # string keys per locale. Mirrors lib/android's gradle
-          # checkLocaleCompleteness task. Runs informational only (does not
-          # fail CI) until the residue translation is filled in for new
-          # locales — flip to `--strict` once coverage is complete.
+          # Brand/protocol terms (Mochi, Stripe, GitHub, OAuth, JWT, libp2p,
+          # ...) must appear verbatim Latin script in every translation. Drop
+          # `# i18n-glossary-ok: <term>` on a line to allowlist intentional
+          # transliterations.
           python3 - <<'PY'
           import re, sys
           from pathlib import Path
-          KEY_RE = re.compile(r'<string name="([^"]+)"')
+          GLOSSARY = ['Mochi','Stripe','GitHub','Pushbullet','ntfy','OAuth','OIDC','PKCE','JWT','SAML','libp2p']
+          ALLOW_RE = re.compile(r'#\s*i18n-glossary-ok\b')
+          ENTRY_RE = re.compile(r'(?:#[^\n]*\n)*msgid\s+(?P<id>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)\nmsgstr\s+(?P<str>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)', re.M)
+          def parse(s):
+              return ''.join(re.findall(r'"((?:[^"\\]|\\.)*)"', s)).replace('\\n','\n').replace('\\"','"').replace('\\\\','\\')
+          violations = 0
+          for po in list(Path('.').rglob('messages.po')) + list(Path('.').rglob('labels/*.conf')):
+              if any(p in po.parts for p in ('node_modules','dist','.git')):
+                  continue
+              text = po.read_text(encoding='utf-8', errors='replace')
+              if po.suffix == '.po':
+                  for m in ENTRY_RE.finditer(text):
+                      src, tgt = parse(m.group('id')), parse(m.group('str'))
+                      if not src or not tgt:
+                          continue
+                      for term in GLOSSARY:
+                          if term in src and term not in tgt:
+                              line = text.count('\n', 0, m.start()) + 1
+                              if not ALLOW_RE.search(text.split('\n')[line-1] if line-1 < len(text.split('\n')) else ''):
+                                  print(f"::error file={po},line={line}::{term} missing from translation: {tgt[:80]}")
+                                  violations += 1
+              else:
+                  for n, line in enumerate(text.splitlines(), 1):
+                      if '=' not in line or ALLOW_RE.search(line):
+                          continue
+                      val = line.split('=', 1)[1].strip()
+                      for term in GLOSSARY:
+                          if term in val:
+                              # Compare against en.conf to know if term should be there
+                              en_path = po.parent / 'en.conf'
+                              if en_path.exists() and term in en_path.read_text(encoding='utf-8'):
+                                  continue  # term in source too — fine
+                              if term not in val:
+                                  print(f"::error file={po},line={n}::{term} should be verbatim: {val[:80]}")
+                                  violations += 1
+          if violations:
+              print(f"\n{violations} glossary violations", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Check i18n format usage
+        run: |
+          # `.toFixed()`, `.toLocaleString*()`, `new Intl.*Format`, `moment()`
+          # bypass useFormat() and render in browser locale, not user locale.
+          # Allowlist with `// i18n-format-ok: <reason>` trailing comment.
+          python3 - <<'PY'
+          import re, sys
+          from pathlib import Path
+          PATTERNS = [
+              (re.compile(r'\.toFixed\(\s*\d+\s*\)'), 'toFixed'),
+              (re.compile(r'\.toLocaleString\b'), 'toLocaleString'),
+              (re.compile(r'\.toLocaleDateString\b'), 'toLocaleDateString'),
+              (re.compile(r'\.toLocaleTimeString\b'), 'toLocaleTimeString'),
+              (re.compile(r'new Intl\.(DateTimeFormat|NumberFormat)\b'), 'new Intl.*Format'),
+              (re.compile(r'\bmoment\('), 'moment()'),
+          ]
+          ALLOW = re.compile(r'//\s*i18n-format-ok\b')
+          INFRA = {'src/hooks/use-format.ts','src/lib/locale-format.ts','src/context/locale-provider.tsx','src/context/i18n-provider.tsx'}
+          SKIP = {'node_modules','dist','.next','build','.git'}
+          violations = 0
+          for f in Path('.').rglob('*.ts'):
+              if any(p in f.parts for p in SKIP):
+                  continue
+              if any(str(f).endswith(i) for i in INFRA):
+                  continue
+              for n, line in enumerate(f.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
+                  if ALLOW.search(line):
+                      continue
+                  for pat, name in PATTERNS:
+                      if pat.search(line):
+                          print(f"::error file={f},line={n}::{name} bypasses useFormat()")
+                          violations += 1
+          for f in Path('.').rglob('*.tsx'):
+              if any(p in f.parts for p in SKIP):
+                  continue
+              for n, line in enumerate(f.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
+                  if ALLOW.search(line):
+                      continue
+                  for pat, name in PATTERNS:
+                      if pat.search(line):
+                          print(f"::error file={f},line={n}::{name} bypasses useFormat()")
+                          violations += 1
+          if violations:
+              print(f"\n{violations} format violations", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Check i18n source-en purity
+        run: |
+          # `en` is the source locale — Lingui expects msgstr to be empty so
+          # source text falls through. A populated en/messages.po breaks
+          # fallback semantics.
+          python3 - <<'PY'
+          import re, sys
+          from pathlib import Path
+          ENTRY_RE = re.compile(r'msgid\s+(?P<id>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)\nmsgstr\s+(?P<str>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)', re.M)
+          def parse(s):
+              return ''.join(re.findall(r'"((?:[^"\\]|\\.)*)"', s)).replace('\\n','\n').replace('\\"','"').replace('\\\\','\\')
+          violations = 0
+          for po in Path('.').rglob('locales/en/messages.po'):
+              if 'node_modules' in po.parts:
+                  continue
+              text = po.read_text(encoding='utf-8', errors='replace')
+              for m in ENTRY_RE.finditer(text):
+                  src, tgt = parse(m.group('id')), parse(m.group('str'))
+                  if src and tgt:
+                      line = text.count('\n', 0, m.start()) + 1
+                      print(f"::error file={po},line={line}::populated msgstr in en source: {tgt[:60]}")
+                      violations += 1
+          if violations:
+              print(f"\n{violations} en-source violations (en/messages.po should have empty msgstrs)", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Check i18n plural-form completeness
+        run: |
+          # Each locale has required CLDR plural categories. If a translator
+          # drops a required form (e.g. Welsh's `few`, Latvian's `zero`),
+          # ICU throws at runtime. Catch it on PR.
+          python3 - <<'PY'
+          import re, sys
+          from pathlib import Path
+          REQUIRED = {
+              # CLDR cardinal plural categories per locale (ICU runtime requirement)
+              'ar': {'zero','one','two','few','many','other'},
+              'cy': {'zero','one','two','few','many','other'},
+              'ga': {'one','two','few','many','other'},
+              'gd': {'one','two','few','other'},
+              'mt': {'one','few','many','other'},
+              'sl': {'one','two','few','other'},
+              'lv': {'zero','one','other'},
+              'lt': {'one','few','many','other'},
+              'ru':'one,few,many,other'.split(','),
+              'uk':'one,few,many,other'.split(','),
+              'be':'one,few,many,other'.split(','),
+              'pl':'one,few,many,other'.split(','),
+              'cs':'one,few,many,other'.split(','),
+              'sk':'one,few,many,other'.split(','),
+              'sr':'one,few,other'.split(','),
+              'hr':'one,few,other'.split(','),
+              'bs':'one,few,other'.split(','),
+              'ro':'one,few,other'.split(','),
+              'he':'one,two,many,other'.split(','),
+          }
+          PLURAL_RE = re.compile(r'\{[^{}]*?,\s*plural\s*,\s*([^{}]+(?:\{[^{}]*\}[^{}]*)+)\}')
+          ARM_RE = re.compile(r'\b(zero|one|two|few|many|other)\s*\{')
+          ENTRY_RE = re.compile(r'msgid\s+(?P<id>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)\nmsgstr\s+(?P<str>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)', re.M)
+          def parse(s):
+              return ''.join(re.findall(r'"((?:[^"\\]|\\.)*)"', s)).replace('\\n','\n').replace('\\"','"').replace('\\\\','\\')
+          violations = 0
+          for po in Path('.').rglob('locales/*/messages.po'):
+              if 'node_modules' in po.parts:
+                  continue
+              locale = po.parent.name
+              required = set(REQUIRED.get(locale, ()))
+              if not required:
+                  continue
+              text = po.read_text(encoding='utf-8', errors='replace')
+              for m in ENTRY_RE.finditer(text):
+                  tgt = parse(m.group('str'))
+                  if not tgt:
+                      continue
+                  for plural in PLURAL_RE.findall(tgt):
+                      have = set(ARM_RE.findall(plural))
+                      if have and not required.issubset(have):
+                          missing = required - have
+                          line = text.count('\n', 0, m.start()) + 1
+                          print(f"::error file={po},line={line}::{locale} plural missing forms: {sorted(missing)}")
+                          violations += 1
+          if violations:
+              print(f"\n{violations} plural-completeness violations", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Check Android i18n catalogs
+        run: |
+          # Walk the caller repo for any Android module and check:
+          #   (a) values-<qualifier>/strings.xml has every source key (warns on missing)
+          #   (b) %1$s / %1$d / %2$s placeholders match source per <string> (errors on mismatch)
+          # Mirrors lib/android's gradle checkLocaleCompleteness plus a
+          # format-string preservation guard. Coverage warnings stay
+          # informational until residue is filled.
+          python3 - <<'PY'
+          import re, sys
+          from pathlib import Path
+          STRING_RE = re.compile(r'<string\s+name="([^"]+)"\s*>([^<]*)</string>', re.S)
+          FMT_RE = re.compile(r'%\d+\$[sd]')
           OVERLAYS = {"values-en-rUS"}
-          any_problems = False
+          warnings = 0
+          fmt_violations = 0
           for source in Path('.').rglob('src/main/res/values/strings.xml'):
               if 'android' not in source.parts:
                   continue
               res = source.parent.parent
-              source_keys = set(KEY_RE.findall(source.read_text(encoding='utf-8')))
+              source_strings = dict(STRING_RE.findall(source.read_text(encoding='utf-8')))
+              source_keys = set(source_strings)
+              source_fmts = {k: sorted(set(FMT_RE.findall(v))) for k, v in source_strings.items()}
               for vd in sorted(res.iterdir()):
                   if not vd.is_dir() or not vd.name.startswith('values-') or vd.name in OVERLAYS:
                       continue
                   xml = vd / 'strings.xml'
                   if not xml.exists():
                       continue
-                  missing = source_keys - set(KEY_RE.findall(xml.read_text(encoding='utf-8')))
+                  text = xml.read_text(encoding='utf-8')
+                  pairs = dict(STRING_RE.findall(text))
+                  missing = source_keys - set(pairs)
                   if missing:
                       sample = ', '.join(sorted(missing)[:3])
                       print(f"::warning::{res.relative_to('.')}/{vd.name}: {len(missing)} missing ({sample}…)")
-                      any_problems = True
-          if not any_problems:
+                      warnings += 1
+                  for k, v in pairs.items():
+                      expected = source_fmts.get(k)
+                      if expected is None:
+                          continue
+                      have = sorted(set(FMT_RE.findall(v)))
+                      if have != expected:
+                          line = text.count('\n', 0, text.find(f'name="{k}"')) + 1
+                          print(f"::error file={xml},line={line}::{vd.name}/{k}: format-string mismatch (source {expected}, translation {have})")
+                          fmt_violations += 1
+          if not warnings and not fmt_violations:
               print("Android i18n catalogs complete.")
+          if fmt_violations:
+              print(f"\n{fmt_violations} Android format-string violations", file=sys.stderr)
+              sys.exit(1)
           PY
