@@ -33,6 +33,8 @@ export interface ThemeInfo {
   preview_dark?: string
   border_radius?: string
   spacing?: string
+  font_sans?: string
+  font_mono?: string
   icon_mask?: string
   icon_background?: string
   background?: string
@@ -45,4 +47,8 @@ export interface PreferencesData {
   preferences: Record<string, string>
   schema: PreferenceSchema[]
   themes?: ThemeInfo[]
+  // Per-density CSS-var bundles emitted by mochi.app.theme_presets().
+  // Keyed by "compact" / "comfortable" / "spacious"; each value maps
+  // every CSS custom property the preset defines to its computed value.
+  presets?: Record<string, Record<string, string>>
 }

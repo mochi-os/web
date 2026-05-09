@@ -125,6 +125,16 @@ export function useFontSizeLabels(): Record<string, string> {
   }
 }
 
+export function useFontLabels(): Record<string, string> {
+  const { t } = useLingui()
+  return {
+    theme: t`From theme`,
+    system: t`System`,
+    serif: t`Serif`,
+    dyslexia: t`Dyslexia-friendly`,
+  }
+}
+
 // English-only fallback consts for any pre-existing consumer that runs
 // outside a React tree. Keep in sync with the hooks above.
 export const appearanceLabels: Record<string, string> = {
@@ -207,4 +217,11 @@ export const fontSizeLabels: Record<string, string> = {
   normal: 'Normal',
   large: 'Large',
   'extra-large': 'Extra large',
+}
+
+export const fontLabels: Record<string, string> = {
+  theme: 'From theme',
+  system: 'System',
+  serif: 'Serif',
+  dyslexia: 'Dyslexia-friendly',
 }

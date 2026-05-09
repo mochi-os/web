@@ -291,3 +291,22 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Bump border, text, and ring contrast for users who've asked the OS for
+   stronger contrast. Safari maps "more" to a setting users can flip; we
+   don't expose a Mochi-specific toggle because the OS one already covers
+   it for every site they visit. */
+@media (prefers-contrast: more) {
+  :root,
+  .dark {
+    --border:        oklch(0.6 0 0);
+    --border-strong: oklch(0.4 0 0);
+    --muted-foreground: oklch(0.35 0 0);
+    --ring: oklch(0.488 var(--hue-chroma, 0.15) var(--hue, 250));
+  }
+  .dark {
+    --border:        oklch(0.7 0 0 / 30%);
+    --border-strong: oklch(0.85 0 0 / 50%);
+    --muted-foreground: oklch(0.85 0 0);
+  }
+}
