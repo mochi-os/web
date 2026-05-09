@@ -57,6 +57,15 @@ const displayNameOverrides: Record<string, string> = {
   'en-us': 'English (USA)',
   'es': 'Español (España)',
   'es-419': 'Español (latinoamericano)',
+  // Tags with no CLDR data — Intl.DisplayNames falls back to en-GB and
+  // returns the English exonym instead of the native autonym. The picker
+  // would otherwise show "Aymara"/"Guarani"/"Haitian Creole" instead of the
+  // self-name. Date and number formatting for these locales also fall back
+  // to en-GB at runtime; we accept that for now (Latin-script anyway) and
+  // only fix the picker label.
+  'ay': 'Aymar aru',
+  'gn': "Avañe'ẽ",
+  'ht': 'Kreyòl ayisyen',
 }
 
 // resolveInstalled walks the parent chain of `tag` and returns the closest

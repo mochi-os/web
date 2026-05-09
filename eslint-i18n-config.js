@@ -2,9 +2,11 @@
 // Imported from each app's eslint.config.js so a single ignore list
 // covers every Mochi web project.
 //
-// Set to 'warn' (not 'error') so existing unwrapped strings are
-// surfaced without breaking CI. Tighten to 'error' once the baseline
-// is clean.
+// Set to 'error' so any new unwrapped UI string fails CI. The ignore
+// patterns and ignoreNames lists below cover legitimate non-prose
+// literals (CSS class strings, color values, font stacks, command
+// payloads, etc.) — extend them when a true false-positive surfaces
+// rather than reaching for `// eslint-disable-next-line`.
 
 import pluginLingui from 'eslint-plugin-lingui'
 
@@ -14,7 +16,7 @@ export default {
   },
   rules: {
     'lingui/no-unlocalized-strings': [
-      'warn',
+      'error',
       {
         ignore: [
           // Single lowercase word — config keys, log tags, enum values
@@ -23,6 +25,22 @@ export default {
           '^[A-Z0-9_-]+$',
           // Brand name — intentionally never translated
           '^Mochi$',
+          // Tailwind arbitrary-value class strings (`[&_h1]:text-3xl …`,
+          // `[!important]`) used in `cn()`/className helpers and the
+          // typography-class arrays in document-page renderers.
+          '^\\[[&!]',
+          // CSS color / dimension values: `oklch(…)`, `rgb(…)`, `hsl(…)`,
+          // `var(…)`, hex colors (`#fff`, `#1e3a5f`), and pure numeric
+          // values with units (`1rem`, `0.75rem`, `2.25rem`). These appear
+          // in theme-preview-card.tsx and similar style-only literals.
+          '^(?:oklch|rgb|rgba|hsl|hsla|var|calc|url)\\(',
+          '^#[0-9a-fA-F]{3,8}$',
+          '^[0-9]+(?:\\.[0-9]+)?(?:rem|em|px|vh|vw|%)$',
+          // CSS font-family stacks — comma-separated token lists ending
+          // in a generic family keyword. Captures both the explicit
+          // `font_stacks` table in apps/settings and any inline stacks
+          // passed to fontFamily-style props.
+          '(?:sans-serif|serif|monospace|cursive|fantasy|system-ui)\\s*$',
         ],
         ignoreNames: [
           { regex: { pattern: 'className', flags: 'i' } },
@@ -43,6 +61,10 @@ export default {
           'inputMode',
           'pattern',
           'fontFamily',
+          // Shell-command props on settings/system status renderers and
+          // similar admin/install hint widgets — the literal `sudo apt …`
+          // text is the verbatim command the user copies, not UI prose.
+          'command',
         ],
         ignoreFunctions: [
           // Class-name builders and styling utilities
