@@ -9,6 +9,7 @@ export const PROVIDER_LABELS: Record<string, string> = {
   ntfy: 'ntfy',
   openai: 'OpenAI',
   pushbullet: 'Pushbullet',
+  unifiedpush: 'Push notification',
   url: 'External URL',
   web: 'Mochi web',
 }
