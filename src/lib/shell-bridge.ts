@@ -240,9 +240,16 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
     return Promise.resolve(fallbackExecCommandCopy(text))
   }
 
-  // In shell (sandboxed iframe, opaque origin): Clipboard API is blocked.
-  // Always proxy through the parent via postMessage to avoid infinite recursion
-  // with the monkey-patch installed by installShellClipboardProxy().
+  // In shell (sandboxed iframe, opaque origin): the Clipboard API is blocked,
+  // and routing through the parent via postMessage loses the click's transient
+  // user activation by the time the parent calls navigator.clipboard.writeText
+  // — Chromium 122+ rejects the write. document.execCommand('copy') still
+  // works in sandboxed iframes (no origin / permission policy gate) and runs
+  // synchronously inside the click handler where activation is still live.
+  if (fallbackExecCommandCopy(text)) return Promise.resolve(true)
+
+  // execCommand failed (rare — usually means no document.body or a browser
+  // that disabled it). Fall back to the parent proxy as a best effort.
   const id = ++clipboardIdCounter
   return new Promise((resolve) => {
     clipboardCallbacks.set(id, resolve)
