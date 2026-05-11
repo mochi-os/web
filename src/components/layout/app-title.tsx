@@ -27,7 +27,7 @@ export function AppTitle({ title, subtitle = 'Mochi OS' }: AppTitleProps) {
               className='flex flex-1 items-center gap-2 text-start text-sm leading-tight'
             >
               <img
-                src='./images/logo-header.svg'
+                src='./images/logo-header.png'
                 alt='Mochi'
                 className='h-6 w-6 shrink-0'
               />

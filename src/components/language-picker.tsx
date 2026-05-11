@@ -15,15 +15,13 @@
 // The settings preferences page uses a different code path (server-side
 // preference + shellSetLanguage broadcast) and does NOT use this component.
 import { useMemo, useState } from 'react'
-import { Trans, useLingui } from '@lingui/react/macro'
+import { useLingui } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Globe } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from './ui/command'
@@ -181,14 +179,12 @@ export function LanguagePicker({
       </PopoverTrigger>
       <PopoverContent align={align} className='w-[22rem] p-0'>
         <Command>
-          <CommandInput placeholder={t`Search…`} />
-          <CommandList>
-            <CommandEmpty><Trans>No matches.</Trans></CommandEmpty>
+          <CommandList className='max-h-[60vh]'>
             <CommandGroup>
               {entries.map((entry) => (
                 <CommandItem
                   key={entry.tag}
-                  value={`${entry.native} ${entry.tag}`}
+                  value={entry.tag}
                   onSelect={() => handleSelect(entry.tag)}
                 >
                   <span className='truncate'>{entry.native}</span>

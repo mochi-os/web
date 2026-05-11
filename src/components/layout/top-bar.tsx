@@ -61,7 +61,7 @@ export function TopBar({
 
         <a href='/' title={t`Home`}>
           <img
-            src='/images/logo-header.svg'
+            src='/images/logo-header.png'
             alt='Mochi'
             className='h-6 w-6'
           />
@@ -92,7 +92,7 @@ export function TopBar({
             className='flex size-10 items-center justify-center rounded-md transition-colors duration-150 hover:bg-interactive-hover active:bg-interactive-active'
           >
             <img
-              src='/images/logo-header.svg'
+              src='/images/logo-header.png'
               alt='Mochi'
               className='h-6 w-6'
             />
@@ -113,12 +113,14 @@ export function TopBar({
     )
   }
 
-  // Desktop / no-sidebar layout
+  // Desktop / no-sidebar layout. The `py-4` belongs to the vertical desktop
+  // strip; applying it to the horizontal mobile variant pushes the header
+  // taller than the wrapping `h-12` container and overflows into the page.
   return (
     <header
       className={cn(
-        'z-50 flex items-center gap-2 px-2 py-4 overflow-visible',
-        vertical && 'flex-col',
+        'z-50 flex items-center gap-2 px-2 overflow-visible',
+        vertical ? 'flex-col py-4' : 'w-full',
         className
       )}
     >

@@ -81,7 +81,7 @@ export function AppSidebar({
             <div className='flex items-center gap-2 px-2 py-1'>
               <a href='/' title={t`Home`} className='flex items-center gap-2'>
                 <img
-                  src='/images/logo-header.svg'
+                  src='/images/logo-header.png'
                   alt={'Mochi'}
                   className='h-6 w-6'
                 />

@@ -36,7 +36,7 @@ type MochiMenuProps = {
 }
 
 function MochiLogo() {
-  return <img src='/images/logo-header.svg' alt='Mochi' className='h-6 w-6' />
+  return <img src='/images/logo-header.png' alt='Mochi' className='h-6 w-6' />
 }
 
 function UserIcon({
