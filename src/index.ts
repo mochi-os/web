@@ -201,6 +201,7 @@ export {
   isInShell,
   initShellBridge,
   shellNavigate,
+  shellNavigateBack,
   shellNavigateExternal,
   shellNavigateTop,
   shellSetTitle,
@@ -272,6 +273,9 @@ export * from './features/accounts'
 
 // Subscriptions components
 export * from './features/subscriptions'
+
+// Server documents (rules / terms / privacy) renderer
+export * from './features/document/document-page'
 
 // Custom icons
 export { IconDir } from './assets/custom/icon-dir'

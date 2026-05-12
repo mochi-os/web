@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useRouter } from '@tanstack/react-router'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
+import { isInShell, shellNavigateBack } from '../../lib/shell-bridge'
 
 export interface HeaderBackConfig {
   label: string
@@ -28,8 +29,17 @@ export function BackButton({
     // If the user navigated here from another in-app page, take them back
     // there. Only when there's no in-app history (deep link, fresh tab) do
     // we fall back to the page-supplied destination.
+    //
+    // Inside the shell iframe, history.back() is a silent no-op (opaque
+    // origin, no real history entries — every push was relayed to the top
+    // window via installShellNavigationSync). Ask the shell to pop the top
+    // window's history instead; its popstate handler re-renders the iframe.
     if (router.history.canGoBack()) {
-      router.history.back()
+      if (isInShell()) {
+        shellNavigateBack()
+      } else {
+        router.history.back()
+      }
       return
     }
 

@@ -123,6 +123,22 @@ export function shellNavigate(path: string): void {
   window.parent.postMessage({ type: 'navigate', path }, '*')
 }
 
+/**
+ * Ask the shell to navigate back. Inside the sandboxed iframe the browser
+ * silently no-ops history.back() because the iframe has an opaque origin and
+ * no real history entries (every push was relayed to the top window via
+ * installShellNavigationSync). The shell calls history.back() on the top
+ * window, which pops the real entry and the popstate handler re-renders the
+ * iframe at the previous path.
+ */
+export function shellNavigateBack(): void {
+  if (!isInShell()) {
+    window.history.back()
+    return
+  }
+  window.parent.postMessage({ type: 'navigate-back' }, '*')
+}
+
 /** Send a cross-app navigation event to the shell */
 export function shellNavigateExternal(url: string): void {
   if (!isInShell()) {
