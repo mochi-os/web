@@ -221,7 +221,7 @@ export {
   shellRequestPermission,
   shellFetch,
 } from './lib/shell-bridge'
-export type { LocalePreferences } from './lib/shell-bridge'
+export type { ColorTheme, LocalePreferences } from './lib/shell-bridge'
 export * as shellStorage from './lib/shell-storage'
 export { useShellStorage } from './hooks/use-shell-storage'
 export * from './lib/auth-endpoints'
