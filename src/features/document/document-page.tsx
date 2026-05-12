@@ -76,24 +76,26 @@ export function DocumentPage({ name }: { name: DocumentName }) {
     <>
       <PageHeader title={title} icon={<Icon className='size-4 md:size-5' />} />
       <Main>
-        {error ? (
-          <p className='text-destructive'>
-            <Trans>Could not load this document. Please try again later.</Trans>
-          </p>
-        ) : html === null ? (
-          <div className='flex items-center gap-2 text-muted-foreground'>
-            <Loader2 className='size-4 animate-spin' />
-            <span>
-              <Trans>Loading…</Trans>
-            </span>
-          </div>
-        ) : (
-          <div
-            className={typography}
-            // Server-side rendered + sanitised by mochi.text.markdown (bluemonday).
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        )}
+        <div className='mx-auto max-w-3xl px-4 py-4 sm:px-6 lg:px-8'>
+          {error ? (
+            <p className='text-destructive'>
+              <Trans>Could not load this document. Please try again later.</Trans>
+            </p>
+          ) : html === null ? (
+            <div className='flex items-center gap-2 text-muted-foreground'>
+              <Loader2 className='size-4 animate-spin' />
+              <span>
+                <Trans>Loading…</Trans>
+              </span>
+            </div>
+          ) : (
+            <div
+              className={typography}
+              // Server-side rendered + sanitised by mochi.text.markdown (bluemonday).
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          )}
+        </div>
       </Main>
     </>
   )
