@@ -35,10 +35,10 @@ export function DataChip({
   const displayValue = truncate === 'middle' ? middleTruncate(value) : value
 
   return (
-    <div className={cn('flex items-center gap-1.5 overflow-hidden group/chip', className)}>
+    <div className={cn('flex items-center gap-1.5 overflow-hidden min-w-0 group/chip', className)}>
       <div
         className={cn(
-          'bg-surface-2 text-foreground/90 font-mono text-[13px] px-2 py-0.5 rounded-md border border-border flex items-center gap-1.5 transition-[background-color,color,border-color] group-hover/chip:bg-surface-3 group-hover/chip:border-border-strong group-hover/chip:text-foreground max-w-full',
+          'bg-surface-2 text-foreground/90 font-mono text-[13px] px-2 py-0.5 rounded-md border border-border flex items-center gap-1.5 transition-[background-color,color,border-color] group-hover/chip:bg-surface-3 group-hover/chip:border-border-strong group-hover/chip:text-foreground max-w-full min-w-0',
           chipClassName
         )}
       >
