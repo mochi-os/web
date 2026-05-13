@@ -5,6 +5,7 @@ export const PROVIDER_LABELS: Record<string, string> = {
   browser: 'Browser notifications',
   claude: 'Claude',
   email: 'Email',
+  fcm: 'Android push',
   mcp: 'MCP server',
   ntfy: 'ntfy',
   openai: 'OpenAI',
