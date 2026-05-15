@@ -42,6 +42,7 @@ export interface ChatWebsocketManagerOptions {
   maxDelayMs?: number
   maxRetries?: number
   getChatKey?: (chatId: string) => Promise<string | undefined>
+  getToken?: () => string | undefined
 }
 
 interface ConnectionEntry {
@@ -85,6 +86,7 @@ export class ChatWebsocketManager {
   private readonly maxDelayMs: number
   private readonly maxRetries: number
   private readonly getChatKey?: (chatId: string) => Promise<string | undefined>
+  private readonly getToken?: () => string | undefined
   private readonly connections = new Map<string, ConnectionEntry>()
   private disposed = false
   private online: boolean
@@ -101,6 +103,7 @@ export class ChatWebsocketManager {
     this.maxDelayMs = options.maxDelayMs ?? DEFAULT_MAX_DELAY
     this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES
     this.getChatKey = options.getChatKey
+    this.getToken = options.getToken
     this.online = typeof navigator === 'undefined' ? true : navigator.onLine
 
     if (typeof window !== 'undefined') {
@@ -244,6 +247,12 @@ export class ChatWebsocketManager {
     const websocketUrl = toWssUrl(this.baseUrl)
     const socketUrl = new URL(websocketUrl)
     socketUrl.searchParams.set('key', chatKey)
+
+    const token = this.getToken?.()
+    if (token) {
+      const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
+      socketUrl.searchParams.set('token', rawToken)
+    }
 
     try {
       const socket = new WebSocket(socketUrl.toString())
