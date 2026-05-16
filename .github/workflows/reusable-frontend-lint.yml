@@ -44,6 +44,20 @@ jobs:
           repository: mochi-os/web
           path: lib/web
 
+      # Each app's package.json declares `"@mochi/web": "workspace:*"`, which
+      # only resolves when pnpm sees a workspace root. Locally the workspace
+      # root is the mochi umbrella's pnpm-workspace.yaml; in CI we synthesise
+      # the equivalent at $GITHUB_WORKSPACE so pnpm install --frozen-lockfile
+      # can link @mochi/web → lib/web.
+      - name: Synthesise workspace root for @mochi/web
+        working-directory: ${{ github.workspace }}
+        run: |
+          cat > pnpm-workspace.yaml <<'YAML'
+          packages:
+            - 'lib/*'
+            - 'apps/*/web'
+          YAML
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
