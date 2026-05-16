@@ -38,7 +38,7 @@ jobs:
           path: apps/${{ github.event.repository.name }}
           fetch-depth: 0
 
-      - name: Checkout @mochi/web (lib/web sibling for file: dep)
+      - name: Checkout @mochi/web (lib/web sibling for file dependency)
         uses: actions/checkout@v4
         with:
           repository: mochi-os/web
