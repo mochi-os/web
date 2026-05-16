@@ -30,7 +30,7 @@ export function PageHeader({
       style={{ paddingRight: 'var(--removed-body-scroll-bar-size, 0px)' }}
     >
       <div className={cn('px-3 md:px-6', description ? 'py-1.5 md:py-2' : 'py-1 md:py-2')}>
-        <div className='flex min-h-12 items-center gap-2 md:min-h-12 md:justify-between'>
+        <div className='flex min-h-11 items-center gap-2 md:min-h-11 md:justify-between'>
           <div className='flex min-w-0 flex-1 items-center gap-2.5 md:gap-3'>
             {back && (
               <BackButton
