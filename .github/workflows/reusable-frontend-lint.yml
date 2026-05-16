@@ -47,8 +47,10 @@ jobs:
       # Each app's package.json declares `"@mochi/web": "workspace:*"`, which
       # only resolves when pnpm sees a workspace root. Locally the workspace
       # root is the mochi umbrella's pnpm-workspace.yaml; in CI we synthesise
-      # the equivalent at $GITHUB_WORKSPACE so pnpm install --frozen-lockfile
-      # can link @mochi/web → lib/web.
+      # the equivalent (plus a shim package.json) at $GITHUB_WORKSPACE so a
+      # single `pnpm install` at the root links @mochi/web → lib/web for the
+      # caller. `onlyBuiltDependencies` mirrors the per-app pnpm-workspace.yaml
+      # files so install runs build scripts for the same trusted deps.
       - name: Synthesise workspace root for @mochi/web
         working-directory: ${{ github.workspace }}
         run: |
@@ -56,7 +58,14 @@ jobs:
           packages:
             - 'lib/*'
             - 'apps/*/web'
+          onlyBuiltDependencies:
+            - '@swc/core'
+            - '@tailwindcss/oxide'
+            - esbuild
           YAML
+          cat > package.json <<'JSON'
+          { "name": "mochi-ci-shim", "private": true }
+          JSON
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -67,12 +76,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
-          cache: pnpm
-          cache-dependency-path: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}/pnpm-lock.yaml
 
+      # Per-app pnpm-lock.yaml files are stale (predate the monorepo workspace
+      # — the canonical lockfile is mochi/pnpm-lock.yaml in the umbrella, which
+      # CI can't see), so --frozen-lockfile bails on the workspace:* / file:
+      # specifier mismatch. --no-frozen-lockfile regenerates an in-memory
+      # lockfile for this run; the committed per-app lockfile is ignored.
       - name: Install dependencies
-        working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
-        run: pnpm install --frozen-lockfile
+        working-directory: ${{ github.workspace }}
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint frontend
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
