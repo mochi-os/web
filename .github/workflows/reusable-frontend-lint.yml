@@ -47,10 +47,14 @@ jobs:
       # Each app's package.json declares `"@mochi/web": "workspace:*"`, which
       # only resolves when pnpm sees a workspace root. Locally the workspace
       # root is the mochi umbrella's pnpm-workspace.yaml; in CI we synthesise
-      # the equivalent (plus a shim package.json) at $GITHUB_WORKSPACE so a
+      # an equivalent (plus a shim package.json) at $GITHUB_WORKSPACE so a
       # single `pnpm install` at the root links @mochi/web → lib/web for the
-      # caller. `onlyBuiltDependencies` mirrors the per-app pnpm-workspace.yaml
-      # files so install runs build scripts for the same trusted deps.
+      # caller. The shim mirrors the relevant bits of mochi/package.json:
+      # `eslint-plugin-lingui` for `@mochi/web/eslint-i18n-config` (apps' lint
+      # configs extend it but don't declare the plugin themselves — locally
+      # pnpm hoists it from root) and `onlyBuiltDependencies` from the per-app
+      # pnpm-workspace.yaml files. Keep this in sync if the root grows
+      # additional hoisted devDeps that apps' lint/i18n:check expect.
       - name: Synthesise workspace root for @mochi/web
         working-directory: ${{ github.workspace }}
         run: |
@@ -64,7 +68,13 @@ jobs:
             - esbuild
           YAML
           cat > package.json <<'JSON'
-          { "name": "mochi-ci-shim", "private": true }
+          {
+            "name": "mochi-ci-shim",
+            "private": true,
+            "devDependencies": {
+              "eslint-plugin-lingui": "^0.13.1"
+            }
+          }
           JSON
 
       - name: Setup pnpm
