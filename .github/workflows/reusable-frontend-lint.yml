@@ -20,29 +20,53 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # Each app's pnpm-lock.yaml resolves `@mochi/web` via
+    # `file:../../../lib/web` — matching the local-dev layout
+    # `<mochi>/apps/<app>/web/` plus `<mochi>/lib/web/`. To make the same
+    # relative path resolve in CI, we mount the caller at
+    # `apps/<repo-name>/` and check out lib/web at `lib/web/`. All Python
+    # checks then run with the caller dir as working directory, so they
+    # see exactly what they would see in a vanilla `git clone <app>`.
+    defaults:
+      run:
+        working-directory: apps/${{ github.event.repository.name }}
+
     steps:
       - name: Checkout caller repository
         uses: actions/checkout@v4
         with:
+          path: apps/${{ github.event.repository.name }}
           fetch-depth: 0
+
+      - name: Checkout @mochi/web (lib/web sibling for file: dep)
+        uses: actions/checkout@v4
+        with:
+          repository: mochi-os/web
+          path: lib/web
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
           cache: pnpm
+          cache-dependency-path: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}/pnpm-lock.yaml
 
       - name: Install dependencies
+        working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: pnpm install --frozen-lockfile
 
       - name: Lint frontend
-        run: pnpm -C ${{ inputs.web_dir }} lint --max-warnings=0
+        working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
+        run: pnpm lint --max-warnings=0
 
       - name: Check i18n catalogs
-        run: pnpm -C ${{ inputs.web_dir }} i18n:check
+        working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
+        run: pnpm i18n:check
 
       - name: Check i18n glossary (brand/protocol terms)
         run: |
