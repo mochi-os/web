@@ -224,7 +224,7 @@ function RightPanelTrigger({
       {...props}
     >
       {isOpen ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
-      <span className="sr-only"><Trans>Toggle Right Panel</Trans></span>
+      <span className="sr-only"><Trans>Toggle right panel</Trans></span>
     </Button>
   )
 }
@@ -251,7 +251,7 @@ function RightPanelCloseButton({
       {...props}
     >
       <XIcon className="size-4" />
-      <span className="sr-only"><Trans>Close Panel</Trans></span>
+      <span className="sr-only"><Trans>Close panel</Trans></span>
     </Button>
   )
 }

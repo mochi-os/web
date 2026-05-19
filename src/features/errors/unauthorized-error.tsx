@@ -1,5 +1,6 @@
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Trans } from '@lingui/react/macro'
+import { ChevronLeft } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 
 export function UnauthorisedError() {
@@ -16,9 +17,10 @@ export function UnauthorisedError() {
         </p>
         <div className='mt-6 flex gap-4'>
           <Button variant='outline' onClick={() => history.go(-1)}>
-            <Trans>Go Back</Trans>
+            <ChevronLeft className='size-4' />
+            <Trans>Go back</Trans>
           </Button>
-          <Button onClick={() => navigate({ to: '/' })}><Trans>Back to Home</Trans></Button>
+          <Button onClick={() => navigate({ to: '/' })}><Trans>Back to home</Trans></Button>
         </div>
       </div>
     </div>

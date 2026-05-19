@@ -1,5 +1,6 @@
 import { Cross2Icon } from '@radix-ui/react-icons'
 import { type Table } from '@tanstack/react-table'
+import { Trans } from '@lingui/react/macro'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { DataTableFacetedFilter } from './faceted-filter'
@@ -74,7 +75,7 @@ export function DataTableToolbar<TData>({
             }}
             className='h-8 px-2 lg:px-3'
           >
-            Reset
+            <Trans>Reset</Trans>
             <Cross2Icon className='ms-2 h-4 w-4' />
           </Button>
         )}
