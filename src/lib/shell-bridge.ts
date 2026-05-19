@@ -299,6 +299,74 @@ export function installShellClipboardProxy(): void {
   }
 }
 
+/**
+ * Run a WebAuthn create/get ceremony via the parent shell. The sandboxed
+ * iframe has an opaque origin so navigator.credentials.create/.get
+ * throws NotAllowedError immediately. The shell runs in the top window
+ * with a real origin and forwards the result back over postMessage.
+ *
+ * Outside the shell, calls navigator.credentials directly using the
+ * native JSON parsers — same result shape so callers don't branch.
+ */
+let webauthnIdCounter = 0
+const webauthnCallbacks = new Map<
+  number,
+  (result: { credential?: unknown; error?: { name: string; message: string } }) => void
+>()
+
+type WebauthnError = Error & { name: string }
+
+function webauthnFailure(name: string, message: string): WebauthnError {
+  const err = new Error(message) as WebauthnError
+  err.name = name
+  return err
+}
+
+async function webauthnLocal(create: boolean, optionsJSON: unknown): Promise<unknown> {
+  const pk = window.PublicKeyCredential as unknown as {
+    parseCreationOptionsFromJSON?: (opts: unknown) => PublicKeyCredentialCreationOptions
+    parseRequestOptionsFromJSON?: (opts: unknown) => PublicKeyCredentialRequestOptions
+  } | undefined
+  if (!pk) throw webauthnFailure('NotSupportedError', 'WebAuthn unavailable in this browser')
+  const publicKey = create
+    ? pk.parseCreationOptionsFromJSON?.(optionsJSON)
+    : pk.parseRequestOptionsFromJSON?.(optionsJSON)
+  if (!publicKey) throw webauthnFailure('NotSupportedError', 'WebAuthn JSON parsers unavailable')
+  const cred = create
+    ? await navigator.credentials.create({ publicKey: publicKey as PublicKeyCredentialCreationOptions })
+    : await navigator.credentials.get({ publicKey: publicKey as PublicKeyCredentialRequestOptions })
+  const withToJSON = cred as unknown as { toJSON?: () => unknown }
+  if (!cred || typeof withToJSON.toJSON !== 'function') {
+    throw webauthnFailure('NotSupportedError', 'Credential JSON serialisation unavailable')
+  }
+  return withToJSON.toJSON()
+}
+
+function webauthnThroughShell(create: boolean, optionsJSON: unknown): Promise<unknown> {
+  const id = ++webauthnIdCounter
+  return new Promise((resolve, reject) => {
+    webauthnCallbacks.set(id, (result) => {
+      if (result.error) {
+        reject(webauthnFailure(result.error.name, result.error.message))
+        return
+      }
+      resolve(result.credential)
+    })
+    window.parent.postMessage(
+      { type: create ? 'webauthn.create' : 'webauthn.get', requestId: id, optionsJSON },
+      '*'
+    )
+  })
+}
+
+export function shellWebauthnCreate(optionsJSON: unknown): Promise<unknown> {
+  return isInShell() ? webauthnThroughShell(true, optionsJSON) : webauthnLocal(true, optionsJSON)
+}
+
+export function shellWebauthnGet(optionsJSON: unknown): Promise<unknown> {
+  return isInShell() ? webauthnThroughShell(false, optionsJSON) : webauthnLocal(false, optionsJSON)
+}
+
 /** Listen for messages from the shell */
 export function onShellMessage(listener: (msg: ShellMessage) => void): () => void {
   messageListeners.push(listener)
@@ -512,6 +580,18 @@ if (typeof window !== 'undefined') {
       if (cb) {
         permissionCallbacks.delete(data.id as number)
         cb(data.result as string)
+      }
+    }
+
+    // Handle WebAuthn ceremony result
+    if (data.type === 'webauthn.create.result' || data.type === 'webauthn.get.result') {
+      const cb = webauthnCallbacks.get(data.requestId as number)
+      if (cb) {
+        webauthnCallbacks.delete(data.requestId as number)
+        cb({
+          credential: data.credential,
+          error: data.error as { name: string; message: string } | undefined,
+        })
       }
     }
 

@@ -1,5 +1,5 @@
 export interface User {
-  id: number
+  uid: string
   username: string
   role: string
   status: 'active' | 'suspended'
