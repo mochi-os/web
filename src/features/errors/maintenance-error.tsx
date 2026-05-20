@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 
 import { Trans } from '@lingui/react/macro'
@@ -12,7 +13,7 @@ export function MaintenanceError() {
           <Trans>We'll be back online shortly.</Trans>
         </p>
         <div className='mt-6 flex gap-4'>
-          <Button variant='outline' onClick={() => window.location.reload()}><Trans>Try again</Trans></Button>
+          <Button variant='outline' onClick={() => window.location.reload()}><RefreshCw className='size-4' /><Trans>Try again</Trans></Button>
         </div>
       </div>
     </div>

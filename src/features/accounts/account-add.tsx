@@ -190,7 +190,7 @@ export function AccountAdd({
               ) : (
                 <Plus className="me-2 h-4 w-4" />
               )}
-              Add
+              <Trans>Add</Trans>
             </Button>
           </ResponsiveDialogFooter>
         </form>

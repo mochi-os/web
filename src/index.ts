@@ -220,6 +220,8 @@ export {
   shellClipboardWrite,
   shellRequestPermission,
   shellFetch,
+  shellWebauthnCreate,
+  shellWebauthnGet,
 } from './lib/shell-bridge'
 export type { ColorTheme, LocalePreferences } from './lib/shell-bridge'
 export * as shellStorage from './lib/shell-storage'

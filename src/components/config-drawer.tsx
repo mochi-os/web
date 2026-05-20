@@ -104,7 +104,7 @@ function SectionTitle({
       {showReset && onReset && (
         <Button
           size='icon'
-          variant='secondary'
+          variant='outline'
           className='size-4 rounded-full'
           onClick={onReset}
           aria-label={`Reset ${title}`}

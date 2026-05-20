@@ -92,7 +92,7 @@ export function AccountVerify({
               disabled={isResending}
             >
               {isResending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Send again
+              <Trans>Send again</Trans>
             </Button>
             <Button
               type="submit"
@@ -103,7 +103,7 @@ export function AccountVerify({
               ) : (
                 <Check className="me-2 h-4 w-4" />
               )}
-              Verify
+              <Trans>Verify</Trans>
             </Button>
           </ResponsiveDialogFooter>
         </form>

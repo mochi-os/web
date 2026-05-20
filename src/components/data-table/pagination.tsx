@@ -96,7 +96,7 @@ export function DataTablePagination<TData>({
                   className='h-8 min-w-8 px-2'
                   onClick={() => table.setPageIndex((pageNumber as number) - 1)}
                 >
-                  <span className='sr-only'>Go to page {pageNumber}</span>
+                  <span className='sr-only'><Trans>Go to page {pageNumber}</Trans></span>
                   {pageNumber}
                 </Button>
               )}
