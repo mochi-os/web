@@ -20,7 +20,6 @@ interface Category {
 }
 
 interface TopicRow {
-  id: number
   app: string
   topic: string
   object: string
@@ -89,7 +88,12 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
     if (!row) return
     setSaving(true)
     try {
-      const params = new URLSearchParams({ id: String(row.id), category: value })
+      const params = new URLSearchParams({
+        app: row.app,
+        topic: row.topic,
+        object: row.object,
+        category: value,
+      })
       await menuFetch('-/notifications/topic/set_category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
