@@ -290,6 +290,16 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* Loading spinners are functional feedback, not decoration — they
+     tell the user the app is still working. The blanket reset above
+     would freeze them after a single 0.01ms flick (reported as "the
+     spinner doesn't spin"). Re-enable continuous rotation for the
+     spin utilities; a small rotating spinner is low-motion and is the
+     standard exception to reduced-motion. */
+  .animate-spin {
+    animation: spin 1s linear infinite !important;
+  }
 }
 
 /* Bump border, text, and ring contrast for users who've asked the OS for
