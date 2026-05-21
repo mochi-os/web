@@ -8,7 +8,16 @@ interface DataChipProps {
   icon?: React.ReactNode
   copyable?: boolean
   copyButtonMode?: 'hover' | 'always'
-  truncate?: 'end' | 'middle'
+  /**
+   * How to handle values wider than the chip:
+   *   - 'end'    (default): CSS ellipsis at the end; chip fills available width
+   *     when the parent forces width, hides overflow inside the chip
+   *   - 'middle': insert "..." between first/last 10 chars when value > 24 chars
+   *   - 'none':   show full value; wraps with `break-all` on narrow widths so
+   *     long monospace strings (peer IDs, entity IDs) stay fully readable
+   *     instead of being cut off
+   */
+  truncate?: 'end' | 'middle' | 'none'
   className?: string
   chipClassName?: string
 }
@@ -35,7 +44,13 @@ export function DataChip({
   const displayValue = truncate === 'middle' ? middleTruncate(value) : value
 
   return (
-    <div className={cn('flex items-center gap-1.5 overflow-hidden min-w-0 group/chip', className)}>
+    <div
+      className={cn(
+        'flex items-center gap-1.5 min-w-0 group/chip',
+        truncate === 'none' ? 'flex-wrap' : 'overflow-hidden',
+        className,
+      )}
+    >
       <div
         className={cn(
           'bg-surface-2 text-foreground/90 font-mono text-[13px] px-2 py-0.5 rounded-md border border-border flex items-center gap-1.5 transition-[background-color,color,border-color] group-hover/chip:bg-surface-3 group-hover/chip:border-border-strong group-hover/chip:text-foreground max-w-full min-w-0',
@@ -47,7 +62,8 @@ export function DataChip({
         <span
           className={cn(
             'min-w-0',
-            truncate === 'end' && 'truncate'
+            truncate === 'end' && 'truncate',
+            truncate === 'none' && 'break-all',
           )}
           title={value}
         >

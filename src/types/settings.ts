@@ -11,6 +11,9 @@ export interface SystemSetting {
 
 export interface SystemSettingsData {
   settings: SystemSetting[]
+  /** Local libp2p peer ID — shown on the System Status page so the
+   * operator can copy it when configuring a paired/replica server. */
+  server?: { id: string }
 }
 
 export interface PreferenceSchema {
