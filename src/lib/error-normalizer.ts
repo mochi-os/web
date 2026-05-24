@@ -28,12 +28,25 @@ function extractErrorFromPayloadWithSource(payload: unknown): {
 } {
   if (!isRecord(payload)) return {}
 
+  // Mochi error envelope is { error: <machine-readable code>, message:
+  // <localized human-readable string> } as produced by respond_error
+  // (core/server/labels.go). When both are present, prefer message for
+  // display; keep error as the code so callers can switch on it.
+  // Falling through to "error as message" when message is absent
+  // preserves backwards compatibility with handlers that haven't yet
+  // adopted respond_error.
   const topError = asNonEmptyString(payload.error)
+  const topMessage = asNonEmptyString(payload.message)
+  if (topError && topMessage) {
+    return {
+      message: topMessage,
+      code: topError,
+      source: 'payload.error+message',
+    }
+  }
   if (topError) {
     return { message: topError, code: topError, source: 'payload.error' }
   }
-
-  const topMessage = asNonEmptyString(payload.message)
   if (topMessage) {
     return { message: topMessage, source: 'payload.message' }
   }
@@ -47,6 +60,14 @@ function extractErrorFromPayloadWithSource(payload: unknown): {
   if (!isRecord(nestedData)) return {}
 
   const nestedError = asNonEmptyString(nestedData.error)
+  const nestedMessage = asNonEmptyString(nestedData.message)
+  if (nestedError && nestedMessage) {
+    return {
+      message: nestedMessage,
+      code: nestedError,
+      source: 'payload.data.error+message',
+    }
+  }
   if (nestedError) {
     return {
       message: nestedError,
@@ -54,8 +75,6 @@ function extractErrorFromPayloadWithSource(payload: unknown): {
       source: 'payload.data.error',
     }
   }
-
-  const nestedMessage = asNonEmptyString(nestedData.message)
   if (nestedMessage) {
     return { message: nestedMessage, source: 'payload.data.message' }
   }
@@ -139,19 +158,23 @@ export function normalizeError(
     }
 
     // Conservative app-level envelope handling: only treat as error when
-    // status is present and >= 400.
+    // status is present and >= 400. Same error/message preference as the
+    // extractor above - prefer the localized message field for display.
     const envelopePayload = responsePayload ?? dataPayload
     if (isRecord(envelopePayload)) {
       const envelopeStatus = toFiniteNumber(envelopePayload.status)
       const envelopeError = asNonEmptyString(envelopePayload.error)
+      const envelopeMessage = asNonEmptyString(envelopePayload.message)
       if (
         envelopeError &&
         envelopeStatus !== undefined &&
         envelopeStatus >= 400
       ) {
-        message = envelopeError
+        message = envelopeMessage ?? envelopeError
         code = envelopeError
-        source = 'payload.status-error-envelope'
+        source = envelopeMessage
+          ? 'payload.status-error-envelope+message'
+          : 'payload.status-error-envelope'
         status = status ?? envelopeStatus
       }
     }
