@@ -41,6 +41,13 @@ type ShellInitData = {
    * else "en". Wave 2 of the i18n plan; the I18nProvider in lib/web reads it.
    */
   language?: string | null
+  /**
+   * Source server URL when this account arrived here via a server-move
+   * restore, with the list of third-party services to re-link. Drives the
+   * post-restore RestoreBanner. Absent for normally-created accounts.
+   */
+  restoreSource?: string | null
+  relinks?: { service: string; identifier: string }[] | null
 }
 
 type ShellMessage = {
