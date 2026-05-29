@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { ExternalLink, X } from 'lucide-react'
 import { getShellInitData, initShellBridge } from '../lib/shell-bridge'
+import { requestHelpers } from '../lib/request'
 import { Button } from './ui/button'
 
 interface RestoreRelink {
@@ -57,16 +58,22 @@ export function RestoreBanner() {
   if (dismissed || !source) return null
 
   return (
-    <div className='border-border bg-muted/40 relative mb-6 rounded-lg border p-4'>
+    <div className='border-border bg-muted/40 relative mb-6 rounded-lg border p-4 text-center'>
       <button
         type='button'
-        onClick={() => setDismissed(true)}
+        onClick={() => {
+          // Persist the dismissal account-wide (best effort), then hide
+          // immediately. The action sets the restore.show preference to
+          // "false" so the banner stays gone after reload.
+          void requestHelpers.post('-/restore/dismiss', {}).catch(() => {})
+          setDismissed(true)
+        }}
         aria-label={t`Dismiss`}
         className='text-muted-foreground hover:text-foreground absolute top-3 right-3'
       >
         <X className='h-4 w-4' />
       </button>
-      <h2 className='mb-1 pr-6 font-semibold'>
+      <h2 className='mb-1 font-semibold'>
         <Trans>Finish moving your account</Trans>
       </h2>
       <p className='text-muted-foreground mb-3 text-sm'>
@@ -88,12 +95,17 @@ export function RestoreBanner() {
           <p className='mb-1 text-sm font-medium'>
             <Trans>Re-link your accounts on this server</Trans>
           </p>
-          <ul className='text-muted-foreground list-inside list-disc text-sm'>
+          <ul className='space-y-0.5 text-sm'>
             {relinks.map((relink) => (
               <li key={relink.service}>
-                {relink.identifier
-                  ? `${serviceName(relink.service)} (${relink.identifier})`
-                  : serviceName(relink.service)}
+                <a
+                  href='/settings/user/account#oauth'
+                  className='text-primary underline-offset-4 hover:underline'
+                >
+                  {relink.identifier
+                    ? `${serviceName(relink.service)} (${relink.identifier})`
+                    : serviceName(relink.service)}
+                </a>
               </li>
             ))}
           </ul>
