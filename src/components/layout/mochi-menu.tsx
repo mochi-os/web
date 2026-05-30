@@ -50,7 +50,7 @@ function UserIcon({
 }) {
   return (
     <div className='relative'>
-      <EntityAvatar fingerprint={identity || undefined} name={name} size={24} />
+      <EntityAvatar fingerprint={identity || undefined} name={name} size="sm" />
       {!!unreadCount && (
         <span className='absolute -right-0.5 -top-0.5 z-10 h-3 w-3 rounded-full bg-notification' />
       )}

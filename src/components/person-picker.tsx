@@ -397,7 +397,7 @@ export function PersonPicker({
                       src={`/people/${person.id}/-/avatar`}
                       styleUrl={`/people/${person.id}/-/style`}
                       name={person.name}
-                      size={24}
+                      size="sm"
                     />
                     <span className="truncate text-sm">{person.name}</span>
                   </div>

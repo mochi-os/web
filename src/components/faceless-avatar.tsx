@@ -47,12 +47,14 @@ export const FacelessAvatar = memo(function FacelessAvatar({
   return (
     <div
       className={cn(
-        'border-border bg-muted inline-flex shrink-0 items-center justify-center rounded-full border text-sm font-semibold tracking-wide uppercase',
+        'border-border bg-muted inline-flex shrink-0 items-center justify-center rounded-full border font-semibold tracking-wide uppercase',
         className
       )}
       style={{
         width: size,
         height: size,
+        fontSize: Math.round(size * 0.4),
+        lineHeight: 1,
         backgroundColor: bg,
         color,
         ...style,

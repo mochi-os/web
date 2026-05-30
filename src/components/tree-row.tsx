@@ -125,7 +125,7 @@ export function TreeRow({
         const name = peopleMap[value] || value
         return (
           <span className='inline-flex items-center gap-1.5 truncate'>
-            <EntityAvatar fingerprint={value} name={name} size={18} />
+            <EntityAvatar fingerprint={value} name={name} size="xs" />
             <span className='truncate'>{truncate(name, 25)}</span>
           </span>
         )
