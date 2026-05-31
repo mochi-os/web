@@ -104,6 +104,58 @@ jobs:
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: pnpm i18n:check
 
+      - name: Check server label completeness (.conf)
+        working-directory: apps/${{ github.event.repository.name }}
+        run: |
+          # Every key in labels/en.conf must be translated in each non-overlay
+          # <lang>.conf. A value identical to English is allowed only when every
+          # alphabetic word is a keep-word (brand/protocol token, loanword,
+          # colour). KEEP is an inline copy of claude/scripts/i18n_glossary.py
+          # in the monorepo — keep the two in sync.
+          python3 - <<'PY'
+          import re, sys
+          from pathlib import Path
+          OVERLAY = {"en","en-us","en-ca","fr-ca","es-ar","zh-hk","yue","nn","de-ch"}
+          KEEP = {"mochi","stripe","github","pushbullet","ntfy","oauth","oidc",
+                  "pkce","jwt","saml","libp2p","crm","comptroller","git","google",
+                  "paypal","api","url","id","rss","qr","sgf","pgn","sha","apps",
+                  "chat","chess","disputes","email","feeds","forums","go","help",
+                  "home","market","mentions","menu","messages","moderation",
+                  "notifications","rose","teal","violet","wiki","wikis","server"}
+          WORD = re.compile(r"[A-Za-z]+")
+          PH = re.compile(r"\{[^}]*\}")
+          def keep(s):
+              w = WORD.findall(PH.sub("", s))
+              return bool(w) and all(x.lower() in KEEP for x in w)
+          def parse(p):
+              d = {}
+              for ln in p.read_text(encoding="utf-8").splitlines():
+                  ln = ln.strip()
+                  if ln and not ln.startswith("#") and "=" in ln:
+                      k, _, v = ln.partition("=")
+                      d[k.strip()] = v.strip()
+              return d
+          labels = Path("labels")
+          if not (labels / "en.conf").exists():
+              print("No labels/en.conf; nothing to check.")
+              sys.exit(0)
+          en = parse(labels / "en.conf")
+          violations = 0
+          for conf in sorted(labels.glob("*.conf")):
+              if conf.stem in OVERLAY:
+                  continue
+              translated = parse(conf)
+              for key, en_value in en.items():
+                  value = translated.get(key, "")
+                  if not value or (value == en_value and not keep(en_value)):
+                      print(f"::error file={conf}::{conf.stem}: untranslated label {key}")
+                      violations += 1
+          if violations:
+              print(f"\n{violations} untranslated server labels", file=sys.stderr)
+              sys.exit(1)
+          print("Server labels complete in every locale.")
+          PY
+
       - name: Check i18n glossary (brand/protocol terms)
         run: |
           # Brand/protocol terms (Mochi, Stripe, GitHub, OAuth, JWT, libp2p,
