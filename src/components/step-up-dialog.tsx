@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
@@ -32,7 +32,7 @@ export interface StepUpClient {
   passkeyBegin: () => Promise<{ ceremony: string; options: unknown }>
   passkeyFinish: (ceremony: string, assertion: unknown) => Promise<StepUpResult>
   // Linked OAuth providers (e.g. ['google']) the user can re-verify with, and
-  // the popup verification that returns a proof for the email factor.
+  // the popup verification that returns a proof for the oauth factor.
   oauthProviders: () => Promise<string[]>
   oauthVerify: (provider: string) => Promise<StepUpResult>
 }
@@ -140,6 +140,17 @@ export function StepUpDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // The dialog doesn't auto-focus on open (that would grab the export passphrase
+  // field), but once the email-code field is actually shown — auto-sent, or
+  // after the user clicks Send email — focus it so they can type the code right
+  // away.
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (!loading && sent && remaining.includes('email')) {
+      emailInputRef.current?.focus()
+    }
+  }, [loading, sent, remaining])
 
   // A factor verified to completion yields a proof token. When `defer` is set
   // (a factor button in a flow that has its own action button, e.g. export's
@@ -251,7 +262,9 @@ export function StepUpDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
-      <ResponsiveDialogContent>
+      {/* Don't auto-focus on open: while loading, the passphrase field (children)
+          is the first focusable element and would grab focus. */}
+      <ResponsiveDialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>
           {description ? (
@@ -274,6 +287,7 @@ export function StepUpDialog({
                       </Label>
                       <Input
                         id='stepup-email'
+                        ref={emailInputRef}
                         value={emailCode}
                         onChange={(e) => setEmailCode(e.target.value)}
                         onKeyDown={(e) => {
