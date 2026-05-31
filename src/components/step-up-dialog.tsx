@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -88,6 +88,11 @@ export function StepUpDialog({
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  // A proof earned before the caller's extra input (e.g. the export
+  // passphrase) is ready, held until the footer action fires it. Lets the
+  // re-auth options stay enabled from the start while the action button
+  // waits for everything required.
+  const [earnedToken, setEarnedToken] = useState<string | null>(null)
 
   // On open: learn the user's factors and, if email is one, send the code.
   useEffect(() => {
@@ -99,22 +104,30 @@ export function StepUpDialog({
     setTotpCode('')
     setProviders([])
     setSent(false)
+    // The dialog instance is reused across method changes; a prior verify (in
+    // particular an abandoned OAuth popup, which polls for up to two minutes
+    // because the sandboxed iframe's window.open returns null and so never
+    // detects the close) could leave busy=true and grey out every control.
+    // Nothing is in progress at open time, so clear it.
+    setBusy(false)
+    setEarnedToken(null)
     ;(async () => {
       try {
         const methods = await client.methods()
         if (cancelled) return
         setRemaining(methods)
-        if (methods.includes('email')) {
-          // Linked OAuth providers are an alternative to the emailed code.
-          const linked = await client.oauthProviders().catch(() => [])
-          if (cancelled) return
-          setProviders(linked)
-          // Only auto-send the code when email is the sole option; if the user
-          // can re-verify with a provider, don't send an unprompted email.
-          if (linked.length === 0) {
-            await client.send().catch(() => {})
-            if (!cancelled) setSent(true)
-          }
+        // Linked OAuth providers are offered as a top-level alternative
+        // whenever they can satisfy the step-up; the client returns none when
+        // they can't, so fetch them regardless of which code factors show.
+        const linked = await client.oauthProviders().catch(() => [])
+        if (cancelled) return
+        setProviders(linked)
+        // Auto-send the emailed code only when email is offered and there is
+        // no OAuth alternative; otherwise wait for the user to choose so we
+        // don't send an unprompted email.
+        if (methods.includes('email') && linked.length === 0) {
+          await client.send().catch(() => {})
+          if (!cancelled) setSent(true)
         }
       } catch {
         if (!cancelled) setError(t`Couldn't start re-authentication. Please try again.`)
@@ -128,13 +141,19 @@ export function StepUpDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Await onVerified so the action it performs (e.g. building the export
-  // bundle, which can take a while) keeps the dialog in its busy state —
-  // spinner on, inputs disabled — until it finishes and closes the dialog.
+  // A factor verified to completion yields a proof token. When `defer` is set
+  // (a factor button in a flow that has its own action button, e.g. export's
+  // Download), hold the proof so the footer button stays the explicit final
+  // step. Otherwise run the action now — awaiting it keeps the dialog busy
+  // while e.g. the export bundle builds.
   const apply = useCallback(
-    async (r: StepUpResult) => {
+    async (r: StepUpResult, defer = false) => {
       if (r.token) {
-        await onVerified(r.token)
+        if (defer) {
+          setEarnedToken(r.token)
+        } else {
+          await onVerified(r.token)
+        }
       } else {
         setRemaining(r.remaining ?? [])
       }
@@ -171,7 +190,7 @@ export function StepUpDialog({
     try {
       const { ceremony, options } = await client.passkeyBegin()
       const assertion = await shellWebauthnGet(options)
-      await apply(await client.passkeyFinish(ceremony, assertion))
+      await apply(await client.passkeyFinish(ceremony, assertion), !!submitLabel)
     } catch {
       setError(t`Passkey verification failed. Please try again.`)
     } finally {
@@ -183,7 +202,7 @@ export function StepUpDialog({
     setBusy(true)
     setError('')
     try {
-      await apply(await client.oauthVerify(provider))
+      await apply(await client.oauthVerify(provider), !!submitLabel)
     } catch {
       setError(t`Couldn't verify with that account. Please try again.`)
     } finally {
@@ -191,13 +210,31 @@ export function StepUpDialog({
     }
   }
 
-  // Footer submit (when submitLabel is set): verify whichever code factor
-  // the user has filled, advancing the accrual exactly as an inline button.
+  // Footer submit: verify whichever code factor the user has filled,
+  // advancing the accrual. Drives the footer Verify / submit button and the
+  // code inputs' Enter key.
   const submitActive = () => {
     if (remaining.includes('email') && emailCode.trim()) {
       verify(() => client.verifyEmail(emailCode.trim()), () => setEmailCode(''))
     } else if (remaining.includes('totp') && totpCode.trim()) {
       verify(() => client.verifyTotp(totpCode.trim()), () => setTotpCode(''))
+    }
+  }
+
+  // The footer action button: if a proof was already earned (e.g. via OAuth or
+  // passkey before the passphrase was set), run the action with it now;
+  // otherwise verify whichever code the user has filled.
+  const submitFooter = async () => {
+    if (earnedToken) {
+      setBusy(true)
+      setError('')
+      try {
+        await onVerified(earnedToken)
+      } finally {
+        setBusy(false)
+      }
+    } else {
+      submitActive()
     }
   }
 
@@ -235,49 +272,24 @@ export function StepUpDialog({
                       <Label htmlFor='stepup-email' className='text-base font-semibold'>
                         <Trans>Email code</Trans>
                       </Label>
-                      <div className='flex items-center gap-2'>
-                        <Input
-                          id='stepup-email'
-                          value={emailCode}
-                          onChange={(e) => setEmailCode(e.target.value)}
-                          placeholder={t`Enter the code from your email`}
-                          className='font-mono'
-                          autoComplete='one-time-code'
-                          disabled={busy}
-                        />
-                        <Button variant='outline' size='sm' onClick={resend} disabled={busy}>
-                          <Trans>Resend</Trans>
-                        </Button>
-                        {!submitLabel && (
-                          <Button
-                            size='sm'
-                            onClick={() => verify(() => client.verifyEmail(emailCode.trim()), () => setEmailCode(''))}
-                            disabled={busy || !canVerify || !emailCode.trim()}
-                          >
-                            <Trans>Verify</Trans>
-                          </Button>
-                        )}
-                      </div>
+                      <Input
+                        id='stepup-email'
+                        value={emailCode}
+                        onChange={(e) => setEmailCode(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !busy && canVerify) submitActive()
+                        }}
+                        placeholder={t`Enter the code from your email`}
+                        className='font-mono'
+                        autoComplete='one-time-code'
+                        disabled={busy}
+                      />
                     </>
                   ) : (
                     <Button variant='outline' className='w-full' onClick={resend} disabled={busy}>
                       <Trans>Send email</Trans>
                     </Button>
                   )}
-                  {providers.map((p) => {
-                    const label = oauthLabel(p)
-                    return (
-                      <Button
-                        key={p}
-                        variant='outline'
-                        className='w-full'
-                        onClick={() => useOauth(p)}
-                        disabled={busy || !canVerify}
-                      >
-                        <Trans>Continue with {label}</Trans>
-                      </Button>
-                    )
-                  })}
                 </div>
               )}
               {need('totp') && (
@@ -285,26 +297,18 @@ export function StepUpDialog({
                   <Label htmlFor='stepup-totp' className='text-base font-semibold'>
                     <Trans>Authenticator code</Trans>
                   </Label>
-                  <div className='flex items-center gap-2'>
-                    <Input
-                      id='stepup-totp'
-                      value={totpCode}
-                      onChange={(e) => setTotpCode(e.target.value)}
-                      placeholder={t`Enter your authenticator code`}
-                      className='font-mono'
-                      autoComplete='one-time-code'
-                      disabled={busy}
-                    />
-                    {!submitLabel && (
-                      <Button
-                        size='sm'
-                        onClick={() => verify(() => client.verifyTotp(totpCode.trim()), () => setTotpCode(''))}
-                        disabled={busy || !canVerify || !totpCode.trim()}
-                      >
-                        <Trans>Verify</Trans>
-                      </Button>
-                    )}
-                  </div>
+                  <Input
+                    id='stepup-totp'
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !busy && canVerify) submitActive()
+                    }}
+                    placeholder={t`Enter your authenticator code`}
+                    className='font-mono'
+                    autoComplete='one-time-code'
+                    disabled={busy}
+                  />
                 </div>
               )}
               {need('passkey') && (
@@ -312,12 +316,26 @@ export function StepUpDialog({
                   <Label className='text-base font-semibold'>
                     <Trans>Passkey</Trans>
                   </Label>
-                  <Button variant='outline' className='w-full' onClick={usePasskey} disabled={busy || !canVerify}>
+                  <Button variant='outline' className='w-full' onClick={usePasskey} disabled={busy}>
                     {busy ? <Loader2 className='me-2 h-4 w-4 animate-spin' /> : null}
                     <Trans>Use your passkey</Trans>
                   </Button>
                 </div>
               )}
+              {providers.map((p) => {
+                const label = oauthLabel(p)
+                return (
+                  <Button
+                    key={p}
+                    variant='outline'
+                    className='w-full'
+                    onClick={() => useOauth(p)}
+                    disabled={busy}
+                  >
+                    <Trans>Continue with {label}</Trans>
+                  </Button>
+                )
+              })}
             </>
           )}
           {children}
@@ -327,17 +345,30 @@ export function StepUpDialog({
           <Button variant='outline' onClick={() => handleOpenChange(false)} disabled={busy}>
             <Trans>Cancel</Trans>
           </Button>
-          {submitLabel && !loading && (need('email') || need('totp')) ? (
+          {sent && need('email') ? (
+            <Button variant='outline' onClick={resend} disabled={busy}>
+              <Trans>Resend email</Trans>
+            </Button>
+          ) : null}
+          {!loading && (need('email') || need('totp') || earnedToken) ? (
             <Button
-              onClick={submitActive}
+              onClick={submitFooter}
               disabled={
                 busy ||
                 !canVerify ||
-                !((need('email') && emailCode.trim()) || (need('totp') && totpCode.trim()))
+                !(
+                  earnedToken ||
+                  (need('email') && emailCode.trim()) ||
+                  (need('totp') && totpCode.trim())
+                )
               }
             >
-              {busy ? <Loader2 className='me-2 h-4 w-4 animate-spin' /> : null}
-              {submitLabel}
+              {busy ? (
+                <Loader2 className='me-2 h-4 w-4 animate-spin' />
+              ) : submitLabel ? null : (
+                <Check className='me-2 h-4 w-4' />
+              )}
+              {submitLabel ?? <Trans>Verify</Trans>}
             </Button>
           ) : null}
         </ResponsiveDialogFooter>
