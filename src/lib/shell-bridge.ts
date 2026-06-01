@@ -48,6 +48,12 @@ type ShellInitData = {
    */
   restoreSource?: string | null
   relinks?: { service: string; identifier: string }[] | null
+  /**
+   * True when the restored account had passkeys on the source server.
+   * Passkeys are bound to their origin and don't travel in a backup, so the
+   * banner prompts the user to re-register them here.
+   */
+  restorePasskeys?: boolean | null
 }
 
 type ShellMessage = {

@@ -39,6 +39,7 @@ export function RestoreBanner() {
   const init = getShellInitData()
   const [source, setSource] = useState<string | null>(init?.restoreSource ?? null)
   const [relinks, setRelinks] = useState<RestoreRelink[]>(init?.relinks ?? [])
+  const [passkeys, setPasskeys] = useState<boolean>(init?.restorePasskeys ?? false)
   const [dismissed, setDismissed] = useState(false)
 
   // Init data arrives asynchronously via postMessage after the tree
@@ -49,6 +50,7 @@ export function RestoreBanner() {
       if (cancelled) return
       setSource(data.restoreSource ?? null)
       setRelinks(data.relinks ?? [])
+      setPasskeys(!!data.restorePasskeys)
     })
     return () => {
       cancelled = true
@@ -99,7 +101,7 @@ export function RestoreBanner() {
             {relinks.map((relink) => (
               <li key={relink.service}>
                 <a
-                  href='/settings/user/account#oauth'
+                  href='/settings/user/login#oauth'
                   className='text-primary underline-offset-4 hover:underline'
                 >
                   {relink.identifier
@@ -109,6 +111,20 @@ export function RestoreBanner() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {passkeys && (
+        <div className='mt-4'>
+          <p className='mb-1 text-sm font-medium'>
+            <Trans>Re-register your passkeys on this server</Trans>
+          </p>
+          <a
+            href='/settings/user/login'
+            className='text-primary text-sm underline-offset-4 hover:underline'
+          >
+            <Trans>Passkeys</Trans>
+          </a>
         </div>
       )}
     </div>
