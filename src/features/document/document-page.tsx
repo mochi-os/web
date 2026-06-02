@@ -49,7 +49,7 @@ function useDocumentMeta(name: DocumentName): { title: string; icon: typeof Book
  * `mochi.document.get(name)`) and SPA routes for `document/rules`,
  * `document/terms`, `document/privacy` that mount this component.
  */
-export function DocumentPage({ name }: { name: DocumentName }) {
+export function DocumentPage({ name, back }: { name: DocumentName; back?: import('../../components/layout/back-button').HeaderBackConfig }) {
   const { title, icon: Icon } = useDocumentMeta(name)
   usePageTitle(title)
   const [html, setHtml] = useState<string | null>(null)
@@ -74,7 +74,7 @@ export function DocumentPage({ name }: { name: DocumentName }) {
 
   return (
     <>
-      <PageHeader title={title} icon={<Icon className='size-4 md:size-5' />} />
+      <PageHeader title={title} icon={<Icon className='size-4 md:size-5' />} back={back} />
       <Main>
         {error ? (
           <p className='text-destructive'>
