@@ -63,10 +63,14 @@
 }
 
 :root {
-  /* --- Twitter-inspired "TweekCN" tweaks --- */
-  --font-sans: 'Open Sans', 'Geist', sans-serif;
+  /* Font stacks. The lead family in each stack is the webfont actually loaded
+     by the Vite plugin's Google Fonts <link> (see lib/web/src/vite/mochi-plugin.js)
+     — keep these in sync. A loaded webfont must come first so text renders
+     deterministically instead of falling through to the device's generic family,
+     which is not guaranteed to be sans-serif on every device. */
+  --font-sans: 'Atkinson Hyperlegible', system-ui, sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: 'Menlo', 'Geist Mono', monospace;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   /* Default card/component radius; overridable by Mochi themes via border_radius */
   --radius: 10px;
