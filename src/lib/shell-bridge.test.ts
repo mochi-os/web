@@ -4,20 +4,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // In jsdom, window.parent === window by default, so we override it.
 
 let parentPostMessage: ReturnType<typeof vi.fn>
+// Stable stub for window.parent. The bridge guards every inbound message on
+// event.source === window.parent, so the stub must keep a stable identity and
+// inbound MessageEvents must carry it as their source (see dispatchFromParent).
+let parentStub: { postMessage: ReturnType<typeof vi.fn>; readonly document: never }
 
 beforeEach(() => {
   parentPostMessage = vi.fn()
 
   // Simulate a sandboxed iframe: parent !== window, parent.document throws SecurityError
+  parentStub = {
+    postMessage: parentPostMessage,
+    get document(): never {
+      throw new DOMException('Blocked', 'SecurityError')
+    },
+  }
   Object.defineProperty(window, 'parent', {
     configurable: true,
     get() {
-      return {
-        postMessage: parentPostMessage,
-        get document(): never {
-          throw new DOMException('Blocked', 'SecurityError')
-        },
-      }
+      return parentStub
     },
   })
 })
@@ -32,6 +37,15 @@ afterEach(() => {
   })
   vi.resetModules()
 })
+
+// Dispatch a message as the shell would: stamped with source === window.parent.
+// jsdom's MessageEvent constructor won't accept a non-Window source, so we
+// override the property after construction.
+function dispatchFromParent(data: unknown) {
+  const event = new MessageEvent('message', { data })
+  Object.defineProperty(event, 'source', { value: window.parent, configurable: true })
+  window.dispatchEvent(event)
+}
 
 describe('shellRequestPermission', () => {
   it('sends correct postMessage to parent', async () => {
@@ -48,11 +62,7 @@ describe('shellRequestPermission', () => {
     expect(typeof msg.id).toBe('number')
 
     // Simulate shell responding
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { type: 'permission-result', id: msg.id, result: 'granted' },
-      })
-    )
+    dispatchFromParent({ type: 'permission-result', id: msg.id, result: 'granted' })
 
     expect(await promise).toBe('granted')
   })
@@ -63,11 +73,7 @@ describe('shellRequestPermission', () => {
     const promise = shellRequestPermission('feeds', 'accounts/read', false)
     const id = parentPostMessage.mock.calls[0][0].id
 
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { type: 'permission-result', id, result: 'denied' },
-      })
-    )
+    dispatchFromParent({ type: 'permission-result', id, result: 'denied' })
 
     expect(await promise).toBe('denied')
   })
@@ -103,19 +109,11 @@ describe('shellRequestPermission', () => {
     const id2 = parentPostMessage.mock.calls[1][0].id
 
     // Respond to second first
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { type: 'permission-result', id: id2, result: 'denied' },
-      })
-    )
+    dispatchFromParent({ type: 'permission-result', id: id2, result: 'denied' })
     expect(await promise2).toBe('denied')
 
     // Then first
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { type: 'permission-result', id: id1, result: 'granted' },
-      })
-    )
+    dispatchFromParent({ type: 'permission-result', id: id1, result: 'granted' })
     expect(await promise1).toBe('granted')
   })
 
@@ -126,19 +124,34 @@ describe('shellRequestPermission', () => {
     const id = parentPostMessage.mock.calls[0][0].id
 
     // Send unrelated message
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { type: 'subscribe-notifications-result', id, result: 'accepted' },
-      })
-    )
+    dispatchFromParent({ type: 'subscribe-notifications-result', id, result: 'accepted' })
 
     // Now send the real one
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { type: 'permission-result', id, result: 'granted' },
-      })
-    )
+    dispatchFromParent({ type: 'permission-result', id, result: 'granted' })
 
+    expect(await promise).toBe('granted')
+  })
+
+  it('ignores messages whose source is not the parent window', async () => {
+    const { shellRequestPermission } = await import('./shell-bridge')
+
+    const promise = shellRequestPermission('feeds', 'accounts/read', false)
+    const id = parentPostMessage.mock.calls[0][0].id
+
+    // A message from some other window (sibling iframe, popup, embedded frame)
+    // carries a different source and must be dropped by the bridge guard.
+    const spoof = new MessageEvent('message', {
+      data: { type: 'permission-result', id, result: 'granted' },
+    })
+    Object.defineProperty(spoof, 'source', { value: { notTheParent: true }, configurable: true })
+    window.dispatchEvent(spoof)
+
+    // The spoofed result must not resolve the promise.
+    const settled = await Promise.race([promise, Promise.resolve('pending')])
+    expect(settled).toBe('pending')
+
+    // A genuine parent-sourced reply still resolves it.
+    dispatchFromParent({ type: 'permission-result', id, result: 'granted' })
     expect(await promise).toBe('granted')
   })
 })

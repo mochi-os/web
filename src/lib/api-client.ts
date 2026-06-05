@@ -186,7 +186,7 @@ apiClient.interceptors.response.use(
         maybeToastGlobalError({
           config: response.config,
           statusKey: `app-${errorData.status}`,
-          title: errorData.error || 'An error occurred',
+          title: errorData.error || t`An error occurred`,
         })
 
         if (import.meta.env.DEV) {
@@ -249,11 +249,11 @@ apiClient.interceptors.response.use(
         const errorMessage =
           responseData?.error ??
           responseData?.message ??
-          'An unexpected error occurred'
+          t`An unexpected error occurred`
         maybeToastGlobalError({
           config: error.config,
           statusKey: '500',
-          title: "Server error",
+          title: t`Server error`,
           description: errorMessage,
         })
         if (import.meta.env.DEV) {
@@ -274,11 +274,11 @@ apiClient.interceptors.response.use(
         const errorMessage =
           responseData?.error ??
           responseData?.message ??
-          'Unable to connect to remote server'
+          t`Unable to connect to remote server`
         maybeToastGlobalError({
           config: error.config,
           statusKey: String(status),
-          title: "Server error",
+          title: t`Server error`,
           description: errorMessage,
         })
         break
@@ -294,8 +294,8 @@ apiClient.interceptors.response.use(
             maybeToastGlobalError({
               config: error.config,
               statusKey: 'network',
-              title: "Network error",
-              description: "Please check your internet connection and try again.",
+              title: t`Network error`,
+              description: t`Please check your internet connection and try again.`,
             })
           }
         } else {

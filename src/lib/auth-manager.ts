@@ -136,9 +136,11 @@ class AuthManager {
       }
     } catch (error) {
       if (requestHelpers.isAuthError(error)) {
-        console.warn('[AuthManager] Identity check failed (401) -> Logging out')
+        if (import.meta.env.DEV) {
+          console.warn('[AuthManager] Identity check failed (401) -> Logging out')
+        }
         await this.logout('Identity check 401')
-      } else {
+      } else if (import.meta.env.DEV) {
         console.error('[AuthManager] Identity check error:', error)
       }
     } finally {

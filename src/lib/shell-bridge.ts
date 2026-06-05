@@ -102,6 +102,10 @@ export function initShellBridge(): Promise<ShellInitData> {
     }, 5000)
 
     function onMessage(event: MessageEvent) {
+      // Only the shell (our direct parent) may drive the bridge. The iframe's
+      // own origin is opaque so we can't pin event.origin; pinning the source
+      // window blocks injection from siblings, popups, or embedded frames.
+      if (event.source !== window.parent) return
       const data = event.data
       if (!data || typeof data !== 'object') return
 
@@ -561,6 +565,10 @@ export function shellFetch<T = unknown>(path: string, init?: { method?: string; 
 // Global message listener — routes shell messages to registered listeners
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (event: MessageEvent) => {
+    // Only accept messages from the shell (our direct parent). In top-window
+    // contexts window.parent === window, so self-posted messages still pass;
+    // this blocks injection from siblings, popups, or embedded frames.
+    if (event.source !== window.parent) return
     const data = event.data
     if (!data || typeof data !== 'object' || !data.type) return
 
