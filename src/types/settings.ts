@@ -16,15 +16,6 @@ export interface SystemSettingsData {
   server?: { id: string }
 }
 
-export interface PreferenceSchema {
-  key: string
-  type: 'select' | 'timezone'
-  options?: string[]
-  default: string
-  label: string
-  description: string
-}
-
 export interface ThemeInfo {
   id: string
   app: string
@@ -48,7 +39,6 @@ export interface ThemeInfo {
 
 export interface PreferencesData {
   preferences: Record<string, string>
-  schema: PreferenceSchema[]
   themes?: ThemeInfo[]
   // Per-density CSS-var bundles emitted by mochi.app.theme_presets().
   // Keyed by "compact" / "comfortable" / "spacious"; each value maps
