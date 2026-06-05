@@ -253,6 +253,8 @@ export function ImageLightbox({
                   setIsLoading(false)
                   setHasError(true)
                 }}
+                onClick={showControls}
+                onPointerMove={showControls}
               />
             ) : (
               <div onDoubleClick={handleDoubleClick} className='h-full w-full'>
@@ -294,10 +296,11 @@ export function ImageLightbox({
           </div>
 
           {/* Top bar overlay with filename, counter, and controls */}
+          {/* For videos, always show controls — native player handles play/pause but close is here only */}
           <div
             className={cn(
               'absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-4 rounded-full bg-black/50 px-4 py-2 text-white transition-opacity duration-300',
-              controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
           >
             <span className='min-w-0 truncate text-sm text-white/70'>
@@ -327,7 +330,7 @@ export function ImageLightbox({
                 onClick={goToPrevious}
                 className={cn(
                   'absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:left-4 sm:p-3',
-                  controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 )}
                 aria-label={t`Previous image`}
               >
@@ -337,7 +340,7 @@ export function ImageLightbox({
                 onClick={goToNext}
                 className={cn(
                   'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
-                  controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 )}
                 aria-label={t`Next image`}
               >
