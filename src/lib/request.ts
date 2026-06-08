@@ -9,6 +9,29 @@ import { normalizeError } from './error-normalizer'
 
 const devConsole = globalThis.console
 
+// When the account is pending closure (soft-deleted), every app action is
+// refused with HTTP 403 and error code "account_closing". Bounce the top
+// window straight to the login app's reactivation interstitial — the login
+// app is exempt from the closing gate, so this can't loop the way a bounce
+// to "/" (which serves the gated dashboard) would. Guarded so the redirect
+// fires at most once per page load.
+let accountClosingRedirectFired = false
+function maybeRedirectAccountClosing(
+  status: number | undefined,
+  payload: unknown
+): void {
+  if (accountClosingRedirectFired || status !== 403) return
+  const code =
+    payload && typeof payload === 'object' && 'error' in payload
+      ? (payload as { error?: unknown }).error
+      : undefined
+  if (code !== 'account_closing') return
+  accountClosingRedirectFired = true
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login/closing'
+  }
+}
+
 function getStatusErrorEnvelope(payload: unknown): {
   status: number
   error: string
@@ -82,6 +105,8 @@ const buildApiError = (
 
   const normalized = normalizeError(error, fallbackMessage)
   const payload = getErrorPayload(error)
+
+  maybeRedirectAccountClosing(normalized.status, payload)
 
   return new ApiError({
     message: normalized.message,
