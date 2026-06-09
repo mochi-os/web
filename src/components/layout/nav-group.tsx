@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
-import { ChevronRight, Circle } from 'lucide-react'
+import { ChevronRight, Circle, MoreHorizontal } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
   Collapsible,
@@ -11,6 +11,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuAction as SidebarItemAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -33,6 +34,7 @@ import {
   type NavCollapsible,
   type NavItem,
   type NavLink,
+  type NavMenuItem,
   type NavSubCollapsible,
   type NavSubItem,
   type NavGroup as NavGroupProps,
@@ -100,6 +102,45 @@ function NavBadge({ children, className }: { children: ReactNode; className?: st
   return <Badge variant='destructive' className={cn('rounded-full px-1 py-0 text-xs', className)}>{children}</Badge>
 }
 
+function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
+  const { setOpenMobile } = useSidebar()
+  if (!menu.length) return null
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarItemAction showOnHover>
+          <MoreHorizontal />
+          {/* eslint-disable-next-line lingui/no-unlocalized-strings -- shared nav; apps supply menu item labels */}
+          <span className='sr-only'>Open actions</span>
+        </SidebarItemAction>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side='right' align='start' sideOffset={4}>
+        {menu.map((menuItem) => (
+          <DropdownMenuItem
+            key={menuItem.title}
+            disabled={menuItem.disabled}
+            className={
+              menuItem.destructive
+                ? 'text-destructive focus:text-destructive'
+                : undefined
+            }
+            onSelect={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              setOpenMobile(false)
+              menuItem.onClick()
+            }}
+          >
+            {menuItem.icon && <menuItem.icon className='me-2 size-4' />}
+            <span>{menuItem.title}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 function SidebarMenuAction({ item }: { item: NavAction }) {
   const { setOpenMobile } = useSidebar()
   return (
@@ -142,6 +183,7 @@ function SidebarMenuLink({
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
           </a>
         </SidebarMenuButton>
+        {item.menu?.length ? <SidebarLinkMenu menu={item.menu} /> : null}
       </SidebarMenuItem>
     )
   }
@@ -161,6 +203,7 @@ function SidebarMenuLink({
           {item.badge && <NavBadge>{item.badge}</NavBadge>}
         </Link>
       </SidebarMenuButton>
+      {item.menu?.length ? <SidebarLinkMenu menu={item.menu} /> : null}
     </SidebarMenuItem>
   )
 }

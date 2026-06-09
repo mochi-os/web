@@ -8,12 +8,21 @@ type BaseNavItem = {
   className?: string
 }
 
+type NavMenuItem = {
+  title: string
+  icon?: React.ElementType
+  onClick: () => void
+  disabled?: boolean
+  destructive?: boolean
+}
+
 type NavLink = BaseNavItem & {
   url: LinkProps['to'] | (string & {})
   items?: never
   external?: boolean // For cross-app navigation
   isActive?: boolean // Override active state for external links
   onClick?: never
+  menu?: NavMenuItem[]
 }
 
 type NavAction = BaseNavItem & {
@@ -61,4 +70,4 @@ type SidebarData = {
   navGroups: NavGroup[]
 }
 
-export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavSubCollapsible, NavSubItem, NavLink, NavAction }
+export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavSubCollapsible, NavSubItem, NavLink, NavAction, NavMenuItem }

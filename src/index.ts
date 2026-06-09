@@ -72,6 +72,7 @@ export type {
   NavSubItem,
   NavLink,
   NavAction,
+  NavMenuItem,
 } from './components/layout/types'
 export {
   RightPanel,
