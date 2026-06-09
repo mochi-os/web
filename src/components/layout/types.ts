@@ -23,6 +23,9 @@ type NavLink = BaseNavItem & {
   isActive?: boolean // Override active state for external links
   onClick?: never
   menu?: NavMenuItem[]
+  /** Trailing icon shown before the unread badge (e.g. pinned chat indicator). */
+  endIcon?: React.ElementType
+  endIconClassName?: string
 }
 
 type NavAction = BaseNavItem & {

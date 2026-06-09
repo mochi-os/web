@@ -102,6 +102,26 @@ function NavBadge({ children, className }: { children: ReactNode; className?: st
   return <Badge variant='destructive' className={cn('rounded-full px-1 py-0 text-xs', className)}>{children}</Badge>
 }
 
+function NavLinkTrailing({ item }: { item: NavLink }) {
+  const EndIcon = item.endIcon
+  if (!EndIcon && !item.badge) return null
+
+  return (
+    <span className='ms-auto flex shrink-0 items-center gap-1'>
+      {EndIcon ? (
+        <EndIcon
+          className={cn(
+            'text-muted-foreground size-3.5 opacity-40',
+            item.endIconClassName
+          )}
+          aria-hidden
+        />
+      ) : null}
+      {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
+    </span>
+  )
+}
+
 function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
   const { setOpenMobile } = useSidebar()
   if (!menu.length) return null
@@ -179,8 +199,10 @@ function SidebarMenuLink({
         <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={item.className}>
           <a href={item.url as string} onClick={() => setOpenMobile(false)}>
             <ItemIcon icon={item.icon} />
-            <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
-            {item.badge && <NavBadge>{item.badge}</NavBadge>}
+            <span className='min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden'>
+              {item.title}
+            </span>
+            <NavLinkTrailing item={item} />
           </a>
         </SidebarMenuButton>
         {item.menu?.length ? <SidebarLinkMenu menu={item.menu} /> : null}
@@ -199,8 +221,8 @@ function SidebarMenuLink({
       >
         <Link to={item.url} onClick={() => setOpenMobile(false)}>
           <ItemIcon icon={item.icon} />
-          <span>{item.title}</span>
-          {item.badge && <NavBadge>{item.badge}</NavBadge>}
+          <span className='min-w-0 flex-1 truncate'>{item.title}</span>
+          <NavLinkTrailing item={item} />
         </Link>
       </SidebarMenuButton>
       {item.menu?.length ? <SidebarLinkMenu menu={item.menu} /> : null}
