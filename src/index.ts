@@ -46,6 +46,7 @@ export * from './components/ui/textarea'
 export * from './components/ui/tooltip'
 
 // Layout Components
+export * from './components/theme-gradient-background'
 export * from './components/layout/main'
 export * from './components/layout/header'
 export * from './components/layout/top-bar'
