@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
+import { useLingui } from '@lingui/react/macro'
 import { ChevronRight, Circle, MoreHorizontal } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
@@ -124,15 +125,14 @@ function NavLinkTrailing({ item }: { item: NavLink }) {
 
 function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
   const { setOpenMobile } = useSidebar()
+  const { t } = useLingui()
   if (!menu.length) return null
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarItemAction showOnHover>
+        <SidebarItemAction showOnHover aria-label={t`Open actions`}>
           <MoreHorizontal />
-          {/* eslint-disable-next-line lingui/no-unlocalized-strings -- shared nav; apps supply menu item labels */}
-          <span className='sr-only'>Open actions</span>
         </SidebarItemAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent side='right' align='start' sideOffset={4}>
