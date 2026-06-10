@@ -7,6 +7,10 @@ export interface SystemSetting {
   user_readable: boolean
   read_only: boolean
   public: boolean
+  // True when the value is a credential the server never returns. For such
+  // settings `value` is always "" and `set` reports whether one is stored.
+  secret?: boolean
+  set?: boolean
 }
 
 export interface SystemSettingsData {

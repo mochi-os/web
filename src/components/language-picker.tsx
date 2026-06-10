@@ -66,6 +66,117 @@ const displayNameOverrides: Record<string, string> = {
   'ht': 'Kreyòl ayisyen',
 }
 
+// Native autonyms keyed by lower-cased BCP 47 tag. Browsers ship
+// Intl.DisplayNames data for only a subset of display locales, so
+// `new Intl.DisplayNames([tag]).of(tag)` falls back to the runtime default
+// (usually the English exonym) for the many less-common locales. This table
+// gives the correct self-name from CLDR so the picker reads in each
+// language's own script regardless of the browser's ICU coverage. Values are
+// final display strings — capitalisation is baked in, so they are NOT passed
+// through `capitalise` (which would corrupt caseless scripts, e.g. mapping
+// Georgian Mkhedruli to Asomtavruli). Keys overridden in
+// `displayNameOverrides` are omitted there; the override wins.
+const nativeNames: Record<string, string> = {
+  'af': 'Afrikaans',
+  'am': 'አማርኛ',
+  'ar': 'العربية',
+  'az': 'Azərbaycan',
+  'be': 'Беларуская',
+  'bg': 'Български',
+  'bho': 'भोजपुरी',
+  'bn': 'বাংলা',
+  'bs': 'Bosanski',
+  'ca': 'Català',
+  'ckb': 'کوردیی ناوەندی',
+  'cs': 'Čeština',
+  'cy': 'Cymraeg',
+  'da': 'Dansk',
+  'de': 'Deutsch',
+  'de-ch': 'Schweizer Hochdeutsch',
+  'el': 'Ελληνικά',
+  'es-ar': 'Español (Argentina)',
+  'et': 'Eesti',
+  'eu': 'Euskara',
+  'fa': 'فارسی',
+  'fi': 'Suomi',
+  'fr': 'Français',
+  'fr-ca': 'Français canadien',
+  'ga': 'Gaeilge',
+  'gd': 'Gàidhlig',
+  'gl': 'Galego',
+  'gu': 'ગુજરાતી',
+  'ha': 'Hausa',
+  'he': 'עברית',
+  'hi': 'हिन्दी',
+  'hr': 'Hrvatski',
+  'hu': 'Magyar',
+  'hy': 'Հայերեն',
+  'id': 'Bahasa Indonesia',
+  'is': 'Íslenska',
+  'it': 'Italiano',
+  'ja': '日本語',
+  'jv': 'Jawa',
+  'ka': 'ქართული',
+  'kk': 'Қазақ тілі',
+  'km': 'ខ្មែរ',
+  'kn': 'ಕನ್ನಡ',
+  'ko': '한국어',
+  'ku': 'Kurdî (kurmancî)',
+  'ky': 'Кыргызча',
+  'lo': 'ລາວ',
+  'lt': 'Lietuvių',
+  'lv': 'Latviešu',
+  'mk': 'Македонски',
+  'ml': 'മലയാളം',
+  'mn': 'Монгол',
+  'mr': 'मराठी',
+  'ms': 'Melayu',
+  'mt': 'Malti',
+  'my': 'မြန်မာ',
+  'nb': 'Norsk bokmål',
+  'ne': 'नेपाली',
+  'nl': 'Nederlands',
+  'nl-be': 'Vlaams',
+  'nn': 'Norsk nynorsk',
+  'om': 'Oromoo',
+  'pa': 'ਪੰਜਾਬੀ',
+  'pl': 'Polski',
+  'ps': 'پښتو',
+  'pt': 'Português',
+  'pt-br': 'Português (Brasil)',
+  'qu': 'Runasimi',
+  'ro': 'Română',
+  'ru': 'Русский',
+  'sd': 'سنڌي',
+  'si': 'සිංහල',
+  'sk': 'Slovenčina',
+  'sl': 'Slovenščina',
+  'sq': 'Shqip',
+  'sr': 'Српски',
+  'su': 'Basa Sunda',
+  'sv': 'Svenska',
+  'sw': 'Kiswahili',
+  'ta': 'தமிழ்',
+  'te': 'తెలుగు',
+  'tg': 'Тоҷикӣ',
+  'th': 'ไทย',
+  'tk': 'Türkmen dili',
+  'tl': 'Filipino',
+  'tr': 'Türkçe',
+  'uk': 'Українська',
+  'ur': 'اردو',
+  'uz': 'O‘zbek',
+  'vi': 'Tiếng Việt',
+  'xh': 'IsiXhosa',
+  'yi': 'ייִדיש',
+  'yo': 'Èdè Yorùbá',
+  'yue': '粵語',
+  'zh-hans': '简体中文',
+  'zh-hant': '繁體中文',
+  'zh-hk': '繁體中文（香港）',
+  'zu': 'IsiZulu',
+}
+
 // resolveInstalled walks the parent chain of `tag` and returns the closest
 // match in `installed`. Mirrors the server-side resolver's fallback chain so
 // the Auto entry's display name reflects the catalog the user will actually
@@ -90,6 +201,15 @@ function resolveInstalled(tag: string, installed: Set<string>): string {
 function nativeName(tag: string, displayLocale?: string): string {
   const override = displayNameOverrides[tag.toLowerCase()]
   if (override) return override
+  // No explicit display locale means the caller wants the language's own
+  // autonym (the list entries). Prefer the static table — the browser's
+  // Intl.DisplayNames lacks data for most display locales and would return
+  // the English exonym. With a display locale set (the Auto entry, which
+  // shows the detected language in the active UI locale) we must use Intl.
+  if (!displayLocale) {
+    const auto = nativeNames[tag.toLowerCase()]
+    if (auto) return auto
+  }
   let name = tag
   try {
     name = new Intl.DisplayNames([displayLocale ?? tag], { type: 'language' }).of(tag) ?? tag
