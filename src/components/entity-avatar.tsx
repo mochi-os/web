@@ -42,6 +42,8 @@ type EntityAvatarProps = {
   // lookup — pass this when the caller already has the accent value and would
   // otherwise force a redundant style fetch.
   accent?: string
+  // Icon component rendered instead of initials when no image is available.
+  icon?: React.ComponentType<{ size?: number; className?: string }>
 }
 
 function fingerprintUrl(fingerprint: string, version?: string): string {
@@ -60,6 +62,7 @@ export function EntityAvatar({
   className,
   alt,
   accent,
+  icon,
 }: EntityAvatarProps) {
   const px = typeof size === 'number' ? size : AVATAR_SIZES[size]
   const rawSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
@@ -84,6 +87,7 @@ export function EntityAvatar({
       size={px}
       className={className}
       style={ringStyle}
+      icon={icon}
     />
   ) : (
     <img

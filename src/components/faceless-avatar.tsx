@@ -7,6 +7,7 @@ type FacelessAvatarProps = {
   size?: number
   className?: string
   style?: CSSProperties
+  icon?: React.ComponentType<{ size?: number; className?: string }>
 }
 
 const backgroundColors = ['#DFE4EA', '#E5E7EB', '#D1D5DB', '#F3F4F6']
@@ -37,6 +38,7 @@ export const FacelessAvatar = memo(function FacelessAvatar({
   size = 48,
   className,
   style,
+  icon: Icon,
 }: FacelessAvatarProps) {
   const base = name?.trim() || seed || 'mochi-friend'
   const hashed = hashSeed(base)
@@ -62,7 +64,7 @@ export const FacelessAvatar = memo(function FacelessAvatar({
       role="img"
       aria-label={name ? `Initials avatar for ${name}` : 'Initials avatar'}
     >
-      {initials}
+      {Icon ? <Icon size={Math.round(size * 0.5)} /> : initials}
     </div>
   )
 })
