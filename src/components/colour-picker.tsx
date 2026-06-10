@@ -3,6 +3,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from '@lingui/react/macro'
+import { ChevronDown } from "lucide-react";
+import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
@@ -67,9 +69,13 @@ interface ColourPickerProps {
   onClear?: () => void;
   actions?: React.ReactNode;
   className?: string;
+  // When true, the gradient/hue/hex picker starts hidden behind a "Custom"
+  // toggle and only the preset swatches are shown. Opt-in; existing callers
+  // keep the fully-expanded layout.
+  collapsible?: boolean;
 }
 
-export function ColourPicker({ value, onChange, onClear, actions, className }: ColourPickerProps) {
+export function ColourPicker({ value, onChange, onClear, actions, className, collapsible = false }: ColourPickerProps) {
   const hasValue = value !== "";
   const [hsv, setHsv] = useState<[number, number, number]>(() =>
     hasValue ? hexToHsv(value) : [0, 0, 1],
@@ -79,6 +85,10 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
   const [draggingSV, setDraggingSV] = useState(false);
   const [draggingHue, setDraggingHue] = useState(false);
   const [hexInput, setHexInput] = useState(value);
+  // Advanced picker visibility. Always open when not collapsible. When
+  // collapsible, open automatically if the current value isn't a preset.
+  const isPresetValue = hasValue && PRESET_COLOURS.some((c) => c.toLowerCase() === value.toLowerCase());
+  const [advancedOpen, setAdvancedOpen] = useState(!collapsible || (hasValue && !isPresetValue));
 
   // Sync internal state when value prop changes externally
   useEffect(() => {
@@ -212,7 +222,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
   return (
     <div className={className}>
       {/* Preset swatches */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {PRESET_COLOURS.map((c) => (
           <button
             key={c}
@@ -231,6 +241,41 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
         ))}
       </div>
 
+      {/* Compact controls: custom-colour toggle + actions (collapsible mode only) */}
+      {collapsible && (
+        <div className="mt-3 flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setAdvancedOpen((o) => !o)}
+          >
+            {hasValue && (
+              <span
+                className="size-4 rounded-full border border-border"
+                style={{ backgroundColor: hsvToHex(hsv[0], hsv[1], hsv[2]) }}
+              />
+            )}
+            <Trans>Custom</Trans>
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", advancedOpen && "rotate-180")}
+            />
+          </Button>
+          {((onClear && hasValue) || actions) && (
+            <div className="ms-auto flex items-center gap-2">
+              {onClear && hasValue && (
+                <Button type="button" variant="outline" size="sm" onClick={onClear}>
+                  <Trans>Clear</Trans>
+                </Button>
+              )}
+              {actions}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Advanced picker — kept mounted (so the canvases stay drawn) but hidden when collapsed */}
+      <div className={cn(collapsible && !advancedOpen && "hidden")}>
       {/* SV gradient box */}
       <canvas
         ref={svCanvasRef}
@@ -297,7 +342,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
           maxLength={7}
           placeholder={hasValue ? "#rrggbb" : "None"}
         />
-        {((onClear && hasValue) || actions) && (
+        {!collapsible && ((onClear && hasValue) || actions) && (
           <div className="ms-auto flex items-center gap-2">
             {onClear && hasValue && (
               <Button type="button" variant="outline" size="sm" onClick={onClear}>
@@ -307,6 +352,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className }: C
             {actions}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
