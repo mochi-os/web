@@ -79,7 +79,7 @@ export function GameHeader({
                 aria-hidden='true'
                 className={cn(
                   'me-1.5 inline-block size-2 rounded-full align-middle',
-                  myTurn ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                  myTurn ? 'bg-success' : 'bg-muted-foreground/30'
                 )}
               />
             )}

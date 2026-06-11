@@ -85,7 +85,7 @@ export function AccountPicker({
                   {needsVerification ? (
                     <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
                   ) : isVerified ? (
-                    <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+                    <CheckCircle2 className="h-3 w-3 text-success" />
                   ) : null}
                 </div>
               </SelectItem>

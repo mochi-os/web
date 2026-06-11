@@ -144,7 +144,7 @@ export function TreeRow({
               className={cn(
                 'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset',
                 allDone
-                  ? 'bg-green-500/10 text-green-600 ring-green-500/30'
+                  ? 'bg-success/10 text-success ring-success/30'
                   : 'bg-muted text-muted-foreground ring-border'
               )}
             >

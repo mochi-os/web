@@ -131,7 +131,7 @@ function AccountItem({
                 <Trans>Unverified</Trans>
               </span>
             ) : isVerified ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
             ) : null}
           </div>
           {account.identifier && (
