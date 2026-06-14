@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { MapPin, Mountain, Building2, Loader2, Plane, X } from 'lucide-react'
+import { MapPin, Mountain, Building2, Loader2, Plane, X, Check } from 'lucide-react'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
 import { Button } from './ui/button'
@@ -296,6 +296,7 @@ export function TravellingPicker({
               onClick={handleConfirm}
               disabled={!canConfirm}
             >
+              <Check className="size-4" />
               <Trans>Confirm</Trans>
             </Button>
           </div>

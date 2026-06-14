@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { MapPin, Mountain, Building2, Loader2 } from 'lucide-react'
+import { MapPin, Mountain, Building2, Loader2, Check } from 'lucide-react'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
 import { Button } from './ui/button'
@@ -152,6 +152,7 @@ export function PlacePicker({
                   <Trans>Back</Trans>
                 </Button>
                 <Button className="flex-1" onClick={handleConfirm}>
+                  <Check className="size-4" />
                   <Trans>Confirm</Trans>
                 </Button>
               </div>
