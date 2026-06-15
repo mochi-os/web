@@ -1,6 +1,6 @@
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Trans } from '@lingui/react/macro'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Home } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 
 export function ForbiddenError() {
@@ -20,7 +20,7 @@ export function ForbiddenError() {
             <ChevronLeft className='size-4' />
             <Trans>Go back</Trans>
           </Button>
-          <Button onClick={() => navigate({ to: '/' })}><Trans>Back to home</Trans></Button>
+          <Button onClick={() => navigate({ to: '/' })}><Home className='size-4' /><Trans>Back to home</Trans></Button>
         </div>
       </div>
     </div>

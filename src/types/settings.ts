@@ -15,9 +15,10 @@ export interface SystemSetting {
 
 export interface SystemSettingsData {
   settings: SystemSetting[]
-  /** Local libp2p peer ID — shown on the System Status page so the
-   * operator can copy it when configuring a paired/replica server. */
-  server?: { id: string }
+  /** Local libp2p peer ID and its fingerprint — shown on the System
+   * Status page so the operator can copy them when configuring a
+   * paired/replica server. */
+  server?: { id: string; fingerprint?: string }
 }
 
 export interface ThemeInfo {
