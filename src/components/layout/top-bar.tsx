@@ -89,7 +89,7 @@ export function TopBar({
           <a
             href='/'
             title={t`Home`}
-            className='flex size-10 items-center justify-center rounded-md transition-colors duration-150 hover:bg-interactive-hover active:bg-interactive-active'
+            className='flex size-10 items-center justify-center rounded-md transition-colors duration-150 hover:bg-hover active:bg-interactive-active'
           >
             <img
               src='/images/logo-header.png'

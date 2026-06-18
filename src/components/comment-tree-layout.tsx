@@ -84,7 +84,7 @@ export function CommentTreeLayout({
               onToggleCollapse()
             }}
             className={cn(
-              'bg-background hover:bg-muted text-muted-foreground absolute z-20 flex items-center justify-center rounded-full border transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'bg-background hover:bg-hover text-muted-foreground absolute z-20 flex items-center justify-center rounded-full border transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               isComfortable
                 ? 'top-[5px] left-[3px] size-3.5 md:top-[4px] md:left-[2px] md:size-3'
                 : 'top-[4px] left-[2px] size-3',

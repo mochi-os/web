@@ -158,7 +158,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
               <button
                 type='button'
                 title={t`Boost interest`}
-                className='text-muted-foreground hover:bg-accent hover:text-foreground rounded p-0.5 transition-colors'
+                className='text-muted-foreground hover:bg-hover hover:text-foreground rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -173,7 +173,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
               <button
                 type='button'
                 title={t`Reduce interest`}
-                className='text-muted-foreground hover:bg-accent hover:text-foreground rounded p-0.5 transition-colors'
+                className='text-muted-foreground hover:bg-hover hover:text-foreground rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -188,7 +188,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
               <button
                 type='button'
                 title={t`Remove interest`}
-                className='text-muted-foreground hover:bg-interactive-hover rounded p-0.5 transition-colors'
+                className='text-muted-foreground hover:bg-hover rounded p-0.5 transition-colors'
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()

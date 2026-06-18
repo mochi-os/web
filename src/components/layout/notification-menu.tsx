@@ -24,7 +24,7 @@ export function NotificationItem({
   return (
     <div
       className={cn(
-        'flex w-full items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-interactive-hover',
+        'flex w-full items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-hover',
         isUnread && 'bg-muted/50'
       )}
     >
@@ -85,7 +85,7 @@ export function NotificationsSection({
             <button
               aria-label={t`Mark all as read`}
               onClick={markAllAsRead}
-              className='rounded p-1.5 hover:bg-interactive-hover active:bg-interactive-active'
+              className='rounded p-1.5 hover:bg-hover active:bg-interactive-active'
             >
               <Check className='size-4' />
             </button>
@@ -94,7 +94,7 @@ export function NotificationsSection({
             aria-label={t`View all notifications`}
             href='/notifications/'
             onClick={onClose}
-            className='rounded p-1.5 hover:bg-interactive-hover active:bg-interactive-active'
+            className='rounded p-1.5 hover:bg-hover active:bg-interactive-active'
           >
             <ExternalLink className='size-4' />
           </a>

@@ -131,7 +131,7 @@ export function TagInput({
             <button
               key={suggestion.label}
               type='button'
-              className='hover:bg-muted flex w-full items-center justify-between px-3 py-1.5 text-xs'
+              className='hover:bg-hover flex w-full items-center justify-between px-3 py-1.5 text-xs'
               onMouseDown={(event) => {
                 event.preventDefault()
                 void submit(suggestion.label)

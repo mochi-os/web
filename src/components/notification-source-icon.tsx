@@ -14,7 +14,7 @@ export function NotificationSourceIcon({
 
   return (
     <div className='relative mt-0.5 shrink-0'>
-      <div className='bg-primary/15 dark:bg-accent/70 flex size-7 items-center justify-center rounded-md'>
+      <div className='bg-primary/15 dark:bg-hover/70 flex size-7 items-center justify-center rounded-md'>
         {sender ? (
           <EntityAvatar
             src={`/people/${sender}/-/avatar`}
@@ -23,7 +23,7 @@ export function NotificationSourceIcon({
             className='shrink-0'
           />
         ) : iconFailed ? (
-          <div className='text-accent-foreground flex size-6 items-center justify-center text-[10px] font-semibold uppercase'>
+          <div className='text-hover-foreground flex size-6 items-center justify-center text-[10px] font-semibold uppercase'>
             {app.slice(0, 1)}
           </div>
         ) : (

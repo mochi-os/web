@@ -26,7 +26,7 @@ export function SortDirectionButton({
       type="button"
       onClick={onToggle}
       className={cn(
-        'flex items-center justify-center rounded-md border border-input bg-background hover:bg-muted',
+        'flex items-center justify-center rounded-md border border-input bg-background transition-colors hover:bg-hover',
         sizeClasses,
         className
       )}

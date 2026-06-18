@@ -140,12 +140,12 @@ export function NavUser() {
                   </div>
                 </div>
                 <div className='flex flex-col gap-2'>
-                  <a href='/settings/' className='flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-md'>
+                  <a href='/settings/' className='flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-hover rounded-md'>
                     <Settings size={16} />
                     <Trans>Settings</Trans>
                   </a>
                   
-                  <div className='flex items-center justify-between px-2 py-1.5 text-sm hover:bg-muted rounded-md'>
+                  <div className='flex items-center justify-between px-2 py-1.5 text-sm hover:bg-hover rounded-md'>
                     <div className='flex items-center gap-2'>
                       <Moon size={16} />
                       <Trans>Dark mode</Trans>
@@ -158,7 +158,7 @@ export function NavUser() {
 
                   <button
                     onClick={() => setOpen(true)}
-                    className='flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-interactive-hover rounded-md'
+                    className='flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-hover rounded-md'
                   >
                     <LogOut size={16} />
                     <Trans>Log out</Trans>

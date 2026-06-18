@@ -203,7 +203,7 @@ export function TreeRow({
       ref={rowRef}
       data-card-id={object.id}
       className={cn(
-        'hover:bg-muted/50 cursor-pointer text-sm group relative',
+        'hover:bg-hover transition-colors cursor-pointer text-sm group relative',
         isDragOver && 'bg-primary/20 ring-2 ring-inset ring-primary/50'
       )}
       onClick={onClick}
@@ -237,7 +237,7 @@ export function TreeRow({
           </div>
           {hasChildren ? (
             <button
-              className='size-5 flex items-center justify-center hover:bg-muted rounded'
+              className='size-5 flex items-center justify-center hover:bg-hover transition-colors rounded'
               onClick={(e) => {
                 e.stopPropagation()
                 onToggleExpand()
