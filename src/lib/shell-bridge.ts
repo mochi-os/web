@@ -463,26 +463,41 @@ export function installShellNavigationSync(): void {
   if (navigationSyncInstalled || !isInShell()) return
   navigationSyncInstalled = true
 
-  const origPushState = history.pushState.bind(history)
   const origReplaceState = history.replaceState.bind(history)
 
-  const notifyShell = () => {
+  // Relay to the shell, distinguishing a push (new history entry) from a
+  // replace (in-place URL update, no new entry). The shell owns the real
+  // top-window history; if it can't tell the two apart it pushes for both, so
+  // every router URL-canonicalization, filter replaceState, and the
+  // replaceState TanStack fires when the iframe reloads on back injects a
+  // spurious back-stack entry. Those bury the app-home entry and make
+  // browser-back skip it (e.g. listing -> back lands on the Home app, not the
+  // app's own home).
+  const notifyShell = (replace: boolean) => {
     const path = window.location.pathname + window.location.search + window.location.hash
-    window.parent.postMessage({ type: 'navigate', path }, '*')
+    window.parent.postMessage({ type: 'navigate', path, replace }, '*')
   }
 
+  // In-shell, the top window owns the real back-stack; the iframe must NOT grow
+  // its own (opaque-origin) session history or those phantom entries interleave
+  // with the shell's and make browser-back skip/repeat. So mirror BOTH push and
+  // replace locally with origReplaceState (update the current entry in place,
+  // never add one) — TanStack drives rendering from its own internal location,
+  // not the iframe URL — and let only the relayed flag tell the shell whether
+  // to push or replace the one authoritative entry.
   history.pushState = function (...args: Parameters<typeof history.pushState>) {
-    origPushState(...args)
-    notifyShell()
+    origReplaceState(...args)
+    notifyShell(false)
   }
 
   history.replaceState = function (...args: Parameters<typeof history.replaceState>) {
     origReplaceState(...args)
-    notifyShell()
+    notifyShell(true)
   }
 
-  // Also catch popstate (back/forward within iframe)
-  window.addEventListener('popstate', () => notifyShell())
+  // popstate (back/forward within the iframe) moves an existing entry — mirror
+  // it as a replace so it never adds a new top-window entry.
+  window.addEventListener('popstate', () => notifyShell(true))
 }
 
 /**
