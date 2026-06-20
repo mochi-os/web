@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { createContext, useContext, useEffect, useState } from 'react'
 import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
 import { getCookie, setCookie, removeCookie } from '../lib/cookies'

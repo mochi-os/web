@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import * as React from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { Check, Loader2, Pencil, X } from 'lucide-react'

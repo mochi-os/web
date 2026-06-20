@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 type JsonRecord = Record<string, unknown>
 
 const DEFAULT_ERROR_MESSAGE = 'An unexpected error occurred'

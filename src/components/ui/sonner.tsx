@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 import { useTheme } from '../../context/theme-provider'
 

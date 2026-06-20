@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { Search as SearchIcon, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Input } from './ui/input'

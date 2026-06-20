@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { Moon, LogOut } from 'lucide-react'
 import { Trans } from '@lingui/react/macro'
 import useDialogState from '../hooks/use-dialog-state'

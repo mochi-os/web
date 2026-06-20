@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { type ReactNode } from 'react'
 import { BackButton, type HeaderBackConfig } from './back-button'
 import { PageUtilityBar } from './page-utility-bar'

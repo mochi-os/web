@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { useFormat } from '../hooks/use-format'
 import { Button } from './ui/button'

@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { type SVGProps } from 'react'
 
 export function IconLayoutFull(props: SVGProps<SVGSVGElement>) {

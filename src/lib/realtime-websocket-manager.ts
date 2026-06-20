@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // WebSocket manager — generic, works with any app
 
 const devConsole = globalThis.console

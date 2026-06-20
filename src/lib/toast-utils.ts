@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { createElement } from 'react'
 import { toast as sonnerToast, type ExternalToast } from 'sonner'
 import { Copy } from 'lucide-react'

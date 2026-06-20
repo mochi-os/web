@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Permission error handling utilities
 
 import { isInShell, shellRequestPermission } from './shell-bridge'

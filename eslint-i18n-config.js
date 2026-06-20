@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Shared ESLint config for the lingui no-unlocalized-strings rule.
 // Imported from each app's eslint.config.js so a single ignore list
 // covers every Mochi web project.

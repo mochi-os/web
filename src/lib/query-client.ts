@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Shared QueryClient factory with sensible defaults to prevent caching issues
 import { QueryCache, QueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'

@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Locale-aware formatting utilities.
 // All functions are pure — they take the format preference as a parameter.
 

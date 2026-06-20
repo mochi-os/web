@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { type Root, type Content, type Trigger } from '@radix-ui/react-popover'
 import { Trans } from '@lingui/react/macro'
 import { CircleHelp } from 'lucide-react'

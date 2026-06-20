@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import type { CSSProperties, ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 import { EntityAvatar } from '../entity-avatar'

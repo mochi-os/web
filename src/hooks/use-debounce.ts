@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useState, useEffect } from 'react'
 
 export function useDebounce<T>(value: T, delay: number): T {

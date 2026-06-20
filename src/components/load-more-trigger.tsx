@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
 

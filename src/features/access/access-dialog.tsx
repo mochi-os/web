@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { User, UsersRound, Search, Globe, Users, Loader2, Plus } from 'lucide-react'

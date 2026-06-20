@@ -1,5 +1,6 @@
 // Mochi: Mention-textarea component for @mention autocomplete
-// Copyright Alistair Cunningham 2026
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'

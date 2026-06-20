@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { getAuthLoginUrl } from '../lib/app-path'

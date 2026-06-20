@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useLayout } from '../../context/layout-provider'
 import { useLingui } from '@lingui/react/macro'
 import { useScreenSize } from '../../hooks/use-screen-size'

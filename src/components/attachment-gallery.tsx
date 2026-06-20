@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useCallback, useState, type ReactNode, type SyntheticEvent } from 'react'
 import { Loader2, Play } from 'lucide-react'
 import { useLingui } from '@lingui/react/macro'

@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import * as React from 'react'
 import { OTPInput, OTPInputContext } from 'input-otp'
 import { MinusIcon } from 'lucide-react'

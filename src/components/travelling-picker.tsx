@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Travelling picker with origin and destination on the same screen
 
 import { useState, useRef, useEffect } from 'react'

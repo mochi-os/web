@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useState, useEffect, useRef } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { type Table } from '@tanstack/react-table'

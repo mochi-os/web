@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Shell bridge: communication between sandboxed iframe apps and the shell page.
 // When an app runs inside the shell's sandboxed iframe, it has an opaque origin
 // and cannot access cookies, localStorage, or the parent DOM. All communication

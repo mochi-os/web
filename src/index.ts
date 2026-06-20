@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // UI Components
 export * from './components/ui/alert-dialog'
 export * from './components/ui/alert'

@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useEffect, useState } from 'react'
 import { useAccent } from '../hooks/use-accent'
 import { normalizeEntityUrl } from '../lib/app-path'

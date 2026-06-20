@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { create } from 'zustand'
 import { clearProfileCookie } from '../lib/profile-cookie'
 import { initShellBridge, onShellMessage } from '../lib/shell-bridge'

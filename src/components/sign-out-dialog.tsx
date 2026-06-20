@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { LogOut } from 'lucide-react'
 import { useLogout } from '../hooks/use-logout'
 import { ConfirmDialog } from './confirm-dialog'

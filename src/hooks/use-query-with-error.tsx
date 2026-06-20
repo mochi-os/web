@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useQuery, useInfiniteQuery, type UseQueryOptions, type UseInfiniteQueryOptions, type QueryKey } from '@tanstack/react-query'
 import { GeneralError } from '../features/errors/general-error'
 

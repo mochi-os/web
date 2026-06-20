@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 export { useQueryWithError } from '../hooks/use-query-with-error'
 export { useAuthStore } from '../stores/auth-store'
 export { usePageTitle } from '../hooks/use-page-title'

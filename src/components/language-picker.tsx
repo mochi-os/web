@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Compact language picker for the login page and anonymous-chrome
 // placements (Phase 1 Wave 3 step 10 of claude/plans/languages.md).
 //

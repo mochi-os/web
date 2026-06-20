@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Notifications hook — stub for API compatibility.
 // Notifications are handled entirely by the menu app in the shell.
 // Authenticated users always use the shell; unauthenticated users have no notifications.

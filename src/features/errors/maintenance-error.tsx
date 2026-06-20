@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 

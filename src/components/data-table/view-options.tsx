@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu'
 import { Trans } from '@lingui/react/macro'
 import { MixerHorizontalIcon } from '@radix-ui/react-icons'

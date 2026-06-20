@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { t } from '@lingui/core/macro'
 import { useAuthStore } from '../stores/auth-store'
 import { authEndpoints } from './auth-endpoints'

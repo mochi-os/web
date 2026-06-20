@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { LayoutGrid, ListTree, Plus } from 'lucide-react'
 import { t } from '@lingui/core/macro'
 import { cn } from '../lib/utils'

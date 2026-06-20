@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PreferencesData } from '../../types/settings'
 import { apiClient } from '../../lib/api-client'

@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Routing helpers that derive context from server-injected meta tags or URL path.
 // Authenticated users always run inside the shell's sandboxed iframe, where no
 // meta tags are injected — routing context comes from the shell init message.

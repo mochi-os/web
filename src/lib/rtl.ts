@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Right-to-left locale detection for Mochi.
 //
 // Mochi sets `document.documentElement.dir` from the active language so

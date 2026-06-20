@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Shell storage: async localStorage proxy for sandboxed iframe apps.
 // When in shell, localStorage is unavailable (opaque origin), so we relay
 // via postMessage to the shell which namespaces keys by app ID.

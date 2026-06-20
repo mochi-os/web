@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Minus, Plus, Tag as TagIcon, X } from 'lucide-react'

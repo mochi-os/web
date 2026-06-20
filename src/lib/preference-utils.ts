@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // User-preference label hooks. Each returns a Record<string, string> mapping
 // preference values to their human-readable display, with translatable strings
 // resolved through Lingui's active catalog. Number/date/time format keys that

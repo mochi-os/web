@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Trans } from '@lingui/react/macro'
 import { ChevronLeft, Home } from 'lucide-react'

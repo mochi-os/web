@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 const prefetched = new Set<string>()
 
 export function prefetchUrl(url: string) {

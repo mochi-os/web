@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 const SAFE_INTERNAL_PROTOCOLS = new Set(['http:', 'https:'])
 const SAFE_EXTERNAL_PROTOCOL = 'https:'
 

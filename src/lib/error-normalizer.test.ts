@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Tests for error-normalizer. The Mochi server's respond_error helper
 // returns { error: <machine-readable code>, message: <localized
 // human-readable string> } - the localizer should surface the message

@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { type LocalePreferences, getShellInitData, onShellMessage } from '../lib/shell-bridge'
 import type { DateFormat, TimeFormat, TimestampDisplay, NumberFormat } from '../lib/locale-format'

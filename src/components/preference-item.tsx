@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { cn } from '../lib/utils'
 import { Label } from './ui/label'
 

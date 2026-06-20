@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // Hook for searching places with debouncing
 
 import { useQuery } from '@tanstack/react-query'

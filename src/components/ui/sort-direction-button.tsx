@@ -1,5 +1,6 @@
 // Sort direction toggle button
-// Copyright Alistair Cunningham 2026
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
 
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { cn } from '../../lib/utils'

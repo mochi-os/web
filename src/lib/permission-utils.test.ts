@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock shell-bridge module before importing permission-utils

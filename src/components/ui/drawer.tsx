@@ -1,3 +1,6 @@
+// Copyright © 2026 Mochi OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 import * as React from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
 import { cn } from '../../lib/utils'
