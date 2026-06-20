@@ -110,6 +110,10 @@
   --card-px: 1.5rem;
   --card-py: 1rem;
   --border-width: 1px;
+  /* Per-theme card surface treatment — override in a theme's overrides map:
+     --card-shadow: none  -> border-only;  --card-border-width: 0px -> shadow-only */
+  --card-border-width: var(--border-width);
+  --card-shadow: var(--shadow-sm);
 
   /* Layout spacing tokens */
   --header-height: 3rem;

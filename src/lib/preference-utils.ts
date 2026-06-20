@@ -106,6 +106,15 @@ export function useRadiusLabels(): Record<string, string> {
   }
 }
 
+export function useCardLabels(): Record<string, string> {
+  const { t } = useLingui()
+  return {
+    theme: t`From theme`,
+    flat: t`Flat`,
+    raised: t`Raised`,
+  }
+}
+
 export function useBackgroundLabels(): Record<string, string> {
   const { t } = useLingui()
   return {

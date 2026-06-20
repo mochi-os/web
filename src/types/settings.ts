@@ -28,8 +28,6 @@ export interface ThemeInfo {
   hue: number
   chroma: number
   hue_bg: number
-  preview: string
-  preview_dark?: string
   border_radius?: string
   spacing?: string
   font_sans?: string
