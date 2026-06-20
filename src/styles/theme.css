@@ -6,6 +6,12 @@
   --hue-chroma: 0.16;
   --hue-bg: 250;
 
+  /* Primary accent lightness (OKLCH L). Per-theme overridable (via a theme's
+     overrides map) so warm/green hues can lift off this default — at 0.488 a
+     warm hue renders as a dark brown and a green skews olive, while blue stays
+     a clean azure. Drives --primary and the accent vars that share its L. */
+  --primary-l: 0.488;
+
   /* --- Color system (light) — Neutral base + Blue primary --- */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -13,7 +19,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.488 var(--hue-chroma) var(--hue));
+  --primary: oklch(var(--primary-l) var(--hue-chroma) var(--hue));
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -33,16 +39,16 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.81 0.17 75.35);
-  --chart-2: oklch(0.488 var(--hue-chroma) var(--hue));
+  --chart-2: oklch(var(--primary-l) var(--hue-chroma) var(--hue));
   --chart-3: oklch(0.72 0 0);
   --chart-4: oklch(0.92 0 0);
   --chart-5: oklch(0.56 0 0);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.488 var(--hue-chroma) var(--hue));
+  --sidebar-primary: oklch(var(--primary-l) var(--hue-chroma) var(--hue));
   --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.488 var(--hue-chroma) var(--hue));
+  --sidebar-ring: oklch(var(--primary-l) var(--hue-chroma) var(--hue));
   --selected: oklch(0.92 calc(var(--hue-chroma) * 0.19) var(--hue));
   --surface-1: oklch(1 0 0);
   --surface-2: oklch(0.97 0 0);
@@ -56,7 +62,7 @@
   --notification-foreground: oklch(1 0 0);
 
   /* Text selection colors */
-  --selection: oklch(0.488 var(--hue-chroma) var(--hue));
+  --selection: oklch(var(--primary-l) var(--hue-chroma) var(--hue));
   --selection-foreground: oklch(1 0 0);
 }
 
@@ -132,7 +138,8 @@
   --popover-foreground: oklch(0.985 0 0);
 
   /* --- Primary --- */
-  --primary: oklch(0.488 var(--hue-chroma) var(--hue));
+  --primary-l: 0.488;
+  --primary: oklch(var(--primary-l) var(--hue-chroma) var(--hue));
   --primary-foreground: oklch(1 0 0);
 
   /* --- Secondary --- */
