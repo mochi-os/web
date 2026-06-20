@@ -15,8 +15,8 @@ const buttonVariants = cva(
         warning:
           'bg-warning text-warning-foreground border-[length:var(--border-width)] border-warning/50 shadow-sm hover:bg-warning/90 hover:shadow-md active:bg-warning/80',
         outline:
-          'border-[length:var(--border-width)] border-border bg-background hover:border-border-strong hover:bg-interactive-hover active:bg-interactive-active dark:bg-surface-1',
-        ghost: 'hover:bg-interactive-hover active:bg-interactive-active',
+          'border-[length:var(--border-width)] border-border bg-background hover:border-border-strong hover:bg-hover active:bg-interactive-active dark:bg-surface-1',
+        ghost: 'hover:bg-hover active:bg-interactive-active',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

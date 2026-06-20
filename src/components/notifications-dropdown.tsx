@@ -47,7 +47,7 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
       type='button'
       onClick={() => onClick?.(notification)}
       className={cn(
-        'group flex w-full items-start gap-3 px-4 py-3 text-start transition-colors hover:bg-muted/50',
+        'group flex w-full items-start gap-3 px-4 py-3 text-start transition-colors hover:bg-hover',
         isUnread ? 'bg-muted/30' : 'bg-transparent'
       )}
     >

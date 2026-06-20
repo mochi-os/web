@@ -114,7 +114,7 @@ export function ProfileDropdown() {
             <div className='mb-4 pb-4 border-b'>{userInfo}</div>
             
             <div className='flex flex-col gap-2'>
-              <div className="flex items-center justify-between px-2 py-1.5 text-sm hover:bg-muted rounded-md">
+              <div className="flex items-center justify-between px-2 py-1.5 text-sm hover:bg-hover rounded-md">
                 <div className="flex items-center gap-2">
                   <Moon className="size-4" />
                   <Trans>Dark mode</Trans>

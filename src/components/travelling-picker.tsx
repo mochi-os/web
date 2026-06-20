@@ -188,7 +188,7 @@ export function TravellingPicker({
                     key={place.osmId || index}
                     type="button"
                     onClick={() => handleOriginSelect(place)}
-                    className="w-full px-3 py-2 text-start hover:bg-muted transition-colors flex items-start gap-2"
+                    className="w-full px-3 py-2 text-start hover:bg-hover transition-colors flex items-start gap-2"
                   >
                     <PlaceIcon category={place.category} />
                     <div className="min-w-0 flex-1">
@@ -248,7 +248,7 @@ export function TravellingPicker({
                     key={place.osmId || index}
                     type="button"
                     onClick={() => handleDestinationSelect(place)}
-                    className="w-full px-3 py-2 text-start hover:bg-muted transition-colors flex items-start gap-2"
+                    className="w-full px-3 py-2 text-start hover:bg-hover transition-colors flex items-start gap-2"
                   >
                     <PlaceIcon category={place.category} />
                     <div className="min-w-0 flex-1">

@@ -119,7 +119,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
           aria-label={t`Change notification category`}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-interactive-active',
+            'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground active:bg-interactive-active',
             className
           )}
         >

@@ -84,13 +84,13 @@ export function MochiMenu({
           <div className='flex items-center gap-1 ms-4'>
             <a
               href='/settings'
-              className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-interactive-hover active:bg-interactive-active'
+              className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
             >
               <Settings className='size-4' />
             </a>
             <button
               onClick={() => setSignOutOpen(true)}
-              className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-interactive-hover active:bg-interactive-active'
+              className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
             >
               <LogOut className='size-4' />
             </button>
@@ -119,7 +119,7 @@ export function MochiMenu({
   const trigger = (
     <button
       aria-label={triggerLabel}
-      className='rounded p-1 hover:bg-interactive-hover active:bg-interactive-active'
+      className='rounded p-1 hover:bg-hover active:bg-interactive-active'
     >
       <UserIcon
         unreadCount={showNotifications ? unreadCount : 0}

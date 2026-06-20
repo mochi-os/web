@@ -31,7 +31,7 @@ export function EntityCard({
   subscribeLabel,
 }: EntityCardProps) {
   return (
-    <div className='group flex items-center justify-between p-3 rounded-lg border border-transparent transition-all duration-200 hover:bg-muted/50 hover:shadow-sm hover:border-border'>
+    <div className='group flex items-center justify-between p-3 rounded-lg border border-transparent transition-all duration-200 hover:bg-hover hover:shadow-sm hover:border-border'>
       <div className='flex items-center gap-3 overflow-hidden'>
         <div
           className={cn(

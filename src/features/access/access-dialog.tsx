@@ -210,7 +210,7 @@ export function AccessDialog({
                       className={`flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors ${
                         selectedUser?.id === user.id
                           ? 'bg-hover text-hover-foreground'
-                          : 'hover:bg-muted'
+                          : 'hover:bg-hover'
                       }`}
                       onClick={() => setSelectedUser(user)}
                     >
@@ -245,7 +245,7 @@ export function AccessDialog({
                       className={`flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors ${
                         selectedGroup?.id === group.id
                           ? 'bg-hover text-hover-foreground'
-                          : 'hover:bg-muted'
+                          : 'hover:bg-hover'
                       }`}
                       onClick={() => setSelectedGroup(group)}
                     >
@@ -275,7 +275,7 @@ export function AccessDialog({
                     className={`cursor-pointer py-0 transition-colors ${
                       selectedSpecial?.id === special.id
                         ? 'border-primary'
-                        : 'hover:bg-muted'
+                        : 'hover:bg-hover'
                     }`}
                     onClick={() => setSelectedSpecial(special)}
                   >

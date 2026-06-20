@@ -44,7 +44,7 @@ function CollapseBtn() {
       className={cn(
         'absolute -end-3 top-1/2 z-50 -translate-y-1/2',
         'h-6 w-6 rounded-full border bg-background shadow-md',
-        'hover:bg-accent hover:text-accent-foreground',
+        'hover:bg-hover hover:text-hover-foreground',
         'inline-flex'
       )}
       onClick={toggleSidebar}

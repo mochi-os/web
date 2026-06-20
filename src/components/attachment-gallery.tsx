@@ -194,7 +194,7 @@ export function AttachmentGallery({
         key={attachment.id}
         href={resolveUrl(attachment)}
         onClick={(e) => e.stopPropagation()}
-        className='hover:bg-muted flex items-center gap-2 rounded-[8px] border p-2 text-sm transition-colors'
+        className='hover:bg-hover flex items-center gap-2 rounded-[8px] border p-2 text-sm transition-colors'
       >
         <FileIcon className='text-muted-foreground size-4 shrink-0' />
         <span className='min-w-0 flex-1 truncate'>{attachment.name}</span>

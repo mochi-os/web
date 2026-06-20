@@ -306,7 +306,7 @@ export function PersonPicker({
                   e.preventDefault()
                   e.stopPropagation()
                 }}
-                className="rounded-sm hover:bg-accent p-0.5"
+                className="rounded-sm hover:bg-hover p-0.5"
               >
                 <X className="size-4 opacity-50 hover:opacity-100" />
               </span>
@@ -343,7 +343,7 @@ export function PersonPicker({
                 onChange('')
                 setOpen(false)
               }}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-hover hover:text-hover-foreground text-muted-foreground"
             >
               <div className="size-4 shrink-0" />
               <span className="text-sm"><Trans>None</Trans></span>
@@ -377,8 +377,8 @@ export function PersonPicker({
                     onClick={() => handleSelect(person.id)}
                     className={cn(
                       'flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      isSelected && 'bg-accent'
+                      'hover:bg-hover hover:text-hover-foreground',
+                      isSelected && 'bg-selected'
                     )}
                   >
                     {mode === 'multiple' ? (
