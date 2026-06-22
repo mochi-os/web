@@ -4,6 +4,8 @@
 import { type LinkProps } from '@tanstack/react-router'
 
 type BaseNavItem = {
+  /** Stable React key for list items; avoids remount when title/badge changes. */
+  id?: string
   title: string
   badge?: string
   icon?: React.ElementType
@@ -70,6 +72,8 @@ type NavGroup = {
   title: string
   items: NavItem[]
   separator?: boolean // Show a separator line above this group
+  /** Animate insert/remove on direct SidebarMenu children (entity lists). */
+  animateList?: boolean
 }
 
 type SidebarData = {

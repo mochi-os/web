@@ -133,7 +133,7 @@ export function CommentTreeLayout({
             <div
               className={cn(
                 isComfortable &&
-                  'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0'
+                'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0'
               )}
             >
               {isCollapsed ? collapsedContent : content}
