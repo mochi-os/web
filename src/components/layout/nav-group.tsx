@@ -58,9 +58,21 @@ function isNavSubCollapsible(item: unknown): item is NavSubCollapsible {
 }
 
 // Shows the item's icon, or a generic circle visible only in icon-collapsed mode.
-function ItemIcon({ icon: Icon }: { icon?: React.ElementType }) {
-  if (Icon) return <Icon />
-  return <Circle className='hidden group-data-[collapsible=icon]:block' />
+// Aggregate ("All <items>") entries reuse the same glyph as their members,
+// marked with a small hollow ring at the corner so they stay distinct even when
+// the sidebar collapses to icons and the text label is hidden.
+function ItemIcon({ icon: Icon, aggregate }: { icon?: React.ElementType; aggregate?: boolean }) {
+  if (!Icon) return <Circle className='hidden group-data-[collapsible=icon]:block' />
+  if (!aggregate) return <Icon />
+  return (
+    <span className='relative inline-flex shrink-0'>
+      <Icon className='size-4 shrink-0' />
+      <span
+        aria-hidden
+        className='absolute -end-1 -top-1 size-1.5 rounded-full border border-current'
+      />
+    </span>
+  )
 }
 
 export function NavGroup({ title, items, separator }: NavGroupProps) {
@@ -178,7 +190,7 @@ function SidebarMenuAction({ item }: { item: NavAction }) {
         variant={item.variant}
         className={item.className}
       >
-        <ItemIcon icon={item.icon} />
+        <ItemIcon icon={item.icon} aggregate={item.aggregate} />
         <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
         {item.badge && <NavBadge>{item.badge}</NavBadge>}
       </SidebarMenuButton>
@@ -201,7 +213,7 @@ function SidebarMenuLink({
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={item.className}>
           <a href={item.url as string} onClick={() => setOpenMobile(false)}>
-            <ItemIcon icon={item.icon} />
+            <ItemIcon icon={item.icon} aggregate={item.aggregate} />
             <span className='min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden'>
               {item.title}
             </span>
@@ -223,7 +235,7 @@ function SidebarMenuLink({
         className={item.className}
       >
         <Link to={item.url} onClick={() => setOpenMobile(false)}>
-          <ItemIcon icon={item.icon} />
+          <ItemIcon icon={item.icon} aggregate={item.aggregate} />
           <span className='min-w-0 flex-1 truncate'>{item.title}</span>
           <NavLinkTrailing item={item} />
         </Link>
@@ -275,7 +287,7 @@ function SidebarMenuCollapsible({
                 className={cn('flex-1', item.className)}
               >
                 <a href={item.url as string} onClick={() => setOpenMobile(false)}>
-                  <ItemIcon icon={item.icon} />
+                  <ItemIcon icon={item.icon} aggregate={item.aggregate} />
                   <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                   {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 </a>
@@ -288,7 +300,7 @@ function SidebarMenuCollapsible({
                 className={cn('flex-1', item.className)}
               >
                 <Link to={item.url} onClick={() => setOpenMobile(false)}>
-                  <ItemIcon icon={item.icon} />
+                  <ItemIcon icon={item.icon} aggregate={item.aggregate} />
                   <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                   {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 </Link>
@@ -312,7 +324,7 @@ function SidebarMenuCollapsible({
               tooltip={item.title}
               className={cn('cursor-pointer', item.className)}
             >
-              <ItemIcon icon={item.icon} />
+              <ItemIcon icon={item.icon} aggregate={item.aggregate} />
               <span className='group-data-[collapsible=icon]:hidden'>
                 {item.title}
               </span>
@@ -412,7 +424,7 @@ function SidebarMenuSubCollapsible({
                 className='flex-1'
               >
                 <Link to={item.url} onClick={() => setOpenMobile(false)}>
-                  <ItemIcon icon={item.icon} />
+                  <ItemIcon icon={item.icon} aggregate={item.aggregate} />
                   <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                   {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 </Link>
@@ -432,7 +444,7 @@ function SidebarMenuSubCollapsible({
            */
           <CollapsibleTrigger asChild>
              <SidebarMenuSubButton className='flex-1 cursor-pointer'>
-                <ItemIcon icon={item.icon} />
+                <ItemIcon icon={item.icon} aggregate={item.aggregate} />
                 <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                 {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 <ChevronRight className='ms-auto size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
@@ -499,7 +511,7 @@ function SidebarMenuCollapsedDropdown({
             tooltip={item.title}
             isActive={checkIsActive(pathname, item)}
           >
-            <ItemIcon icon={item.icon} />
+            <ItemIcon icon={item.icon} aggregate={item.aggregate} />
             <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
             {item.badge && <NavBadge className='group-data-[collapsible=icon]:hidden'>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden rtl:rotate-180' />
