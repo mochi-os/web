@@ -190,24 +190,22 @@ export function TreeRow({
     const y = e.clientY - rect.top
     const height = rect.height
 
-    // Reorder lives in thin bands at the top and bottom edges; the rest of the
-    // row reparents. Cap the band to a quarter of the row height so short rows
-    // keep a usable reparent zone in the middle.
-    const edgeZone = Math.min(8, height * 0.25)
+    // Reorder gets generous bands at the top and bottom of the row; reparent
+    // (when allowed) sits in the middle. This mirrors the board: reordering is
+    // the easy gesture, reparenting the deliberate one. When a row is only a
+    // reorder target (e.g. siblings that can't contain each other) the whole
+    // row splits in half — which is why top-level rows reorder so reliably.
+    const edge = canReparent ? height * 0.35 : height * 0.5
 
-    if (canReorder && y < edgeZone) {
+    if (canReorder && y < edge) {
       onDragOver(object.id, 'before')
-    } else if (canReorder && y > height - edgeZone) {
+    } else if (canReorder && y > height - edge) {
       onDragOver(object.id, 'after')
     } else if (canReparent) {
       onDragOver(object.id, 'on')
     } else if (canReorder) {
-      // If can't reparent but can reorder, use before/after based on half
-      if (y < height * 0.5) {
-        onDragOver(object.id, 'before')
-      } else {
-        onDragOver(object.id, 'after')
-      }
+      // Not a reparent target: the exact-midpoint sliver falls through to here.
+      onDragOver(object.id, y < height * 0.5 ? 'before' : 'after')
     }
   }
 
