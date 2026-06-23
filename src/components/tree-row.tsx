@@ -10,7 +10,9 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useFormat } from '../hooks/use-format'
+import { useLingui } from '@lingui/react/macro'
 import { EntityAvatar } from './entity-avatar'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export interface TreeRowField {
   id: string
@@ -95,6 +97,7 @@ export function TreeRow({
 }: TreeRowProps) {
   const rowRef = useRef<HTMLTableRowElement>(null)
   const { formatDate } = useFormat()
+  const { t } = useLingui()
 
   const renderFieldValue = (field: TreeRowField, value: string) => {
     if (!value) {
@@ -176,14 +179,21 @@ export function TreeRow({
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
 
+    // Signal a move so the browser shows the move cursor and reliably
+    // dispatches the drop; without it some browsers render a no-drop cursor
+    // and the reparent can feel like it didn't register.
+    e.dataTransfer.dropEffect = 'move'
+
     if (!rowRef.current) return
 
     const rect = rowRef.current.getBoundingClientRect()
     const y = e.clientY - rect.top
     const height = rect.height
 
-    // Use larger edge zones (8px) for reorder, center for reparent
-    const edgeZone = 8
+    // Reorder lives in thin bands at the top and bottom edges; the rest of the
+    // row reparents. Cap the band to a quarter of the row height so short rows
+    // keep a usable reparent zone in the middle.
+    const edgeZone = Math.min(8, height * 0.25)
 
     if (canReorder && y < edgeZone) {
       onDragOver(object.id, 'before')
@@ -239,19 +249,25 @@ export function TreeRow({
             <GripVertical className='size-3' />
           </div>
           {hasChildren ? (
-            <button
-              className='size-5 flex items-center justify-center hover:bg-hover transition-colors rounded'
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleExpand()
-              }}
-            >
-              {isExpanded ? (
-                <ChevronDown className='size-4' />
-              ) : (
-                <ChevronRight className='size-4 rtl:rotate-180' />
-              )}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  aria-label={isExpanded ? t`Collapse` : t`Expand`}
+                  className='size-5 flex items-center justify-center hover:bg-hover transition-colors rounded'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleExpand()
+                  }}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className='size-4' />
+                  ) : (
+                    <ChevronRight className='size-4 rtl:rotate-180' />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{isExpanded ? t`Collapse` : t`Expand`}</TooltipContent>
+            </Tooltip>
           ) : anySiblingHasChildren ? (
             <div className='size-5' />
           ) : null}

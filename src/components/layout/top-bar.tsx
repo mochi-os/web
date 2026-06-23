@@ -10,6 +10,7 @@ import { useTheme } from '../../context/theme-provider'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { useSidebar } from '../ui/sidebar'
 import { Button } from '../ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { MochiMenu } from './mochi-menu'
 import { t } from '@lingui/core/macro'
 
@@ -51,16 +52,21 @@ export function TopBar({
           className
         )}
       >
-        <Button
-          type='button'
-          variant='ghost'
-          size='icon'
-          className='shrink-0'
-          onClick={toggleSidebar}
-          aria-label={t`Open navigation`}
-        >
-          {sidebarOpen ? <PanelLeftClose className='size-5' /> : <PanelLeftOpen className='size-5' />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='shrink-0'
+              onClick={toggleSidebar}
+              aria-label={t`Open navigation`}
+            >
+              {sidebarOpen ? <PanelLeftClose className='size-5' /> : <PanelLeftOpen className='size-5' />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t`Open navigation`}</TooltipContent>
+        </Tooltip>
 
         <a href='/' title={t`Home`}>
           <img

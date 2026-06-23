@@ -26,6 +26,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '../ui/drawer'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { EntityAvatar } from '../entity-avatar'
 import { SignOutDialog } from '../sign-out-dialog'
 import { NotificationsSection } from './notification-menu'
@@ -85,18 +86,30 @@ export function MochiMenu({
             <span className='font-semibold'>{name || 'User'}</span>
           </div>
           <div className='flex items-center gap-1 ms-4'>
-            <a
-              href='/settings'
-              className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
-            >
-              <Settings className='size-4' />
-            </a>
-            <button
-              onClick={() => setSignOutOpen(true)}
-              className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
-            >
-              <LogOut className='size-4' />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href='/settings'
+                  aria-label={t`Settings`}
+                  className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
+                >
+                  <Settings className='size-4' />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>{t`Settings`}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setSignOutOpen(true)}
+                  aria-label={t`Sign out`}
+                  className='flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
+                >
+                  <LogOut className='size-4' />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t`Sign out`}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </DropdownMenuLabel>
@@ -149,7 +162,12 @@ export function MochiMenu({
 
         {isMobile ? (
           <Drawer open={menuOpen} onOpenChange={setMenuOpen} direction="bottom">
-            <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{triggerLabel}</TooltipContent>
+            </Tooltip>
             <DrawerContent>
               <DrawerHeader>
                 <DrawerTitle className='sr-only'><Trans>Menu</Trans></DrawerTitle>
@@ -159,7 +177,12 @@ export function MochiMenu({
           </Drawer>
         ) : (
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{triggerLabel}</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align='start' className='min-w-72'>
               {menuContent}
             </DropdownMenuContent>

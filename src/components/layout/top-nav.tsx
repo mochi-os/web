@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { t } from '@lingui/core/macro'
 
 type TopNavProps = React.HTMLAttributes<HTMLElement> & {
@@ -27,17 +28,21 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
     <>
       <div className='lg:hidden'>
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size='icon'
-                variant='outline'
-                className='md:size-7'
-                aria-label={t`Open navigation menu`}
-                title={t`Open navigation menu`}
-              >
-                <Menu />
-              </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size='icon'
+                    variant='outline'
+                    className='md:size-7'
+                    aria-label={t`Open navigation menu`}
+                  >
+                    <Menu />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t`Open navigation menu`}</TooltipContent>
+            </Tooltip>
           <DropdownMenuContent side='bottom' align='start'>
             {links.map(({ title, href, isActive, disabled }) => (
               <DropdownMenuItem key={`${title}-${href}`} asChild>

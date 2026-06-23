@@ -4,6 +4,7 @@
 import { Search as SearchIcon, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Input } from './ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 type SearchInputProps = Omit<
   React.ComponentProps<'input'>,
@@ -35,14 +36,19 @@ export function SearchInput({
         {...props}
       />
       {value && (
-        <button
-          type='button'
-          aria-label={clearLabel}
-          onClick={() => onValueChange('')}
-          className='text-muted-foreground hover:text-foreground absolute end-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm transition-colors'
-        >
-          <X className='size-4' />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type='button'
+              aria-label={clearLabel}
+              onClick={() => onValueChange('')}
+              className='text-muted-foreground hover:text-foreground absolute end-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm transition-colors'
+            >
+              <X className='size-4' />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{clearLabel}</TooltipContent>
+        </Tooltip>
       )}
     </div>
   )

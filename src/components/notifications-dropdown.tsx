@@ -9,6 +9,7 @@ import { shellNavigateExternal } from '../lib/shell-bridge'
 import { useFormat } from '../hooks/use-format'
 import { useScreenSize } from '../hooks/use-screen-size'
 import { Button } from './ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import {
@@ -228,7 +229,12 @@ export function NotificationsDropdown({
   if (isDesktop) {
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t`Notifications`}</TooltipContent>
+        </Tooltip>
         <PopoverContent
           align='end'
           sideOffset={8}
@@ -244,7 +250,12 @@ export function NotificationsDropdown({
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t`Notifications`}</TooltipContent>
+      </Tooltip>
       <DrawerContent>
         <DrawerHeader className='sr-only'>
           <DrawerTitle><Trans>Notifications</Trans></DrawerTitle>

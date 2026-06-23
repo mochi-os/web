@@ -4,6 +4,8 @@
 import type { ReactNode } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import { useLingui } from '@lingui/react/macro'
 
 type CommentTreeDensity = 'compact' | 'comfortable'
 
@@ -39,6 +41,7 @@ export function CommentTreeLayout({
   children,
   collapsedContent,
 }: CommentTreeLayoutProps) {
+  const { t } = useLingui()
   // Rainbow palette
   const RAINBOW_COLORS = [
     'bg-rose-400',
@@ -80,27 +83,32 @@ export function CommentTreeLayout({
 
         {/* Collapse/Expand Button */}
         {hasChildren && (
-          <button
-            type='button'
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleCollapse()
-            }}
-            className={cn(
-              'bg-background hover:bg-hover text-muted-foreground absolute z-20 flex items-center justify-center rounded-full border transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-              isComfortable
-                ? 'top-[5px] left-[3px] size-3.5 md:top-[4px] md:left-[2px] md:size-3'
-                : 'top-[4px] left-[2px] size-3',
-              selfColorBorder
-            )}
-            aria-label={isCollapsed ? "Expand" : "Collapse"}
-          >
-            {isCollapsed ? (
-              <Plus className='size-2' />
-            ) : (
-              <Minus className='size-2' />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type='button'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleCollapse()
+                }}
+                className={cn(
+                  'bg-background hover:bg-hover text-muted-foreground absolute z-20 flex items-center justify-center rounded-full border transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  isComfortable
+                    ? 'top-[5px] left-[3px] size-3.5 md:top-[4px] md:left-[2px] md:size-3'
+                    : 'top-[4px] left-[2px] size-3',
+                  selfColorBorder
+                )}
+                aria-label={isCollapsed ? t`Expand` : t`Collapse`}
+              >
+                {isCollapsed ? (
+                  <Plus className='size-2' />
+                ) : (
+                  <Minus className='size-2' />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{isCollapsed ? t`Expand` : t`Collapse`}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 

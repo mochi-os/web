@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from '@tanstack/react-router'
 import { Button } from '../ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { cn } from '../../lib/utils'
 import { isInShell, shellNavigateBack } from '../../lib/shell-bridge'
 
@@ -57,17 +58,21 @@ export function BackButton({
   }
 
   return (
-    <Button
-      type='button'
-      variant='ghost'
-      size='icon'
-      onClick={() => void handleClick()}
-      disabled={isFallbackPending}
-      title={label}
-      aria-label={ariaLabel ?? label}
-      className={cn('shrink-0', className)}
-    >
-      <ArrowLeft className='size-4 shrink-0 rtl:rotate-180' />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          onClick={() => void handleClick()}
+          disabled={isFallbackPending}
+          aria-label={ariaLabel ?? label}
+          className={cn('shrink-0', className)}
+        >
+          <ArrowLeft className='size-4 shrink-0 rtl:rotate-180' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{ariaLabel ?? label}</TooltipContent>
+    </Tooltip>
   )
 }

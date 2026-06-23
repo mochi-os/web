@@ -7,6 +7,7 @@ import { ExternalLink, X } from 'lucide-react'
 import { getShellInitData, initShellBridge } from '../lib/shell-bridge'
 import { requestHelpers } from '../lib/request'
 import { Button } from './ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface RestoreRelink {
   service: string
@@ -64,20 +65,25 @@ export function RestoreBanner() {
 
   return (
     <div className='border-border bg-muted/40 relative mb-6 rounded-lg border p-4 text-center'>
-      <button
-        type='button'
-        onClick={() => {
-          // Persist the dismissal account-wide (best effort), then hide
-          // immediately. The action sets the restore.show preference to
-          // "false" so the banner stays gone after reload.
-          void requestHelpers.post('-/restore/dismiss', {}).catch(() => {})
-          setDismissed(true)
-        }}
-        aria-label={t`Dismiss`}
-        className='text-muted-foreground hover:text-foreground absolute top-3 right-3'
-      >
-        <X className='h-4 w-4' />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type='button'
+            onClick={() => {
+              // Persist the dismissal account-wide (best effort), then hide
+              // immediately. The action sets the restore.show preference to
+              // "false" so the banner stays gone after reload.
+              void requestHelpers.post('-/restore/dismiss', {}).catch(() => {})
+              setDismissed(true)
+            }}
+            aria-label={t`Dismiss`}
+            className='text-muted-foreground hover:text-foreground absolute top-3 right-3'
+          >
+            <X className='h-4 w-4' />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t`Dismiss`}</TooltipContent>
+      </Tooltip>
       <h2 className='mb-1 font-semibold'>
         <Trans>Finish moving your account</Trans>
       </h2>

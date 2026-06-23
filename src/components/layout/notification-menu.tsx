@@ -8,6 +8,7 @@ import { useFormat } from '../../hooks/use-format'
 import type { Notification } from '../notifications-dropdown'
 import { NotificationCategoryButton } from '../notification-category-button'
 import { ScrollArea } from '../ui/scroll-area'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { t } from '@lingui/core/macro'
 
 export { type Notification }
@@ -85,22 +86,32 @@ export function NotificationsSection({
         </span>
         <div className='flex gap-1'>
           {unread.length > 0 && (
-            <button
-              aria-label={t`Mark all as read`}
-              onClick={markAllAsRead}
-              className='rounded p-1.5 hover:bg-hover active:bg-interactive-active'
-            >
-              <Check className='size-4' />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  aria-label={t`Mark all as read`}
+                  onClick={markAllAsRead}
+                  className='rounded p-1.5 hover:bg-hover active:bg-interactive-active'
+                >
+                  <Check className='size-4' />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t`Mark all as read`}</TooltipContent>
+            </Tooltip>
           )}
-          <a
-            aria-label={t`View all notifications`}
-            href='/notifications/'
-            onClick={onClose}
-            className='rounded p-1.5 hover:bg-hover active:bg-interactive-active'
-          >
-            <ExternalLink className='size-4' />
-          </a>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                aria-label={t`View all notifications`}
+                href='/notifications/'
+                onClick={onClose}
+                className='rounded p-1.5 hover:bg-hover active:bg-interactive-active'
+              >
+                <ExternalLink className='size-4' />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent>{t`View all notifications`}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

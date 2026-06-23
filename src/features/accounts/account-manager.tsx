@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip'
 import { toast } from '../../lib/toast-utils'
 import { useAccounts } from '../../hooks/use-accounts'
 import { AccountAdd } from './account-add'
@@ -145,21 +146,25 @@ function AccountItem({
         </div>
       </div>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={isRemoving}
-            aria-label={t`Open account actions`}
-            title={t`Open account actions`}
-          >
-            {isRemoving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <MoreHorizontal className="h-4 w-4" />
-            )}
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={isRemoving}
+                aria-label={t`Open account actions`}
+              >
+                {isRemoving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t`Open account actions`}</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end">
           {needsVerification && (
             <DropdownMenuItem onClick={() => onVerify(account)}>

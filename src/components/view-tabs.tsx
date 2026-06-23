@@ -5,6 +5,7 @@ import { LayoutGrid, ListTree, Plus } from 'lucide-react'
 import { t } from '@lingui/core/macro'
 import { cn } from '../lib/utils'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface View {
   id: string
@@ -78,15 +79,19 @@ export function ViewTabs({
           ))}
         </TabsList>
         {onAddView && (
-          <button
-            type='button'
-            onClick={onAddView}
-            aria-label={t`Add view`}
-            title={t`Add view`}
-            className='text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-2 text-sm transition-colors'
-          >
-            <Plus className='size-4' />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type='button'
+                onClick={onAddView}
+                aria-label={t`Add view`}
+                className='text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-2 text-sm transition-colors'
+              >
+                <Plus className='size-4' />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t`Add view`}</TooltipContent>
+          </Tooltip>
         )}
       </div>
     </Tabs>
