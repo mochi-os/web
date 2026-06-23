@@ -34,6 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import {
   type NavAction,
   type NavCollapsible,
@@ -169,11 +170,16 @@ function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <SidebarItemAction showOnHover aria-label={t`Open actions`}>
-          <MoreHorizontal />
-        </SidebarItemAction>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <SidebarItemAction showOnHover aria-label={t`Open actions`}>
+              <MoreHorizontal />
+            </SidebarItemAction>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t`Open actions`}</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent side='right' align='start' sideOffset={4}>
         {menu.map((menuItem) => (
           <DropdownMenuItem
@@ -277,6 +283,7 @@ function SidebarMenuCollapsible({
   pathname: string
 }) {
   const { setOpenMobile } = useSidebar()
+  const { t } = useLingui()
 
   // Use controlled mode if `open` prop is provided, otherwise use uncontrolled
   const isControlled = typeof item.open === 'boolean'
@@ -330,14 +337,20 @@ function SidebarMenuCollapsible({
                 </Link>
               </SidebarMenuButton>
             )}
-            <CollapsibleTrigger asChild>
-              <button
-                type='button'
-                className='rounded-md p-2 transition-colors hover:bg-hover active:bg-interactive-active'
-              >
-                <ChevronRight className='size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180' />
-              </button>
-            </CollapsibleTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type='button'
+                    aria-label={t`Toggle section`}
+                    className='rounded-md p-2 transition-colors hover:bg-hover active:bg-interactive-active'
+                  >
+                    <ChevronRight className='size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180' />
+                  </button>
+                </CollapsibleTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t`Toggle section`}</TooltipContent>
+            </Tooltip>
           </div>
         ) : (
           /*
@@ -420,6 +433,7 @@ function SidebarMenuSubCollapsible({
   pathname: string
 }) {
   const { setOpenMobile } = useSidebar()
+  const { t } = useLingui()
 
   // Use controlled mode if `open` prop is provided
   const isControlled = typeof item.open === 'boolean'
@@ -453,14 +467,20 @@ function SidebarMenuSubCollapsible({
                   {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 </Link>
               </SidebarMenuSubButton>
-            <CollapsibleTrigger asChild>
-              <button
-                type='button'
-                className='rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
-              >
-                <ChevronRight className='size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
-              </button>
-            </CollapsibleTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type='button'
+                    aria-label={t`Toggle section`}
+                    className='rounded-md p-1.5 transition-colors hover:bg-hover active:bg-interactive-active'
+                  >
+                    <ChevronRight className='size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
+                  </button>
+                </CollapsibleTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t`Toggle section`}</TooltipContent>
+            </Tooltip>
           </div>
         ) : (
           /*

@@ -4,6 +4,7 @@
 import { X } from 'lucide-react'
 import { Trans } from '@lingui/react/macro'
 import { Button } from './ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export interface FilterState {
   search: string
@@ -46,14 +47,19 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
         >
           <span className='text-muted-foreground'>{filter.label}:</span>
           <span className='max-w-[100px] truncate'>{filter.value}</span>
-          <button
-            type='button'
-            onClick={() => clearFilter(filter.key)}
-            aria-label={`Remove ${filter.label} filter`}
-            className='ms-0.5'
-          >
-            <X className='size-3' />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type='button'
+                onClick={() => clearFilter(filter.key)}
+                aria-label={`Remove ${filter.label} filter`}
+                className='ms-0.5'
+              >
+                <X className='size-3' />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{`Remove ${filter.label} filter`}</TooltipContent>
+          </Tooltip>
         </span>
       ))}
       {activeFilters.length > 1 && (

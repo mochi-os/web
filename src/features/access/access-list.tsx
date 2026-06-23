@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../../components/ui/alert-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip'
 import type { AccessLevel, AccessRule } from './types'
 import { GeneralError } from '../errors/general-error'
 import { t } from '@lingui/core/macro'
@@ -236,17 +237,21 @@ export function AccessList({
               <TableCell>
                 {!isOwner && (
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={isUpdating}
-                        aria-label={t`Remove access rule`}
-                        title={t`Remove access rule`}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={isUpdating}
+                            aria-label={t`Remove access rule`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>{t`Remove access rule`}</TooltipContent>
+                    </Tooltip>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle><Trans>Remove access?</Trans></AlertDialogTitle>

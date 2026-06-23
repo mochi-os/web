@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { SlidersHorizontal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Skeleton } from './ui/skeleton'
 import { cn } from '../lib/utils'
@@ -116,19 +117,24 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={t`Change notification category`}
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground active:bg-interactive-active',
-            className
-          )}
-        >
-          <SlidersHorizontal className="size-3.5" />
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={t`Change notification category`}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground active:bg-interactive-active',
+                className
+              )}
+            >
+              <SlidersHorizontal className="size-3.5" />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t`Change notification category`}</TooltipContent>
+      </Tooltip>
       <PopoverContent
         align="end"
         className="w-64 p-3"

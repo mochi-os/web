@@ -7,6 +7,7 @@ import { CircleHelp } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 type LearnMoreProps = React.ComponentProps<typeof Root> & {
   contentProps?: React.ComponentProps<typeof Content>
@@ -21,16 +22,21 @@ export function LearnMore({
 }: LearnMoreProps) {
   return (
     <Popover {...props}>
-      <PopoverTrigger
-        asChild
-        {...triggerProps}
-        className={cn('size-5 rounded-full', triggerProps?.className)}
-      >
-        <Button variant="outline" size="icon">
-          <span className="sr-only"><Trans>Learn more</Trans></span>
-          <CircleHelp className="size-4" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger
+            asChild
+            {...triggerProps}
+            className={cn('size-5 rounded-full', triggerProps?.className)}
+          >
+            <Button variant="outline" size="icon">
+              <span className="sr-only"><Trans>Learn more</Trans></span>
+              <CircleHelp className="size-4" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent><Trans>Learn more</Trans></TooltipContent>
+      </Tooltip>
       <PopoverContent
         side="top"
         align="start"

@@ -11,6 +11,7 @@ import { MapView } from './map-view'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -155,13 +156,19 @@ export function TravellingPicker({
                 <div className="flex items-center gap-2 border rounded-[8px] px-3 py-2">
                   <PlaceIcon category={origin.category} />
                   <span className="flex-1 truncate">{origin.name}</span>
-                  <button
-                    type="button"
-                    onClick={clearOrigin}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={clearOrigin}
+                        aria-label={t`Clear`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t`Clear`}</TooltipContent>
+                  </Tooltip>
                 </div>
               ) : (
                 <>
@@ -216,13 +223,19 @@ export function TravellingPicker({
                 <div className="flex items-center gap-2 border rounded-[8px] px-3 py-2">
                   <PlaceIcon category={destination.category} />
                   <span className="flex-1 truncate">{destination.name}</span>
-                  <button
-                    type="button"
-                    onClick={clearDestination}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={clearDestination}
+                        aria-label={t`Clear`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t`Clear`}</TooltipContent>
+                  </Tooltip>
                 </div>
               ) : (
                 <>

@@ -20,6 +20,7 @@ import {
 import { NavGroup } from './nav-group'
 import { Button } from '../ui/button'
 import { Skeleton } from '../ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { MochiMenu } from './mochi-menu'
 
 import type { SidebarData } from './types'
@@ -38,27 +39,31 @@ function CollapseBtn() {
   const label = state === 'expanded' ? t`Collapse sidebar` : t`Expand sidebar`
 
   return (
-    <Button
-      data-sidebar='trigger'
-      variant='outline'
-      size='icon'
-      title={label}
-      aria-label={label}
-      className={cn(
-        'absolute -end-3 top-1/2 z-50 -translate-y-1/2',
-        'h-6 w-6 rounded-full border bg-background shadow-md',
-        'hover:bg-hover hover:text-hover-foreground',
-        'inline-flex'
-      )}
-      onClick={toggleSidebar}
-    >
-      {state === 'expanded' ? (
-        <ChevronLeft className='h-3 w-3 rtl:rotate-180' />
-      ) : (
-        <ChevronRight className='h-3 w-3 rtl:rotate-180' />
-      )}
-      <span className='sr-only'>{label}</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-sidebar='trigger'
+          variant='outline'
+          size='icon'
+          aria-label={label}
+          className={cn(
+            'absolute -end-3 top-1/2 z-50 -translate-y-1/2',
+            'h-6 w-6 rounded-full border bg-background shadow-md',
+            'hover:bg-hover hover:text-hover-foreground',
+            'inline-flex'
+          )}
+          onClick={toggleSidebar}
+        >
+          {state === 'expanded' ? (
+            <ChevronLeft className='h-3 w-3 rtl:rotate-180' />
+          ) : (
+            <ChevronRight className='h-3 w-3 rtl:rotate-180' />
+          )}
+          <span className='sr-only'>{label}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -91,16 +96,21 @@ export function AppSidebar({
                 <span className='text-sm font-semibold'>mochi</span>
               </a>
               <div className='flex-1' />
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon'
-                className='size-7'
-                onClick={() => setOpenMobile(false)}
-                aria-label={t`Close navigation`}
-              >
-                <X className='size-4' />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    className='size-7'
+                    onClick={() => setOpenMobile(false)}
+                    aria-label={t`Close navigation`}
+                  >
+                    <X className='size-4' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t`Close navigation`}</TooltipContent>
+              </Tooltip>
             </div>
           </SidebarHeader>
         )

@@ -299,21 +299,26 @@ function SidebarTrigger({
   const { toggleSidebar } = useSidebar()
 
   return (
-    <Button
-      data-sidebar='trigger'
-      data-slot='sidebar-trigger'
-      variant='ghost'
-      size='icon'
-      className={cn('size-8', className)}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      {...props}
-    >
-      <PanelLeftIcon className='size-5' />
-      <span className='sr-only'><Trans>Toggle sidebar</Trans></span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-sidebar='trigger'
+          data-slot='sidebar-trigger'
+          variant='ghost'
+          size='icon'
+          className={cn('size-8', className)}
+          onClick={(event) => {
+            onClick?.(event)
+            toggleSidebar()
+          }}
+          {...props}
+        >
+          <PanelLeftIcon className='size-5' />
+          <span className='sr-only'><Trans>Toggle sidebar</Trans></span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent><Trans>Toggle sidebar</Trans></TooltipContent>
+    </Tooltip>
   )
 }
 

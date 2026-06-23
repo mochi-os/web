@@ -29,6 +29,7 @@ import {
   CommandList,
 } from './ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { setStoredLanguage } from '../context/i18n-provider'
 import { detectLanguage } from '../context/locale-provider'
 import { cn, naturalCompare } from '../lib/utils'
@@ -290,16 +291,21 @@ export function LanguagePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant='outline'
-          size='icon'
-          aria-label={t`Choose language`}
-          className={cn('size-9', className)}
-        >
-          <Globe className='size-4' />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant='outline'
+              size='icon'
+              aria-label={t`Choose language`}
+              className={cn('size-9', className)}
+            >
+              <Globe className='size-4' />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t`Choose language`}</TooltipContent>
+      </Tooltip>
       <PopoverContent align={align} className='w-[22rem] p-0'>
         <Command>
           <CommandList className='max-h-[60vh]'>

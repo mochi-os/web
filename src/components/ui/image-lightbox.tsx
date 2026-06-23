@@ -9,6 +9,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { ChevronLeft, ChevronRight, Download, FileWarning, ImageOff, Loader2, X } from 'lucide-react'
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { cn } from '../../lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip'
 import { t } from '@lingui/core/macro'
 
 export type LightboxMedia = {
@@ -311,44 +312,64 @@ export function ImageLightbox({
               {currentMedia.name}
             </span>
             <div className='flex shrink-0 items-center gap-1 text-white/70'>
-              <a
-                href={currentMedia.url}
-                download={currentMedia.name}
-                className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white'
-                title={t`Download`}
-              >
-                <Download className='size-5' />
-              </a>
-              <DialogPrimitive.Close className='rounded-full p-2 outline-none transition-colors hover:bg-white/20 hover:text-white'>
-                <X className='size-5' />
-                <span className='sr-only'><Trans>Close</Trans></span>
-              </DialogPrimitive.Close>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a
+                    href={currentMedia.url}
+                    download={currentMedia.name}
+                    aria-label={t`Download`}
+                    className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white'
+                  >
+                    <Download className='size-5' />
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent>{t`Download`}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DialogPrimitive.Close className='rounded-full p-2 outline-none transition-colors hover:bg-white/20 hover:text-white'>
+                    <X className='size-5' />
+                    <span className='sr-only'><Trans>Close</Trans></span>
+                  </DialogPrimitive.Close>
+                </TooltipTrigger>
+                <TooltipContent><Trans>Close</Trans></TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
           {/* Navigation buttons */}
           {hasMultiple && (
             <>
-              <button
-                onClick={goToPrevious}
-                className={cn(
-                  'absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:left-4 sm:p-3',
-                  isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                )}
-                aria-label={t`Previous image`}
-              >
-                <ChevronLeft className='size-6 sm:size-8 rtl:rotate-180' />
-              </button>
-              <button
-                onClick={goToNext}
-                className={cn(
-                  'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
-                  isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                )}
-                aria-label={t`Next image`}
-              >
-                <ChevronRight className='size-6 sm:size-8 rtl:rotate-180' />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={goToPrevious}
+                    className={cn(
+                      'absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:left-4 sm:p-3',
+                      isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    )}
+                    aria-label={t`Previous image`}
+                  >
+                    <ChevronLeft className='size-6 sm:size-8 rtl:rotate-180' />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t`Previous image`}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={goToNext}
+                    className={cn(
+                      'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
+                      isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    )}
+                    aria-label={t`Next image`}
+                  >
+                    <ChevronRight className='size-6 sm:size-8 rtl:rotate-180' />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t`Next image`}</TooltipContent>
+              </Tooltip>
             </>
           )}
         </DialogPrimitive.Content>

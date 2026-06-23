@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils'
 import { safeCookieGet, safeCookieSet } from '../../lib/shell-bridge'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from '../ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet'
 import { PanelRightIcon, XIcon } from 'lucide-react'
 
@@ -215,20 +216,25 @@ function RightPanelTrigger({
   const isOpen = isLargeScreen ? open : openMobile
 
   return (
-    <Button
-      data-slot="right-panel-trigger"
-      variant="ghost"
-      size="icon"
-      className={cn('size-8', className)}
-      onClick={(event) => {
-        onClick?.(event)
-        togglePanel()
-      }}
-      {...props}
-    >
-      {isOpen ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
-      <span className="sr-only"><Trans>Toggle right panel</Trans></span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-slot="right-panel-trigger"
+          variant="ghost"
+          size="icon"
+          className={cn('size-8', className)}
+          onClick={(event) => {
+            onClick?.(event)
+            togglePanel()
+          }}
+          {...props}
+        >
+          {isOpen ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
+          <span className="sr-only"><Trans>Toggle right panel</Trans></span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent><Trans>Toggle right panel</Trans></TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -239,23 +245,28 @@ function RightPanelCloseButton({
   const { setOpen, setOpenMobile, isLargeScreen } = useRightPanel()
 
   return (
-    <Button
-      data-slot="right-panel-close"
-      variant="ghost"
-      size="icon"
-      className={cn('size-8', className)}
-      onClick={() => {
-        if (!isLargeScreen) {
-          setOpenMobile(false)
-        } else {
-          setOpen(false)
-        }
-      }}
-      {...props}
-    >
-      <XIcon className="size-4" />
-      <span className="sr-only"><Trans>Close panel</Trans></span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-slot="right-panel-close"
+          variant="ghost"
+          size="icon"
+          className={cn('size-8', className)}
+          onClick={() => {
+            if (!isLargeScreen) {
+              setOpenMobile(false)
+            } else {
+              setOpen(false)
+            }
+          }}
+          {...props}
+        >
+          <XIcon className="size-4" />
+          <span className="sr-only"><Trans>Close panel</Trans></span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent><Trans>Close panel</Trans></TooltipContent>
+    </Tooltip>
   )
 }
 

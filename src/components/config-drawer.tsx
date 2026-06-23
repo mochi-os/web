@@ -30,6 +30,7 @@ import {
   SheetTrigger,
 } from './ui/sheet'
 import { useSidebar } from './ui/sidebar'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export function ConfigDrawer() {
   const { t } = useLingui()
@@ -47,17 +48,22 @@ export function ConfigDrawer() {
 
   return (
     <Sheet>
-      <SheetTrigger asChild>
-        <Button
-          size='icon'
-          variant='ghost'
-          aria-label={t`Open theme settings`}
-          aria-describedby='config-drawer-description'
-          className='rounded-full'
-        >
-          <Settings aria-hidden='true' />
-        </Button>
-      </SheetTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SheetTrigger asChild>
+            <Button
+              size='icon'
+              variant='ghost'
+              aria-label={t`Open theme settings`}
+              aria-describedby='config-drawer-description'
+              className='rounded-full'
+            >
+              <Settings aria-hidden='true' />
+            </Button>
+          </SheetTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t`Open theme settings`}</TooltipContent>
+      </Tooltip>
       <SheetContent className='flex flex-col'>
         <SheetHeader className='pb-0 text-start'>
           <SheetTitle><Trans>Theme Settings</Trans></SheetTitle>
@@ -105,16 +111,20 @@ function SectionTitle({
     >
       {title}
       {showReset && onReset && (
-        <Button
-          size='icon'
-          variant='outline'
-          className='size-4 rounded-full'
-          onClick={onReset}
-          aria-label={`Reset ${title}`}
-          title={`Reset ${title}`}
-        >
-          <RotateCcw className='size-3' />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size='icon'
+              variant='outline'
+              className='size-4 rounded-full'
+              onClick={onReset}
+              aria-label={`Reset ${title}`}
+            >
+              <RotateCcw className='size-3' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{`Reset ${title}`}</TooltipContent>
+        </Tooltip>
       )}
     </div>
   )
