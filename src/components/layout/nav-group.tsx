@@ -6,6 +6,7 @@ import { Link, useLocation } from '@tanstack/react-router'
 import { useLingui } from '@lingui/react/macro'
 import { ChevronRight, Circle, MoreHorizontal } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { useListAutoAnimate } from '../../hooks/use-list-auto-animate'
 import {
   Collapsible,
   CollapsibleContent,
@@ -76,17 +77,40 @@ function ItemIcon({ icon: Icon, aggregate }: { icon?: React.ElementType; aggrega
   )
 }
 
-export function NavGroup({ title, items, separator }: NavGroupProps) {
+function getNavItemKey(item: {
+  id?: string
+  title: string
+  url?: unknown
+}): string {
+  if (item.id) return item.id
+  if (item.url !== undefined && item.url !== '') {
+    return `url:${String(item.url)}`
+  }
+  return `action:${item.title}`
+}
+
+export function NavGroup({
+  title,
+  items,
+  separator,
+  animateList = false,
+}: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const pathname = useLocation({ select: (location) => location.pathname })
+  const animationsDisabled =
+    !animateList || (state === 'collapsed' && !isMobile)
+  const [menuRef] = useListAutoAnimate<HTMLUListElement>({
+    disabled: animationsDisabled,
+  })
+
   return (
     <>
       {separator && <SidebarSeparator className='mx-2' />}
       <SidebarGroup>
       {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
-      <SidebarMenu>
+      <SidebarMenu ref={animateList ? menuRef : undefined}>
         {items.map((item) => {
-          const key = `${item.title}-${'url' in item ? item.url : 'action'}`
+          const key = getNavItemKey(item)
 
           if (isNavAction(item)) {
             return <SidebarMenuAction key={key} item={item} />
@@ -354,7 +378,7 @@ function SidebarMenuCollapsible({
               if (isNavSubCollapsible(subItem)) {
                 return (
                   <SidebarMenuSubCollapsible
-                    key={subItem.title}
+                    key={getNavItemKey(subItem)}
                     item={subItem}
                     pathname={pathname}
                   />
@@ -363,7 +387,7 @@ function SidebarMenuCollapsible({
               // Handle action sub-items
               if (isNavAction(subItem)) {
                 return (
-                  <SidebarMenuSubItem key={subItem.title}>
+                  <SidebarMenuSubItem key={getNavItemKey(subItem)}>
                     <SidebarMenuSubButton
                       className='cursor-pointer'
                       onClick={() => {
@@ -380,7 +404,7 @@ function SidebarMenuCollapsible({
               }
               // Handle link sub-items
               return (
-                <SidebarMenuSubItem key={subItem.title}>
+                <SidebarMenuSubItem key={getNavItemKey(subItem)}>
                   <SidebarMenuSubButton
                     asChild
                     isActive={'url' in subItem ? checkIsActive(pathname, subItem) : false}
@@ -478,7 +502,7 @@ function SidebarMenuSubCollapsible({
               // Handle action sub-sub-items
               if (isNavAction(subSubItem)) {
                 return (
-                  <SidebarMenuSubItem key={subSubItem.title}>
+                  <SidebarMenuSubItem key={getNavItemKey(subSubItem)}>
                     <SidebarMenuSubButton
                       className='cursor-pointer'
                       onClick={() => {
@@ -495,7 +519,7 @@ function SidebarMenuSubCollapsible({
               }
               // Handle link sub-sub-items
               return (
-                <SidebarMenuSubItem key={subSubItem.title}>
+                <SidebarMenuSubItem key={getNavItemKey(subSubItem)}>
                   <SidebarMenuSubButton
                     asChild
                     isActive={'url' in subSubItem ? checkIsActive(pathname, subSubItem) : false}
@@ -544,7 +568,7 @@ function SidebarMenuCollapsedDropdown({
           <DropdownMenuSeparator />
           {item.items.map((sub) => {
             if (isNavSubCollapsible(sub)) return null
-            const key = `${sub.title}-${'url' in sub ? sub.url : 'action'}`
+            const key = getNavItemKey(sub)
             if (isNavAction(sub)) {
               return (
                 <DropdownMenuItem key={key} onClick={sub.onClick}>
