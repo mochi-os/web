@@ -66,8 +66,14 @@ function isNavSubCollapsible(item: unknown): item is NavSubCollapsible {
 function ItemIcon({ icon: Icon, aggregate }: { icon?: React.ElementType; aggregate?: boolean }) {
   if (!Icon) return <Circle className='hidden group-data-[collapsible=icon]:block' />
   if (!aggregate) return <Icon />
+  // The menu button hides direct <span> children in icon-collapsed mode
+  // (group-data-[collapsible=icon]:[&>span]:hidden — that rule exists to hide
+  // the text label). This wrapper is a <span> too, so without the override the
+  // aggregate glyph would vanish in collapsed mode. Force it back to inline-flex
+  // (needs ! to beat the more-specific label-hiding rule) so the ring stays
+  // visible exactly when the text label is hidden.
   return (
-    <span className='relative inline-flex shrink-0'>
+    <span className='relative inline-flex shrink-0 group-data-[collapsible=icon]:!inline-flex'>
       <Icon className='size-4 shrink-0' />
       <span
         aria-hidden
