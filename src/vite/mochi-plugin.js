@@ -18,11 +18,14 @@ export function mochiPlugin(options = {}) {
   // Web fonts referenced by --font-sans / --font-mono and the user's
   // font preference. Injected into every app's <head> so iframe SPAs all
   // pick up the same fonts without each app's index.html duplicating the
-  // tags. display=swap keeps text legible during the network fetch.
+  // tags. display=optional means the browser uses the webfont only if it's
+  // ready within the short block period (already cached or arrives fast),
+  // otherwise it keeps the fallback for the whole pageview and never swaps
+  // mid-render — eliminating the flash between skeleton and loaded content.
   const FONT_LINKS = [
     '<link rel="preconnect" href="https://fonts.googleapis.com">',
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
-    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap">',
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=optional">',
   ].join('\n    ')
 
   return {

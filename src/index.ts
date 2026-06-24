@@ -153,7 +153,6 @@ export * from './components/view-tabs'
 
 // Context Providers
 export * from './context/direction-provider'
-export * from './context/font-provider'
 export * from './context/mobile-page-header-context'
 export {
   LayoutProvider,
