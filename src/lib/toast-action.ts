@@ -19,26 +19,23 @@ export function toastAction<T>(
       ? messages.error(err)
       : getErrorMessage(err, messages.error)
 
-  if (messages.success === false) {
-    const id = toast.loading(messages.loading)
-
-    return promise
-      .then((data) => {
-        toast.dismiss(id)
-        return data
-      })
-      .catch((err) => {
-        toast.dismiss(id)
-        toast.error(resolveError(err))
-        throw err
-      })
-  }
-
-  toast.promise(promise, {
-    loading: messages.loading,
-    success: messages.success as string | ((data: T) => string),
-    error: (err) => resolveError(err),
-  })
+  const id = toast.loading(messages.loading)
 
   return promise
+    .then((data) => {
+      toast.dismiss(id)
+      if (messages.success !== false && messages.success !== undefined) {
+        const msg =
+          typeof messages.success === 'function'
+            ? messages.success(data)
+            : messages.success
+        toast.success(msg)
+      }
+      return data
+    })
+    .catch((err) => {
+      toast.dismiss(id)
+      toast.error(resolveError(err))
+      throw err
+    })
 }
