@@ -293,6 +293,56 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
   })
 }
 
+/** Fetch a URL and save it to disk via a blob — only safe where this document
+ * is same-origin and not sandboxed (the top window). */
+function directBlobDownload(url: string, name: string): Promise<boolean> {
+  return fetch(url, { credentials: 'same-origin' })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      return r.blob()
+    })
+    .then((blob) => {
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = name
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      // Delay cleanup so the browser resolves the blob URL before it's revoked.
+      setTimeout(() => {
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      }, 1000)
+      return true
+    })
+    .catch(() => false)
+}
+
+/**
+ * Trigger a real file download. Inside the shell's sandboxed (opaque-origin)
+ * iframe the browser silently refuses to save — a bare <a download> is ignored
+ * cross-origin and a blob click is blocked — so hand the job to the parent
+ * shell, which is same-origin and unsandboxed. In the top window we can save
+ * directly. Resolves false if the download couldn't be started.
+ */
+let downloadIdCounter = 0
+const downloadCallbacks = new Map<number, (ok: boolean) => void>()
+
+export function shellDownload(url: string, name: string): Promise<boolean> {
+  // Resolve against this document's real app URL before the value leaves the
+  // iframe, so the parent receives an unambiguous absolute URL.
+  const absolute = new URL(url, document.baseURI).href
+  if (!isInShell()) {
+    return directBlobDownload(absolute, name)
+  }
+  const id = ++downloadIdCounter
+  return new Promise((resolve) => {
+    downloadCallbacks.set(id, resolve)
+    window.parent.postMessage({ type: 'download', url: absolute, name, id }, '*')
+  })
+}
+
 /**
  * Monkey-patch navigator.clipboard.writeText to route through the shell proxy.
  * This makes all existing navigator.clipboard.writeText() calls work automatically
@@ -600,6 +650,15 @@ if (typeof window !== 'undefined') {
       const cb = clipboardCallbacks.get(data.id as number)
       if (cb) {
         clipboardCallbacks.delete(data.id as number)
+        cb(data.ok as boolean)
+      }
+    }
+
+    // Handle download result
+    if (data.type === 'download.result') {
+      const cb = downloadCallbacks.get(data.id as number)
+      if (cb) {
+        downloadCallbacks.delete(data.id as number)
         cb(data.ok as boolean)
       }
     }

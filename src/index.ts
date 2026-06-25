@@ -222,6 +222,7 @@ export {
   shellNavigateBack,
   shellNavigateExternal,
   shellNavigateTop,
+  shellDownload,
   shellSetTitle,
   shellSetSidebarState,
   shellSetSidebarPresent,
