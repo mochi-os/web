@@ -51,6 +51,43 @@ export function ImageLightbox({
   const [currentScale, setCurrentScale] = useState(1)
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null)
 
+  // Download the current media. A bare <a download> only triggers a save for
+  // same-origin URLs; inside the shell's opaque-origin sandboxed iframe the
+  // attachment URL counts as cross-origin, so the browser ignores `download`
+  // and just navigates to the image. Fetch the bytes and save via a blob URL
+  // (same-origin to this document, so `download` is always honoured) — the
+  // pattern used elsewhere in the codebase (repositories/market downloads).
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = useCallback(async () => {
+    if (downloading) return
+    setDownloading(true)
+    try {
+      const response = await fetch(currentMedia.url)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = currentMedia.name
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      // Delay cleanup so Firefox resolves the blob URL before it's revoked;
+      // revoking immediately races with the download and silently kills it.
+      setTimeout(() => {
+        document.body.removeChild(link)
+        URL.revokeObjectURL(objectUrl)
+      }, 1000)
+    } catch {
+      // Last resort if the blob fetch fails — open in a new tab rather than
+      // replacing the lightbox view.
+      window.open(currentMedia.url, '_blank', 'noopener')
+    } finally {
+      setDownloading(false)
+    }
+  }, [currentMedia.url, currentMedia.name, downloading])
+
   // Reset loading/error state, zoom, and pause video when media changes
   useEffect(() => {
     setIsLoading(true)
@@ -314,14 +351,19 @@ export function ImageLightbox({
             <div className='flex shrink-0 items-center gap-1 text-white/70'>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <a
-                    href={currentMedia.url}
-                    download={currentMedia.name}
+                  <button
+                    type='button'
+                    onClick={handleDownload}
+                    disabled={downloading}
                     aria-label={t`Download`}
-                    className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white'
+                    className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-60'
                   >
-                    <Download className='size-5' />
-                  </a>
+                    {downloading ? (
+                      <Loader2 className='size-5 animate-spin' />
+                    ) : (
+                      <Download className='size-5' />
+                    )}
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>{t`Download`}</TooltipContent>
               </Tooltip>
