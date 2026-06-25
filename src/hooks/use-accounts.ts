@@ -12,6 +12,16 @@ import type {
   AccountsHookResult,
 } from '../features/accounts/types'
 
+const NO_TOAST = { mochi: { showGlobalErrorToast: false } } as const
+
+const formPost = () =>
+  ({
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    ...NO_TOAST,
+  }) as const
+
 // Extract app ID from appBase path (e.g., "/notifications" -> "notifications")
 function getAppIdFromBase(appBase: string): string {
   return appBase.replace(/^\//, '').split('/')[0] || ''
@@ -101,11 +111,7 @@ export function useAccounts(
       const res = await requestHelpers.post<Account>(
         `${appBase}/-/accounts/add`,
         formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+        formPost()
       )
       return res
     },
@@ -124,11 +130,7 @@ export function useAccounts(
       const res = await requestHelpers.post<boolean>(
         `${appBase}/-/accounts/remove`,
         formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+        formPost()
       )
       return res === true
     },
@@ -156,11 +158,7 @@ export function useAccounts(
       const res = await requestHelpers.post<boolean>(
         `${appBase}/-/accounts/update`,
         formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+        formPost()
       )
       return res === true
     },
@@ -182,11 +180,7 @@ export function useAccounts(
       const res = await requestHelpers.post<boolean>(
         `${appBase}/-/accounts/verify`,
         formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+        formPost()
       )
       return res === true
     },
@@ -205,11 +199,7 @@ export function useAccounts(
       const res = await requestHelpers.post<AccountTestResult>(
         `${appBase}/-/accounts/test`,
         formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+        formPost()
       )
       return res
     },

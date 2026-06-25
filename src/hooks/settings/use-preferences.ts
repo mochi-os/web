@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PreferencesData } from '../../types/settings'
 import { apiClient } from '../../lib/api-client'
 
+const NO_TOAST = { mochi: { showGlobalErrorToast: false } } as const
+
 export function usePreferencesData(endpoint: string) {
   return useQuery({
     queryKey: ['user', 'preferences', endpoint],
@@ -19,7 +21,7 @@ export function useSetPreference(endpoint: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: Record<string, string>) => {
-      const response = await apiClient.post(endpoint, data)
+      const response = await apiClient.post(endpoint, data, NO_TOAST)
       return response.data
     },
     onSuccess: () => {
@@ -32,7 +34,7 @@ export function useResetPreferences(endpoint: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async () => {
-      const response = await apiClient.post(endpoint)
+      const response = await apiClient.post(endpoint, undefined, NO_TOAST)
       return response.data
     },
     onSuccess: () => {
