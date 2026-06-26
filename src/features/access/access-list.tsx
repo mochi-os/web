@@ -51,7 +51,7 @@ export interface AccessListProps {
   isLoading?: boolean
   error?: Error | null
   onRetry?: () => void
-  /** Width for the level select dropdown (default: 250px) */
+  /** Minimum width for the level select dropdown; it grows to fit longer labels (default: 250px) */
   selectWidth?: number
 }
 
@@ -221,7 +221,7 @@ export function AccessList({
                     onValueChange={(newLevel) => void handleLevelChange(subject, newLevel)}
                     disabled={isUpdating}
                   >
-                    <SelectTrigger style={{ width: selectWidth }} className="h-8 -ms-3">
+                    <SelectTrigger style={{ minWidth: selectWidth }} className="h-8 -ms-3 max-w-full">
                       <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>

@@ -41,6 +41,7 @@ export * from './components/ui/card-skeleton'
 export * from './components/ui/list-skeleton'
 export * from './components/ui/detail-skeleton'
 export * from './components/ui/board-skeleton'
+export * from './components/ui/loading-content'
 export * from './components/ui/sonner'
 export * from './components/ui/status-badge'
 export * from './components/ui/slider'
@@ -224,6 +225,7 @@ export {
   shellNavigateBack,
   shellNavigateExternal,
   shellNavigateTop,
+  shellDownload,
   shellSetTitle,
   shellSetSidebarState,
   shellSetSidebarPresent,
