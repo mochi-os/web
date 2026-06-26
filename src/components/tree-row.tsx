@@ -3,6 +3,7 @@
 
 import { useRef, type DragEvent } from 'react'
 import {
+  Calendar,
   CheckSquare,
   ChevronRight,
   ChevronDown,
@@ -11,11 +12,13 @@ import {
 import { cn } from '../lib/utils'
 import { useFormat } from '../hooks/use-format'
 import { useLingui } from '@lingui/react/macro'
+import { getAppPath } from '../lib/app-path'
 import { EntityAvatar } from './entity-avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export interface TreeRowField {
   id: string
+  name?: string
   fieldtype: string
 }
 
@@ -53,6 +56,12 @@ export interface TreeRowProps {
   prefix?: string
   showClass?: boolean
   showId?: boolean
+  /** Enumerated field id used for card/row border colour (e.g. priority). */
+  borderField?: string
+  /** App resource id for user avatar URLs (project/crm fingerprint). */
+  resourceId?: string
+  /** Highlight row when detail panel is open for this object. */
+  isSelected?: boolean
   isDragOver: boolean
   isDragBefore: boolean
   isDragAfter: boolean
@@ -70,6 +79,41 @@ function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 1) + '…'
 }
 
+function isPastDue(dateStr: string): boolean {
+  const due = new Date(dateStr + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return due < today
+}
+
+function withTruncationTooltip(fullText: string, maxLength: number, className?: string) {
+  const display = truncate(fullText, maxLength)
+  const node = <span className={cn('truncate block', className)}>{display}</span>
+  if (fullText.length <= maxLength) return node
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{node}</TooltipTrigger>
+      <TooltipContent className="max-w-sm whitespace-pre-wrap break-words">
+        {fullText}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function columnWidthClass(field: TreeRowField, isTitle: boolean): string {
+  if (isTitle) return 'min-w-[12rem] w-full max-w-0'
+  switch (field.fieldtype) {
+    case 'user':
+      return 'w-40 shrink-0'
+    case 'date':
+      return 'w-32 shrink-0'
+    case 'enumerated':
+      return 'w-36 shrink-0'
+    default:
+      return 'w-48 shrink-0 max-w-xs'
+  }
+}
+
 export function TreeRow({
   object,
   depth,
@@ -84,6 +128,9 @@ export function TreeRow({
   prefix,
   showClass = true,
   showId = true,
+  borderField,
+  resourceId,
+  isSelected = false,
   isDragOver,
   isDragBefore,
   isDragAfter,
@@ -99,9 +146,35 @@ export function TreeRow({
   const { formatDate } = useFormat()
   const { t } = useLingui()
 
-  const renderFieldValue = (field: TreeRowField, value: string) => {
+  let borderColor: string | undefined
+  if (borderField) {
+    const value = object.values[borderField]
+    if (value) {
+      const match = options[borderField]?.find((o) => o.id === value && o.colour)
+      if (match) borderColor = match.colour
+    }
+  }
+
+  const renderFieldValue = (field: TreeRowField, value: string, isTitleField: boolean) => {
     if (!value) {
-      return <span className='text-muted-foreground'>-</span>
+      if (field.fieldtype === 'date') {
+        return (
+          <span
+            className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 text-muted-foreground/45"
+            aria-hidden="true"
+          >
+            <Calendar className="size-3.5" />
+          </span>
+        )
+      }
+      if (field.fieldtype === 'user') {
+        return (
+          <span className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 text-muted-foreground/45 text-xs">
+            —
+          </span>
+        )
+      }
+      return <span className="text-muted-foreground">—</span>
     }
 
     switch (field.fieldtype) {
@@ -110,29 +183,50 @@ export function TreeRow({
         const option = fieldOptions.find((o) => o.id === value)
         if (option) {
           return (
-            <span className='inline-flex items-center gap-1.5'>
-              <span
-                className='size-2 rounded-full shrink-0'
-                style={{ backgroundColor: option.colour }}
-              />
-              <span className='truncate'>{option.name}</span>
+            <span className="inline-flex items-center gap-1.5 max-w-full">
+              {option.colour ? (
+                <span
+                  className="size-2 rounded-full shrink-0"
+                  style={{ backgroundColor: option.colour }}
+                />
+              ) : null}
+              <span className="truncate">{option.name}</span>
             </span>
           )
         }
-        return <span className='truncate'>{value}</span>
+        return <span className="truncate">{value}</span>
       }
 
       case 'date': {
         const date = new Date(value + 'T00:00:00')
-        return <span className='truncate'>{formatDate(date)}</span>
+        const overdue = isPastDue(value)
+        const label = formatDate(date)
+        return (
+          <span className={cn('truncate tabular-nums', overdue && 'text-destructive font-medium')}>
+            {label}
+          </span>
+        )
       }
 
       case 'user': {
         const name = peopleMap[value] || value
+        const avatarSrc = resourceId
+          ? `${getAppPath()}/${resourceId}/-/user/${value}/asset/avatar`
+          : undefined
+        const styleUrl = resourceId
+          ? `${getAppPath()}/${resourceId}/-/user/${value}/asset/style`
+          : undefined
         return (
-          <span className='inline-flex items-center gap-1.5 truncate'>
-            <EntityAvatar fingerprint={value} name={name} size="xs" />
-            <span className='truncate'>{truncate(name, 25)}</span>
+          <span className="inline-flex items-center gap-2 truncate max-w-full">
+            <EntityAvatar
+              src={avatarSrc}
+              styleUrl={styleUrl}
+              fingerprint={resourceId ? undefined : value}
+              seed={value}
+              name={name}
+              size="xs"
+            />
+            <span className="truncate text-sm">{truncate(name, 22)}</span>
           </span>
         )
       }
@@ -141,7 +235,7 @@ export function TreeRow({
         try {
           const items: TreeRowChecklistItem[] = JSON.parse(value)
           if (items.length === 0) {
-            return <span className='text-muted-foreground'>-</span>
+            return <span className="text-muted-foreground">—</span>
           }
           const doneCount = items.filter((item) => item.done).length
           const allDone = doneCount === items.length
@@ -151,37 +245,37 @@ export function TreeRow({
                 'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset',
                 allDone
                   ? 'bg-success/10 text-success ring-success/30'
-                  : 'bg-muted text-muted-foreground ring-border'
+                  : 'bg-muted text-muted-foreground ring-border',
               )}
             >
-              <CheckSquare className='size-3' />
+              <CheckSquare className="size-3" />
               {doneCount}/{items.length}
             </span>
           )
         } catch {
-          return <span className='text-muted-foreground'>-</span>
+          return <span className="text-muted-foreground">—</span>
         }
       }
 
       case 'text':
-      default:
-        return <span className='truncate'>{value}</span>
+      default: {
+        const maxLen = isTitleField ? 120 : 80
+        return withTruncationTooltip(
+          value,
+          maxLen,
+          isTitleField ? 'font-medium text-foreground' : 'text-muted-foreground',
+        )
+      }
     }
   }
 
-  // Calculate indentation (24px per level, applied to first content column)
-  const indentPx = depth * 24
+  const indentPx = depth * 20
   const hasId = prefix !== undefined && showId
   const firstContentCol = showClass ? 'class' : hasId ? 'id' : fields[0]?.id || ''
-  const indentStyle = indentPx > 0 ? { paddingLeft: indentPx } : undefined
+  const indentStyle = indentPx > 0 ? { paddingInlineStart: indentPx } : undefined
 
-  // Determine drop position based on mouse position within row
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
-
-    // Signal a move so the browser shows the move cursor and reliably
-    // dispatches the drop; without it some browsers render a no-drop cursor
-    // and the reparent can feel like it didn't register.
     e.dataTransfer.dropEffect = 'move'
 
     if (!rowRef.current) return
@@ -189,12 +283,6 @@ export function TreeRow({
     const rect = rowRef.current.getBoundingClientRect()
     const y = e.clientY - rect.top
     const height = rect.height
-
-    // Reorder gets generous bands at the top and bottom of the row; reparent
-    // (when allowed) sits in the middle. This mirrors the board: reordering is
-    // the easy gesture, reparenting the deliberate one. When a row is only a
-    // reorder target (e.g. siblings that can't contain each other) the whole
-    // row splits in half — which is why top-level rows reorder so reliably.
     const edge = canReparent ? height * 0.35 : height * 0.5
 
     if (canReorder && y < edge) {
@@ -204,7 +292,6 @@ export function TreeRow({
     } else if (canReparent) {
       onDragOver(object.id, 'on')
     } else if (canReorder) {
-      // Not a reparent target: the exact-midpoint sliver falls through to here.
       onDragOver(object.id, y < height * 0.5 ? 'before' : 'after')
     }
   }
@@ -214,9 +301,12 @@ export function TreeRow({
       ref={rowRef}
       data-card-id={object.id}
       className={cn(
-        'hover:bg-hover transition-colors cursor-pointer text-sm group relative',
-        isDragOver && 'bg-primary/20 ring-2 ring-inset ring-primary/50'
+        'hover:bg-hover transition-colors cursor-pointer text-sm group relative border-b border-border/60',
+        isSelected && 'bg-primary/10 hover:bg-primary/10 ring-1 ring-inset ring-primary/20',
+        isDragOver && 'bg-primary/20 ring-2 ring-inset ring-primary/50',
+        borderColor && 'border-s-[3px]',
       )}
+      style={borderColor ? { borderInlineStartColor: borderColor } : undefined}
       onClick={onClick}
       draggable
       onDragStart={(e) => {
@@ -228,99 +318,90 @@ export function TreeRow({
       onDrop={onDragEnd}
       onDragEnd={onDragEnd}
     >
-      {/* Drop indicator - before */}
-      {isDragBefore && (
-        <td
-          colSpan={100}
-          className='absolute -top-px left-0 right-0 pointer-events-none'
-        >
-          <div className='relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50'>
-            <div className='absolute -left-1 -top-[3px] size-2 rounded-full bg-primary' />
+      {isDragBefore ? (
+        <td colSpan={100} className="absolute -top-px left-0 right-0 pointer-events-none">
+          <div className="relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50">
+            <div className="absolute -start-1 -top-[3px] size-2 rounded-full bg-primary" />
           </div>
         </td>
-      )}
+      ) : null}
 
-      {/* Drag handle + expand/collapse */}
-      <td className='whitespace-nowrap py-1.5 ps-1 pe-0 w-0'>
-        <div className='flex items-center'>
-          <div className='w-5 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab'>
-            <GripVertical className='size-3' />
+      <td className="whitespace-nowrap py-2 ps-2 pe-2 w-10 min-w-10">
+        <div className="flex items-center gap-0.5">
+          <div className="w-5 shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab">
+            <GripVertical className="size-3" />
           </div>
           {hasChildren ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   aria-label={isExpanded ? t`Collapse` : t`Expand`}
-                  className='size-5 flex items-center justify-center hover:bg-hover transition-colors rounded'
+                  className="size-5 flex items-center justify-center hover:bg-hover transition-colors rounded"
                   onClick={(e) => {
                     e.stopPropagation()
                     onToggleExpand()
                   }}
                 >
                   {isExpanded ? (
-                    <ChevronDown className='size-4' />
+                    <ChevronDown className="size-4" />
                   ) : (
-                    <ChevronRight className='size-4 rtl:rotate-180' />
+                    <ChevronRight className="size-4 rtl:rotate-180" />
                   )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>{isExpanded ? t`Collapse` : t`Expand`}</TooltipContent>
             </Tooltip>
           ) : anySiblingHasChildren ? (
-            <div className='size-5' />
+            <div className="size-5" />
           ) : null}
         </div>
       </td>
 
-      {/* Class badge */}
-      {showClass && (
+      {showClass ? (
         <td
-          className='whitespace-nowrap ps-1 pe-2 py-1.5'
+          className="whitespace-nowrap ps-1 pe-2 py-2 w-24 shrink-0"
           style={firstContentCol === 'class' ? indentStyle : undefined}
         >
-          <span className='text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded'>
+          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
             {classMap[object.class] || object.class}
           </span>
         </td>
-      )}
+      ) : null}
 
-      {/* Object number */}
-      {hasId && (
+      {hasId ? (
         <td
-          className='whitespace-nowrap ps-1 pe-2 py-1.5 text-xs text-muted-foreground font-mono'
+          className="whitespace-nowrap ps-1 pe-2 py-2 text-xs text-muted-foreground font-mono w-20 shrink-0"
           style={firstContentCol === 'id' ? indentStyle : undefined}
         >
           {prefix}-{object.number}
         </td>
-      )}
+      ) : null}
 
-      {/* Field columns */}
       {fields.map((field) => {
         const isTitleField = field.id === titleFieldId
         const value = object.values[field.id] || ''
-        const displayValue = isTitleField ? truncate(value, 100) : value
         return (
           <td
             key={field.id}
-            className={cn('px-2 py-1.5', isTitleField ? '' : 'whitespace-nowrap')}
+            className={cn(
+              'px-2 py-2',
+              columnWidthClass(field, isTitleField),
+              firstContentCol === field.id && 'ps-3',
+            )}
             style={firstContentCol === field.id ? indentStyle : undefined}
           >
-            {renderFieldValue(field, displayValue)}
+            {renderFieldValue(field, value, isTitleField)}
           </td>
         )
       })}
 
-      {/* Drop indicator - after */}
-      {isDragAfter && (
-        <td
-          colSpan={100}
-          className='absolute -bottom-px left-0 right-0 pointer-events-none'
-        >
-          <div className='relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50'>
-            <div className='absolute -left-1 -top-[3px] size-2 rounded-full bg-primary' />
+      {isDragAfter ? (
+        <td colSpan={100} className="absolute -bottom-px left-0 right-0 pointer-events-none">
+          <div className="relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50">
+            <div className="absolute -start-1 -top-[3px] size-2 rounded-full bg-primary" />
           </div>
         </td>
-      )}
+      ) : null}
     </tr>
   )
 }
