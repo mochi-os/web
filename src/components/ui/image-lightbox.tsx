@@ -61,12 +61,12 @@ export function ImageLightbox({
   const [downloading, setDownloading] = useState(false)
 
   const handleDownload = useCallback(async () => {
-    if (downloading) return
+    if (downloading || !currentMedia) return
     setDownloading(true)
     const ok = await shellDownload(currentMedia.url, currentMedia.name)
     setDownloading(false)
     if (!ok) toast.error(t`Download failed`)
-  }, [currentMedia.url, currentMedia.name, downloading])
+  }, [currentMedia, downloading])
 
   // Reset loading/error state, zoom, and pause video when media changes
   useEffect(() => {
