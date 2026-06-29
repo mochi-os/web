@@ -199,17 +199,40 @@ function resolveCatalogTag(catalogs: Catalogs, language: string): string {
   return 'en'
 }
 
+function isEmptyCatalog(messages: Messages): boolean {
+  return Object.keys(messages).length === 0
+}
+
+/** Parent BCP 47 tag, or `en` for base locales, or null when exhausted. */
+function parentCatalogTag(tag: string): string | null {
+  const i = tag.lastIndexOf('-')
+  if (i < 0) return tag === 'en' ? null : 'en'
+  return tag.slice(0, i)
+}
+
 async function activate(catalogs: Catalogs, language: string): Promise<void> {
-  const tag = resolveCatalogTag(catalogs, language)
-  const loader = catalogs[tag]
-  if (!loader) {
-    // No catalog at all — Lingui falls back to source IDs.
-    i18n.activate(language)
-    return
+  let tag: string | null = resolveCatalogTag(catalogs, language)
+  const tried = new Set<string>()
+
+  while (tag && !tried.has(tag)) {
+    tried.add(tag)
+    const loader = catalogs[tag]
+    if (!loader) {
+      tag = parentCatalogTag(tag)
+      continue
+    }
+    const { messages } = await loader()
+    if (!isEmptyCatalog(messages)) {
+      i18n.load(tag, messages)
+      i18n.activate(tag)
+      return
+    }
+    // BUILD_LOCALES=en stubs non-en catalogs with `{}` — walk to parent/en.
+    tag = parentCatalogTag(tag)
   }
-  const { messages } = await loader()
-  i18n.load(tag, messages)
-  i18n.activate(tag)
+
+  // No non-empty catalog — Lingui falls back to message IDs.
+  i18n.activate(language)
 }
 
 export function I18nProvider({
