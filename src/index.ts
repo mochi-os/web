@@ -187,6 +187,7 @@ export * from './hooks/useAuth'
 export * from './hooks/use-logout'
 export * from './hooks/use-verify-session'
 export * from './hooks/use-shell-overlay'
+export * from './hooks/use-shell-immersive'
 export * from './hooks/use-require-auth'
 export * from './hooks/use-table-url-state'
 export * from './hooks/use-video-thumbnail'
@@ -229,6 +230,7 @@ export {
   shellSetTitle,
   shellSetSidebarState,
   shellSetSidebarPresent,
+  shellSetImmersive,
   shellSetLocale,
   shellSetLanguage,
   onShellMessage,
