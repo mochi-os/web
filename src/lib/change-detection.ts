@@ -45,6 +45,14 @@ export function unorderedArraysEqual(a: readonly string[], b: readonly string[])
   return arraysEqual(sortedA, sortedB)
 }
 
+export function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false
+  for (const value of a) {
+    if (!b.has(value)) return false
+  }
+  return true
+}
+
 export function jsonValueUnchanged(a: unknown, b: unknown): boolean {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
