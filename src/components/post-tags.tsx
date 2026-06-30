@@ -16,9 +16,13 @@ export interface PostTag {
   interest?: number
 }
 
-function interestHue(weight: number): number {
-  // Continuous: red(-100) → blue(0) → green(+100)
-  return 240 - (weight / 100) * 120
+// Diverging interest scale: red (−) ↔ grey (0) ↔ green (+). Hue carries the
+// sign, saturation the strength, so neutral reads as plain grey rather than a
+// colour you have to interpret. Used for tag text and the settings slider.
+export function interestColor(weight: number): string {
+  const magnitude = Math.min(1, Math.abs(weight) / 100)
+  const hue = weight >= 0 ? 145 : 4
+  return `hsl(${hue}, ${Math.round(6 + magnitude * 72)}%, ${Math.round(50 - magnitude * 3)}%)`
 }
 
 interface PostTagsTooltipProps {
@@ -159,7 +163,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
               onFilter?.(tag.label)
             }}
             title={tag.relevance != null && interest != null ? `Relevance ${tag.relevance}, interest ${interest}` : tag.relevance != null ? `Relevance ${tag.relevance}` : interest != null ? `Interest ${interest}` : undefined}
-            style={interest != null ? { color: `hsl(${interestHue(interest)}, 80%, 45%)` } : undefined}
+            style={interest != null ? { color: interestColor(interest) } : undefined}
           >
             #{tag.label}
           </button>
