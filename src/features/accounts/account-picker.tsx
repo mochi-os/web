@@ -18,8 +18,8 @@ import { getProviderLabel } from './types'
 interface AccountPickerProps {
   appBase: string
   capability: string
-  value?: number
-  onChange: (id: number | undefined) => void
+  value?: string
+  onChange: (id: string | undefined) => void
   allowAdd?: boolean
   placeholder?: string
 }
@@ -47,7 +47,7 @@ export function AccountPicker({
     if (val === '__add__') {
       setIsAddOpen(true)
     } else {
-      onChange(val ? parseInt(val, 10) : undefined)
+      onChange(val ? val : undefined)
     }
   }
 
@@ -64,7 +64,7 @@ export function AccountPicker({
   return (
     <>
       <Select
-        value={value?.toString() || ''}
+        value={value || ''}
         onValueChange={handleValueChange}
         disabled={isLoading}
       >
@@ -78,7 +78,7 @@ export function AccountPicker({
             const needsVerification = provider?.verify && !isVerified
 
             return (
-              <SelectItem key={account.id} value={account.id.toString()}>
+              <SelectItem key={account.id} value={account.id}>
                 <div className="flex items-center gap-2">
                   <span>
                     {account.label ||
