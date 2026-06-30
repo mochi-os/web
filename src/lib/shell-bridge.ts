@@ -205,6 +205,17 @@ export function shellSetSidebarPresent(present: boolean): void {
   }
 }
 
+/** Ask the shell to hide its chrome for an immersive view (e.g. a fullscreen
+ * game). The shell treats repeated `on: true` messages as a heartbeat and
+ * auto-restores its chrome if they stop, so a crashed or closed app can never
+ * leave the menu permanently hidden. Prefer the `useShellImmersive` hook, which
+ * sends the heartbeat and always restores on unmount. */
+export function shellSetImmersive(on: boolean): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'immersive', on }, '*')
+  }
+}
+
 /** Broadcast locale preference changes to the shell (which forwards to all iframes) */
 export function shellSetLocale(locale: LocalePreferences): void {
   if (isInShell()) {
