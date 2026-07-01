@@ -5,7 +5,10 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import { getApiBasepath, getAppPath, isDomainEntityRouting, useAuthStore, isInShell } from '@mochi/web'
+import { getApiBasepath, getAppPath, isDomainEntityRouting } from './app-path'
+import { isInShell } from './shell-bridge'
+import { useAuthStore } from '../stores/auth-store'
+import { attachApiResponseInterceptors } from './api-response-interceptors'
 
 export interface AppClientOptions {
   /**
@@ -78,6 +81,8 @@ export function createAppClient({
 
     return config
   })
+
+  attachApiResponseInterceptors(client)
 
   // We wrap the client to provide a cleaner async API (returning response.data)
   return {
