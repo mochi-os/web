@@ -108,7 +108,7 @@ function AccountItem({
 }: {
   account: Account
   providers: Provider[]
-  onRemove: (id: number) => void
+  onRemove: (id: string) => void
   onVerify: (account: Account) => void
   isRemoving: boolean
 }) {
@@ -226,7 +226,7 @@ export function AccountManager({
     }
   }
 
-  const handleRemove = async (id: number) => {
+  const handleRemove = async (id: string) => {
     try {
       await remove(id)
       toast.success(t`Account removed`)
@@ -235,7 +235,7 @@ export function AccountManager({
     }
   }
 
-  const handleVerify = async (id: number, code: string) => {
+  const handleVerify = async (id: string, code: string) => {
     try {
       const result = await verify(id, code)
       if (result) {
@@ -249,7 +249,7 @@ export function AccountManager({
     }
   }
 
-  const handleResend = async (id: number) => {
+  const handleResend = async (id: string) => {
     try {
       await verify(id)
       toast.success(t`Verification code sent`)

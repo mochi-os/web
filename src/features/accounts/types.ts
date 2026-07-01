@@ -25,7 +25,7 @@ export function getProviderLabel(type: string): string {
 }
 
 export interface Account {
-  id: number
+  id: string
   type: string
   label: string
   identifier: string
@@ -67,10 +67,10 @@ export interface AccountsHookResult {
   /** Error from the accounts list query, if it failed */
   accountsError: unknown
   add: (type: string, fields: Record<string, string>, addToExisting?: boolean) => Promise<Account>
-  remove: (id: number) => Promise<boolean>
-  update: (id: number, fields: Record<string, string>) => Promise<boolean>
-  verify: (id: number, code?: string) => Promise<boolean>
-  test: (id: number) => Promise<AccountTestResult>
+  remove: (id: string) => Promise<boolean>
+  update: (id: string, fields: Record<string, string>) => Promise<boolean>
+  verify: (id: string, code?: string) => Promise<boolean>
+  test: (id: string) => Promise<AccountTestResult>
   refetch: () => void
   isAdding: boolean
   isRemoving: boolean

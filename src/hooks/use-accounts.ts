@@ -123,9 +123,9 @@ export function useAccounts(
   })
 
   const removeMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const formData = new URLSearchParams()
-      formData.append('id', String(id))
+      formData.append('id', id)
 
       const res = await requestHelpers.post<boolean>(
         `${appBase}/-/accounts/remove`,
@@ -146,11 +146,11 @@ export function useAccounts(
       id,
       fields,
     }: {
-      id: number
+      id: string
       fields: Record<string, string>
     }) => {
       const formData = new URLSearchParams()
-      formData.append('id', String(id))
+      formData.append('id', id)
       for (const [key, value] of Object.entries(fields)) {
         formData.append(key, value)
       }
@@ -170,9 +170,9 @@ export function useAccounts(
   })
 
   const verifyMutation = useMutation({
-    mutationFn: async ({ id, code }: { id: number; code?: string }) => {
+    mutationFn: async ({ id, code }: { id: string; code?: string }) => {
       const formData = new URLSearchParams()
-      formData.append('id', String(id))
+      formData.append('id', id)
       if (code) {
         formData.append('code', code)
       }
@@ -192,9 +192,9 @@ export function useAccounts(
   })
 
   const testMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const formData = new URLSearchParams()
-      formData.append('id', String(id))
+      formData.append('id', id)
 
       const res = await requestHelpers.post<AccountTestResult>(
         `${appBase}/-/accounts/test`,
@@ -218,16 +218,16 @@ export function useAccounts(
       if (!result) throw new Error("Failed to add account")
       return result
     },
-    remove: async (id: number) => {
+    remove: async (id: string) => {
       return removeMutation.mutateAsync(id)
     },
-    update: async (id: number, fields: Record<string, string>) => {
+    update: async (id: string, fields: Record<string, string>) => {
       return updateMutation.mutateAsync({ id, fields })
     },
-    verify: async (id: number, code?: string) => {
+    verify: async (id: string, code?: string) => {
       return verifyMutation.mutateAsync({ id, code })
     },
-    test: async (id: number) => {
+    test: async (id: string) => {
       return testMutation.mutateAsync(id)
     },
     refetch: () => refetch(),

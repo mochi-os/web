@@ -21,8 +21,8 @@ interface AccountVerifyProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   account: Account
-  onVerify: (id: number, code: string) => Promise<void>
-  onResend: (id: number) => Promise<void>
+  onVerify: (id: string, code: string) => Promise<void>
+  onResend: (id: string) => Promise<void>
   isVerifying: boolean
 }
 
