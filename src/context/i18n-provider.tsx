@@ -25,6 +25,7 @@
 // `{value, mochiDate}` etc. They delegate to format helpers via the active
 // locale set by LocaleProvider — see registerLocaleFormatters() below.
 import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { i18n, type Messages } from '@lingui/core'
 import { I18nProvider as LinguiProvider } from '@lingui/react'
 import { getShellInitData, initShellBridge, onShellMessage } from '../lib/shell-bridge'
@@ -238,9 +239,12 @@ async function activate(catalogs: Catalogs, language: string): Promise<void> {
 export function I18nProvider({
   children,
   catalogs,
+  bootstrapFallback,
 }: {
   children: React.ReactNode
   catalogs: Catalogs
+  /** Shown while the first catalog loads. Defaults to a centered spinner. */
+  bootstrapFallback?: React.ReactNode
 }) {
   const [language, setLanguage] = useState(() => pickInitialLanguage(catalogs))
   const [ready, setReady] = useState(false)
@@ -311,8 +315,25 @@ export function I18nProvider({
     }
   }, [catalogs])
 
-  if (!ready) return null
   const dir = isRtlLocale(language) ? 'rtl' : 'ltr'
+
+  if (!ready) {
+    return (
+      <RdxDirProvider dir={dir}>
+        {bootstrapFallback ?? (
+          <div
+            className='text-muted-foreground flex min-h-[50vh] flex-col items-center justify-center gap-3'
+            role='status'
+            aria-busy='true'
+            aria-live='polite'
+          >
+            <Loader2 className='size-6 animate-spin' />
+          </div>
+        )}
+      </RdxDirProvider>
+    )
+  }
+
   return (
     <RdxDirProvider dir={dir}>
       <LinguiProvider i18n={i18n}>{children}</LinguiProvider>
