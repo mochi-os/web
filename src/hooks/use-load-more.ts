@@ -1,8 +1,7 @@
 // Copyright © 2026 Mochi OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 
 export interface PaginatedResult<T> {
   items: T[]

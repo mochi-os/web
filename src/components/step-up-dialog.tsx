@@ -212,7 +212,7 @@ export function StepUpDialog({
     }
   }
 
-  const useOauth = async (provider: string) => {
+  const verifyOauth = async (provider: string) => {
     setBusy(true)
     setError('')
     try {
@@ -346,7 +346,7 @@ export function StepUpDialog({
                     key={p}
                     variant='outline'
                     className='w-full'
-                    onClick={() => useOauth(p)}
+                    onClick={() => verifyOauth(p)}
                     disabled={busy}
                   >
                     <Trans>Continue with {label}</Trans>
