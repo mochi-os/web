@@ -46,29 +46,41 @@ function formatErrorMessage(message: string): string | undefined {
 }
 
 function getInlineCopy(status: number, rawMessage: string, errorMessage?: string) {
-  if (errorMessage) {
-    return { title: errorMessage, description: undefined }
-  }
-
   const lowerMessage = rawMessage.toLowerCase()
 
-  if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
-    return { title: "You do not have access to this section.", description: undefined }
+  if (lowerMessage.includes('network') || lowerMessage.includes('failed to fetch') || lowerMessage.includes('internet connection')) {
+    return { 
+      title: <Trans>Network error</Trans>, 
+      description: <Trans>Please check your internet connection and try again.</Trans> 
+    }
   }
 
-  if (lowerMessage.includes('network') || lowerMessage.includes('failed to fetch')) {
-    return { title: "Check your connection and try again.", description: undefined }
+  if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
+    return { 
+      title: <Trans>Access denied</Trans>, 
+      description: <Trans>You do not have access to this section.</Trans> 
+    }
   }
 
   if (status === 404) {
-    return { title: "Not found", description: undefined }
+    return { 
+      title: <Trans>Not found</Trans>, 
+      description: <Trans>The requested content could not be found.</Trans> 
+    }
   }
 
   if (status === 429) {
-    return { title: "Too many requests. Please wait a moment and try again.", description: undefined }
+    return { 
+      title: <Trans>Too many requests</Trans>, 
+      description: <Trans>Please wait a moment and try again.</Trans> 
+    }
   }
 
-  return { title: "Please try again.", description: undefined }
+  if (errorMessage && errorMessage.toLowerCase() !== 'network error') {
+    return { title: errorMessage, description: undefined }
+  }
+
+  return { title: <Trans>Please try again.</Trans>, description: undefined }
 }
 
 export function GeneralError({

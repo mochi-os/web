@@ -195,8 +195,13 @@ export function normalizeError(
   if (!message && error instanceof Error) {
     const errorMessage = asNonEmptyString(error.message)
     if (errorMessage) {
-      message = errorMessage
-      source = 'error.message'
+      if (errorMessage.toLowerCase() === 'network error' || errorMessage.toLowerCase() === 'failed to fetch') {
+        message = 'Please check your internet connection and try again.'
+        source = 'error.message (network)'
+      } else {
+        message = errorMessage
+          source = 'error.message'
+      }
     }
   }
 

@@ -28,7 +28,7 @@ export interface AppClientOptions {
  */
 export function createAppClient({
   appName,
-  timeout = 0,
+  timeout = 30000,
 }: AppClientOptions = {}) {
   const client = axios.create({
     timeout,

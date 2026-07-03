@@ -175,10 +175,8 @@ export async function handleApiResponseError(
         if (logoutHandler) {
           logoutHandler('Session expired')
         } else {
-          // Fallback: page reload gets fresh token if session valid
           useAuthStore.getState().clearAuth()
-          toast.error(t`Session expired`)
-          window.location.reload()
+          toast.error(t`Session expired. Please log in again.`)
         }
       }
 
@@ -193,6 +191,17 @@ export async function handleApiResponseError(
 
     case 404: {
       logDevError('[API] 404 Not Found', error)
+      break
+    }
+
+    case 409: {
+      logDevError('[API] 409 Conflict', error)
+      maybeToastGlobalError({
+        config: error.config,
+        statusKey: '409',
+        title: t`Data conflict`,
+        description: t`Another change was made at the same time. Please refresh to see the latest version.`,
+      })
       break
     }
 
