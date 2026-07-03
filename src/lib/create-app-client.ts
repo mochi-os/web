@@ -82,7 +82,10 @@ export function createAppClient({
     return config
   })
 
-  attachApiResponseInterceptors(client)
+  attachApiResponseInterceptors(client, {
+    defaultShowGlobalErrorToast: false,
+    suppressNoHandlerFallback: true,
+  })
 
   // We wrap the client to provide a cleaner async API (returning response.data)
   return {
