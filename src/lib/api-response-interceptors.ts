@@ -32,7 +32,15 @@ function getRequestUrl(config?: AxiosRequestConfig): string {
   return `${base}${url}` || '<unknown>'
 }
 
-function shouldShowGlobalErrorToast(config?: AxiosRequestConfig): boolean {
+export interface AttachInterceptorOptions {
+  defaultShowGlobalErrorToast?: boolean
+  suppressNoHandlerFallback?: boolean
+}
+
+function shouldShowGlobalErrorToast(
+  config: AxiosRequestConfig | undefined,
+  defaultShow: boolean
+): boolean {
   const explicit = config?.mochi?.showGlobalErrorToast
   if (typeof explicit === 'boolean') {
     return explicit
@@ -40,11 +48,15 @@ function shouldShowGlobalErrorToast(config?: AxiosRequestConfig): boolean {
 
   const method = config?.method?.toUpperCase()
   if (!method) {
-    return true
+    return defaultShow
   }
 
   // Query-style requests should render inline section errors instead.
-  return method !== 'GET' && method !== 'HEAD'
+  if (method === 'GET' || method === 'HEAD') {
+    return false
+  }
+
+  return defaultShow
 }
 
 function getToastDedupeKey(
@@ -94,13 +106,15 @@ function maybeToastGlobalError({
   statusKey,
   title,
   description,
+  defaultShow,
 }: {
   config?: AxiosRequestConfig
   statusKey: string
   title: string
   description?: string
+  defaultShow: boolean
 }): void {
-  if (!shouldShowGlobalErrorToast(config)) {
+  if (!shouldShowGlobalErrorToast(config, defaultShow)) {
     return
   }
 
@@ -122,150 +136,191 @@ export const setLogoutHandler = (handler: (reason?: string) => void) => {
   logoutHandler = handler
 }
 
+function makeHandleApiResponseSuccess(
+  opts: Required<AttachInterceptorOptions>
+) {
+  return function handleApiResponseSuccess<T>(
+    response: AxiosResponse<T>
+  ): AxiosResponse<T> {
+    // Check for application-level errors in successful HTTP responses
+    // Some backends return HTTP 200 with error details in the response body
+    const responseData = response.data as unknown
+    if (
+      responseData &&
+      typeof responseData === 'object' &&
+      'error' in responseData &&
+      'status' in responseData
+    ) {
+      const errorData = responseData as { error?: string; status?: number }
+      if (errorData.error && errorData.status && errorData.status >= 400) {
+        maybeToastGlobalError({
+          config: response.config,
+          statusKey: `app-${errorData.status}`,
+          title: errorData.error || t`An error occurred`,
+          defaultShow: opts.defaultShowGlobalErrorToast,
+        })
+
+        if (import.meta.env.DEV) {
+          devConsole?.error?.(
+            `[API] Application error: ${errorData.error} (status: ${errorData.status})`
+          )
+        }
+      }
+    }
+
+    return response
+  }
+}
+
+// Legacy export kept for tests that reference the standalone function.
 export function handleApiResponseSuccess<T>(
   response: AxiosResponse<T>
 ): AxiosResponse<T> {
-  // Check for application-level errors in successful HTTP responses
-  // Some backends return HTTP 200 with error details in the response body
-  const responseData = response.data as unknown
-  if (
-    responseData &&
-    typeof responseData === 'object' &&
-    'error' in responseData &&
-    'status' in responseData
-  ) {
-    const errorData = responseData as { error?: string; status?: number }
-    if (errorData.error && errorData.status && errorData.status >= 400) {
-      maybeToastGlobalError({
-        config: response.config,
-        statusKey: `app-${errorData.status}`,
-        title: errorData.error || t`An error occurred`,
-      })
-
-      if (import.meta.env.DEV) {
-        devConsole?.error?.(
-          `[API] Application error: ${errorData.error} (status: ${errorData.status})`
-        )
-      }
-    }
-  }
-
-  return response
+  return makeHandleApiResponseSuccess({
+    defaultShowGlobalErrorToast: true,
+    suppressNoHandlerFallback: false,
+  })(response)
 }
 
+function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
+  return async function handleApiResponseError(
+    error: AxiosError
+  ): Promise<never> {
+    const status = error.response?.status
+
+    switch (status) {
+      case 401: {
+        logDevError('[API] 401 Unauthorized', error)
+
+        const isAuthEndpoint =
+          error.config?.url?.includes('/login') ||
+          error.config?.url?.includes('/auth') ||
+          error.config?.url?.includes('/verify')
+
+        // Only redirect if user had a session that expired
+        // Don't redirect if user was never authenticated (anonymous access)
+        const hadSession = useAuthStore.getState().token
+
+        if (!isAuthEndpoint && hadSession) {
+          if (logoutHandler) {
+            logoutHandler('Session expired')
+          } else if (!opts.suppressNoHandlerFallback) {
+            useAuthStore.getState().clearAuth()
+            toast.error(t`Session expired`)
+            window.location.reload()
+          } else {
+            logDevError(
+              '[API] 401 with no logout handler — letting error propagate',
+              error
+            )
+          }
+        }
+
+        break
+      }
+
+      case 403: {
+        // Permission errors are handled by components using isPermissionError()
+        logDevError('[API] 403 Forbidden', error)
+        break
+      }
+
+      case 404: {
+        logDevError('[API] 404 Not Found', error)
+        break
+      }
+
+      case 500: {
+        logDevError('[API] Server error', error)
+        const responseData = error.response?.data as
+          | { error?: string; message?: string }
+          | undefined
+        const errorMessage =
+          responseData?.error ??
+          responseData?.message ??
+          t`An unexpected error occurred`
+        maybeToastGlobalError({
+          config: error.config,
+          statusKey: '500',
+          title: t`Server error`,
+          description: errorMessage,
+          defaultShow: opts.defaultShowGlobalErrorToast,
+        })
+        if (import.meta.env.DEV) {
+          devConsole?.error?.(
+            `[API] 500 Error for ${error.config?.method?.toUpperCase()} ${error.config?.baseURL}${error.config?.url}`
+          )
+          devConsole?.error?.('[API] Response data:', error.response?.data)
+        }
+        break
+      }
+
+      case 502:
+      case 503: {
+        logDevError('[API] Server error', error)
+        const responseData = error.response?.data as
+          | { error?: string; message?: string }
+          | undefined
+        const errorMessage =
+          responseData?.error ??
+          responseData?.message ??
+          t`Unable to connect to remote server`
+        maybeToastGlobalError({
+          config: error.config,
+          statusKey: String(status),
+          title: t`Server error`,
+          description: errorMessage,
+          defaultShow: opts.defaultShowGlobalErrorToast,
+        })
+        break
+      }
+
+      default: {
+        if (!error.response) {
+          // Don't show network error for canceled requests (e.g., page refresh/navigation)
+          if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+            logDevError('[API] Request canceled', error)
+          } else {
+            logDevError('[API] Network error', error)
+            maybeToastGlobalError({
+              config: error.config,
+              statusKey: 'network',
+              title: t`Network error`,
+              description: t`Please check your internet connection and try again.`,
+              defaultShow: opts.defaultShowGlobalErrorToast,
+            })
+          }
+        } else {
+          logDevError('[API] Response error', error)
+        }
+      }
+    }
+
+    return Promise.reject(error)
+  }
+}
+
+// Legacy export kept for tests that reference the standalone function.
 export async function handleApiResponseError(
   error: AxiosError
 ): Promise<never> {
-  const status = error.response?.status
-
-  switch (status) {
-    case 401: {
-      logDevError('[API] 401 Unauthorized', error)
-
-      const isAuthEndpoint =
-        error.config?.url?.includes('/login') ||
-        error.config?.url?.includes('/auth') ||
-        error.config?.url?.includes('/verify')
-
-      // Only redirect if user had a session that expired
-      // Don't redirect if user was never authenticated (anonymous access)
-      const hadSession = useAuthStore.getState().token
-
-      if (!isAuthEndpoint && hadSession) {
-        if (logoutHandler) {
-          logoutHandler('Session expired')
-        } else {
-          // Fallback: page reload gets fresh token if session valid
-          useAuthStore.getState().clearAuth()
-          toast.error(t`Session expired`)
-          window.location.reload()
-        }
-      }
-
-      break
-    }
-
-    case 403: {
-      // Permission errors are handled by components using isPermissionError()
-      logDevError('[API] 403 Forbidden', error)
-      break
-    }
-
-    case 404: {
-      logDevError('[API] 404 Not Found', error)
-      break
-    }
-
-    case 500: {
-      logDevError('[API] Server error', error)
-      const responseData = error.response?.data as
-        | { error?: string; message?: string }
-        | undefined
-      const errorMessage =
-        responseData?.error ??
-        responseData?.message ??
-        t`An unexpected error occurred`
-      maybeToastGlobalError({
-        config: error.config,
-        statusKey: '500',
-        title: t`Server error`,
-        description: errorMessage,
-      })
-      if (import.meta.env.DEV) {
-        devConsole?.error?.(
-          `[API] 500 Error for ${error.config?.method?.toUpperCase()} ${error.config?.baseURL}${error.config?.url}`
-        )
-        devConsole?.error?.('[API] Response data:', error.response?.data)
-      }
-      break
-    }
-
-    case 502:
-    case 503: {
-      logDevError('[API] Server error', error)
-      const responseData = error.response?.data as
-        | { error?: string; message?: string }
-        | undefined
-      const errorMessage =
-        responseData?.error ??
-        responseData?.message ??
-        t`Unable to connect to remote server`
-      maybeToastGlobalError({
-        config: error.config,
-        statusKey: String(status),
-        title: t`Server error`,
-        description: errorMessage,
-      })
-      break
-    }
-
-    default: {
-      if (!error.response) {
-        // Don't show network error for canceled requests (e.g., page refresh/navigation)
-        if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
-          logDevError('[API] Request canceled', error)
-        } else {
-          logDevError('[API] Network error', error)
-          maybeToastGlobalError({
-            config: error.config,
-            statusKey: 'network',
-            title: t`Network error`,
-            description: t`Please check your internet connection and try again.`,
-          })
-        }
-      } else {
-        logDevError('[API] Response error', error)
-      }
-    }
-  }
-
-  return Promise.reject(error)
+  return makeHandleApiResponseError({
+    defaultShowGlobalErrorToast: true,
+    suppressNoHandlerFallback: false,
+  })(error)
 }
 
-export function attachApiResponseInterceptors(client: AxiosInstance): void {
+export function attachApiResponseInterceptors(
+  client: AxiosInstance,
+  options?: AttachInterceptorOptions
+): void {
+  const opts: Required<AttachInterceptorOptions> = {
+    defaultShowGlobalErrorToast: options?.defaultShowGlobalErrorToast ?? true,
+    suppressNoHandlerFallback: options?.suppressNoHandlerFallback ?? false,
+  }
   client.interceptors.response.use(
-    handleApiResponseSuccess,
-    handleApiResponseError
+    makeHandleApiResponseSuccess(opts),
+    makeHandleApiResponseError(opts)
   )
 }
 
