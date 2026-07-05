@@ -8,6 +8,7 @@ import { Search, Loader2, type LucideIcon } from 'lucide-react'
 import { Input } from './ui/input'
 import { requestHelpers } from '../lib/request'
 import { getAppPath } from '../lib/app-path'
+import { parseMochiEntityUri } from '../lib/mochi-uri'
 import { usePageTitle } from '../hooks/use-page-title'
 import { Header } from './layout/header'
 import { Main } from './layout/main'
@@ -19,6 +20,8 @@ interface DirectoryEntry extends EntityCardItem {
   class?: string
   location?: string
   subscribed?: boolean
+  /** libp2p peer from a pasted mochi://<peer>/<entity> link; reaches a private entity. */
+  peer?: string
 }
 
 interface RecommendedEntity extends EntityCardItem {
@@ -81,6 +84,11 @@ export function FindEntityPage({
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [pendingEntityId, setPendingEntityId] = useState<string | null>(null)
 
+  // A pasted mochi://<peer>/<entity> link reaches a PRIVATE entity directly by
+  // peer (the ACL still gates access). When the box holds one, offer a direct
+  // subscribe instead of a directory search (which can't find a private entity).
+  const pastedUri = parseMochiEntityUri(searchQuery)
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500)
@@ -102,7 +110,7 @@ export function FindEntityPage({
       )
       return Array.isArray(response) ? response : (response.results || [])
     },
-    enabled: debouncedSearch.length > 0,
+    enabled: debouncedSearch.length > 0 && !pastedUri,
   })
 
   const results = data || []
@@ -146,7 +154,20 @@ export function FindEntityPage({
             />
           </div>
 
-          {isLoading && debouncedSearch && (
+          {pastedUri && (
+            <EntityCard
+              entity={{ id: pastedUri.entity, name: pastedUri.entity }}
+              icon={Icon}
+              iconClassName={iconClassName}
+              isPending={pendingEntityId === pastedUri.entity}
+              onSubscribe={() =>
+                handleSubscribe({ id: pastedUri.entity, name: pastedUri.entity, peer: pastedUri.peer })
+              }
+              subscribeLabel={subscribeLabel}
+            />
+          )}
+
+          {!pastedUri && isLoading && debouncedSearch && (
             <div className='flex flex-col items-center justify-center py-12 gap-2'>
               <Loader2 className='text-primary size-8 animate-spin' />
               <p className='text-sm text-muted-foreground'><Trans>Searching...</Trans></p>
