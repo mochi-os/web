@@ -45,10 +45,10 @@ function formatErrorMessage(message: string): string | undefined {
   return trimmed
 }
 
-function getInlineCopy(status: number, rawMessage: string, errorMessage?: string) {
+function getInlineCopy(status: number, rawMessage: string, errorMessage?: string, source?: string) {
   const lowerMessage = rawMessage.toLowerCase()
 
-  if (lowerMessage.includes('network') || lowerMessage.includes('failed to fetch') || lowerMessage.includes('internet connection')) {
+  if (source === 'error.message (network)') {
     return { 
       title: <Trans>Network error</Trans>, 
       description: <Trans>Please check your internet connection and try again.</Trans> 
@@ -58,21 +58,21 @@ function getInlineCopy(status: number, rawMessage: string, errorMessage?: string
   if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
     return { 
       title: <Trans>Access denied</Trans>, 
-      description: <Trans>You do not have access to this section.</Trans> 
+      description: errorMessage ?? <Trans>You do not have access to this section.</Trans> 
     }
   }
 
   if (status === 404) {
     return { 
       title: <Trans>Not found</Trans>, 
-      description: <Trans>The requested content could not be found.</Trans> 
+      description: errorMessage ?? <Trans>The requested content could not be found.</Trans> 
     }
   }
 
   if (status === 429) {
     return { 
       title: <Trans>Too many requests</Trans>, 
-      description: <Trans>Please wait a moment and try again.</Trans> 
+      description: errorMessage ?? <Trans>Please wait a moment and try again.</Trans> 
     }
   }
 
@@ -95,7 +95,7 @@ export function GeneralError({
   const message = normalized.message
   const errorMessage = formatErrorMessage(message)
   const displayMessage = errorMessage ?? message
-  const inlineCopy = getInlineCopy(statusCode, message, errorMessage)
+  const inlineCopy = getInlineCopy(statusCode, message, errorMessage, normalized.source)
 
   // Use the error message as the heading if it's descriptive
   const isDescriptiveMessage = !!errorMessage &&

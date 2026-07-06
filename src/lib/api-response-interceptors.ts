@@ -202,11 +202,13 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
         const hadSession = useAuthStore.getState().token
 
         if (!isAuthEndpoint && hadSession) {
-          if (logoutHandler) {
-            logoutHandler('Session expired')
-          } else {
-            useAuthStore.getState().clearAuth()
-            toast.error(t`Session expired. Please log in again.`)
+          if (!opts.suppressNoHandlerFallback) {
+            if (logoutHandler) {
+              logoutHandler('Session expired')
+            } else {
+              useAuthStore.getState().clearAuth()
+              toast.error(t`Session expired. Please log in again.`)
+            }
           }
         }
 
@@ -226,13 +228,20 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
 
       case 409: {
         logDevError('[API] 409 Conflict', error)
-        maybeToastGlobalError({
-          config: error.config,
-          statusKey: '409',
-          title: t`Data conflict`,
-          description: t`Another change was made at the same time. Please refresh to see the latest version.`,
-          defaultShow: opts.defaultShowGlobalErrorToast,
-        })
+        const responseData = error.response?.data as
+          | { error?: string; message?: string }
+          | undefined
+        const serverMessage = responseData?.message ?? responseData?.error
+        
+        if (serverMessage) {
+          maybeToastGlobalError({
+            config: error.config,
+            statusKey: '409',
+            title: t`Data conflict`,
+            description: serverMessage,
+            defaultShow: opts.defaultShowGlobalErrorToast,
+          })
+        }
         break
       }
 
