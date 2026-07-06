@@ -34,7 +34,7 @@ function getRequestUrl(config?: AxiosRequestConfig): string {
 
 export interface AttachInterceptorOptions {
   defaultShowGlobalErrorToast?: boolean
-  suppressNoHandlerFallback?: boolean
+  suppress401Handling?: boolean
 }
 
 function shouldShowGlobalErrorToast(
@@ -178,7 +178,7 @@ export function handleApiResponseSuccess<T>(
 ): AxiosResponse<T> {
   return makeHandleApiResponseSuccess({
     defaultShowGlobalErrorToast: true,
-    suppressNoHandlerFallback: false,
+    suppress401Handling: false,
   })(response)
 }
 
@@ -202,7 +202,7 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
         const hadSession = useAuthStore.getState().token
 
         if (!isAuthEndpoint && hadSession) {
-          if (!opts.suppressNoHandlerFallback) {
+          if (!opts.suppress401Handling) {
             if (logoutHandler) {
               logoutHandler('Session expired')
             } else {
@@ -321,7 +321,7 @@ export async function handleApiResponseError(
 ): Promise<never> {
   return makeHandleApiResponseError({
     defaultShowGlobalErrorToast: true,
-    suppressNoHandlerFallback: false,
+    suppress401Handling: false,
   })(error)
 }
 
@@ -331,7 +331,7 @@ export function attachApiResponseInterceptors(
 ): void {
   const opts: Required<AttachInterceptorOptions> = {
     defaultShowGlobalErrorToast: options?.defaultShowGlobalErrorToast ?? true,
-    suppressNoHandlerFallback: options?.suppressNoHandlerFallback ?? false,
+    suppress401Handling: options?.suppress401Handling ?? false,
   }
   client.interceptors.response.use(
     makeHandleApiResponseSuccess(opts),

@@ -74,7 +74,9 @@ apiClient.interceptors.request.use(
   }
 )
 
-attachApiResponseInterceptors(apiClient)
+attachApiResponseInterceptors(apiClient, {
+  suppress401Handling: isInShell(),
+})
 
 export function isAuthError(error: unknown): boolean {
   return (

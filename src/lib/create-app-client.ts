@@ -84,7 +84,7 @@ export function createAppClient({
 
   attachApiResponseInterceptors(client, {
     defaultShowGlobalErrorToast: false,
-    suppressNoHandlerFallback: true,
+    suppress401Handling: isInShell(),
   })
 
   // We wrap the client to provide a cleaner async API (returning response.data)
