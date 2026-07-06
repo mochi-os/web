@@ -8,7 +8,7 @@ import { Search, Loader2, type LucideIcon } from 'lucide-react'
 import { Input } from './ui/input'
 import { requestHelpers } from '../lib/request'
 import { getAppPath } from '../lib/app-path'
-import { parseMochiEntityUri } from '../lib/mochi-uri'
+import { parseMochiEntityUri, type MochiEntityUri } from '../lib/mochi-uri'
 import { usePageTitle } from '../hooks/use-page-title'
 import { Header } from './layout/header'
 import { Main } from './layout/main'
@@ -31,6 +31,8 @@ interface RecommendedEntity extends EntityCardItem {
 interface FindEntityPageProps {
   /** Called when user clicks subscribe on an entity */
   onSubscribe: (entityId: string, entity: DirectoryEntry) => Promise<void>
+  /** Resolve a pasted mochi:// URI to a named entry (e.g. via the app's probe action). */
+  resolveUri?: (uri: MochiEntityUri) => Promise<DirectoryEntry | null>
   /** Set of already subscribed entity IDs or fingerprints */
   subscribedIds?: Set<string>
   /** Entity class being searched (e.g., "feed", "forum", "wiki") */
@@ -63,6 +65,7 @@ interface FindEntityPageProps {
 
 export function FindEntityPage({
   onSubscribe,
+  resolveUri,
   subscribedIds = new Set(),
   entityClass,
   searchEndpoint,
@@ -88,6 +91,16 @@ export function FindEntityPage({
   // peer (the ACL still gates access). When the box holds one, offer a direct
   // subscribe instead of a directory search (which can't find a private entity).
   const pastedUri = parseMochiEntityUri(searchQuery)
+
+  // Resolve the pasted link to its real name via the app's probe action, so the
+  // card shows the feed/forum/etc. name rather than a raw entity id.
+  const { data: resolvedEntry, isLoading: isResolving } = useQuery({
+    queryKey: [entityClass, 'resolve-uri', pastedUri?.peer, pastedUri?.entity],
+    queryFn: () => resolveUri!(pastedUri!),
+    enabled: !!pastedUri && !!resolveUri,
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
 
   // Debounce search input
   useEffect(() => {
@@ -154,14 +167,29 @@ export function FindEntityPage({
             />
           </div>
 
-          {pastedUri && (
+          {pastedUri && isResolving && (
+            <div className='flex items-center justify-center py-8'>
+              <Loader2 className='text-muted-foreground size-5 animate-spin' />
+            </div>
+          )}
+
+          {pastedUri && !isResolving && (
             <EntityCard
-              entity={{ id: pastedUri.entity, name: pastedUri.entity }}
+              entity={{
+                id: resolvedEntry?.id || pastedUri.entity,
+                name: resolvedEntry?.name || pastedUri.entity,
+                fingerprint: resolvedEntry?.fingerprint,
+                blurb: resolvedEntry?.blurb,
+              }}
               icon={Icon}
               iconClassName={iconClassName}
-              isPending={pendingEntityId === pastedUri.entity}
+              isPending={pendingEntityId === (resolvedEntry?.id || pastedUri.entity)}
               onSubscribe={() =>
-                handleSubscribe({ id: pastedUri.entity, name: pastedUri.entity, peer: pastedUri.peer })
+                handleSubscribe({
+                  id: resolvedEntry?.id || pastedUri.entity,
+                  name: resolvedEntry?.name || pastedUri.entity,
+                  peer: resolvedEntry?.peer || pastedUri.peer,
+                })
               }
               subscribeLabel={subscribeLabel}
             />
