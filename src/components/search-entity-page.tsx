@@ -13,8 +13,7 @@ import { usePageTitle } from '../hooks/use-page-title'
 import { Header } from './layout/header'
 import { Main } from './layout/main'
 import { GeneralError } from '../features/errors/general-error'
-import { EntityCard } from './entity-card'
-import type { EntityCardItem } from './entity-card'
+import { EntityCard, type EntityCardItem } from './entity-card'
 
 interface DirectoryEntry extends EntityCardItem {
   class?: string
@@ -24,9 +23,7 @@ interface DirectoryEntry extends EntityCardItem {
   peer?: string
 }
 
-interface RecommendedEntity extends EntityCardItem {
-  // EntityCardItem already covers id, name, fingerprint, blurb
-}
+type RecommendedEntity = EntityCardItem
 
 interface FindEntityPageProps {
   /** Called when user clicks subscribe on an entity */

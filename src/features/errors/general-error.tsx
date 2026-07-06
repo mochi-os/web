@@ -45,30 +45,42 @@ function formatErrorMessage(message: string): string | undefined {
   return trimmed
 }
 
-function getInlineCopy(status: number, rawMessage: string, errorMessage?: string) {
-  if (errorMessage) {
-    return { title: errorMessage, description: undefined }
-  }
-
+function getInlineCopy(status: number, rawMessage: string, errorMessage?: string, source?: string) {
   const lowerMessage = rawMessage.toLowerCase()
 
-  if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
-    return { title: "You do not have access to this section.", description: undefined }
+  if (source === 'error.message (network)') {
+    return { 
+      title: <Trans>Network error</Trans>, 
+      description: <Trans>Please check your internet connection and try again.</Trans> 
+    }
   }
 
-  if (lowerMessage.includes('network') || lowerMessage.includes('failed to fetch')) {
-    return { title: "Check your connection and try again.", description: undefined }
+  if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
+    return { 
+      title: <Trans>Access denied</Trans>, 
+      description: errorMessage ?? <Trans>You do not have access to this section.</Trans> 
+    }
   }
 
   if (status === 404) {
-    return { title: "Not found", description: undefined }
+    return { 
+      title: <Trans>Not found</Trans>, 
+      description: errorMessage ?? <Trans>The requested content could not be found.</Trans> 
+    }
   }
 
   if (status === 429) {
-    return { title: "Too many requests. Please wait a moment and try again.", description: undefined }
+    return { 
+      title: <Trans>Too many requests</Trans>, 
+      description: errorMessage ?? <Trans>Please wait a moment and try again.</Trans> 
+    }
   }
 
-  return { title: "Please try again.", description: undefined }
+  if (errorMessage && errorMessage.toLowerCase() !== 'network error') {
+    return { title: errorMessage, description: undefined }
+  }
+
+  return { title: <Trans>Please try again.</Trans>, description: undefined }
 }
 
 export function GeneralError({
@@ -83,7 +95,7 @@ export function GeneralError({
   const message = normalized.message
   const errorMessage = formatErrorMessage(message)
   const displayMessage = errorMessage ?? message
-  const inlineCopy = getInlineCopy(statusCode, message, errorMessage)
+  const inlineCopy = getInlineCopy(statusCode, message, errorMessage, normalized.source)
 
   // Use the error message as the heading if it's descriptive
   const isDescriptiveMessage = !!errorMessage &&
