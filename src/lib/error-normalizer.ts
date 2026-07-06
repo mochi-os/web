@@ -1,6 +1,8 @@
 // Copyright © 2026 Mochi OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { i18n } from '@lingui/core'
+
 type JsonRecord = Record<string, unknown>
 
 const DEFAULT_ERROR_MESSAGE = 'An unexpected error occurred'
@@ -196,11 +198,14 @@ export function normalizeError(
     const errorMessage = asNonEmptyString(error.message)
     if (errorMessage) {
       if (errorMessage.toLowerCase() === 'network error' || errorMessage.toLowerCase() === 'failed to fetch') {
-        message = 'Please check your internet connection and try again.'
+        // Runtime lookup, not a macro: this file is imported by tests without
+        // babel. The msgid stays in every catalog via the identical <Trans>
+        // sentence in general-error.tsx.
+        message = i18n._('Please check your internet connection and try again.')
         source = 'error.message (network)'
       } else {
         message = errorMessage
-          source = 'error.message'
+        source = 'error.message'
       }
     }
   }
