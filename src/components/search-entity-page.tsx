@@ -8,7 +8,6 @@ import { Search, Loader2, type LucideIcon } from 'lucide-react'
 import { Input } from './ui/input'
 import { requestHelpers } from '../lib/request'
 import { getAppPath } from '../lib/app-path'
-import { parseMochiEntityUri, type MochiEntityUri } from '../lib/mochi-uri'
 import { usePageTitle } from '../hooks/use-page-title'
 import { Header } from './layout/header'
 import { Main } from './layout/main'
@@ -28,8 +27,8 @@ type RecommendedEntity = EntityCardItem
 interface FindEntityPageProps {
   /** Called when user clicks subscribe on an entity */
   onSubscribe: (entityId: string, entity: DirectoryEntry) => Promise<void>
-  /** Resolve a pasted mochi:// URI to a named entry (e.g. via the app's probe action). */
-  resolveUri?: (uri: MochiEntityUri) => Promise<DirectoryEntry | null>
+  /** Resolve a pasted link (mochi://<peer>/<id> or a web URL) to a named entry via the app's probe action. */
+  resolveUri?: (url: string) => Promise<DirectoryEntry | null>
   /** Set of already subscribed entity IDs or fingerprints */
   subscribedIds?: Set<string>
   /** Entity class being searched (e.g., "feed", "forum", "wiki") */
@@ -84,17 +83,17 @@ export function FindEntityPage({
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [pendingEntityId, setPendingEntityId] = useState<string | null>(null)
 
-  // A pasted mochi://<peer>/<entity> link reaches a PRIVATE entity directly by
-  // peer (the ACL still gates access). When the box holds one, offer a direct
-  // subscribe instead of a directory search (which can't find a private entity).
-  const pastedUri = parseMochiEntityUri(searchQuery)
+  // A pasted link - mochi://<peer>/<entity> (a private entity reached by peer)
+  // or a web URL (https://server/<app>/<id>) - is resolved via the app's probe
+  // action, not a directory search: the directory can't find a private/unlisted
+  // entity, and can't match a raw URL string. Probe parses both link forms.
+  const trimmedQuery = searchQuery.trim()
+  const isLink = /^(mochi:|https?:\/\/)/i.test(trimmedQuery)
 
-  // Resolve the pasted link to its real name via the app's probe action, so the
-  // card shows the feed/forum/etc. name rather than a raw entity id.
   const { data: resolvedEntry, isLoading: isResolving } = useQuery({
-    queryKey: [entityClass, 'resolve-uri', pastedUri?.peer, pastedUri?.entity],
-    queryFn: () => resolveUri!(pastedUri!),
-    enabled: !!pastedUri && !!resolveUri,
+    queryKey: [entityClass, 'resolve-link', trimmedQuery],
+    queryFn: () => resolveUri!(trimmedQuery),
+    enabled: isLink && !!resolveUri,
     retry: false,
     refetchOnWindowFocus: false,
   })
@@ -120,7 +119,7 @@ export function FindEntityPage({
       )
       return Array.isArray(response) ? response : (response.results || [])
     },
-    enabled: debouncedSearch.length > 0 && !pastedUri,
+    enabled: debouncedSearch.length > 0 && !isLink,
   })
 
   const results = data || []
@@ -164,35 +163,38 @@ export function FindEntityPage({
             />
           </div>
 
-          {pastedUri && isResolving && (
+          {isLink && isResolving && (
             <div className='flex items-center justify-center py-8'>
               <Loader2 className='text-muted-foreground size-5 animate-spin' />
             </div>
           )}
 
-          {pastedUri && !isResolving && (
+          {isLink && !isResolving && resolvedEntry && (
             <EntityCard
               entity={{
-                id: resolvedEntry?.id || pastedUri.entity,
-                name: resolvedEntry?.name || pastedUri.entity,
-                fingerprint: resolvedEntry?.fingerprint,
-                blurb: resolvedEntry?.blurb,
+                id: resolvedEntry.id,
+                name: resolvedEntry.name,
+                fingerprint: resolvedEntry.fingerprint,
+                blurb: resolvedEntry.blurb,
               }}
               icon={Icon}
               iconClassName={iconClassName}
-              isPending={pendingEntityId === (resolvedEntry?.id || pastedUri.entity)}
-              onSubscribe={() =>
-                handleSubscribe({
-                  id: resolvedEntry?.id || pastedUri.entity,
-                  name: resolvedEntry?.name || pastedUri.entity,
-                  peer: resolvedEntry?.peer || pastedUri.peer,
-                })
-              }
+              isPending={pendingEntityId === resolvedEntry.id}
+              onSubscribe={() => handleSubscribe(resolvedEntry)}
               subscribeLabel={subscribeLabel}
             />
           )}
 
-          {!pastedUri && isLoading && debouncedSearch && (
+          {isLink && !isResolving && !resolvedEntry && (
+            <div className='py-12 text-center'>
+              <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
+                <Icon className='text-muted-foreground size-8' />
+              </div>
+              <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
+            </div>
+          )}
+
+          {!isLink && isLoading && debouncedSearch && (
             <div className='flex flex-col items-center justify-center py-12 gap-2'>
               <Loader2 className='text-primary size-8 animate-spin' />
               <p className='text-sm text-muted-foreground'><Trans>Searching...</Trans></p>
@@ -205,7 +207,7 @@ export function FindEntityPage({
             </div>
           )}
 
-          {!isLoading && !isError && debouncedSearch && filteredResults.length === 0 && (
+          {!isLink && !isLoading && !isError && debouncedSearch && filteredResults.length === 0 && (
             <div className='py-12 text-center'>
               <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
                 <Icon className='text-muted-foreground size-8' />
