@@ -19,3 +19,21 @@ export function isImage(type: string): boolean {
 export function isVideo(type: string): boolean {
   return type.startsWith('video/')
 }
+
+/** Stable React key for a pending File before upload. */
+export function pendingFileKey(file: File): string {
+  return `${file.name}:${file.size}:${file.lastModified}`
+}
+
+/** Remove one matching pending file without relying on array index. */
+export function removePendingFile(files: File[], target: File): File[] {
+  const key = pendingFileKey(target)
+  let removed = false
+  return files.filter((file) => {
+    if (!removed && pendingFileKey(file) === key) {
+      removed = true
+      return false
+    }
+    return true
+  })
+}
