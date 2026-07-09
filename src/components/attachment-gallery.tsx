@@ -5,6 +5,15 @@ import { useCallback, useState, type ReactNode, type SyntheticEvent } from 'reac
 import { Loader2, Play } from 'lucide-react'
 import { useLingui } from '@lingui/react/macro'
 import { ImageLightbox, type LightboxMedia } from './ui/image-lightbox'
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger,
+} from './ui/attachment'
 import { useLightboxHash } from '../hooks/use-lightbox-hash'
 import { formatVideoDuration, useVideoThumbnailCached } from '../hooks/use-video-thumbnail'
 import { getFileIcon, isImage, isVideo } from '../lib/attachment-utils'
@@ -190,23 +199,36 @@ export function AttachmentGallery({
     )
   })
 
-  const fileLinks = !hideFiles && files.map((attachment) => {
-    const FileIcon = getFileIcon(attachment.type)
-    return (
-      <a
-        key={attachment.id}
-        href={resolveUrl(attachment)}
-        onClick={(e) => e.stopPropagation()}
-        className='hover:bg-hover flex items-center gap-2 rounded-[8px] border p-2 text-sm transition-colors'
-      >
-        <FileIcon className='text-muted-foreground size-4 shrink-0' />
-        <span className='min-w-0 flex-1 truncate'>{attachment.name}</span>
-        <span className='text-muted-foreground shrink-0 text-xs'>
-          {formatFileSize(attachment.size)}
-        </span>
-      </a>
-    )
-  })
+  const fileLinks = !hideFiles && files.length > 0 ? (
+    <AttachmentGroup>
+      {files.map((attachment) => {
+        const FileIcon = getFileIcon(attachment.type)
+        return (
+          <Attachment key={attachment.id} size="sm">
+            <AttachmentTrigger asChild>
+              <a
+                href={resolveUrl(attachment)}
+                onClick={(e) => e.stopPropagation()}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="sr-only">{attachment.name}</span>
+              </a>
+            </AttachmentTrigger>
+            <AttachmentMedia>
+              <FileIcon />
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{attachment.name}</AttachmentTitle>
+              <AttachmentDescription>
+                {formatFileSize(attachment.size)}
+              </AttachmentDescription>
+            </AttachmentContent>
+          </Attachment>
+        )
+      })}
+    </AttachmentGroup>
+  ) : null
 
   const spacer = <span aria-hidden className='block h-0 grow-[999] basis-0' />
 
@@ -225,7 +247,7 @@ export function AttachmentGallery({
       <>
         {mediaButtons}
         {media.length > 0 && spacer}
-        {fileLinks && fileLinks}
+        {fileLinks}
         {lightbox}
       </>
     )
@@ -239,9 +261,7 @@ export function AttachmentGallery({
           {spacer}
         </div>
       )}
-      {fileLinks && files.length > 0 && (
-        <div className='space-y-1'>{fileLinks}</div>
-      )}
+      {fileLinks}
       {lightbox}
     </div>
   )
