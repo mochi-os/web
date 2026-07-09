@@ -255,7 +255,19 @@ function fallbackExecCommandCopy(text: string): boolean {
   textArea.style.position = 'fixed'
   textArea.style.left = '-999999px'
   textArea.style.top = '-999999px'
-  document.body.appendChild(textArea)
+  // Append inside the open modal dialog (if any) rather than document.body. A
+  // Radix Dialog traps focus in its content scope, so a textarea outside it
+  // gets focus yanked straight back — leaving execCommand('copy') with nothing
+  // selected (it returns true but copies the old clipboard). Inside the scope,
+  // the textarea keeps focus and the copy works. Falls back to body elsewhere.
+  const dialog =
+    (activeElement &&
+      activeElement.closest('[role="dialog"], [role="alertdialog"]')) ||
+    document.querySelector(
+      '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
+    )
+  const container = dialog || document.body
+  container.appendChild(textArea)
 
   textArea.focus()
   textArea.select()
@@ -265,7 +277,7 @@ function fallbackExecCommandCopy(text: string): boolean {
   } catch {
     return false
   } finally {
-    document.body.removeChild(textArea)
+    textArea.remove()
 
     if (selection) {
       selection.removeAllRanges()
