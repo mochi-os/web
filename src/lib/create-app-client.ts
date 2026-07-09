@@ -9,6 +9,7 @@ import { getApiBasepath, getAppPath, isDomainEntityRouting } from './app-path'
 import { isInShell } from './shell-bridge'
 import { useAuthStore } from '../stores/auth-store'
 import { attachApiResponseInterceptors } from './api-response-interceptors'
+import { clearContentTypeHeader } from './clear-content-type-header'
 
 export interface AppClientOptions {
   /**
@@ -62,7 +63,7 @@ export function createAppClient({
 
     // Remove Content-Type for FormData so axios can set the multipart boundary
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type']
+      clearContentTypeHeader(config.headers)
     }
 
     // In sandboxed iframe, cookies are unavailable — always use Bearer auth only

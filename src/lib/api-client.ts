@@ -13,6 +13,7 @@ import {
   attachApiResponseInterceptors,
   setLogoutHandler,
 } from './api-response-interceptors'
+import { clearContentTypeHeader } from './clear-content-type-header'
 
 export { setLogoutHandler }
 
@@ -40,7 +41,7 @@ apiClient.interceptors.request.use(
 
     // Remove Content-Type for FormData so axios can set the multipart boundary
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type']
+      clearContentTypeHeader(config.headers)
     }
 
     // Handle absolute URLs - they should bypass the app-specific baseURL
