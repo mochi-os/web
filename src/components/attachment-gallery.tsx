@@ -9,7 +9,6 @@ import {
   Attachment,
   AttachmentContent,
   AttachmentDescription,
-  AttachmentGroup,
   AttachmentMedia,
   AttachmentTitle,
   AttachmentTrigger,
@@ -200,7 +199,7 @@ export function AttachmentGallery({
   })
 
   const fileLinks = !hideFiles && files.length > 0 ? (
-    <AttachmentGroup>
+    <div className="flex flex-col space-y-1">
       {files.map((attachment) => {
         const FileIcon = getFileIcon(attachment.type)
         return (
@@ -209,8 +208,6 @@ export function AttachmentGallery({
               <a
                 href={resolveUrl(attachment)}
                 onClick={(e) => e.stopPropagation()}
-                target="_blank"
-                rel="noopener noreferrer"
               >
                 <span className="sr-only">{attachment.name}</span>
               </a>
@@ -227,7 +224,7 @@ export function AttachmentGallery({
           </Attachment>
         )
       })}
-    </AttachmentGroup>
+    </div>
   ) : null
 
   const spacer = <span aria-hidden className='block h-0 grow-[999] basis-0' />
