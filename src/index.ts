@@ -154,6 +154,7 @@ export * from './components/filter-bar'
 export * from './components/header-search'
 export * from './components/icon-button'
 export * from './components/post-tags'
+export * from './components/action-pill'
 export * from './components/view-tabs'
 
 // Context Providers
