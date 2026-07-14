@@ -1,5 +1,5 @@
 // Sort direction toggle button
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 import { ArrowDown, ArrowUp } from 'lucide-react'

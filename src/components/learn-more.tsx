@@ -1,4 +1,4 @@
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 import { type Root, type Content, type Trigger } from '@radix-ui/react-popover'

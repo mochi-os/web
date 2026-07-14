@@ -1,4 +1,4 @@
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 import { useAuthStore } from '../stores/auth-store'

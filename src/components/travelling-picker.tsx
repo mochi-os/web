@@ -1,4 +1,4 @@
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 // Travelling picker with origin and destination on the same screen

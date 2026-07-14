@@ -1,5 +1,5 @@
 // Mochi: Colour picker component with presets, graphical HSV picker, and hex input
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 import { useCallback, useEffect, useRef, useState } from "react";

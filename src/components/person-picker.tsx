@@ -1,5 +1,5 @@
 // Mochi: Person picker component for selecting users/people
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 'use client'

@@ -1,4 +1,4 @@
-// Copyright © 2026 Mochi OÜ
+// Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 // Routing helpers that derive context from server-injected meta tags or URL path.
