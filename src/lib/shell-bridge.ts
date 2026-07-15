@@ -460,6 +460,142 @@ export function shellWebauthnGet(optionsJSON: unknown): Promise<unknown> {
   return isInShell() ? webauthnThroughShell(false, optionsJSON) : webauthnLocal(false, optionsJSON)
 }
 
+/**
+ * Microphone recording via the top-level Mochi shell.
+ * Sandboxed opaque-origin iframes cannot use getUserMedia; the shell records
+ * and returns a structured-cloneable Blob over postMessage.
+ *
+ * Outside the shell, callers should use createMicSessionHost locally instead.
+ */
+
+export type ShellMicResult = {
+  blob: Blob
+  mimeType: string
+  filename: string
+  durationSecs: number
+}
+
+export type ShellMicError = Error & { name: string }
+
+const SHELL_MIC_TIMEOUT_MS = 30_000
+const SHELL_MIC_UNSUPPORTED =
+  'Installed Mochi shell may not support voice recording'
+
+function shellMicFailure(name: string, message: string): ShellMicError {
+  const err = new Error(message) as ShellMicError
+  err.name = name
+  return err
+}
+
+let micIdCounter = 0
+const micStartCallbacks = new Map<
+  number,
+  {
+    resolve: (requestId: number) => void
+    reject: (err: ShellMicError) => void
+    timer: ReturnType<typeof setTimeout>
+  }
+>()
+const micStopCallbacks = new Map<
+  number,
+  {
+    resolve: (result: ShellMicResult) => void
+    reject: (err: ShellMicError) => void
+    timer: ReturnType<typeof setTimeout>
+  }
+>()
+const micCancelCallbacks = new Map<
+  number,
+  {
+    resolve: () => void
+    reject: (err: ShellMicError) => void
+    timer: ReturnType<typeof setTimeout>
+  }
+>()
+
+function clearMicTimer(
+  entry: { timer: ReturnType<typeof setTimeout> } | undefined
+) {
+  if (entry) clearTimeout(entry.timer)
+}
+
+/** Start shell-side microphone recording. Resolves with shell requestId. */
+export function shellMicStart(): Promise<number> {
+  if (!isInShell()) {
+    return Promise.reject(
+      shellMicFailure(
+        'InvalidStateError',
+        'shellMicStart is only available inside the Mochi shell'
+      )
+    )
+  }
+
+  const requestId = ++micIdCounter
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      micStartCallbacks.delete(requestId)
+      reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
+    }, SHELL_MIC_TIMEOUT_MS)
+
+    micStartCallbacks.set(requestId, { resolve, reject, timer })
+    window.parent.postMessage({ type: 'mic.start', requestId }, '*')
+  })
+}
+
+/** Stop shell-side recording and receive the Blob result. */
+export function shellMicStop(requestId: number): Promise<ShellMicResult> {
+  if (!isInShell()) {
+    return Promise.reject(
+      shellMicFailure(
+        'InvalidStateError',
+        'shellMicStop is only available inside the Mochi shell'
+      )
+    )
+  }
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      micStopCallbacks.delete(requestId)
+      reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
+    }, SHELL_MIC_TIMEOUT_MS)
+
+    micStopCallbacks.set(requestId, { resolve, reject, timer })
+    window.parent.postMessage({ type: 'mic.stop', requestId }, '*')
+  })
+}
+
+/** Cancel shell-side recording (or a pending permission request). */
+export function shellMicCancel(requestId?: number): Promise<void> {
+  if (!isInShell()) {
+    return Promise.resolve()
+  }
+
+  const id = requestId ?? 0
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      micCancelCallbacks.delete(id)
+      reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
+    }, SHELL_MIC_TIMEOUT_MS)
+
+    micCancelCallbacks.set(id, { resolve, reject, timer })
+    window.parent.postMessage(
+      { type: 'mic.cancel', requestId: requestId ?? null },
+      '*'
+    )
+  })
+}
+
+type MicLevelListener = (requestId: number, level: number) => void
+const micLevelListeners = new Set<MicLevelListener>()
+
+/** Subscribe to live microphone level samples from the shell (0..1). */
+export function onShellMicLevel(listener: MicLevelListener): () => void {
+  micLevelListeners.add(listener)
+  return () => {
+    micLevelListeners.delete(listener)
+  }
+}
+
 /** Listen for messages from the shell */
 export function onShellMessage(listener: (msg: ShellMessage) => void): () => void {
   messageListeners.push(listener)
@@ -713,6 +849,98 @@ if (typeof window !== 'undefined') {
           credential: data.credential,
           error: data.error as { name: string; message: string } | undefined,
         })
+      }
+    }
+
+    // Handle microphone bridge results from the shell
+    if (data.type === 'mic.started') {
+      const requestId = data.requestId as number
+      const cb = micStartCallbacks.get(requestId)
+      if (cb) {
+        micStartCallbacks.delete(requestId)
+        clearMicTimer(cb)
+        cb.resolve(requestId)
+      }
+    }
+
+    if (data.type === 'mic.level') {
+      const requestId = data.requestId as number
+      const level = Number(data.level)
+      if (Number.isFinite(level)) {
+        for (const listener of micLevelListeners) {
+          listener(requestId, level)
+        }
+      }
+    }
+
+    if (data.type === 'mic.result') {
+      const requestId = data.requestId as number
+      const startCb = micStartCallbacks.get(requestId)
+      if (startCb) {
+        micStartCallbacks.delete(requestId)
+        clearMicTimer(startCb)
+        const err = data.error as { name?: string; message?: string } | undefined
+        startCb.reject(
+          shellMicFailure(
+            err?.name || (data.cancelled ? 'AbortError' : 'Error'),
+            err?.message ||
+              (data.cancelled
+                ? 'Microphone request cancelled'
+                : 'Microphone recording failed')
+          )
+        )
+      }
+
+      const stopCb = micStopCallbacks.get(requestId)
+      if (stopCb) {
+        micStopCallbacks.delete(requestId)
+        clearMicTimer(stopCb)
+        if (data.ok && data.blob instanceof Blob) {
+          stopCb.resolve({
+            blob: data.blob,
+            mimeType: String(data.mimeType || 'audio/webm'),
+            filename: String(data.filename || 'Voice Note.webm'),
+            durationSecs: Number(data.durationSecs) || 1,
+          })
+        } else {
+          const err = data.error as { name?: string; message?: string } | undefined
+          stopCb.reject(
+            shellMicFailure(
+              err?.name || (data.cancelled ? 'AbortError' : 'Error'),
+              err?.message ||
+                (data.cancelled
+                  ? 'Microphone recording cancelled'
+                  : 'Microphone recording failed')
+            )
+          )
+        }
+      }
+
+      const cancelCb =
+        micCancelCallbacks.get(requestId) || micCancelCallbacks.get(0)
+      if (cancelCb) {
+        if (micCancelCallbacks.get(requestId)) {
+          micCancelCallbacks.delete(requestId)
+        } else {
+          micCancelCallbacks.delete(0)
+        }
+        clearMicTimer(cancelCb)
+        cancelCb.resolve()
+      }
+    }
+
+    if (data.type === 'mic.cancelled') {
+      const requestId = (data.requestId as number) || 0
+      const cancelCb =
+        micCancelCallbacks.get(requestId) || micCancelCallbacks.get(0)
+      if (cancelCb) {
+        if (micCancelCallbacks.get(requestId)) {
+          micCancelCallbacks.delete(requestId)
+        } else {
+          micCancelCallbacks.delete(0)
+        }
+        clearMicTimer(cancelCb)
+        cancelCb.resolve()
       }
     }
 

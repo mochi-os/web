@@ -2,7 +2,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { forwardRef, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/utils'
 
@@ -20,6 +20,8 @@ interface MentionTextareaProps
   people?: MentionUser[]
   /** Async search function for people (used by feeds/forums). */
   onSearchPeople?: (query: string) => Promise<MentionUser[]>
+  /** Optional callback fired when a mention is explicitly selected from the dropdown. */
+  onMentionSelect?: (user: MentionUser) => void
 }
 
 /** Convert @[name] tokens to styled React nodes. Use for plain-text comment bodies. */
@@ -50,20 +52,27 @@ function getMentionQuery(text: string, cursorPos: number): string | null {
   return match ? match[2] : null
 }
 
-export function MentionTextarea({
-  value,
-  onValueChange,
-  people = [],
-  onSearchPeople,
-  className,
-  onKeyDown,
-  ...props
-}: MentionTextareaProps) {
+export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
+  function MentionTextarea({
+    value,
+    onValueChange,
+    people = [],
+    onSearchPeople,
+    onMentionSelect,
+    className,
+    onKeyDown,
+    ...props
+  }, forwardedRef) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [asyncResults, setAsyncResults] = useState<MentionUser[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [dropdownPos, setDropdownPos] = useState<{
+    bottom: number
+    left: number
+    width: number
+  } | null>(null)
 
   // Debounced async search
   useEffect(() => {
@@ -108,15 +117,16 @@ export function MentionTextarea({
       }
 
       const rect = textareaRef.current.getBoundingClientRect()
+      // Anchor above the field so chat composers near the viewport bottom stay usable.
       const nextPos = {
-        top: rect.bottom + 4,
+        bottom: window.innerHeight - rect.top + 4,
         left: rect.left,
         width: rect.width,
       }
 
       setDropdownPos((currentPos) =>
         currentPos &&
-        currentPos.top === nextPos.top &&
+        currentPos.bottom === nextPos.bottom &&
         currentPos.left === nextPos.left &&
         currentPos.width === nextPos.width
           ? currentPos
@@ -187,6 +197,7 @@ export function MentionTextarea({
       .slice(0, cursor)
       .replace(mentionQueryPattern, `$1@[${person.name}] `)
     onValueChange(before + value.slice(cursor))
+    onMentionSelect?.(person)
     setMentionQuery(null)
     setTimeout(() => {
       textarea.focus()
@@ -197,7 +208,14 @@ export function MentionTextarea({
   return (
     <>
       <textarea
-        ref={textareaRef}
+        ref={(node) => {
+          textareaRef.current = node
+          if (typeof forwardedRef === 'function') {
+            forwardedRef(node)
+          } else if (forwardedRef) {
+            forwardedRef.current = node
+          }
+        }}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -217,7 +235,7 @@ export function MentionTextarea({
             role='listbox'
             style={{
               position: 'fixed',
-              top: dropdownPos.top,
+              bottom: dropdownPos.bottom,
               left: dropdownPos.left,
               width: dropdownPos.width,
               zIndex: 9999,
@@ -251,4 +269,4 @@ export function MentionTextarea({
         )}
     </>
   )
-}
+})

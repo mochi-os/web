@@ -255,8 +255,30 @@ export {
   shellFetch,
   shellWebauthnCreate,
   shellWebauthnGet,
+  shellMicStart,
+  shellMicStop,
+  shellMicCancel,
+  onShellMicLevel,
 } from './lib/shell-bridge'
-export type { ColorTheme, LocalePreferences } from './lib/shell-bridge'
+export type {
+  ColorTheme,
+  LocalePreferences,
+  ShellMicResult,
+  ShellMicError,
+} from './lib/shell-bridge'
+export {
+  createMicSessionHost,
+  micDurationSecs,
+  micFilenameForMime,
+  pickMicMimeType,
+  MIC_PREFERRED_MIME_TYPES,
+} from './lib/shell-mic-session'
+export type {
+  MicSessionHost,
+  MicSessionResult,
+  MicSessionError,
+  MicSessionState,
+} from './lib/shell-mic-session'
 export * as shellStorage from './lib/shell-storage'
 export { useShellStorage } from './hooks/use-shell-storage'
 export * from './lib/auth-endpoints'
