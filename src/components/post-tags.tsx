@@ -98,7 +98,7 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
             <button
               type='button'
               aria-label={t`Tags`}
-              className={'inline-flex items-center justify-center gap-1 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors ' + (tags.length > 0 ? 'px-2' : 'w-8')}
+              className='text-muted-foreground hover:text-foreground -m-1 inline-flex items-center gap-1 p-1 transition-colors'
               onClick={(e) => {
                 e.stopPropagation()
               }}
