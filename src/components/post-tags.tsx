@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useState, useRef, useEffect } from 'react'
+import { cn } from '../lib/utils'
 import { createPortal } from 'react-dom'
 import { Minus, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
@@ -98,7 +99,10 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
             <button
               type='button'
               aria-label={t`Tags`}
-              className='text-muted-foreground hover:text-foreground -m-1 inline-flex items-center gap-1 p-1 transition-colors'
+              className={cn(
+                'inline-flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground active:bg-interactive-active',
+                tags.length > 0 ? 'min-w-7 h-7 px-1.5 gap-1 text-xs' : 'size-7'
+              )}
               onClick={(e) => {
                 e.stopPropagation()
               }}
