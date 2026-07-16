@@ -165,6 +165,27 @@ function attachLevelMeter(
 export function createMicSessionHost(deps: MicSessionHostDeps) {
   let nextRequestId = 1
   let session: ActiveSession | null = null
+  /** Waiters notified when the host becomes idle (no active session). */
+  let idleWaiters: Array<() => void> = []
+  /**
+   * Monotonic generation for cancel→retry starts. Only the latest queued retry
+   * proceeds after the cancelled permission wait settles — older ones abort.
+   */
+  let startQueueGeneration = 0
+
+  const notifyIdle = () => {
+    if (session && !session.settled) return
+    const waiters = idleWaiters.slice()
+    idleWaiters = []
+    for (const waiter of waiters) waiter()
+  }
+
+  const waitUntilIdle = (): Promise<void> => {
+    if (!session || session.settled) return Promise.resolve()
+    return new Promise((resolve) => {
+      idleWaiters.push(resolve)
+    })
+  }
 
   const stopTracks = (stream: MediaStream | null | undefined) => {
     if (!stream) return
@@ -224,6 +245,7 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
     if (session === active) {
       session = null
     }
+    notifyIdle()
 
     if (startWaiter) {
       if (options.startReject) {
@@ -382,16 +404,29 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
 
   const start = (): Promise<number> => {
     if (session && !session.settled) {
-      // Preempt only a cancelled permission wait so a retry can proceed while
-      // the old getUserMedia is still pending. Leave the old session cancelled;
-      // its then/catch must only clear `session` when session === that object.
-      if (!(session.cancelled && session.state === 'requesting')) {
-        return Promise.reject({
-          name: 'InvalidStateError',
-          message: 'A microphone session is already active',
-        } satisfies MicSessionError)
+      // Serialize cancel→retry: wait for the in-flight getUserMedia to settle
+      // (tracks stopped) before opening another permission request. Never stack
+      // concurrent getUserMedia calls — that floods permission prompts.
+      if (session.cancelled && session.state === 'requesting') {
+        const generation = ++startQueueGeneration
+        return waitUntilIdle().then(() => {
+          if (generation !== startQueueGeneration) {
+            return Promise.reject({
+              name: 'AbortError',
+              message: 'Microphone request superseded',
+            } satisfies MicSessionError)
+          }
+          return start()
+        })
       }
+      return Promise.reject({
+        name: 'InvalidStateError',
+        message: 'A microphone session is already active',
+      } satisfies MicSessionError)
     }
+
+    // A fresh start supersedes any still-queued cancel→retry waiters.
+    startQueueGeneration += 1
 
     const requestId = nextRequestId++
     const active: ActiveSession = {
@@ -530,6 +565,9 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
 
   /** Abort any session immediately (navigation / unload). */
   const abortAll = (): void => {
+    // Supersede queued cancel→retry starts so notifyIdle cannot revive them.
+    startQueueGeneration += 1
+
     const active = session
     if (!active || active.settled) return
     active.cancelled = true

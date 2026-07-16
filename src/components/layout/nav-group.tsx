@@ -149,6 +149,26 @@ function NavBadge({ children, className }: { children: ReactNode; className?: st
   return <Badge variant='destructive' className={cn('rounded-full px-1 py-0 text-xs', className)}>{children}</Badge>
 }
 
+function NavTitle({ title, meta }: { title: string; meta?: string }) {
+  return (
+    <>
+      {title}
+      {meta ? (
+        <span className='text-muted-foreground ms-1.5 text-[0.8125rem] font-semibold leading-none'>
+          {meta}
+        </span>
+      ) : null}
+    </>
+  )
+}
+
+function navLinkTooltip(item: NavLink): string | { children: string; hidden: boolean } {
+  if (item.tooltipAlways) {
+    return { children: item.title, hidden: false }
+  }
+  return item.title
+}
+
 function NavLinkTrailing({ item }: { item: NavLink }) {
   const EndIcon = item.endIcon
   if (!EndIcon && !item.badge) return null
@@ -247,11 +267,11 @@ function SidebarMenuLink({
     const isActive = item.isActive ?? checkIsActive(pathname, item)
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={item.className}>
+        <SidebarMenuButton asChild isActive={isActive} tooltip={navLinkTooltip(item)} className={item.className}>
           <a href={item.url as string} onClick={() => setOpenMobile(false)}>
             <ItemIcon icon={item.icon} aggregate={item.aggregate} />
             <span className='min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden'>
-              {item.title}
+              <NavTitle title={item.title} meta={item.meta} />
             </span>
             <NavLinkTrailing item={item} />
           </a>
@@ -267,12 +287,14 @@ function SidebarMenuLink({
       <SidebarMenuButton
         asChild
         isActive={isActive}
-        tooltip={item.title}
+        tooltip={navLinkTooltip(item)}
         className={item.className}
       >
         <Link preload={false} to={item.url} onClick={() => setOpenMobile(false)}>
           <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-          <span className='min-w-0 flex-1 truncate'>{item.title}</span>
+          <span className='min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden'>
+            <NavTitle title={item.title} meta={item.meta} />
+          </span>
           <NavLinkTrailing item={item} />
         </Link>
       </SidebarMenuButton>

@@ -6,6 +6,11 @@ import { forwardRef, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/utils'
 import { computeMentionDropdownPosition } from './mention-dropdown-position'
+import {
+  getMentionQuery,
+  mentionQueryPattern,
+  shouldSyncMentionQueryFromValue,
+} from './mention-query'
 
 /** Minimal user shape needed for mentions. */
 export interface MentionUser {
@@ -45,13 +50,7 @@ export const highlightMentions = (html: string): string =>
     return `<span class="text-primary font-medium">@${safe}</span>`
   })
 
-// Match a mention query at the cursor, supporting Unicode letters, marks, numbers, underscore, and hyphen.
-const mentionQueryPattern = /(^|[\s])@([\p{L}\p{M}\p{N}_-]*)$/u
-
-function getMentionQuery(text: string, cursorPos: number): string | null {
-  const match = text.slice(0, cursorPos).match(mentionQueryPattern)
-  return match ? match[2] : null
-}
+export { getMentionQuery, mentionQueryPattern } from './mention-query'
 
 export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
   function MentionTextarea({
@@ -65,6 +64,8 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
     ...props
   }, forwardedRef) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  /** Last value written locally (keystroke / insert). Skips redundant prop sync. */
+  const lastLocalValueRef = useRef(value)
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [asyncResults, setAsyncResults] = useState<MentionUser[]>([])
@@ -108,15 +109,36 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
     setActiveIndex(0)
   }, [filtered.length])
 
-  // Sync and clear mention query on programmatic value updates
+  // Sync mention query only on programmatic value updates (not every keystroke).
+  // Defer cursor read so insertMention's setSelectionRange(0) can land first when
+  // a parent update races with selection restore.
   useEffect(() => {
-    const textarea = textareaRef.current
-    if (textarea) {
-      const cursor = textarea.selectionStart ?? value.length
+    if (
+      !shouldSyncMentionQueryFromValue({
+        propValue: value,
+        lastLocalValue: lastLocalValueRef.current,
+      })
+    ) {
+      return
+    }
+
+    lastLocalValueRef.current = value
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return
+      const textarea = textareaRef.current
+      const cursor = textarea?.selectionStart ?? value.length
       setMentionQuery(getMentionQuery(value, cursor))
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
     }
   }, [value])
 
+  // Attach scroll/resize listeners only while the dropdown is open — not on
+  // every keystroke. ResizeObserver covers textarea growth from typing.
   useEffect(() => {
     if (!isOpen) {
       setDropdownPos(null)
@@ -180,12 +202,14 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
       window.removeEventListener('scroll', updateDropdownPosition, true)
       window.removeEventListener('resize', updateDropdownPosition)
     }
-  }, [isOpen, mentionQuery, value])
+  }, [isOpen])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onValueChange(e.target.value)
-    const cursor = e.target.selectionStart ?? e.target.value.length
-    setMentionQuery(getMentionQuery(e.target.value, cursor))
+    const next = e.target.value
+    lastLocalValueRef.current = next
+    onValueChange(next)
+    const cursor = e.target.selectionStart ?? next.length
+    setMentionQuery(getMentionQuery(next, cursor))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -221,7 +245,11 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
     const before = value
       .slice(0, cursor)
       .replace(mentionQueryPattern, `$1@[${person.name}] `)
-    onValueChange(before + value.slice(cursor))
+    const next = before + value.slice(cursor)
+    // Mark local write before parent setState so the value-sync effect skips
+    // and does not re-open the dropdown from a stale selectionStart.
+    lastLocalValueRef.current = next
+    onValueChange(next)
     onMentionSelect?.(person)
     setMentionQuery(null)
     setTimeout(() => {

@@ -8,6 +8,8 @@ type BaseNavItem = {
   id?: string
   title: string
   badge?: string
+  /** Muted inline label after the title (e.g. chat Draft). */
+  meta?: string
   icon?: React.ElementType
   variant?: 'default' | 'outline' | 'primary'
   className?: string
@@ -38,6 +40,8 @@ type NavLink = BaseNavItem & {
   /** Trailing icon shown before the unread badge (e.g. pinned chat indicator). */
   endIcon?: React.ElementType
   endIconClassName?: string
+  /** Show title tooltip even when the sidebar is expanded (truncated labels). */
+  tooltipAlways?: boolean
 }
 
 type NavAction = BaseNavItem & {
