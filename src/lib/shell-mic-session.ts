@@ -382,10 +382,15 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
 
   const start = (): Promise<number> => {
     if (session && !session.settled) {
-      return Promise.reject({
-        name: 'InvalidStateError',
-        message: 'A microphone session is already active',
-      } satisfies MicSessionError)
+      // Preempt only a cancelled permission wait so a retry can proceed while
+      // the old getUserMedia is still pending. Leave the old session cancelled;
+      // its then/catch must only clear `session` when session === that object.
+      if (!(session.cancelled && session.state === 'requesting')) {
+        return Promise.reject({
+          name: 'InvalidStateError',
+          message: 'A microphone session is already active',
+        } satisfies MicSessionError)
+      }
     }
 
     const requestId = nextRequestId++

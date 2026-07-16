@@ -5,6 +5,7 @@
 import { forwardRef, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/utils'
+import { computeMentionDropdownPosition } from './mention-dropdown-position'
 
 /** Minimal user shape needed for mentions. */
 export interface MentionUser {
@@ -69,9 +70,11 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
   const [asyncResults, setAsyncResults] = useState<MentionUser[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
   const [dropdownPos, setDropdownPos] = useState<{
-    bottom: number
+    top?: number
+    bottom?: number
     left: number
     width: number
+    maxHeight: number
   } | null>(null)
 
   // Debounced async search
@@ -105,6 +108,15 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
     setActiveIndex(0)
   }, [filtered.length])
 
+  // Sync and clear mention query on programmatic value updates
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      const cursor = textarea.selectionStart ?? value.length
+      setMentionQuery(getMentionQuery(value, cursor))
+    }
+  }, [value])
+
   useEffect(() => {
     if (!isOpen) {
       setDropdownPos(null)
@@ -117,20 +129,32 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
       }
 
       const rect = textareaRef.current.getBoundingClientRect()
-      // Anchor above the field so chat composers near the viewport bottom stay usable.
-      const nextPos = {
-        bottom: window.innerHeight - rect.top + 4,
-        left: rect.left,
-        width: rect.width,
-      }
+      const nextPos = computeMentionDropdownPosition({
+        rect: {
+          top: rect.top,
+          bottom: rect.bottom,
+          left: rect.left,
+          width: rect.width,
+        },
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      })
 
       setDropdownPos((currentPos) =>
         currentPos &&
+        currentPos.top === nextPos.top &&
         currentPos.bottom === nextPos.bottom &&
         currentPos.left === nextPos.left &&
-        currentPos.width === nextPos.width
+        currentPos.width === nextPos.width &&
+        currentPos.maxHeight === nextPos.maxHeight
           ? currentPos
-          : nextPos,
+          : {
+              top: nextPos.top,
+              bottom: nextPos.bottom,
+              left: nextPos.left,
+              width: nextPos.width,
+              maxHeight: nextPos.maxHeight,
+            },
       )
     }
 
@@ -147,6 +171,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
       resizeObserver.observe(textareaRef.current)
     }
 
+    // Capture phase so nested scroll containers also reposition the portal.
     window.addEventListener('scroll', updateDropdownPosition, true)
     window.addEventListener('resize', updateDropdownPosition)
 
@@ -155,7 +180,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
       window.removeEventListener('scroll', updateDropdownPosition, true)
       window.removeEventListener('resize', updateDropdownPosition)
     }
-  }, [isOpen])
+  }, [isOpen, mentionQuery, value])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onValueChange(e.target.value)
@@ -235,12 +260,15 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
             role='listbox'
             style={{
               position: 'fixed',
+              top: dropdownPos.top,
               bottom: dropdownPos.bottom,
               left: dropdownPos.left,
               width: dropdownPos.width,
+              maxHeight: dropdownPos.maxHeight,
+              overflowY: 'auto',
               zIndex: 9999,
             }}
-            className='bg-popover max-h-72 overflow-y-auto rounded-md border shadow-md'
+            className='bg-popover rounded-md border shadow-md'
           >
             {filtered.map((person, i) => (
               <button

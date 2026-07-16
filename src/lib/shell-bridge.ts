@@ -534,6 +534,9 @@ export function shellMicStart(): Promise<number> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       micStartCallbacks.delete(requestId)
+      // Best-effort cancel so the shell discards a still-pending permission
+      // request. Do not await shellMicCancel() — that adds another timeout.
+      window.parent.postMessage({ type: 'mic.cancel', requestId }, '*')
       reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
     }, SHELL_MIC_TIMEOUT_MS)
 
