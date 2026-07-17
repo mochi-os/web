@@ -258,6 +258,7 @@ export {
   shellMicStart,
   shellMicStop,
   shellMicCancel,
+  shellMicProbe,
   onShellMicLevel,
 } from './lib/shell-bridge'
 export type {

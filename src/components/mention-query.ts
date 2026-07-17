@@ -94,24 +94,25 @@ export function resolveMentionsFromBody(options: {
 }
 
 /**
- * Display names in `body` that could not be resolved to ids: unknown names,
- * or ambiguous names with no matching `preferred` pick.
+ * Split unresolved `@[Name]` tokens into unknown (no roster match) vs
+ * ambiguous (multiple matches, no preferred pick).
  */
-export function unresolvedMentionDisplayNames(options: {
+export function classifyUnresolvedMentions(options: {
   body: string
   people: MentionResolvePerson[]
   preferred?: MentionResolvePerson[]
-}): string[] {
+}): { unknown: string[]; ambiguous: string[] } {
   const namesInBody = new Set(extractMentionDisplayNames(options.body))
-  if (namesInBody.size === 0) return []
+  if (namesInBody.size === 0) return { unknown: [], ambiguous: [] }
 
   const preferred = options.preferred ?? []
-  const unresolved: string[] = []
+  const unknown: string[] = []
+  const ambiguous: string[] = []
 
   for (const name of namesInBody) {
     const matches = options.people.filter((person) => person.name === name)
     if (matches.length === 0) {
-      unresolved.push(name)
+      unknown.push(name)
       continue
     }
     if (matches.length === 1) continue
@@ -121,9 +122,22 @@ export function unresolvedMentionDisplayNames(options: {
       (person) => person.name === name && matchIds.has(person.id)
     )
     if (!hasPreferred) {
-      unresolved.push(name)
+      ambiguous.push(name)
     }
   }
 
-  return unresolved
+  return { unknown, ambiguous }
+}
+
+/**
+ * Display names in `body` that could not be resolved to ids: unknown names,
+ * or ambiguous names with no matching `preferred` pick.
+ */
+export function unresolvedMentionDisplayNames(options: {
+  body: string
+  people: MentionResolvePerson[]
+  preferred?: MentionResolvePerson[]
+}): string[] {
+  const { unknown, ambiguous } = classifyUnresolvedMentions(options)
+  return [...unknown, ...ambiguous]
 }

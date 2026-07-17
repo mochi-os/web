@@ -480,6 +480,7 @@ export type ShellMicError = Error & { name: string }
 const SHELL_MIC_START_TIMEOUT_MS = 30_000
 const SHELL_MIC_STOP_TIMEOUT_MS = 120_000
 const SHELL_MIC_CANCEL_TIMEOUT_MS = 30_000
+const SHELL_MIC_PROBE_TIMEOUT_MS = 800
 const SHELL_MIC_UNSUPPORTED =
   'Installed Mochi shell may not support voice recording'
 
@@ -490,6 +491,13 @@ function shellMicFailure(name: string, message: string): ShellMicError {
 }
 
 let micIdCounter = 0
+const micProbeCallbacks = new Map<
+  number,
+  {
+    resolve: (supported: boolean) => void
+    timer: ReturnType<typeof setTimeout>
+  }
+>()
 const micStartCallbacks = new Map<
   number,
   {
@@ -519,6 +527,27 @@ function clearMicTimer(
   entry: { timer: ReturnType<typeof setTimeout> } | undefined
 ) {
   if (entry) clearTimeout(entry.timer)
+}
+
+/**
+ * Probe whether the parent shell implements the mic bridge.
+ * Old shells ignore the message → false after a short timeout (no 30s hang).
+ */
+export function shellMicProbe(): Promise<boolean> {
+  if (!isInShell()) {
+    return Promise.resolve(false)
+  }
+
+  const requestId = ++micIdCounter
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      micProbeCallbacks.delete(requestId)
+      resolve(false)
+    }, SHELL_MIC_PROBE_TIMEOUT_MS)
+
+    micProbeCallbacks.set(requestId, { resolve, timer })
+    window.parent.postMessage({ type: 'mic.probe', requestId }, '*')
+  })
 }
 
 /** Start shell-side microphone recording. Resolves with shell requestId. */
@@ -858,6 +887,16 @@ if (typeof window !== 'undefined') {
     }
 
     // Handle microphone bridge results from the shell
+    if (data.type === 'mic.probe.result') {
+      const requestId = data.requestId as number
+      const cb = micProbeCallbacks.get(requestId)
+      if (cb) {
+        micProbeCallbacks.delete(requestId)
+        clearMicTimer(cb)
+        cb.resolve(data.supported === true)
+      }
+    }
+
     if (data.type === 'mic.started') {
       const requestId = data.requestId as number
       const cb = micStartCallbacks.get(requestId)

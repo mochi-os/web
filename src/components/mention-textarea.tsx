@@ -16,6 +16,8 @@ import {
 export interface MentionUser {
   id: string
   name: string
+  /** Secondary line when names collide (e.g. short identity). */
+  detail?: string
 }
 
 interface MentionTextareaProps
@@ -51,6 +53,7 @@ export const highlightMentions = (html: string): string =>
   })
 
 export {
+  classifyUnresolvedMentions,
   extractMentionDisplayNames,
   getMentionQuery,
   mentionDisplayTokenPattern,
@@ -325,7 +328,14 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
                 }}
                 onMouseEnter={() => setActiveIndex(i)}
               >
-                {person.name}
+                <span className='flex min-w-0 flex-col items-start gap-0.5'>
+                  <span className='truncate'>{person.name}</span>
+                  {person.detail ? (
+                    <span className='text-muted-foreground truncate text-xs'>
+                      {person.detail}
+                    </span>
+                  ) : null}
+                </span>
               </button>
             ))}
           </div>,
