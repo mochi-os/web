@@ -50,7 +50,14 @@ export const highlightMentions = (html: string): string =>
     return `<span class="text-primary font-medium">@${safe}</span>`
   })
 
-export { getMentionQuery, mentionQueryPattern } from './mention-query'
+export {
+  extractMentionDisplayNames,
+  getMentionQuery,
+  mentionDisplayTokenPattern,
+  mentionQueryPattern,
+  resolveMentionsFromBody,
+  type MentionResolvePerson,
+} from './mention-query'
 
 export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
   function MentionTextarea({
