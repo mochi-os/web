@@ -477,7 +477,9 @@ export type ShellMicResult = {
 
 export type ShellMicError = Error & { name: string }
 
-const SHELL_MIC_TIMEOUT_MS = 30_000
+const SHELL_MIC_START_TIMEOUT_MS = 30_000
+const SHELL_MIC_STOP_TIMEOUT_MS = 120_000
+const SHELL_MIC_CANCEL_TIMEOUT_MS = 30_000
 const SHELL_MIC_UNSUPPORTED =
   'Installed Mochi shell may not support voice recording'
 
@@ -538,7 +540,7 @@ export function shellMicStart(): Promise<number> {
       // request. Do not await shellMicCancel() — that adds another timeout.
       window.parent.postMessage({ type: 'mic.cancel', requestId }, '*')
       reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
-    }, SHELL_MIC_TIMEOUT_MS)
+    }, SHELL_MIC_START_TIMEOUT_MS)
 
     micStartCallbacks.set(requestId, { resolve, reject, timer })
     window.parent.postMessage({ type: 'mic.start', requestId }, '*')
@@ -560,7 +562,7 @@ export function shellMicStop(requestId: number): Promise<ShellMicResult> {
     const timer = setTimeout(() => {
       micStopCallbacks.delete(requestId)
       reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
-    }, SHELL_MIC_TIMEOUT_MS)
+    }, SHELL_MIC_STOP_TIMEOUT_MS)
 
     micStopCallbacks.set(requestId, { resolve, reject, timer })
     window.parent.postMessage({ type: 'mic.stop', requestId }, '*')
@@ -578,7 +580,7 @@ export function shellMicCancel(requestId?: number): Promise<void> {
     const timer = setTimeout(() => {
       micCancelCallbacks.delete(id)
       reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
-    }, SHELL_MIC_TIMEOUT_MS)
+    }, SHELL_MIC_CANCEL_TIMEOUT_MS)
 
     micCancelCallbacks.set(id, { resolve, reject, timer })
     window.parent.postMessage(

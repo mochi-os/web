@@ -92,3 +92,38 @@ export function resolveMentionsFromBody(options: {
 
   return result
 }
+
+/**
+ * Display names in `body` that could not be resolved to ids: unknown names,
+ * or ambiguous names with no matching `preferred` pick.
+ */
+export function unresolvedMentionDisplayNames(options: {
+  body: string
+  people: MentionResolvePerson[]
+  preferred?: MentionResolvePerson[]
+}): string[] {
+  const namesInBody = new Set(extractMentionDisplayNames(options.body))
+  if (namesInBody.size === 0) return []
+
+  const preferred = options.preferred ?? []
+  const unresolved: string[] = []
+
+  for (const name of namesInBody) {
+    const matches = options.people.filter((person) => person.name === name)
+    if (matches.length === 0) {
+      unresolved.push(name)
+      continue
+    }
+    if (matches.length === 1) continue
+
+    const matchIds = new Set(matches.map((person) => person.id))
+    const hasPreferred = preferred.some(
+      (person) => person.name === name && matchIds.has(person.id)
+    )
+    if (!hasPreferred) {
+      unresolved.push(name)
+    }
+  }
+
+  return unresolved
+}

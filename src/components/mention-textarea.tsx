@@ -56,6 +56,7 @@ export {
   mentionDisplayTokenPattern,
   mentionQueryPattern,
   resolveMentionsFromBody,
+  unresolvedMentionDisplayNames,
   type MentionResolvePerson,
 } from './mention-query'
 
