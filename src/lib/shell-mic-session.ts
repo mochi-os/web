@@ -610,3 +610,37 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
 }
 
 export type MicSessionHost = ReturnType<typeof createMicSessionHost>
+
+export type GuardedShellMicStart =
+  | { status: 'started'; requestId: number }
+  | { status: 'unsupported' }
+  | { status: 'disposed' }
+
+/**
+ * Start a shell mic recording with dispose-safety across the async gaps.
+ * The permission prompt can outlive the caller (component unmount while the
+ * user decides); a start that resolves after dispose must cancel the shell
+ * session immediately or the mic stays on with no owner.
+ */
+export async function startShellMicGuarded(deps: {
+  ensureSupported: () => Promise<boolean>
+  start: () => Promise<number>
+  /** Fire-and-forget cancel of an orphaned shell session. */
+  cancel: (requestId: number) => void
+  isDisposed: () => boolean
+}): Promise<GuardedShellMicStart> {
+  const supported = await deps.ensureSupported()
+  if (deps.isDisposed()) {
+    return { status: 'disposed' }
+  }
+  if (!supported) {
+    return { status: 'unsupported' }
+  }
+
+  const requestId = await deps.start()
+  if (deps.isDisposed()) {
+    deps.cancel(requestId)
+    return { status: 'disposed' }
+  }
+  return { status: 'started', requestId }
+}

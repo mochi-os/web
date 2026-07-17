@@ -272,9 +272,11 @@ export {
   micDurationSecs,
   micFilenameForMime,
   pickMicMimeType,
+  startShellMicGuarded,
   MIC_PREFERRED_MIME_TYPES,
 } from './lib/shell-mic-session'
 export type {
+  GuardedShellMicStart,
   MicSessionHost,
   MicSessionResult,
   MicSessionError,
