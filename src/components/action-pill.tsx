@@ -48,7 +48,7 @@ const EXPAND_OPACITY = {
 } as const
 
 const INLINE_SHELL =
-  'inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-border/50 bg-muted/40 p-0.5 leading-none shadow-sm'
+  'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-border/50 bg-muted/40 p-0.5 leading-none shadow-sm'
 
 type ActionPillProps = ComponentProps<'div'> & {
   /** Sticky content present (reactions/votes) — shell stays open; actions may expand. */
