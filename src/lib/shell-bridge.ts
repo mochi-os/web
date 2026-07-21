@@ -316,6 +316,23 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
   })
 }
 
+/** Anchor-click save — only works where this document is same-origin and not
+ * sandboxed (the top window). */
+function saveBlob(blob: Blob, name: string): void {
+  const objectUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objectUrl
+  a.download = name
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  // Delay cleanup so the browser resolves the blob URL before it's revoked.
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(objectUrl)
+  }, 1000)
+}
+
 /** Fetch a URL and save it to disk via a blob — only safe where this document
  * is same-origin and not sandboxed (the top window). */
 function directBlobDownload(url: string, name: string): Promise<boolean> {
@@ -325,18 +342,7 @@ function directBlobDownload(url: string, name: string): Promise<boolean> {
       return r.blob()
     })
     .then((blob) => {
-      const objectUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = objectUrl
-      a.download = name
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      // Delay cleanup so the browser resolves the blob URL before it's revoked.
-      setTimeout(() => {
-        document.body.removeChild(a)
-        URL.revokeObjectURL(objectUrl)
-      }, 1000)
+      saveBlob(blob, name)
       return true
     })
     .catch(() => false)
@@ -363,6 +369,35 @@ export function shellDownload(url: string, name: string): Promise<boolean> {
   return new Promise((resolve) => {
     downloadCallbacks.set(id, resolve)
     window.parent.postMessage({ type: 'download', url: absolute, name, id }, '*')
+  })
+}
+
+/**
+ * Save an in-memory Blob to disk as `name`. In the top window a plain anchor
+ * click works; inside the shell's sandboxed iframe the browser silently
+ * ignores it, so post the Blob to the parent shell (structured cloning
+ * carries it across the sandbox boundary) and let the unsandboxed top window
+ * save it. Resolves false if the save couldn't be started — including a
+ * stale shell page that predates the download.content channel (timeout).
+ */
+export function shellSaveBlob(blob: Blob, name: string): Promise<boolean> {
+  if (!isInShell()) {
+    saveBlob(blob, name)
+    return Promise.resolve(true)
+  }
+  const id = ++downloadIdCounter
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      if (downloadCallbacks.has(id)) {
+        downloadCallbacks.delete(id)
+        resolve(false)
+      }
+    }, 10000)
+    downloadCallbacks.set(id, (ok) => {
+      clearTimeout(timer)
+      resolve(ok)
+    })
+    window.parent.postMessage({ type: 'download.content', blob, name, id }, '*')
   })
 }
 

@@ -236,6 +236,7 @@ export {
   shellNavigateExternal,
   shellNavigateTop,
   shellDownload,
+  shellSaveBlob,
   shellSetTitle,
   shellSetSidebarState,
   shellSetSidebarPresent,
