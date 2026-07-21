@@ -25,6 +25,7 @@ export interface GalleryAttachment {
   size: number
   url?: string
   thumbnail_url?: string
+  preview_url?: string
 }
 
 export interface AttachmentGalleryProps {
@@ -33,6 +34,10 @@ export interface AttachmentGalleryProps {
   getUrl?: (att: GalleryAttachment) => string
   // Resolve the thumbnail URL. Falls back to att.thumbnail_url, then att.url, then getUrl.
   getThumbnailUrl?: (att: GalleryAttachment) => string
+  // Resolve the preview URL (larger image variant) for media tiles. Pass this
+  // for post/object galleries whose tiles render large; omit it for small
+  // galleries (comments), whose tiles then stay on the thumbnail chain.
+  getPreviewUrl?: (att: GalleryAttachment) => string
   // Target row height in px. 80 fits comments, 140 matches MapView thumbs, 200 for big posts. Default 140.
   rowHeight?: number
   // Cap on visible media items; overflow collapses into a "+N" overlay on the last tile.
@@ -98,6 +103,7 @@ export function AttachmentGallery({
   attachments,
   getUrl,
   getThumbnailUrl,
+  getPreviewUrl,
   rowHeight = 140,
   mediaCap,
   inline = false,
@@ -124,6 +130,14 @@ export function AttachmentGallery({
       return resolveUrl(att)
     },
     [getThumbnailUrl, resolveUrl]
+  )
+
+  // Media tiles use the preview variant only when the consumer opts in; the
+  // automatic fallback stays on the thumbnail chain so small galleries never
+  // silently upgrade to the heavier variant.
+  const resolveTile = useCallback(
+    (att: GalleryAttachment): string => getPreviewUrl ? getPreviewUrl(att) : resolveThumb(att),
+    [getPreviewUrl, resolveThumb]
   )
 
   const media = (attachments ?? []).filter((att) => isImage(att.type) || isVideo(att.type))
@@ -176,7 +190,7 @@ export function AttachmentGallery({
             />
           ) : (
             <img
-              src={resolveThumb(attachment)}
+              src={resolveTile(attachment)}
               alt={attachment.name}
               onLoad={(e: SyntheticEvent<HTMLImageElement>) => {
                 const img = e.currentTarget
