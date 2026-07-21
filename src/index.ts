@@ -252,7 +252,6 @@ export {
   authenticatedUrl,
   shellClipboardWrite,
   shellRequestPermission,
-  shellFetch,
   shellWebauthnCreate,
   shellWebauthnGet,
   shellMicStart,
