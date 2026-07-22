@@ -59,6 +59,7 @@ export default {
           'Authorization',
           'data-testid',
           'role',
+          'rel',
           'tabIndex',
           'autoComplete',
           'inputMode',

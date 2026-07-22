@@ -100,6 +100,17 @@ jobs:
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: pnpm lint --max-warnings=0
 
+      - name: Unit tests
+        working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
+        run: |
+          # Run the vitest suite for apps that define a "test" script; apps
+          # without one skip cleanly, so this is a no-op until an app adds tests.
+          if node -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"; then
+            pnpm test
+          else
+            echo "no test script — skipping unit tests"
+          fi
+
       - name: Check i18n catalogs
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: pnpm i18n:check
