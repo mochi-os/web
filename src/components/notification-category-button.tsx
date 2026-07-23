@@ -97,7 +97,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
         object: row.object,
         category: value,
       })
-      await menuFetch('-/notifications/topic/set_category', {
+      await menuFetch('-/notifications/topic/category/set', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString(),
