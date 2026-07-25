@@ -48,6 +48,13 @@ export default {
         ignoreNames: [
           { regex: { pattern: 'className', flags: 'i' } },
           { regex: { pattern: '^[A-Z0-9_-]+$' } },
+          // Variables holding a class string rather than prose:
+          // `const toggleClass = isSent ? 'text-primary' : '…'`, and the
+          // `*Classes` / `*ClassName` variants. The rule already exempts
+          // the className *prop* and cn()/cva() arguments, but not the
+          // intermediate variable, which is how conditional styling is
+          // usually expressed.
+          { regex: { pattern: 'class(es|name|names)?$', flags: 'i' } },
           'styleName',
           'src',
           'srcSet',
