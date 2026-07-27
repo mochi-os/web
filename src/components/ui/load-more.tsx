@@ -32,7 +32,7 @@ export function LoadMore({
           onClick={onLoadMore}
           disabled={isLoading}
         >
-          {isLoading ? <Trans>Loading…</Trans> : (label ?? t`Load more`)}
+          {isLoading ? <Trans>Loading...</Trans> : (label ?? t`Load more`)}
         </Button>
       ) : null}
       <p className='text-xs text-muted-foreground'>
