@@ -10,6 +10,7 @@ import { NotificationCategoryButton } from '../notification-category-button'
 import { ScrollArea } from '../ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { t } from '@lingui/core/macro'
+import { Trans } from '@lingui/react/macro'
 
 export { type Notification }
 
@@ -82,7 +83,7 @@ export function NotificationsSection({
     <div className='py-1'>
       <div className='flex items-center justify-between px-2 pb-1'>
         <span className='text-xs font-medium text-muted-foreground'>
-          Notifications: {unread.length}
+          <Trans>Notifications: {unread.length}</Trans>
         </span>
         <div className='flex gap-1'>
           {unread.length > 0 && (

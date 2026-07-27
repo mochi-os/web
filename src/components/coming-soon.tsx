@@ -11,7 +11,7 @@ export function ComingSoon() {
         <Telescope size={72} />
         <h1 className="text-4xl leading-tight font-bold"><Trans>Coming Soon!</Trans></h1>
         <p className="text-muted-foreground text-center">
-          This page has not been created yet. <br />
+          <Trans>This page has not been created yet.</Trans> <br />
           <Trans>Stay tuned though!</Trans>
         </p>
       </div>

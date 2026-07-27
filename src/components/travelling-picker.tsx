@@ -217,7 +217,7 @@ export function TravellingPicker({
 
           {/* Destination field */}
           <div className="space-y-2">
-            <Label>To</Label>
+            <Label><Trans>To</Trans></Label>
             <div className="relative">
               {destination ? (
                 <div className="flex items-center gap-2 border rounded-[8px] px-3 py-2">

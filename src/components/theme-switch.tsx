@@ -42,21 +42,21 @@ export function ThemeSwitch() {
       </Tooltip>
       <DropdownMenuContent align='end'>
         <DropdownMenuItem onClick={() => setTheme('light')}>
-          Light{' '}
+          <Trans>Light</Trans>{' '}
           <Check
             size={14}
             className={cn('ms-auto', theme !== 'light' && 'hidden')}
           />
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('dark')}>
-          Dark
+          <Trans>Dark</Trans>
           <Check
             size={14}
             className={cn('ms-auto', theme !== 'dark' && 'hidden')}
           />
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('system')}>
-          System
+          <Trans>System</Trans>
           <Check
             size={14}
             className={cn('ms-auto', theme !== 'system' && 'hidden')}

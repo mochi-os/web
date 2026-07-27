@@ -170,7 +170,7 @@ export function CreateEntityDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{entityLabel} name</FormLabel>
+                  <FormLabel><Trans>{entityLabel} name</Trans></FormLabel>
                   <FormControl>
                     <Input disabled={isPending} {...field} />
                   </FormControl>

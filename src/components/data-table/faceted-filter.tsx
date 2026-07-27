@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as React from 'react'
-import { Trans } from '@lingui/react/macro'
+import { Trans, Plural } from '@lingui/react/macro'
 import { CheckIcon, PlusCircledIcon } from '@radix-ui/react-icons'
 import { type Column } from '@tanstack/react-table'
 import { cn } from '../../lib/utils'
@@ -63,7 +63,11 @@ export function DataTableFacetedFilter<TData, TValue>({
                     variant='secondary'
                     className='rounded-sm px-1 font-normal'
                   >
-                    {selectedValues.size} selected
+                    <Plural
+                      value={selectedValues.size}
+                      one='# selected'
+                      other='# selected'
+                    />
                   </Badge>
                 ) : (
                   options

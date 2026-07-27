@@ -256,7 +256,7 @@ export function AccessList({
                       <AlertDialogHeader>
                         <AlertDialogTitle><Trans>Remove access?</Trans></AlertDialogTitle>
                         <AlertDialogDescription>
-                          Remove access rule for "{formatSubject(subject, data.name)}"?
+                          <Trans>Remove access rule for "{formatSubject(subject, data.name)}"?</Trans>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

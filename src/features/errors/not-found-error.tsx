@@ -15,8 +15,10 @@ export function NotFoundError() {
         <h1 className='text-[7rem] leading-tight font-bold'>404</h1>
         <span className='font-medium'><Trans>Oops! Page Not Found!</Trans></span>
         <p className='text-muted-foreground text-center'>
-          It seems like the page you're looking for <br />
-          does not exist or might have been removed.
+          <Trans>
+            It seems like the page you're looking for <br />
+            does not exist or might have been removed.
+          </Trans>
         </p>
         <div className='mt-6 flex gap-4'>
           <Button variant='outline' onClick={() => history.go(-1)}>

@@ -306,7 +306,7 @@ export function AccessDialog({
         {canAdd && (
           <div className="mt-4 space-y-3 border-t pt-4">
             <p className="text-sm">
-              Selected: <span className="font-medium">{getSelectedName()}</span>
+              <Trans>Selected: <span className="font-medium">{getSelectedName()}</span></Trans>
             </p>
             <Select value={level} onValueChange={setLevel}>
               <SelectTrigger>

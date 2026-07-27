@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useState, useEffect, useRef } from 'react'
-import { Trans } from '@lingui/react/macro'
+import { Trans, Plural } from '@lingui/react/macro'
 import { type Table } from '@tanstack/react-table'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -14,11 +14,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '../ui/tooltip'
-import { t } from '@lingui/core/macro'
+import { t, plural } from '@lingui/core/macro'
 
 type DataTableBulkActionsProps<TData> = {
   table: Table<TData>
   entityName: string
+  entityNamePlural?: string
   children: React.ReactNode
 }
 
@@ -28,15 +29,18 @@ type DataTableBulkActionsProps<TData> = {
  * @template TData The type of data in the table.
  * @param {object} props The component props.
  * @param {Table<TData>} props.table The react-table instance.
- * @param {string} props.entityName The name of the entity being acted upon (e.g., "task", "user").
+ * @param {string} props.entityName Localized singular noun for the row type (e.g. t`task`).
+ * @param {string} [props.entityNamePlural] Localized plural noun. Defaults to entityName.
  * @param {React.ReactNode} props.children The action buttons to be rendered inside the toolbar.
  * @returns {React.ReactNode | null} The rendered component or null if no rows are selected.
  */
 export function DataTableBulkActions<TData>({
   table,
   entityName,
+  entityNamePlural,
   children,
 }: DataTableBulkActionsProps<TData>): React.ReactNode | null {
+  const manyName = entityNamePlural ?? entityName
   const selectedRows = table.getFilteredSelectedRowModel().rows
   const selectedCount = selectedRows.length
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -45,14 +49,17 @@ export function DataTableBulkActions<TData>({
   // Announce selection changes to screen readers
   useEffect(() => {
     if (selectedCount > 0) {
-      const message = `${selectedCount} ${entityName}${selectedCount > 1 ? 's' : ''} selected. Bulk actions toolbar is available.`
+      const message = plural(selectedCount, {
+        one: `# ${entityName} selected. Bulk actions toolbar is available.`,
+        other: `# ${manyName} selected. Bulk actions toolbar is available.`,
+      })
       setAnnouncement(message)
 
       // Clear announcement after a delay
       const timer = setTimeout(() => setAnnouncement(''), 3000)
       return () => clearTimeout(timer)
     }
-  }, [selectedCount, entityName])
+  }, [selectedCount, entityName, manyName])
 
   const handleClearSelection = () => {
     table.resetRowSelection()
@@ -139,7 +146,10 @@ export function DataTableBulkActions<TData>({
       <div
         ref={toolbarRef}
         role='toolbar'
-        aria-label={`Bulk actions for ${selectedCount} selected ${entityName}${selectedCount > 1 ? 's' : ''}`}
+        aria-label={plural(selectedCount, {
+          one: `Bulk actions for # selected ${entityName}`,
+          other: `Bulk actions for # selected ${manyName}`,
+        })}
         aria-describedby='bulk-actions-description'
         tabIndex={-1}
         onKeyDown={handleKeyDown}
@@ -172,7 +182,7 @@ export function DataTableBulkActions<TData>({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Clear selection (Escape)</p>
+              <p><Trans>Clear selection (Escape)</Trans></p>
             </TooltipContent>
           </Tooltip>
 
@@ -189,15 +199,21 @@ export function DataTableBulkActions<TData>({
             <Badge
               variant='default'
               className='min-w-8 rounded-lg'
-              aria-label={`${selectedCount} selected`}
+              aria-label={plural(selectedCount, {
+                one: '# selected',
+                other: '# selected',
+              })}
             >
               {selectedCount}
             </Badge>{' '}
             <span className='hidden sm:inline'>
-              {entityName}
-              {selectedCount > 1 ? 's' : ''}
+              <Plural
+                value={selectedCount}
+                one={`${entityName} selected`}
+                other={`${manyName} selected`}
+              />
             </span>{' '}
-            selected
+            <span className='sm:hidden'><Trans>selected</Trans></span>
           </div>
 
           <Separator

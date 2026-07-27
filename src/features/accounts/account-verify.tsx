@@ -60,9 +60,11 @@ export function AccountVerify({
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle><Trans>Verify email address</Trans></ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
-              We sent a verification code to{' '}
-              <strong>{account.identifier}</strong>. Enter the code below to
-              verify your email address.
+              <Trans>
+                We sent a verification code to{' '}
+                <strong>{account.identifier}</strong>. Enter the code below to
+                verify your email address.
+              </Trans>
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 

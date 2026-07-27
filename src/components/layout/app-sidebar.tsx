@@ -93,6 +93,7 @@ export function AppSidebar({
                   alt={'Mochi'}
                   className='h-6 w-6'
                 />
+                {/* jsx-text-ok: brand wordmark, verbatim in every locale */}
                 <span className='text-sm font-semibold'>mochi</span>
               </a>
               <div className='flex-1' />

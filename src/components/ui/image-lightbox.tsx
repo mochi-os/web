@@ -242,7 +242,9 @@ export function ImageLightbox({
           aria-describedby={undefined}
         >
           <DialogPrimitive.Title className='sr-only'>
-            {isVideo ? "Video" : "Image"} viewer: {currentMedia.name}
+            {isVideo
+              ? <Trans>Video viewer: {currentMedia.name}</Trans>
+              : <Trans>Image viewer: {currentMedia.name}</Trans>}
           </DialogPrimitive.Title>
 
           {/* Full-screen media area */}
@@ -257,7 +259,9 @@ export function ImageLightbox({
             {hasError ? (
               <div className='flex flex-col items-center gap-3 text-white/70'>
                 {isVideo ? <FileWarning className='size-12' /> : <ImageOff className='size-12' />}
-                <span className='text-sm'>Failed to load {isVideo ? 'video' : 'image'}</span>
+                <span className='text-sm'>
+                  {isVideo ? <Trans>Failed to load video</Trans> : <Trans>Failed to load image</Trans>}
+                </span>
               </div>
             ) : isVideo ? (
               <video

@@ -10,6 +10,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
+import i18nConfig from './eslint-i18n-config.js'
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -70,6 +71,28 @@ export default defineConfig(
       '@typescript-eslint/triple-slash-reference': 'warn',
       '@tanstack/query/exhaustive-deps': 'warn',
       'no-duplicate-imports': 'error',
+    },
+  },
+  // All 23 apps import eslint-i18n-config.js; lib/web shipped without it, so
+  // the component library every app renders was the one place the lingui rule
+  // never ran. That is how five error pages reached production as untranslated
+  // English paragraphs.
+  //
+  // Enabled at 'warn' rather than the shared config's 'error' because turning
+  // it on surfaces 420 pre-existing violations, a real backlog that has to be
+  // triaged string by string (`sonnerToast.error('Failed to copy')` is genuine;
+  // much of the rest is attribute and config noise). Same staged approach the
+  // Android i18n gates took. Flip to 'error' once the backlog is cleared; the
+  // JSX-text subset is already at zero and is held there by
+  // claude/scripts/check-jsx-text.mjs.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ...i18nConfig,
+    rules: {
+      'lingui/no-unlocalized-strings': [
+        'warn',
+        i18nConfig.rules['lingui/no-unlocalized-strings'][1],
+      ],
     },
   }
 );

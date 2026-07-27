@@ -12,7 +12,7 @@ export function MaintenanceError() {
         <h1 className='text-[7rem] leading-tight font-bold'>503</h1>
         <span className='font-medium'><Trans>Website is under maintenance!</Trans></span>
         <p className='text-muted-foreground text-center'>
-          The site is not available at the moment. <br />
+          <Trans>The site is not available at the moment.</Trans> <br />
           <Trans>We'll be back online shortly.</Trans>
         </p>
         <div className='mt-6 flex gap-4'>

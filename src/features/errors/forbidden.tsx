@@ -15,8 +15,10 @@ export function ForbiddenError() {
         <h1 className='text-[7rem] leading-tight font-bold'>403</h1>
         <span className='font-medium'><Trans>Access Forbidden</Trans></span>
         <p className='text-muted-foreground text-center'>
-          You don't have necessary permission <br />
-          to view this resource.
+          <Trans>
+            You don't have necessary permission <br />
+            to view this resource.
+          </Trans>
         </p>
         <div className='mt-6 flex gap-4'>
           <Button variant='outline' onClick={() => history.go(-1)}>
