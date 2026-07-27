@@ -73,12 +73,15 @@
 }
 
 :root {
-  /* Font stacks. The lead family in each stack is the webfont actually loaded
-     by the Vite plugin's Google Fonts <link> (see lib/web/src/vite/mochi-plugin.js)
-     — keep these in sync. A loaded webfont must come first so text renders
-     deterministically instead of falling through to the device's generic family,
-     which is not guaranteed to be sans-serif on every device. */
-  --font-sans: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  /* Font stacks. --font-sans matches the system stack the server emits for
+     themed pages (font_stacks/style_preset_vars in core/server/themes.go), so
+     pages served without a theme style — OpenGraph-served public pages,
+     servers with no default_theme — render in the same font as everything
+     else. Atkinson Hyperlegible stays loaded via the Vite plugin's Google
+     Fonts <link> (see lib/web/src/vite/mochi-plugin.js) but is applied only
+     by the dyslexia font preference. --font-mono leads with the loaded IBM
+     Plex Mono webfont — keep it in sync with the plugin's <link>. */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
