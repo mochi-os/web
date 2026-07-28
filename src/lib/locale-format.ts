@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro'
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
@@ -58,7 +59,7 @@ export function formatRelativeTime(timestamp: number, dateFormat: DateFormat): s
   const now = Date.now() / 1000
   const diff = now - timestamp
 
-  if (diff < 60) return 'Just now'
+  if (diff < 60) return t`Just now`
   if (diff < 3600) return `${Math.floor(diff / 60)}m`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
   if (diff < 604800) return `${Math.floor(diff / 86400)}d`

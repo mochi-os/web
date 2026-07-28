@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import * as React from 'react'
 import { Trans } from '@lingui/react/macro'
 import { Check, Copy } from 'lucide-react'
@@ -21,8 +22,8 @@ interface CopyButtonProps
 
 export function CopyButton({
   value,
-  successMessage = 'Copied to clipboard',
-  errorMessage = 'Failed to copy',
+  successMessage = t`Copied to clipboard`,
+  errorMessage = t`Failed to copy`,
   onCopyError,
   className,
   variant = 'ghost',

@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useState, useRef, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { Plus } from 'lucide-react'
@@ -34,9 +35,9 @@ export function TagInput({
   onAdded,
   loadSuggestions,
   submitTag,
-  invalidMessage = 'Invalid tag: letters, numbers, spaces, hyphens, and slashes only (max 50 chars)',
-  submitErrorMessage = 'Failed to add tag',
-  placeholder = 'Add tag...',
+  invalidMessage = t`Invalid tag: letters, numbers, spaces, hyphens, and slashes only (max 50 chars)`,
+  submitErrorMessage = t`Failed to add tag`,
+  placeholder = t`Add tag...`,
 }: TagInputProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [value, setValue] = useState('')

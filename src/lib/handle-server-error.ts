@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
 import { normalizeError } from './error-normalizer'
 
@@ -14,7 +15,7 @@ export function handleServerError(error: unknown) {
   let errMsg = normalized.message
 
   if (normalized.status === 204) {
-    errMsg = 'Content not found.'
+    errMsg = t`Content not found.`
   }
 
   toast.error(errMsg)

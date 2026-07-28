@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import type { WebsocketConnectionStatus } from './realtime-websocket-manager'
 
 export type WebsocketStatusMeta = {
@@ -14,18 +15,18 @@ export function getWebsocketStatusMeta(
 ): WebsocketStatusMeta {
   switch (status) {
     case 'ready':
-      return { label: "Connected", color: 'bg-success' }
+      return { label: t`Connected`, color: 'bg-success' }
     case 'connecting':
       return {
-        label: retries > 0 ? `Reconnecting (${retries})...` : 'Connecting...',
+        label: retries > 0 ? t`Reconnecting (${retries})...` : t`Connecting...`,
         color: 'bg-warning',
       }
     case 'error':
-      return { label: "Disconnected", color: 'bg-destructive' }
+      return { label: t`Disconnected`, color: 'bg-destructive' }
     case 'idle':
     case 'closing':
     default:
-      return { label: "Disconnected", color: 'bg-muted-foreground' }
+      return { label: t`Disconnected`, color: 'bg-muted-foreground' }
   }
 }
 

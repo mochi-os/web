@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { useFormat } from '../hooks/use-format'
 import { Button } from './ui/button'
@@ -16,7 +17,7 @@ type DatePickerProps = {
 export function DatePicker({
   selected,
   onSelect,
-  placeholder = 'Pick a date',
+  placeholder = t`Pick a date`,
 }: DatePickerProps) {
   const { formatDate, weekStartsOn } = useFormat()
 

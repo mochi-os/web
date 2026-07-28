@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 
 export interface PaginatedResult<T> {
@@ -70,7 +71,7 @@ export function useLoadMore<T, P = Record<string, unknown>>(
         setTotal(result.total)
         setPage(nextPage)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load")
+        setError(err instanceof Error ? err.message : t`Failed to load`)
       } finally {
         setIsLoading(false)
       }

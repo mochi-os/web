@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { CSSProperties, memo } from 'react'
 import { cn } from '../lib/utils'
 
@@ -65,7 +66,7 @@ export const FacelessAvatar = memo(function FacelessAvatar({
         ...style,
       }}
       role="img"
-      aria-label={name ? `Initials avatar for ${name}` : 'Initials avatar'}
+      aria-label={name ? t`Initials avatar for ${name}` : t`Initials avatar`}
     >
       {Icon ? <Icon size={Math.round(size * 0.5)} /> : initials}
     </div>

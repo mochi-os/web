@@ -65,15 +65,15 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
     const cleaned = value.trim().toLowerCase()
     if (!cleaned) return
     if (cleaned.length > 50) {
-      setError('Tag must be 50 characters or less')
+      setError(t`Tag must be 50 characters or less`)
       return
     }
     if (!TAG_PATTERN.test(cleaned)) {
-      setError('Letters, numbers, spaces, and hyphens only')
+      setError(t`Letters, numbers, spaces, and hyphens only`)
       return
     }
     if (tags.some((t) => t.label === cleaned)) {
-      setError('Tag already exists')
+      setError(t`Tag already exists`)
       setValue('')
       return
     }

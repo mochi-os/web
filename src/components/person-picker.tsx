@@ -80,8 +80,8 @@ export function PersonPicker({
   apiBasePath = '',
   directoryFn,
   friendsFn,
-  placeholder = 'Select person...',
-  emptyMessage = 'No people found',
+  placeholder = t`Select person...`,
+  emptyMessage = t`No people found`,
   disabled = false,
   className,
   open: controlledOpen,
@@ -197,21 +197,21 @@ export function PersonPicker({
 
     const localPeople = filteredPeople.filter((p) => localIds.has(p.id))
     if (localPeople.length > 0) {
-      groups.push({ label: "Project members", people: localPeople })
+      groups.push({ label: t`Project members`, people: localPeople })
     }
 
     const friendPeople = filteredPeople.filter(
       (p) => friendIds.has(p.id) && !localIds.has(p.id)
     )
     if (friendPeople.length > 0) {
-      groups.push({ label: "Friends", people: friendPeople })
+      groups.push({ label: t`Friends`, people: friendPeople })
     }
 
     const otherPeople = filteredPeople.filter(
       (p) => !localIds.has(p.id) && !friendIds.has(p.id)
     )
     if (otherPeople.length > 0) {
-      groups.push({ label: "Directory", people: otherPeople })
+      groups.push({ label: t`Directory`, people: otherPeople })
     }
 
     return groups

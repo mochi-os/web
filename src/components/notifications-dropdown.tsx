@@ -190,12 +190,12 @@ export function NotificationsDropdown({
           <div className='flex flex-col items-center justify-center py-12 text-center px-4'>
             <Bell className='size-8 text-muted-foreground/20 mb-3' />
             <p className='text-sm font-medium text-foreground'>
-              {showAll ? "No notifications yet" : "You're all caught up!"}
+              {showAll ? t`No notifications yet` : t`You're all caught up!`}
             </p>
             <p className='text-xs text-muted-foreground mt-1 max-w-[180px]'>
               {showAll
-                ? "We'll notify you when something important happens."
-                : 'Check "All" to see your past notifications.'}
+                ? t`We'll notify you when something important happens.`
+                : t`Check "All" to see your past notifications.`}
             </p>
           </div>
         ) : (

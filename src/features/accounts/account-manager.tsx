@@ -188,8 +188,8 @@ function AccountItem({
 export function AccountManager({
   appBase,
   capability,
-  title = 'Connected accounts',
-  description = 'Manage your connected accounts for notifications and services.',
+  title = t`Connected accounts`,
+  description = t`Manage your connected accounts for notifications and services.`,
 }: AccountManagerProps) {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [verifyAccount, setVerifyAccount] = useState<Account | null>(null)

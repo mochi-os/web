@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
@@ -77,9 +78,9 @@ export function SearchEntityDialog({
   iconClassName = 'bg-primary/10 text-primary',
   title,
   description,
-  placeholder = 'Search...',
-  emptyMessage = 'No results found',
-  subscribeLabel = 'Subscribe',
+  placeholder = t`Search...`,
+  emptyMessage = t`No results found`,
+  subscribeLabel = t`Subscribe`,
   recommendations = [],
   isLoadingRecommendations = false,
   isRecommendationsError = false,

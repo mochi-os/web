@@ -31,7 +31,14 @@ export default {
           // canonical list check-i18n-glossary.py enforces; the extras here are
           // third-party products Mochi names in provider and browser tables
           // (connected accounts, push registration, restore banner).
-          '^(?:Mochi|GitHub|Stripe|Pushbullet|ntfy|libp2p|JWT|OAuth|OIDC|PKCE|SAML)$',
+          '^(?:Mochi|Mochi OS|GitHub|Stripe|Pushbullet|ntfy|libp2p|JWT|OAuth|OIDC|PKCE|SAML)$',
+          // Browser names, returned by user-agent sniffing as an identifier.
+          '^Browser$',
+          // Internal reason strings and diagnostic source labels: recorded
+          // against a forced logout or attached to a normalised error for
+          // debugging, never rendered.
+          '^Session expired$',
+          '^error\\.message',
           '^(?:Google|Microsoft|Facebook|Apple|Claude|OpenAI|Anthropic|Gemini|Ollama)$',
           '^(?:Firefox|Chrome|Safari|Edge|Opera|Chromium)$',
           // Error class names assigned to `name`, not shown to anyone.

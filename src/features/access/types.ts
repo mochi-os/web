@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro'
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
@@ -33,8 +34,11 @@ export interface Group {
   description?: string
 }
 
-// Special subject options
-export const SPECIAL_SUBJECTS = [
-  { id: '+', name: "Authenticated users", description: "Anyone who is logged in" },
-  { id: '*', name: "Anyone", description: "Including anonymous users" },
-]
+// Special subject options. A function, not a const: t`` in a module-level
+// const is resolved once at import, before the user's language is known.
+export function specialSubjects() {
+  return [
+    { id: '+', name: t`Authenticated users`, description: t`Anyone who is logged in` },
+    { id: '*', name: t`Anyone`, description: t`Including anonymous users` },
+  ]
+}

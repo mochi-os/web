@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useState, useMemo } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { z } from 'zod'
@@ -79,9 +80,9 @@ export function CreateEntityDialog({
   title,
   entityLabel,
   showDescription,
-  descriptionLabel = 'Description',
+  descriptionLabel = t`Description`,
   showPrivacyToggle,
-  privacyLabel = `Allow anyone to search for ${entityLabel.toLowerCase()}`,
+  privacyLabel = t`Allow anyone to search for ${entityLabel.toLowerCase()}`,
   extraToggles = [],
   onSubmit,
   isPending = false,
@@ -95,10 +96,10 @@ export function CreateEntityDialog({
   const schema = useMemo(() => z.object({
     name: z
       .string()
-      .min(1, `${entityLabel} name is required`)
-      .max(1000, 'Name must be 1000 characters or less')
+      .min(1, t`${entityLabel} name is required`)
+      .max(1000, t`Name must be 1000 characters or less`)
       .refine((val: string) => !DISALLOWED_NAME_CHARS.test(val), {
-        message: 'Name cannot contain < > \\ ; " \' or ` characters',
+        message: t`Name cannot contain angle brackets, backslash, semicolon, quotes or backticks`,
       }),
     description: z.string().optional(),
     allowSearch: z.boolean(),
@@ -140,7 +141,7 @@ export function CreateEntityDialog({
     }
   }
 
-  const defaultSubmitLabel = `Create ${entityLabel.toLowerCase()}`
+  const defaultSubmitLabel = t`Create ${entityLabel.toLowerCase()}`
 
   return (
     <ResponsiveDialog
@@ -254,7 +255,7 @@ export function CreateEntityDialog({
                 ) : (
                   <Plus className="size-4" />
                 )}
-                {isPending ? 'Creating...' : (submitLabel ?? defaultSubmitLabel)}
+                {isPending ? t`Creating...` : (submitLabel ?? defaultSubmitLabel)}
               </Button>
             </ResponsiveDialogFooter>
           </form>

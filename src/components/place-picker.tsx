@@ -3,6 +3,7 @@
 
 // Place picker with search and map preview
 
+import { t } from '@lingui/core/macro'
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { MapPin, Mountain, Building2, Loader2, Check } from 'lucide-react'
@@ -45,8 +46,8 @@ export function PlacePicker({
   open,
   onOpenChange,
   onSelect,
-  title = 'Select location',
-  placeholder = 'Search for a place...',
+  title = t`Select location`,
+  placeholder = t`Search for a place...`,
 }: PlacePickerProps) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<PhotonPlace | null>(null)

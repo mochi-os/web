@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { type SVGProps } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
@@ -118,12 +119,12 @@ function SectionTitle({
               variant='outline'
               className='size-4 rounded-full'
               onClick={onReset}
-              aria-label={`Reset ${title}`}
+              aria-label={t`Reset ${title}`}
             >
               <RotateCcw className='size-3' />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{`Reset ${title}`}</TooltipContent>
+          <TooltipContent>{t`Reset ${title}`}</TooltipContent>
         </Tooltip>
       )}
     </div>
@@ -145,7 +146,7 @@ function RadioGroupItem({
     <Item
       value={item.value}
       className={cn('group outline-none', 'transition duration-200 ease-in')}
-      aria-label={`Select ${item.label.toLowerCase()}`}
+      aria-label={t`Select ${item.label.toLowerCase()}`}
       aria-describedby={`${item.value}-description`}
     >
       <div
@@ -156,7 +157,7 @@ function RadioGroupItem({
         )}
         role='img'
         aria-hidden='false'
-        aria-label={`${item.label} option preview`}
+        aria-label={t`${item.label} option preview`}
       >
         <CircleCheck
           className={cn(

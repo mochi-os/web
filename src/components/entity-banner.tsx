@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useState } from 'react'
 import { cn } from '../lib/utils'
 
@@ -13,7 +14,7 @@ type EntityBannerProps = {
 
 export function EntityBanner({
   src,
-  alt = 'Banner',
+  alt = t`Banner`,
   className,
   aspectRatio = '3 / 1',
 }: EntityBannerProps) {

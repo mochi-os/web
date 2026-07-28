@@ -1,11 +1,12 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
 
 export function showSubmittedData(
   data: unknown,
-  title: string = 'You submitted the following values:'
+  title: string = t`You submitted the following values:`
 ) {
   toast.message(title, {
     description: (

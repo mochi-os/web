@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { X } from 'lucide-react'
 import { Trans } from '@lingui/react/macro'
 import { Button } from './ui/button'
@@ -28,10 +29,10 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
   const activeFilters: { key: keyof FilterState; label: string; value: string }[] = []
 
   if (filters.search) {
-    activeFilters.push({ key: 'search', label: "Search", value: filters.search })
+    activeFilters.push({ key: 'search', label: t`Search`, value: filters.search })
   }
   if (filters.watched) {
-    activeFilters.push({ key: 'watched', label: "Watched", value: 'On' })
+    activeFilters.push({ key: 'watched', label: t`Watched`, value: t`On` })
   }
 
   if (activeFilters.length === 0) {
@@ -52,13 +53,13 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
               <button
                 type='button'
                 onClick={() => clearFilter(filter.key)}
-                aria-label={`Remove ${filter.label} filter`}
+                aria-label={t`Remove ${filter.label} filter`}
                 className='ms-0.5'
               >
                 <X className='size-3' />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{`Remove ${filter.label} filter`}</TooltipContent>
+            <TooltipContent>{t`Remove ${filter.label} filter`}</TooltipContent>
           </Tooltip>
         </span>
       ))}

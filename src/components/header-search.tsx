@@ -19,7 +19,7 @@ export function HeaderSearch({
   value,
   onValueChange,
   placeholder,
-  label = 'Search',
+  label = t`Search`,
 }: HeaderSearchProps) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
   const showMobileSearch = isMobileSearchOpen || value.trim().length > 0

@@ -30,7 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { EntityAvatar } from '../entity-avatar'
 import { SignOutDialog } from '../sign-out-dialog'
 import { NotificationsSection } from './notification-menu'
-import { t } from '@lingui/core/macro'
+import { t, plural } from '@lingui/core/macro'
 
 type MochiMenuProps = {
   direction?: 'horizontal' | 'vertical'
@@ -83,7 +83,7 @@ export function MochiMenu({
         <div className='flex items-center justify-between px-2 py-1.5'>
           <div className='flex items-center gap-2 text-sm'>
             <EntityAvatar fingerprint={identity || undefined} name={name} size="md" />
-            <span className='font-semibold'>{name || 'User'}</span>
+            <span className='font-semibold'>{name || t`User`}</span>
           </div>
           <div className='flex items-center gap-1 ms-4'>
             <Tooltip>
@@ -129,8 +129,8 @@ export function MochiMenu({
   )
 
   const triggerLabel = unreadCount > 0
-    ? `Open menu (${unreadCount} unread notification${unreadCount === 1 ? '' : 's'})`
-    : 'Open menu'
+    ? plural(unreadCount, { one: 'Open menu (# unread notification)', other: 'Open menu (# unread notifications)' })
+    : t`Open menu`
 
   const trigger = (
     <button

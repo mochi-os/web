@@ -1,27 +1,33 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 // Connected accounts types for shared components
 
-// Provider type to display label mapping
-export const PROVIDER_LABELS: Record<string, string> = {
-  browser: 'Browser notifications',
-  claude: 'Claude',
-  email: 'Email',
-  fcm: 'Android push',
-  mcp: 'MCP server',
-  ntfy: 'ntfy',
-  openai: 'OpenAI',
-  pushbullet: 'Pushbullet',
-  unifiedpush: 'Push notification',
-  url: 'External URL',
-  web: 'Mochi web',
+// Provider display labels. Built per call rather than as a module-level const:
+// a const with t`` in it is evaluated when this module is first imported, before
+// the shell has sent the user's language, so it would pin whatever locale was
+// active then and never update on a language change.
+export function providerLabels(): Record<string, string> {
+  return {
+    browser: t`Browser notifications`,
+    claude: 'Claude',
+    email: t`Email`,
+    fcm: t`Android push`,
+    mcp: t`MCP server`,
+    ntfy: 'ntfy',
+    openai: 'OpenAI',
+    pushbullet: 'Pushbullet',
+    unifiedpush: t`Push notification`,
+    url: t`External URL`,
+    web: t`Mochi web`,
+  }
 }
 
 // Get display label for a provider type
 export function getProviderLabel(type: string): string {
-  if (!type) return 'Unknown'
-  return PROVIDER_LABELS[type] || type
+  if (!type) return t`Unknown`
+  return providerLabels()[type] || type
 }
 
 export interface Account {

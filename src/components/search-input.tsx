@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { Search as SearchIcon, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Input } from './ui/input'
@@ -22,7 +23,7 @@ type SearchInputProps = Omit<
 export function SearchInput({
   value,
   onValueChange,
-  clearLabel = 'Clear search',
+  clearLabel = t`Clear search`,
   className,
   ...props
 }: SearchInputProps) {

@@ -2,6 +2,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from '@lingui/react/macro'
 import { ChevronDown } from "lucide-react";
@@ -341,7 +342,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className, col
           onChange={(e) => handleHexChange(e.target.value)}
           className="w-28 font-mono text-sm"
           maxLength={7}
-          placeholder={hasValue ? "#rrggbb" : "None"}
+          placeholder={hasValue ? "#rrggbb" : t`None`}
         />
         {!collapsible && ((onClear && hasValue) || actions) && (
           <div className="ms-auto flex items-center gap-2">

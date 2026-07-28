@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '../../components/ui/select'
 import {
-  SPECIAL_SUBJECTS,
+  specialSubjects,
   type AccessLevel,
   type Group,
   type UserSearchResult,
@@ -272,7 +272,7 @@ export function AccessDialog({
             <div className="space-y-4">
               <Label><Trans>Select access rule</Trans></Label>
               <div className="space-y-2">
-                {SPECIAL_SUBJECTS.map((special) => (
+                {specialSubjects().map((special) => (
                   <Card
                     key={special.id}
                     className={`cursor-pointer py-0 transition-colors ${
@@ -329,7 +329,7 @@ export function AccessDialog({
           </Button>
           <Button onClick={handleAdd} disabled={!canAdd || isAdding}>
             {isAdding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-            {isAdding ? 'Adding...' : 'Add'}
+            {isAdding ? t`Adding...` : t`Add`}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>

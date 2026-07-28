@@ -91,20 +91,12 @@ export default defineConfig(
     // violations found when the rule was first switched on.
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
+    // At 'error', the same as every app. Enabling the rule here first surfaced
+    // 420 violations; those were cleared by teaching the shared ignore lists
+    // about the non-prose classes, deleting a dead duplicate label table, and
+    // wrapping the genuine prose - every string of which is now translated into
+    // all 98 full locales.
     ...i18nConfig,
-    // Still 'warn', not the shared config's 'error'. Triage took the backlog
-    // from 420 to 119 by teaching the shared ignore lists about the non-prose
-    // classes (Tailwind strings, cookie serialisations, DOM error names, brand
-    // and browser names, dev logging, format patterns) and by deleting a dead
-    // duplicate label table. What remains is genuine user-facing prose, and
-    // each string wrapped here needs filling in 98 locales - so flip this to
-    // 'error' when that count reaches zero, not before.
-    rules: {
-      'lingui/no-unlocalized-strings': [
-        'warn',
-        i18nConfig.rules['lingui/no-unlocalized-strings'][1],
-      ],
-    },
   },
   {
     // Language endonyms must NOT be translated - a language picker that
@@ -112,6 +104,16 @@ export default defineConfig(
     // and the whole point of the table is that each entry is written in its
     // own language.
     files: ['src/components/language-picker.tsx'],
+    rules: { 'lingui/no-unlocalized-strings': 'off' },
+  },
+  {
+    // The shell bridge's microphone plumbing throws MicSessionError objects
+    // whose `message` is a developer diagnostic. Consumers switch on the error
+    // `name` and supply their own translated text - see apps/chat's chat-input,
+    // which maps NotAllowedError, NotReadableError, EmptyRecordingError and the
+    // rest to t`` toasts. The message string is never rendered, so wrapping it
+    // would add ~24 msgids to every locale that nobody will ever read.
+    files: ['src/lib/shell-mic-session.ts', 'src/lib/shell-bridge.ts'],
     rules: { 'lingui/no-unlocalized-strings': 'off' },
   }
 );

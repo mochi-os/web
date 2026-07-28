@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { createElement } from 'react'
 import { toast as sonnerToast, type ExternalToast } from 'sonner'
 import { Copy } from 'lucide-react'
@@ -38,9 +39,9 @@ export const toast = {
             onClick: async () => {
               const ok = await shellClipboardWrite(textToCopy)
               if (ok) {
-                sonnerToast.success('Copied')
+                sonnerToast.success(t`Copied`)
               } else {
-                sonnerToast.error('Failed to copy')
+                sonnerToast.error(t`Failed to copy`)
               }
             },
           }

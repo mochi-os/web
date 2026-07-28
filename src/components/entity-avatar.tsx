@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useEffect, useState } from 'react'
 import { useAccent } from '../hooks/use-accent'
 import { normalizeEntityUrl } from '../lib/app-path'
@@ -95,7 +96,7 @@ export function EntityAvatar({
   ) : (
     <img
       src={resolvedSrc}
-      alt={alt ?? (name ? `Avatar for ${name}` : 'Avatar')}
+      alt={alt ?? (name ? t`Avatar for ${name}` : t`Avatar`)}
       width={px}
       height={px}
       onError={() => setFailed(true)}

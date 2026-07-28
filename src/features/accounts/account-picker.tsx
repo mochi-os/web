@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { CheckCircle2, Clock, Plus } from 'lucide-react'
@@ -30,7 +31,7 @@ export function AccountPicker({
   value,
   onChange,
   allowAdd = true,
-  placeholder = 'Select account',
+  placeholder = t`Select account`,
 }: AccountPickerProps) {
   const [isAddOpen, setIsAddOpen] = useState(false)
 

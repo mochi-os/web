@@ -3,6 +3,7 @@
 
 // Map display component using Leaflet
 
+import { t } from '@lingui/core/macro'
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -204,7 +205,7 @@ export function MapView({
   // Use primitive values for stable dependencies
   const originLat = origin?.lat ?? (showCurrentLocation ? currentLocation?.lat : undefined)
   const originLon = origin?.lon ?? (showCurrentLocation ? currentLocation?.lon : undefined)
-  const originName = origin?.name ?? (showCurrentLocation && currentLocation ? 'Current location' : undefined)
+  const originName = origin?.name ?? (showCurrentLocation && currentLocation ? t`Current location` : undefined)
   const hasOrigin = originLat != null && originLon != null
 
   // Calculate effective zoom

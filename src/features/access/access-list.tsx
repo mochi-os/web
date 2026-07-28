@@ -37,10 +37,14 @@ import type { AccessLevel, AccessRule } from './types'
 import { GeneralError } from '../errors/general-error'
 import { t } from '@lingui/core/macro'
 
-// Subject display labels for special subjects
-const SUBJECT_LABELS: Record<string, string> = {
-  '*': 'Anyone',
-  '+': 'Authenticated users',
+// Special-subject labels, resolved per call rather than once at module load.
+// A module-level `const { '*': t`Anyone` }` is evaluated when this file is
+// imported - before the shell has sent the user's language - so it would pin
+// whatever locale happened to be active then and never update on a change.
+function subjectLabel(subject: string): string | undefined {
+  if (subject === '*') return t`Anyone`
+  if (subject === '+') return t`Authenticated users`
+  return undefined
 }
 
 export interface AccessListProps {
@@ -56,11 +60,12 @@ export interface AccessListProps {
 }
 
 function formatSubject(subject: string, name?: string): string {
-  if (SUBJECT_LABELS[subject]) {
-    return SUBJECT_LABELS[subject]
+  const special = subjectLabel(subject)
+  if (special) {
+    return special
   }
   if (subject.startsWith('@')) {
-    return `Group: ${name || subject.slice(1)}`
+    return t`Group: ${name || subject.slice(1)}`
   }
   // For entity IDs, show name if available, otherwise truncate
   if (name) {

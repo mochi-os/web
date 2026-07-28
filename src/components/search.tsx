@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import { SearchIcon } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useSearch } from '../context/search-provider'
@@ -14,7 +15,7 @@ type SearchProps = {
 
 export function Search({
   className = '',
-  placeholder = 'Search',
+  placeholder = t`Search`,
 }: SearchProps) {
   const { setOpen } = useSearch()
   return (

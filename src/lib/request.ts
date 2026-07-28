@@ -2,6 +2,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { t } from '@lingui/core/macro'
 import {
   isAxiosError,
   type AxiosRequestConfig,
@@ -129,7 +130,7 @@ export async function requestRaw<TResponse>(
   } catch (unknownError) {
     const apiError = buildApiError(
       unknownError,
-      'Unexpected API error',
+      t`Unexpected API error`,
       requestConfig
     )
     logRequestError(apiError, requestConfig)
@@ -202,7 +203,7 @@ export async function request<TResponse>(
   } catch (unknownError) {
     const apiError = buildApiError(
       unknownError,
-      'Unexpected API error',
+      t`Unexpected API error`,
       requestConfig
     )
     logRequestError(apiError, requestConfig)
