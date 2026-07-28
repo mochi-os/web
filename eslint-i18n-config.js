@@ -55,9 +55,15 @@ export default {
           // `var(…)`, hex colors (`#fff`, `#1e3a5f`), and pure numeric
           // values with units (`1rem`, `0.75rem`, `2.25rem`). These appear
           // in theme-preview-card.tsx and similar style-only literals.
-          '^(?:oklch|rgb|rgba|hsl|hsla|var|calc|url)\\(',
+          // Gradient and color-mix functions belong here too: the theme
+          // resolver builds a `--background-image` from them.
+          '^(?:oklch|rgb|rgba|hsl|hsla|var|calc|url|color-mix|(?:repeating-)?(?:linear|radial|conic)-gradient)\\(',
           '^#[0-9a-fA-F]{3,8}$',
           '^[0-9]+(?:\\.[0-9]+)?(?:rem|em|px|vh|vw|%)$',
+          // CSS positional keywords, alone or as a pair (`top center` for
+          // `background-position`). Confined to the six box keywords so
+          // ordinary prose cannot match.
+          '^(?:top|bottom|center|left|right|middle)(?:\\s+(?:top|bottom|center|left|right|middle))?$',
           // CSS font-family stacks — comma-separated token lists ending
           // in a generic family keyword. Captures both the explicit
           // `font_stacks` table in apps/settings and any inline stacks
