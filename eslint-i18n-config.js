@@ -26,8 +26,20 @@ export default {
           '^(?![A-Z])\\S+$',
           // UPPERCASE constants
           '^[A-Z0-9_-]+$',
-          // Brand name — intentionally never translated
-          '^Mochi$',
+          // Brand and product names — intentionally never translated. Keep in
+          // step with BRAND in claude/scripts/i18n_glossary.py, which is the
+          // canonical list check-i18n-glossary.py enforces; the extras here are
+          // third-party products Mochi names in provider and browser tables
+          // (connected accounts, push registration, restore banner).
+          '^(?:Mochi|GitHub|Stripe|Pushbullet|ntfy|libp2p|JWT|OAuth|OIDC|PKCE|SAML)$',
+          '^(?:Google|Microsoft|Facebook|Apple|Claude|OpenAI|Anthropic|Gemini|Ollama)$',
+          '^(?:Firefox|Chrome|Safari|Edge|Opera|Chromium)$',
+          // Error class names assigned to `name`, not shown to anyone.
+          '^[A-Z][A-Za-z0-9]*Error$',
+          // ISO date/time fragments concatenated onto a date string.
+          '^T?\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+-]\\d{2}:\\d{2})?$',
+          // Attribution markup required verbatim by the tile provider licence.
+          '^©\\s',
           // Tailwind arbitrary-value class strings (`[&_h1]:text-3xl …`,
           // `[!important]`) used in `cn()`/className helpers and the
           // typography-class arrays in document-page renderers.
@@ -44,6 +56,35 @@ export default {
           // `font_stacks` table in apps/settings and any inline stacks
           // passed to fontFamily-style props.
           '(?:sans-serif|serif|monospace|cursive|fantasy|system-ui)\\s*$',
+          // React directives. `'use client'` is a directive prologue, not a
+          // string the user ever sees.
+          '^use (?:client|server|strict)$',
+          // Tailwind utility strings that aren't in a className prop — object
+          // values and early returns in class-picking helpers
+          // (`row: 'md:pointer-events-none md:opacity-0 …'`). Recognised by
+          // carrying a Tailwind variant colon or a known utility prefix, which
+          // ordinary prose never does.
+          '^(?:[a-z0-9-]+[:/])?(?:md|sm|lg|xl|dark|group|hover|focus|peer|data|rtl|ltr|max|min|w|h|p|m|bg|text|border|flex|grid|gap|space|shrink|grow|opacity|rounded|font|items|justify|absolute|relative|fixed|sticky|pointer|transition|overflow|cursor|select|whitespace|truncate|z|top|bottom|left|right|inset|size|aspect|leading|tracking|shadow|ring|animate|duration|delay|ease|scale|translate|rotate)[-:[]',
+          // Cookie serialisations built inline: `name=value; path=/; max-age=…`.
+          '(?:;\\s*(?:path|max-age|domain|samesite|secure|expires)=)',
+          // Bare CSS lengths and length pairs assigned to style properties
+          // (`attrib.style.padding = "0 4px"`).
+          '^\\d+(?:\\.\\d+)?(?:px|rem|em|%|vh|vw)?(?:\\s+\\d+(?:\\.\\d+)?(?:px|rem|em|%|vh|vw)?)*$',
+          // Date and time format patterns: `DD/MM/YYYY`, `D MMM YYYY`, `HH:mm`.
+          // Only format letters, separators and spaces, so prose can't match.
+          '^[DMYHhmsAaZz][DMYHhmsAaZz0-9/.:,\\- ]*$',
+          // Inline SVG markup passed to map markers and icon helpers.
+          '^<svg\\b',
+          // CSS media queries and selector strings handed to matchMedia,
+          // querySelector and closest.
+          '^\\(prefers-|^\\[role=|^\\[data-',
+          // HTTP mechanics: header names, auth scheme prefixes, MIME types.
+          '^(?:Bearer|Basic) ?$',
+          '^Content-(?:Type|Disposition|Length)$',
+          '^(?:application|text|image|audio|video|multipart)/',
+          // DOM exception names, thrown as the `name` argument rather than
+          // shown to anyone.
+          '^(?:NotAllowedError|NotSupportedError|AbortError|SecurityError|InvalidStateError|NetworkError|TimeoutError|DataError)$',
         ],
         ignoreNames: [
           { regex: { pattern: 'className', flags: 'i' } },
@@ -108,6 +149,26 @@ export default {
           'Error',
           'TypeError',
           'RangeError',
+          // Developer-facing logging. These strings go to the console for
+          // whoever is debugging, never to a user, and are deliberately in
+          // English so they match the source.
+          'logDevError',
+          'logDevWarn',
+          '*devConsole.log',
+          '*devConsole.warn',
+          '*devConsole.error',
+          // Exception constructors. The message is for a developer or is a
+          // DOM error name; Error/TypeError/RangeError are already listed.
+          'DOMException',
+          'webauthnFailure',
+          // React context accessors take the calling component's name so the
+          // "used outside its provider" throw can say who did it.
+          '*useActionPillContext',
+          '*Context',
+          // Internal reason strings recorded against a forced logout, not
+          // rendered anywhere.
+          '*authManager.logout',
+          '*.logout',
           // Mochi conventions
           'mochi.log.debug',
           'mochi.log.info',

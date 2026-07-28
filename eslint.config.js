@@ -86,13 +86,32 @@ export default defineConfig(
   // JSX-text subset is already at zero and is held there by
   // claude/scripts/check-jsx-text.mjs.
   {
+    // Tests are excluded: their strings are fixtures and `it(...)`
+    // descriptions, never rendered. They accounted for 75 of the 420
+    // violations found when the rule was first switched on.
     files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
     ...i18nConfig,
+    // Still 'warn', not the shared config's 'error'. Triage took the backlog
+    // from 420 to 119 by teaching the shared ignore lists about the non-prose
+    // classes (Tailwind strings, cookie serialisations, DOM error names, brand
+    // and browser names, dev logging, format patterns) and by deleting a dead
+    // duplicate label table. What remains is genuine user-facing prose, and
+    // each string wrapped here needs filling in 98 locales - so flip this to
+    // 'error' when that count reaches zero, not before.
     rules: {
       'lingui/no-unlocalized-strings': [
         'warn',
         i18nConfig.rules['lingui/no-unlocalized-strings'][1],
       ],
     },
+  },
+  {
+    // Language endonyms must NOT be translated - a language picker that
+    // renders "Spanish" instead of "Español" to a Spanish speaker is useless,
+    // and the whole point of the table is that each entry is written in its
+    // own language.
+    files: ['src/components/language-picker.tsx'],
+    rules: { 'lingui/no-unlocalized-strings': 'off' },
   }
 );
