@@ -30,6 +30,28 @@ export function useSetPreference(endpoint: string) {
   })
 }
 
+// Clear specific preferences, each falling back to its default. Sent
+// form-encoded with a repeated `key` field: the server reads these with
+// a.inputs(), which only sees query/form arrays — a JSON body is flattened
+// to one string per key and would arrive as a single mangled value.
+export function useUnsetPreferences(endpoint: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (keys: string[]) => {
+      const form = new URLSearchParams()
+      for (const key of keys) form.append('key', key)
+      const response = await apiClient.post(endpoint, form.toString(), {
+        ...NO_TOAST,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'preferences'] })
+    },
+  })
+}
+
 export function useResetPreferences(endpoint: string) {
   const queryClient = useQueryClient()
   return useMutation({
