@@ -19,6 +19,9 @@ const MENU_PATH = '/menu'
 interface Category {
   id: number
   label: string
+  // Read-time translated label for the seeded categories; label is the
+  // stored value. Render display, edit label.
+  display?: string
   default: number
 }
 
@@ -71,7 +74,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
         const cats = [...(catsRes.data || [])].sort((a, b) => {
           if (a.id === 0) return 1
           if (b.id === 0) return -1
-          return naturalCompare(a.label, b.label)
+          return naturalCompare(a.display ?? a.label, b.display ?? b.label)
         })
         setCategories(cats)
         setRow(rowRes.data || null)
@@ -105,7 +108,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
       setRow({ ...row, category: parseInt(value, 10) })
       const cat = categories?.find((c) => String(c.id) === value)
       const label = row.label || row.topic
-      toast.success(cat ? `${label}: ${cat.label}` : `${label} updated`)
+      toast.success(cat ? `${label}: ${cat.display ?? cat.label}` : `${label} updated`)
       setTimeout(() => setOpen(false), 0)
     } catch (error) {
       toast.error(getErrorMessage(error, t`Failed to update category`))
@@ -156,7 +159,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>{cat.label}</SelectItem>
+                  <SelectItem key={cat.id} value={String(cat.id)}>{cat.display ?? cat.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
