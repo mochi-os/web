@@ -181,7 +181,15 @@
 
   /* --- Charts --- */
   --chart-1: oklch(0.81 0.17 75.35);
-  --chart-2: oklch(0.424 var(--hue-chroma) var(--hue));
+  /* Chroma is capped at what sRGB can hold at this lightness, taken across
+     every hue (the floor is 0.0721, around hue 200) rather than per theme,
+     since --hue is set at runtime and CSS cannot solve the gamut boundary.
+     min() only bites on themes that exceed it: steel (0.055) is untouched,
+     while blue, terracotta and teal were each about 0.015 over and were being
+     silently gamut-mapped by the browser, which shifted their hue by up to
+     4 degrees. A theme's own primary is unaffected - it is in gamut at its
+     own lightness, and only these darker derivations were out. */
+  --chart-2: oklch(0.424 min(var(--hue-chroma), 0.072) var(--hue));
   --chart-3: oklch(0.56 0 0);
   --chart-4: oklch(0.44 0 0);
   --chart-5: oklch(0.92 0 0);
@@ -189,7 +197,7 @@
   /* --- Sidebar --- */
   --sidebar: oklch(0.11 0 0);
   --sidebar-foreground: oklch(0.82 0 0);
-  --sidebar-primary: oklch(0.424 var(--hue-chroma) var(--hue));
+  --sidebar-primary: oklch(0.424 min(var(--hue-chroma), 0.072) var(--hue));
   --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.556 0 0);
@@ -197,7 +205,7 @@
   --sidebar-active: oklch(0.25 0 0);
 
   /* --- Selection --- */
-  --selected: oklch(0.25 calc(var(--hue-chroma) * 0.5) var(--hue));
+  --selected: oklch(0.25 min(calc(var(--hue-chroma) * 0.5), 0.042) var(--hue));
 
   /* --- Surfaces --- */
   --surface-1: oklch(0.205 0 0);
@@ -209,7 +217,7 @@
   --notification-foreground: oklch(0.98 0 0);
 
   /* --- Selection highlight --- */
-  --selection: oklch(0.32 calc(var(--hue-chroma) * 0.5) var(--hue));
+  --selection: oklch(0.32 min(calc(var(--hue-chroma) * 0.5), 0.054) var(--hue));
   --selection-foreground: oklch(0.985 0 0);
 
   /* --- Shadows --- */
