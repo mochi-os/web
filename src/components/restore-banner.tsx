@@ -29,6 +29,19 @@ function serviceName(service: string): string {
   return serviceNames[service] ?? service.charAt(0).toUpperCase() + service.slice(1)
 }
 
+// The claimed source server arrives from the shell verbatim and originates
+// in the restore bundle, which a crafted backup controls — so the
+// delete-your-old-account link only renders for a bare https origin
+// (the shape the exporting server writes). The server stores a validated
+// origin too; this guards rows written before that check existed.
+function sourceOrigin(source: string): string | null {
+  if (!URL.canParse(source)) return null
+  const url = new URL(source)
+  if (url.protocol !== 'https:' || url.username || url.password) return null
+  if ((url.pathname !== '/' && url.pathname !== '') || url.search || url.hash) return null
+  return url.origin
+}
+
 /**
  * Shown after an account is moved onto this server from another (a
  * restore from a migration backup). Nudges the user to delete the old
@@ -63,6 +76,8 @@ export function RestoreBanner() {
 
   if (dismissed || !source) return null
 
+  const origin = sourceOrigin(source)
+
   return (
     <div className='border-border bg-muted/40 relative mb-6 rounded-lg border p-4 text-center'>
       <Tooltip>
@@ -94,12 +109,14 @@ export function RestoreBanner() {
           old server, and followers may take a few minutes to find you here.
         </Trans>
       </p>
-      <Button asChild variant='outline' size='sm'>
-        <a href={`${source}/settings`} target='_blank' rel='noopener noreferrer'>
-          <Trans>Delete your account on the old server</Trans>
-          <ExternalLink className='ml-1 h-3 w-3' />
-        </a>
-      </Button>
+      {origin && (
+        <Button asChild variant='outline' size='sm'>
+          <a href={`${origin}/settings`} target='_blank' rel='noopener noreferrer'>
+            <Trans>Delete your account on the old server</Trans>
+            <ExternalLink className='ml-1 h-3 w-3' />
+          </a>
+        </Button>
+      )}
 
       {relinks.length > 0 && (
         <div className='mt-4'>
