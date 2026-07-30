@@ -10,8 +10,12 @@ import { EmptyState } from '../ui/empty-state'
 interface GameEmptyStateProps {
   onNewGame: () => void
   hasExistingGames: boolean
-  /** Per-game icon: chess uses Swords, go uses Circle, words uses LetterText. */
-  icon: LucideIcon
+  /**
+   * Per-game icon. Each game app passes the URL of its own `images/icon.svg`,
+   * so the empty state, the launcher tile and the browser tab all draw from one
+   * file. A Lucide component still works for anything without an app icon.
+   */
+  icon: LucideIcon | string
 }
 
 export function GameEmptyState({
