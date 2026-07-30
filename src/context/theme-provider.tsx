@@ -12,7 +12,10 @@ import {
 import {
   type ColorTheme,
   getShellInitData,
+  isFetchingValue,
   isInShell,
+  isThemeFontSize,
+  isThemeProperty,
   onShellMessage,
 } from '../lib/shell-bridge'
 
@@ -90,23 +93,9 @@ function getInitialColorTheme(): ColorTheme | null {
   return null
 }
 
-// Theme override keys are restricted to CSS custom properties: overrides come
-// from installed apps' theme manifests and cross the shell relay unfiltered,
-// so without this an app's theme could set ordinary properties (display,
-// pointer-events) on every other app's root element. Same rule as the shell's
-// isThemeVarName. The one standard property allowed through is font-size —
-// the settings font size preference installs it deliberately.
-const themeProperty = /^--[A-Za-z0-9_-]+$/
-
-// A theme value must not make the browser fetch. Custom properties are
-// consumed in image contexts (--background-image lands in background-image),
-// so a URL-bearing value beacons every page view to whoever supplied the
-// theme. The server refuses these at manifest ingestion, but a color-theme-set
-// message posted by any app in the shell reaches every other app's iframe
-// without passing through it, so the same rule is enforced here. Backslash and
-// comment syntax are refused because they let a function name be written so it
-// doesn't read as itself: \75rl(...) and url(h\74tp://...) both fetch.
-const fetchingValue = /url|image|src|element|cross-fade|paint|\\|\/\*/i
+// What a theme may install is decided by isThemeProperty / isFetchingValue /
+// isThemeFontSize in shell-bridge — a theme reaches this provider from an
+// untrusted app via the shell's relay, never only from the validated manifest.
 
 // Inline properties this provider has installed on <html>, so cleanup removes
 // exactly what the theme system owns and nothing else (authenticated-layout's
@@ -139,8 +128,12 @@ function applyColorThemeToDOM(ct: ColorTheme | null) {
     }
     if (ct.overrides) {
       for (const [key, val] of Object.entries(ct.overrides)) {
-        if (!themeProperty.test(key) && key !== 'font-size') continue
-        if (fetchingValue.test(val)) continue
+        if (isFetchingValue(val)) continue
+        if (key === 'font-size') {
+          if (isThemeFontSize(val)) install(key, val)
+          continue
+        }
+        if (!isThemeProperty(key)) continue
         install(key, val)
       }
     }

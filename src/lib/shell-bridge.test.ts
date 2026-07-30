@@ -165,3 +165,70 @@ describe('isInShell', () => {
     expect(isInShell()).toBe(true)
   })
 })
+
+describe('theme value rules', () => {
+  it('accepts custom properties and rejects ordinary ones', async () => {
+    const { isThemeProperty } = await import('./shell-bridge')
+    expect(isThemeProperty('--primary-l')).toBe(true)
+    expect(isThemeProperty('--hue')).toBe(true)
+    expect(isThemeProperty('display')).toBe(false)
+    expect(isThemeProperty('pointer-events')).toBe(false)
+    expect(isThemeProperty('font-size')).toBe(false)
+  })
+
+  it('rejects every value that was verified fetching in a browser', async () => {
+    const { isFetchingValue } = await import('./shell-bridge')
+    for (const value of [
+      'url(https://evil.example/beacon)',
+      'url(/themes/waves.svg)',
+      'url(h\\74tp://evil.example/x)',
+      '\\75rl(http://evil.example/x)',
+      "image-set('https://evil.example/x' 1x)",
+      "-webkit-image-set(url('https://evil.example/x') 1x)",
+      'u/*x*/rl(https://evil.example/x)',
+    ]) {
+      expect(isFetchingValue(value)).toBe(true)
+    }
+    // Legitimate theme values must survive, or the filter has eaten the feature.
+    for (const value of [
+      '0.55',
+      '100% 420px',
+      'radial-gradient(ellipse at top, color-mix(in oklch, var(--primary) 12%, transparent), transparent 70%)',
+      '0 1px 2px rgba(0, 0, 0, 0.1)',
+    ]) {
+      expect(isFetchingValue(value)).toBe(false)
+    }
+  })
+
+  it('bounds font-size to a usable range', async () => {
+    const { isThemeFontSize } = await import('./shell-bridge')
+    expect(isThemeFontSize('87.5%')).toBe(true)
+    expect(isThemeFontSize('100%')).toBe(true)
+    expect(isThemeFontSize('125%')).toBe(true)
+    // Content-hiding and chrome-hiding values, and non-percentages.
+    expect(isThemeFontSize('0.01%')).toBe(false)
+    expect(isThemeFontSize('9999%')).toBe(false)
+    expect(isThemeFontSize('1px')).toBe(false)
+    expect(isThemeFontSize('inherit')).toBe(false)
+  })
+
+  // The shell is a plain script that cannot import this module, so its copy of
+  // these rules is the one that drifts. This asserts the copies still agree
+  // rather than trusting a comment to keep them in step.
+  it('matches the shell script copy of the same rules', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    // vitest runs with lib/web as the working directory.
+    const shell = readFileSync(
+      resolve(process.cwd(), '../../apps/menu/web/public/shell.js'), 'utf8')
+
+    // The literals as they must appear in shell.js. Written out rather than
+    // extracted so a change to either copy fails here loudly.
+    expect(shell).toContain('/^--[A-Za-z0-9_-]+$/')
+    expect(shell).toContain('/url|image|src|element|cross-fade|paint|\\\\|\\/\\*/i')
+    expect(shell).toContain('n >= 50 && n <= 200')
+    // And the rules must actually be applied, not merely defined.
+    expect(shell).toContain('if (isFetchingValue(value)) continue')
+    expect(shell).toContain('if (isFontSize(value)) install(key, value)')
+  })
+})
