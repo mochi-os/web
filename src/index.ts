@@ -68,7 +68,8 @@ export * from './components/layout/game-header-stats'
 export * from './components/entity/entity-board-card'
 export * from './components/entity/entity-field-editor'
 
-// Game Components - shared by the chess, go and words apps
+// Game Components - shared by the chess, go and words apps.
+// The draw offer banner is chess and go only; words has no draw.
 export * from './components/game/game-chat-input'
 export * from './components/game/game-draw-offer-banner'
 export * from './components/game/game-empty-state'

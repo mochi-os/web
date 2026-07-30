@@ -36,7 +36,7 @@ export function GameChatInput({
           </span>
           <input
             type='text'
-            placeholder={t`Type a message...`}
+            placeholder={t`Type a message…`}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             className='w-full bg-inherit text-xs focus-visible:outline-hidden'
