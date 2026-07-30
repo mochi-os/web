@@ -23,7 +23,9 @@ interface EmptyStateProps {
 // against its own document and comes out black, so mask the shape instead and
 // let the background colour supply the tint. Same approach the launcher uses.
 function maskStyle(url: string): CSSProperties {
-  const image = `url(${url})`
+  // Quoted and encoded: an unescaped parenthesis or space makes the value
+  // invalid, and a dropped mask leaves the tinted square painting on its own.
+  const image = `url("${encodeURI(url)}")`
   return {
     maskImage: image,
     maskSize: 'contain',

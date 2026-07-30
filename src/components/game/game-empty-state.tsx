@@ -6,16 +6,17 @@ import { Trans, useLingui } from '@lingui/react/macro'
 import { Plus } from 'lucide-react'
 import { Button } from '../ui/button'
 import { EmptyState } from '../ui/empty-state'
+import { getAppPath } from '../../lib/app-path'
 
 interface GameEmptyStateProps {
   onNewGame: () => void
   hasExistingGames: boolean
   /**
-   * Per-game icon. Each game app passes the URL of its own `images/icon.svg`,
-   * so the empty state, the launcher tile and the browser tab all draw from one
-   * file. A Lucide component still works for anything without an app icon.
+   * Defaults to the calling app's own `images/icon.svg`, the file its launcher
+   * tile and browser tab already draw. Pass a Lucide component or another URL
+   * only for a game that wants something different.
    */
-  icon: LucideIcon | string
+  icon?: LucideIcon | string
 }
 
 export function GameEmptyState({
@@ -24,12 +25,15 @@ export function GameEmptyState({
   icon,
 }: GameEmptyStateProps) {
   const { t } = useLingui()
+  // Resolved during render, not at import: the app path arrives from the shell
+  // asynchronously.
+  const gameIcon = icon ?? `${getAppPath()}/images/icon.svg`
 
   if (hasExistingGames) {
     return (
       <div className='flex h-full w-full flex-1 flex-col items-center justify-center'>
         <EmptyState
-          icon={icon}
+          icon={gameIcon}
           title={t`Select a game`}
           description={t`Choose a game from the sidebar or start a new one.`}
         >
@@ -44,7 +48,7 @@ export function GameEmptyState({
 
   return (
     <div className='flex h-full w-full flex-1 flex-col items-center justify-center'>
-      <EmptyState icon={icon} title={t`No games yet`} description=''>
+      <EmptyState icon={gameIcon} title={t`No games yet`} description=''>
         <Button size='lg' onClick={onNewGame}>
           <Plus className='size-5' />
           <Trans>New game</Trans>
