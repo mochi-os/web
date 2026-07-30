@@ -67,6 +67,7 @@ export * from './components/layout/game-header-stats'
 // Entity object model Components - shared by the crm and projects apps
 export * from './components/entity/entity-board-card'
 export * from './components/entity/entity-field-editor'
+export * from './components/entity/keyboard-shortcuts-help'
 
 // Game Components - shared by the chess, go and words apps.
 // The draw offer banner is chess and go only; words has no draw.
@@ -113,6 +114,7 @@ export * from './components/travelling-picker'
 
 // Shared Components
 export * from './components/activity-timeline'
+export * from './components/audit-timeline'
 export * from './components/attachment-gallery'
 export * from './components/tree-row'
 export * from './components/tree-table-header'
