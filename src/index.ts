@@ -115,6 +115,7 @@ export * from './components/travelling-picker'
 // Shared Components
 export * from './components/activity-timeline'
 export * from './components/audit-timeline'
+export * from './components/options-menu'
 export * from './components/attachment-gallery'
 export * from './components/tree-row'
 export * from './components/tree-table-header'
