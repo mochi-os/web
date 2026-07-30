@@ -350,54 +350,20 @@ jobs:
               sys.exit(1)
           PY
 
-      - name: Check Android i18n catalogs
+      - name: Check Android i18n catalogues
         run: |
-          # Walk the caller repo for any Android module and check:
-          #   (a) values-<qualifier>/strings.xml has every source key (warns on missing)
-          #   (b) %1$s / %1$d / %2$s placeholders match source per <string> (errors on mismatch)
-          # Mirrors lib/android's gradle checkLocaleCompleteness plus a
-          # format-string preservation guard. Coverage warnings stay
-          # informational until residue is filled.
-          python3 - <<'PY'
-          import re, sys
-          from pathlib import Path
-          STRING_RE = re.compile(r'<string\s+name="([^"]+)"\s*>([^<]*)</string>', re.S)
-          FMT_RE = re.compile(r'%\d+\$[sd]')
-          OVERLAYS = {"values-en-rUS"}
-          warnings = 0
-          fmt_violations = 0
-          for source in Path('.').rglob('src/main/res/values/strings.xml'):
-              if 'android' not in source.parts:
-                  continue
-              res = source.parent.parent
-              source_strings = dict(STRING_RE.findall(source.read_text(encoding='utf-8')))
-              source_keys = set(source_strings)
-              source_fmts = {k: sorted(set(FMT_RE.findall(v))) for k, v in source_strings.items()}
-              for vd in sorted(res.iterdir()):
-                  if not vd.is_dir() or not vd.name.startswith('values-') or vd.name in OVERLAYS:
-                      continue
-                  xml = vd / 'strings.xml'
-                  if not xml.exists():
-                      continue
-                  text = xml.read_text(encoding='utf-8')
-                  pairs = dict(STRING_RE.findall(text))
-                  missing = source_keys - set(pairs)
-                  if missing:
-                      sample = ', '.join(sorted(missing)[:3])
-                      print(f"::warning::{res.relative_to('.')}/{vd.name}: {len(missing)} missing ({sample}…)")
-                      warnings += 1
-                  for k, v in pairs.items():
-                      expected = source_fmts.get(k)
-                      if expected is None:
-                          continue
-                      have = sorted(set(FMT_RE.findall(v)))
-                      if have != expected:
-                          line = text.count('\n', 0, text.find(f'name="{k}"')) + 1
-                          print(f"::error file={xml},line={line}::{vd.name}/{k}: format-string mismatch (source {expected}, translation {have})")
-                          fmt_violations += 1
-          if not warnings and not fmt_violations:
-              print("Android i18n catalogs complete.")
-          if fmt_violations:
-              print(f"\n{fmt_violations} Android format-string violations", file=sys.stderr)
-              sys.exit(1)
-          PY
+          # Single implementation, living with the resources it checks:
+          # clients/android/tools/check-locales.py. This step used to carry its
+          # own copy in Python-in-YAML, alongside two more in Kotlin, and the
+          # three drifted - this one never learned about <plurals> or Android's
+          # fallback chain. Delegating means there is one place to fix.
+          #
+          # Repos with no Android module skip rather than fail.
+          checker=$(find . -path '*/tools/check-locales.py' -not -path './node_modules/*' | head -1)
+          if [ -z "$checker" ]; then
+            echo "No Android modules in this repo; nothing to check."
+            exit 0
+          fi
+          root=$(dirname "$(dirname "$checker")")
+          echo "Checking Android catalogues under $root"
+          python3 "$checker" --discover "$root" --strict
