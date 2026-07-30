@@ -90,25 +90,47 @@ function getInitialColorTheme(): ColorTheme | null {
   return null
 }
 
+// Theme override keys are restricted to CSS custom properties: overrides come
+// from installed apps' theme manifests and cross the shell relay unfiltered,
+// so without this an app's theme could set ordinary properties (display,
+// pointer-events) on every other app's root element. Same rule as the shell's
+// isThemeVarName. The one standard property allowed through is font-size —
+// the settings font size preference installs it deliberately.
+const themeProperty = /^--[A-Za-z0-9_-]+$/
+
+// Inline properties this provider has installed on <html>, so cleanup removes
+// exactly what the theme system owns and nothing else (authenticated-layout's
+// --sheet-top-offset must survive a theme switch). Seeded at module evaluation
+// — before any effect can add unrelated properties — with the server-rendered
+// theme variables, which the provider replaces from state on first apply.
+const installedProperties = new Set<string>()
+{
+  const style = document.documentElement.style
+  for (let i = 0; i < style.length; i++) {
+    if (style[i].startsWith('--')) installedProperties.add(style[i])
+  }
+}
+
 function applyColorThemeToDOM(ct: ColorTheme | null) {
   const root = document.documentElement
-  // Remove all inline CSS custom properties
-  const props: string[] = []
-  for (let i = 0; i < root.style.length; i++) {
-    if (root.style[i].startsWith('--')) props.push(root.style[i])
-  }
-  for (const prop of props) {
+  for (const prop of installedProperties) {
     root.style.removeProperty(prop)
+  }
+  installedProperties.clear()
+  const install = (key: string, val: string) => {
+    root.style.setProperty(key, val)
+    installedProperties.add(key)
   }
   if (ct) {
     if (ct.hue) {
-      root.style.setProperty('--hue', ct.hue)
-      root.style.setProperty('--hue-chroma', ct.chroma)
-      root.style.setProperty('--hue-bg', ct.hueBg)
+      install('--hue', ct.hue)
+      install('--hue-chroma', ct.chroma)
+      install('--hue-bg', ct.hueBg)
     }
     if (ct.overrides) {
       for (const [key, val] of Object.entries(ct.overrides)) {
-        root.style.setProperty(key, val)
+        if (!themeProperty.test(key) && key !== 'font-size') continue
+        install(key, val)
       }
     }
   }
