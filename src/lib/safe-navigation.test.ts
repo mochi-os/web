@@ -149,3 +149,38 @@ describe('getSafeNavigationTarget', () => {
     expect(getSafeNavigationTarget('https://evilstripe.com/x', ORIGIN, options)).toBeNull()
   })
 })
+
+// The notification dropdown is the one caller that navigates to an
+// app-authored string in the trusted top window, and a component test stack
+// does not exist in this package. Assert on the source instead, the way
+// shell-bridge.test.ts guards the shell script's copy of the theme rules: the
+// point is to fail loudly if a future edit reverts to the raw link.
+describe('notification-menu call site', () => {
+  async function source() {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    // vitest runs with lib/web as the working directory.
+    return readFileSync(
+      resolve(process.cwd(), 'src/components/layout/notification-menu.tsx'), 'utf8')
+  }
+
+  it('routes the link through the navigation policy', async () => {
+    const menu = await source()
+    // Positive control: the handlers we mean to guard are still here, so a
+    // passing assertion below is about their content and not a renamed file.
+    expect(menu).toContain('onClick={(notif) => {')
+    expect(menu).toContain('onMiddleClick={(notif) => {')
+    expect(menu).toContain('getSafeNavigationTarget')
+  })
+
+  it('never passes the raw link to a navigator', async () => {
+    const menu = await source()
+    expect(menu).not.toContain('shellNavigateExternal(notif.link)')
+    expect(menu).not.toContain('window.open(notif.link')
+  })
+
+  it('severs the opener on the middle-click popup', async () => {
+    const menu = await source()
+    expect(menu).toContain("'noopener,noreferrer'")
+  })
+})

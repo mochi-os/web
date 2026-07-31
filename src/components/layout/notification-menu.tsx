@@ -4,6 +4,8 @@
 import { Check, ExternalLink } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { shellNavigateExternal } from '../../lib/shell-bridge'
+import { getSafeNavigationTarget } from '../../lib/safe-navigation'
+import { toast } from '../../lib/toast-utils'
 import { useFormat } from '../../hooks/use-format'
 import type { Notification } from '../notifications-dropdown'
 import { NotificationCategoryButton } from '../notification-category-button'
@@ -66,6 +68,29 @@ export function NotificationItem({
   )
 }
 
+// Hosts an operator has vouched for as redirect targets, mirroring the
+// standalone notifications page so both views agree. Empty by default: a
+// notification link is app-authored, and this menu runs in the trusted top
+// window on any direct URL or deep link, where no shell filter stands between
+// the link and window.location.
+const TRUSTED_EXTERNAL_REDIRECT_HOSTS = (
+  import.meta.env.VITE_TRUSTED_REDIRECT_HOSTS ?? ''
+)
+  .split(',')
+  .map((host: string) => host.trim().toLowerCase())
+  .filter(Boolean)
+
+/**
+ * Resolve a notification's link to something safe to navigate to, or null.
+ * Returning null covers unsafe schemes (javascript:, data:) and off-origin
+ * hosts alike; the caller reports the refusal rather than navigating.
+ */
+function safeNotificationTarget(link: string): string | null {
+  return getSafeNavigationTarget(link, window.location.origin, {
+    trustedExternalHosts: TRUSTED_EXTERNAL_REDIRECT_HOSTS,
+  })
+}
+
 export function NotificationsSection({
   onClose,
   notifications,
@@ -125,15 +150,23 @@ export function NotificationsSection({
                 notification={n}
                 onClick={(notif) => {
                   markAsRead(notif.id)
-                  if (notif.link) {
-                    shellNavigateExternal(notif.link)
+                  if (!notif.link) return
+                  const target = safeNotificationTarget(notif.link)
+                  if (!target) {
+                    toast.error(t`Blocked navigation to untrusted link`)
+                    return
                   }
+                  shellNavigateExternal(target)
                 }}
                 onMiddleClick={(notif) => {
                   markAsRead(notif.id)
-                  if (notif.link) {
-                    window.open(notif.link, '_blank')
+                  if (!notif.link) return
+                  const target = safeNotificationTarget(notif.link)
+                  if (!target) {
+                    toast.error(t`Blocked navigation to untrusted link`)
+                    return
                   }
+                  window.open(target, '_blank', 'noopener,noreferrer')
                 }}
               />
             ))}
