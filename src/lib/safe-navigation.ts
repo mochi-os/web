@@ -60,6 +60,27 @@ export function isSameOriginRequest(
   }
 }
 
+/**
+ * True when a resource URL (an image, a download) resolves to the current
+ * origin over http(s), so a session token may be added to it.
+ *
+ * Resolution is against document.baseURI, which is what the browser itself
+ * uses for a relative `src` or `href`, so the origin tested here is the origin
+ * actually fetched. A protocol-relative URL resolves off-origin and is
+ * refused, as is any non-http(s) scheme.
+ */
+export function isSameOriginResource(url: string): boolean {
+  try {
+    const resolved = new URL(url, document.baseURI)
+    return (
+      SAFE_INTERNAL_PROTOCOLS.has(resolved.protocol) &&
+      resolved.origin === window.location.origin
+    )
+  } catch {
+    return false
+  }
+}
+
 export function getSafeNavigationTarget(
   target: string | null | undefined,
   currentOrigin: string,

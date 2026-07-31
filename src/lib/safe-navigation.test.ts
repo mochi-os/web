@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect } from 'vitest'
-import { isSameOriginRequest, getSafeNavigationTarget } from './safe-navigation'
+import {
+  isSameOriginRequest,
+  isSameOriginResource,
+  getSafeNavigationTarget,
+} from './safe-navigation'
 
 // jsdom serves the suite from http://localhost:3000 by default; assert it so a
 // change of test origin can't make these cases pass for the wrong reason.
@@ -72,6 +76,36 @@ describe('isSameOriginRequest', () => {
 
   it('treats an unparseable URL as foreign', () => {
     expect(isSameOriginRequest('http://[', 'x')).toBe(false)
+  })
+})
+
+describe('isSameOriginResource', () => {
+  it('accepts relative and root-relative resource paths', () => {
+    expect(isSameOriginResource('/chat/abc/-/attachments/1')).toBe(true)
+    expect(isSameOriginResource('attachments/1/thumbnail')).toBe(true)
+  })
+
+  it('accepts an absolute same-origin URL', () => {
+    expect(isSameOriginResource(`${ORIGIN}/chat/abc/-/attachments/1`)).toBe(true)
+  })
+
+  it('refuses a protocol-relative URL', () => {
+    // The token would otherwise be appended and sent to this host.
+    expect(isSameOriginResource('//attacker.example/image')).toBe(false)
+  })
+
+  it('refuses an absolute foreign URL', () => {
+    expect(isSameOriginResource('https://attacker.example/image')).toBe(false)
+  })
+
+  it('refuses a non-HTTP scheme', () => {
+    expect(isSameOriginResource('data:image/png;base64,AAAA')).toBe(false)
+    expect(isSameOriginResource('javascript:alert(1)')).toBe(false)
+    expect(isSameOriginResource('mochi://peer/entity')).toBe(false)
+  })
+
+  it('refuses a same-host URL on another port', () => {
+    expect(isSameOriginResource(ORIGIN.replace(/:\d+$/, '') + ':4433/x')).toBe(false)
   })
 })
 

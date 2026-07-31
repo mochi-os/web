@@ -6,6 +6,8 @@
 // and cannot access cookies, localStorage, or the parent DOM. All communication
 // happens via postMessage.
 
+import { isSameOriginResource } from './safe-navigation'
+
 type DomainRouteInfo = {
   method: string
   entity: string
@@ -822,11 +824,14 @@ export function installShellNavigationSync(): void {
  * Outside the shell, returns the URL unchanged.
  */
 export function authenticatedUrl(url: string): string {
-  if (!isInShell() || !shellInitData) return url
+  if (!isInShell() || !shellInitData || !url) return url
 
-  // Only add token to same-origin URLs (relative paths or same host)
-  // External URLs (https://other-server.com/...) don't need our token
-  if (/^https?:\/\//i.test(url)) return url
+  // Only add the token to same-origin http(s) URLs. Resolve first rather than
+  // pattern-matching the string: a protocol-relative URL ("//host/path") names
+  // another origin without ever spelling out a scheme, so a "starts with
+  // http(s)://" test reads it as local and would append the token to a URL the
+  // browser then sends to that host.
+  if (!isSameOriginResource(url)) return url
 
   const token = shellInitData.token
   if (!token) return url
