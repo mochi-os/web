@@ -10,6 +10,7 @@ import { isInShell } from './shell-bridge'
 import { useAuthStore } from '../stores/auth-store'
 import { attachApiResponseInterceptors } from './api-response-interceptors'
 import { clearContentTypeHeader } from './clear-content-type-header'
+import { isSameOriginRequest } from './safe-navigation'
 
 export interface AppClientOptions {
   /**
@@ -74,7 +75,7 @@ export function createAppClient({
     // Add auth token
     const token = useAuthStore.getState().token
 
-    if (token) {
+    if (token && isSameOriginRequest(config.baseURL, config.url)) {
       config.headers.Authorization = token.startsWith('Bearer ')
         ? token
         : `Bearer ${token}`

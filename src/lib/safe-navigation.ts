@@ -28,6 +28,38 @@ function isTrustedExternalHost(
   })
 }
 
+/**
+ * True when a request built from `base` and `url` resolves to the current
+ * origin, so the session token may be attached to it.
+ *
+ * Axios treats any URL matching `<scheme>://` or `//` as absolute and drops
+ * the baseURL, so a route parameter that decodes to `//host` (from a path
+ * segment like `%2F%2Fhost`) turns a relative endpoint into an off-origin
+ * request. The combination below mirrors axios's own buildFullPath so the
+ * origin compared here is the origin actually contacted.
+ *
+ * This is an origin comparison, not a ban on absolute URLs: callers
+ * legitimately pass absolute same-origin URLs to bypass an entity-context
+ * baseURL (see search-entity-page), and those must keep their token.
+ */
+export function isSameOriginRequest(
+  base: string | undefined,
+  url: string | undefined
+): boolean {
+  const target = url ?? ''
+  const absolute = /^([a-z][a-z\d+\-.]*:)?\/\//i.test(target)
+  const combined =
+    absolute || !base
+      ? target
+      : `${base.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`
+
+  try {
+    return new URL(combined, window.location.href).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
 export function getSafeNavigationTarget(
   target: string | null | undefined,
   currentOrigin: string,
