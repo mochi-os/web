@@ -75,6 +75,10 @@ export function SendShortcutHint({ className }: { className?: string }) {
         className
       )}
     >
+      {/* Keycap labels, deliberately out of the catalogs: the chip is
+          aria-hidden and the Send button carries the accessible name (see the
+          doc comment above). */}
+      {/* eslint-disable-next-line lingui/no-unlocalized-strings */}
       {isMacPlatform() ? '⌘' : 'Ctrl'}
       <span className='ms-0.5'>{'↵'}</span>
     </span>
