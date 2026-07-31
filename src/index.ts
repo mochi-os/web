@@ -64,6 +64,16 @@ export * from './components/layout/page-header'
 export * from './components/layout/page-utility-bar'
 export * from './components/layout/game-header'
 export * from './components/layout/game-header-stats'
+
+// Entity object model Components - shared by the crm and projects apps
+export * from './components/entity/entity-board-card'
+export * from './components/entity/entity-field-editor'
+
+// Game Components - shared by the chess, go and words apps.
+// The draw offer banner is chess and go only; words has no draw.
+export * from './components/game/game-chat-input'
+export * from './components/game/game-draw-offer-banner'
+export * from './components/game/game-empty-state'
 export * from './components/layout/back-button'
 export * from './components/layout/section'
 export * from './components/layout/simple-layout'
@@ -173,6 +183,16 @@ export * from './context/theme-provider'
 export * from './context/locale-provider'
 export * from './context/i18n-provider'
 export * from './context/search-provider'
+
+// Game session - shared by the chess, go and words apps
+export * from './context/game-sidebar-context'
+export * from './context/game-websocket-context'
+export * from './context/game-websocket-provider'
+export { useGameWebsocketManager } from './hooks/use-game-websocket-manager'
+export {
+  createLastGameStorage,
+  type LastGameStorage,
+} from './hooks/use-last-game-storage'
 
 // Stores
 export * from './stores/auth-store'
@@ -321,6 +341,7 @@ export type {
 } from './types/places'
 export * from './types/settings'
 export * from './types/users'
+export * from './types/entity-object'
 
 // Hooks
 export * from './hooks/settings/use-preferences'
