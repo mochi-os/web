@@ -1,13 +1,14 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Trans } from '@lingui/react/macro'
 import {
   LogOut,
   Settings,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { onShellMessage } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
 import { useNotifications } from '../../hooks/use-notifications'
 import useDialogState from '../../hooks/use-dialog-state'
@@ -47,14 +48,16 @@ function UserIcon({
   unreadCount,
   identity,
   name,
+  version,
 }: {
   unreadCount?: number
   identity?: string
   name?: string
+  version?: string
 }) {
   return (
     <div className='relative'>
-      <EntityAvatar fingerprint={identity || undefined} name={name} size="sm" />
+      <EntityAvatar fingerprint={identity || undefined} version={version} name={name} size="sm" />
       {!!unreadCount && (
         <span className='absolute -right-0.5 -top-0.5 z-10 h-3 w-3 rounded-full bg-notification' />
       )}
@@ -75,14 +78,27 @@ export function MochiMenu({
 
   const name = useAuthStore((s) => s.name)
   const identity = useAuthStore((s) => s.identity)
+  const avatar = useAuthStore((s) => s.avatar)
   const unreadCount = notifications.filter((n) => n.read === 0).length
+
+  // The people app announces an avatar change with shellSetAvatar. Outside the
+  // shell that message lands on this same window, so the menu picks up the new
+  // version token and the avatar URL changes instead of answering from cache.
+  useEffect(() => {
+    return onShellMessage((msg) => {
+      if (msg.type !== 'avatar-set') return
+      if (typeof msg.version !== 'string' || msg.version.length > 64) return
+      if (msg.person !== useAuthStore.getState().identity) return
+      useAuthStore.getState().setAvatar(msg.version)
+    })
+  }, [])
 
   const menuContent = (
     <>
       <DropdownMenuLabel className='p-0 font-normal'>
         <div className='flex items-center justify-between px-2 py-1.5'>
           <div className='flex items-center gap-2 text-sm'>
-            <EntityAvatar fingerprint={identity || undefined} name={name} size="md" />
+            <EntityAvatar fingerprint={identity || undefined} version={avatar || undefined} name={name} size="md" />
             <span className='font-semibold'>{name || t`User`}</span>
           </div>
           <div className='flex items-center gap-1 ms-4'>
@@ -141,6 +157,7 @@ export function MochiMenu({
         unreadCount={showNotifications ? unreadCount : 0}
         identity={identity}
         name={name}
+        version={avatar || undefined}
       />
     </button>
   )

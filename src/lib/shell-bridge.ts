@@ -270,6 +270,18 @@ export function shellSetLanguage(language: string): void {
   }
 }
 
+/**
+ * Announce that a person's avatar image changed. The menus render the avatar
+ * from a URL that never changes and is served with a five-minute cache
+ * lifetime, so without a fresh version token the browser keeps showing the
+ * old image. Posted even outside the shell: in the top window window.parent
+ * is the window itself, which is how a MochiMenu in the same page hears it
+ * (via onShellMessage); inside the shell it reaches the shell menu instead.
+ */
+export function shellSetAvatar(person: string, version: string): void {
+  window.parent.postMessage({ type: 'avatar-set', person, version }, '*')
+}
+
 /** Write text to the clipboard. Uses the shell proxy when sandboxed. */
 let clipboardIdCounter = 0
 const clipboardCallbacks = new Map<number, (ok: boolean) => void>()

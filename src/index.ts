@@ -267,6 +267,7 @@ export {
   shellSetImmersive,
   shellSetLocale,
   shellSetLanguage,
+  shellSetAvatar,
   onShellMessage,
   getShellInitData,
   safeCookieGet,
