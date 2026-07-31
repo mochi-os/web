@@ -47,9 +47,9 @@ function sourceOrigin(source: string): string | null {
  * restore from a migration backup). Nudges the user to delete the old
  * account so the network stops routing to it, and lists third-party
  * services to re-link here. Source server and the re-link list arrive in
- * the shell init payload (restoreSource / relinks). Dismissible for the
- * current view only - it returns until the move is finished, because the
- * work genuinely is not done yet.
+ * the shell init payload (restoreSource / relinks). Dismissal persists
+ * account-wide: the dismiss action sets the restore.show preference to
+ * "false", so the banner stays gone after reload.
  */
 export function RestoreBanner() {
   const { t } = useLingui()
