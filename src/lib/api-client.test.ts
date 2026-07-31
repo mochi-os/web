@@ -6,18 +6,12 @@
 // a real request through the interceptor and inspecting the outgoing headers.
 // Testing the helper alone would let a revert of the interceptor call site
 // pass unnoticed.
+//
+// The real response interceptors run here: the vitest config transforms the
+// Lingui macro, so this module no longer has to be stubbed to be imported.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { InternalAxiosRequestConfig } from 'axios'
-
-// The response-interceptor module reaches for the Lingui macro, which this
-// package's vitest config does not transform. It attaches RESPONSE handling
-// only and has no bearing on the outgoing Authorization header, so stubbing it
-// keeps the request interceptor under test intact.
-vi.mock('./api-response-interceptors', () => ({
-  attachApiResponseInterceptors: () => {},
-  setLogoutHandler: () => {},
-}))
 
 const TOKEN = 'test-token'
 
