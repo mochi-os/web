@@ -105,12 +105,13 @@ describe('createAppClient interceptor', () => {
   })
 })
 
-// crm, projects and repositories each hand-roll a copy of the request
-// interceptor above. Those packages have no test runner, so a behavioural test
-// like the ones above cannot live with them; this asserts on their source
-// instead, the way shell-bridge.test.ts guards the shell script's copy of the
-// theme rules. It is weaker than driving a request, but it is revert-sensitive:
-// restoring any of the three to a bare `if (token)` fails here.
+// crm and projects now defer to createAppClient, so the behavioural tests above
+// cover them for real. repositories still hand-rolls its interceptor because it
+// layers HTML-response detection and a download helper on top, and its package
+// has no test runner — so it is guarded by asserting on its source, the way
+// shell-bridge.test.ts guards the shell script's copy of the theme rules. That
+// is weaker than driving a request, but it is revert-sensitive: restoring it to
+// a bare `if (token)` fails here.
 //
 // Skipped rather than failed when those repositories are not checked out, since
 // each is its own git repo and lib/web is built and tested on its own.
@@ -118,26 +119,36 @@ describe('app-local interceptor call sites', async () => {
   const { existsSync, readFileSync } = await import('node:fs')
   const { resolve } = await import('node:path')
 
-  const clients = ['crm', 'projects', 'repositories'].map((app) => ({
-    app,
-    // vitest runs with lib/web as the working directory.
-    file: resolve(process.cwd(), `../../apps/${app}/web/src/api/request.ts`),
-  }))
-  const present = clients.filter((c) => existsSync(c.file))
+  // vitest runs with lib/web as the working directory.
+  const appFile = (app: string) =>
+    resolve(process.cwd(), `../../apps/${app}/web/src/api/request.ts`)
 
-  it.skipIf(present.length === 0)('found the app clients to check', () => {
-    // Positive control: names which repos were actually read, so a silently
-    // empty sweep cannot masquerade as three passing checks.
-    expect(present.map((c) => c.app)).toEqual(['crm', 'projects', 'repositories'])
-  })
+  const own = 'repositories'
+  const shared = ['crm', 'projects']
 
-  for (const { app, file } of clients) {
-    it.skipIf(!existsSync(file))(`${app} gates the token on the request origin`, () => {
-      const source = readFileSync(file, 'utf8')
+  it.skipIf(!existsSync(appFile(own)))(
+    `${own} gates the token on the request origin`,
+    () => {
+      const source = readFileSync(appFile(own), 'utf8')
       // Positive control: this really is a token-attaching interceptor.
       expect(source).toContain('Authorization')
       expect(source).toContain('isSameOriginRequest(config.baseURL, config.url)')
       expect(source).not.toMatch(/if \(token\) \{/)
-    })
+    }
+  )
+
+  for (const app of shared) {
+    it.skipIf(!existsSync(appFile(app)))(
+      `${app} attaches no interceptor of its own`,
+      () => {
+        const source = readFileSync(appFile(app), 'utf8')
+        // Reintroducing a private interceptor would silently reopen the gap
+        // these tests exist to close, so assert the app stays on the shared
+        // client rather than merely that any copy is currently correct.
+        expect(source).toContain('createAppClient')
+        expect(source).not.toContain('interceptors.request.use')
+        expect(source).not.toContain('Authorization')
+      }
+    )
   }
 })
