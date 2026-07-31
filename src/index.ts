@@ -247,12 +247,6 @@ export {
   NOTIFICATIONS_PATH,
 } from './lib/app-path'
 export {
-  parseMochiEntityUri,
-  isMochiEntityUri,
-  mochiEntityUri,
-} from './lib/mochi-uri'
-export type { MochiEntityUri } from './lib/mochi-uri'
-export {
   isInShell,
   initShellBridge,
   shellNavigate,
