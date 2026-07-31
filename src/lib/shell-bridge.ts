@@ -20,6 +20,40 @@ export type ColorTheme = {
   overrides?: Record<string, string>
 }
 
+// What a theme is allowed to install. A color theme arrives over postMessage
+// from an app we don't trust — the shell relays whatever an app sends to every
+// other app's iframe — so these three rules decide what survives. They are
+// duplicated in apps/menu/web/public/shell.js (plain script, can't import) and
+// in the server's themes_validate (Go, manifest ingestion); the parity test in
+// shell-bridge.test.ts fails if the copies drift.
+
+/** A CSS custom property name — the only key shape a theme may set. */
+export function isThemeProperty(name: string): boolean {
+  return /^--[A-Za-z0-9_-]+$/.test(name)
+}
+
+/**
+ * A theme value that would make the browser fetch. Custom properties are
+ * consumed in image contexts, so a URL-bearing value beacons every page view
+ * to whoever supplied the theme. Backslash and comment syntax count: they let
+ * a function name be written so it doesn't read as itself (`\75rl(` is `url(`).
+ */
+export function isFetchingValue(value: string): boolean {
+  return /url|image|src|element|cross-fade|paint|\\|\/\*/i.test(value)
+}
+
+/**
+ * font-size is the one standard property a theme state carries, set by the
+ * settings font size preference. It is bounded rather than passed through:
+ * any app can post a theme, and 0.01% hides every app's content as effectively
+ * as display:none would.
+ */
+export function isThemeFontSize(value: string): boolean {
+  if (!/^\d{2,3}(\.\d+)?%$/.test(value)) return false
+  const size = parseFloat(value)
+  return size >= 50 && size <= 200
+}
+
 export type LocalePreferences = {
   date_format: string
   time_format: string

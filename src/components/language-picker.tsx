@@ -34,7 +34,7 @@ import { setStoredLanguage } from '../context/i18n-provider'
 import { detectLanguage } from '../context/locale-provider'
 import { cn, naturalCompare } from '../lib/utils'
 
-type LanguageEntry = {
+export type LanguageEntry = {
   tag: string
   native: string
 }
@@ -202,7 +202,7 @@ function resolveInstalled(tag: string, installed: Set<string>): string {
 // their own language by sight (Français, 日本語). For the Auto entry's
 // descriptive parenthetical the caller passes the active UI locale so the
 // detected language reads in the user's UI language instead.
-function nativeName(tag: string, displayLocale?: string): string {
+export function nativeName(tag: string, displayLocale?: string): string {
   const override = displayNameOverrides[tag.toLowerCase()]
   if (override) return override
   // No explicit display locale means the caller wants the language's own
@@ -238,7 +238,7 @@ function scriptBucket(native: string): number {
   return 0
 }
 
-function describeLanguages(tags: string[]): LanguageEntry[] {
+export function describeLanguages(tags: string[]): LanguageEntry[] {
   const out: LanguageEntry[] = tags.map((tag) => ({ tag, native: nativeName(tag) }))
   out.sort((a, b) => {
     const ba = scriptBucket(a.native)

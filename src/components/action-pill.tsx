@@ -47,8 +47,14 @@ const EXPAND_OPACITY = {
     'opacity-0 group-hover/bubble:opacity-100 group-data-[active=true]/bubble:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 transition-opacity',
 } as const
 
-const INLINE_SHELL =
-  'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-border/50 bg-muted/40 p-0.5 leading-none shadow-sm'
+// The container is a plain row: transient actions render bare (per-button
+// hover feedback only). The pill shell lives on ActionPillSticky, so stored
+// state (reaction chips, votes) keeps the chip idiom while actions carry no
+// background of their own.
+const INLINE_BASE = 'inline-flex shrink-0 items-center gap-1 leading-none'
+
+const STICKY_SHELL =
+  'rounded-full border border-border/50 bg-muted/40 p-0.5 shadow-sm'
 
 type ActionPillProps = ComponentProps<'div'> & {
   /** Sticky content present (reactions/votes) — shell stays open; actions may expand. */
@@ -79,13 +85,13 @@ function ActionPill({
   ...props
 }: ActionPillProps) {
   const shellClass = sticky
-    ? INLINE_SHELL
+    ? INLINE_BASE
     : emptyReveal === 'none'
-      ? INLINE_SHELL
+      ? INLINE_BASE
       : emptyReveal === 'opacity'
-        ? cn(INLINE_SHELL, 'transition-opacity pointer-events-auto opacity-100', EXPAND_OPACITY[hoverGroup])
+        ? cn(INLINE_BASE, 'transition-opacity pointer-events-auto opacity-100', EXPAND_OPACITY[hoverGroup])
         : cn(
-            INLINE_SHELL,
+            INLINE_BASE,
             'overflow-hidden transition-all duration-200 max-w-full opacity-100 pointer-events-auto',
             EXPAND_MAX_W[hoverGroup][expandWidth]
           )
@@ -109,7 +115,7 @@ function ActionPillSticky({ className, children, ...props }: ActionPillStickyPro
   return (
     <div
       data-slot='action-pill-sticky'
-      className={cn('flex items-center gap-0.5 leading-none', className)}
+      className={cn('flex items-center gap-0.5 leading-none', STICKY_SHELL, className)}
       {...props}
     >
       {children}
@@ -154,5 +160,5 @@ export { ActionPill, ActionPillSticky, ActionPillActions }
 export {
   EXPAND_MAX_W as actionPillExpandMaxWidthMap,
   EXPAND_OPACITY as actionPillExpandOpacityMap,
-  INLINE_SHELL as actionPillInlineShellClass,
+  STICKY_SHELL as actionPillStickyShellClass,
 }
