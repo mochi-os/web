@@ -14,6 +14,12 @@ const pendingRequests = new Map<number, (value: string | null) => void>()
 // Listen for storage results from shell
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (event: MessageEvent) => {
+    // Only the shell (our direct parent) may answer a storage read. The
+    // iframe's own origin is opaque so event.origin can't be pinned, but
+    // pinning the source window blocks a reply forged by a sibling frame or a
+    // popup — request ids are a plain counter, so they are trivial to guess.
+    // Matches the guard the main bridge applies to every inbound message.
+    if (event.source !== window.parent) return
     const data = event.data
     if (!data || data.type !== 'storage.result') return
 
