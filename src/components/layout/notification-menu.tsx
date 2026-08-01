@@ -8,7 +8,6 @@ import { getSafeNavigationTarget } from '../../lib/safe-navigation'
 import { toast } from '../../lib/toast-utils'
 import { useFormat } from '../../hooks/use-format'
 import type { Notification } from '../notifications-dropdown'
-import { NotificationCategoryButton } from '../notification-category-button'
 import { ScrollArea } from '../ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { t } from '@lingui/core/macro'
@@ -20,10 +19,18 @@ export function NotificationItem({
   notification,
   onClick,
   onMiddleClick,
+  actions,
 }: {
   notification: Notification
   onClick?: (notification: Notification) => void
   onMiddleClick?: (notification: Notification) => void
+  /**
+   * Trailing control for the row, supplied by the consumer. The category
+   * picker lives here in practice, and it needs data from the notifications
+   * service - which this library cannot read on any app's behalf, so it does
+   * not try. No actions supplied, no control rendered.
+   */
+  actions?: (notification: Notification) => React.ReactNode
 }) {
   const isUnread = notification.read === 0
   const { formatTimestamp } = useFormat()
@@ -58,12 +65,7 @@ export function NotificationItem({
           </p>
         </div>
       </button>
-      <NotificationCategoryButton
-        app={notification.app}
-        topic={notification.topic}
-        object={notification.object}
-        className='mt-0.5 shrink-0'
-      />
+      {actions?.(notification)}
     </div>
   )
 }
@@ -96,11 +98,13 @@ export function NotificationsSection({
   notifications,
   markAsRead,
   markAllAsRead,
+  actions,
 }: {
   onClose: () => void
   notifications: Notification[]
   markAsRead: (id: string) => void
   markAllAsRead: () => void
+  actions?: (notification: Notification) => React.ReactNode
 }) {
   const unread = notifications.filter((n) => n.read === 0)
 
@@ -148,6 +152,7 @@ export function NotificationsSection({
               <NotificationItem
                 key={n.id}
                 notification={n}
+                actions={actions}
                 onClick={(notif) => {
                   markAsRead(notif.id)
                   if (!notif.link) return
