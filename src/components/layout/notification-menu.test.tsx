@@ -128,3 +128,46 @@ describe('notification link navigation', () => {
     expect(toastError).toHaveBeenCalledTimes(1)
   })
 })
+
+// MochiMenu decides whether a notification affordance exists at all, from
+// whether a data source was supplied. An app with no way to read notifications
+// must show nothing rather than an empty list, which would assert the user has
+// none when the component cannot know.
+describe('MochiMenu notification affordance', () => {
+  async function renderMenu(props: Record<string, unknown>) {
+    const { MochiMenu } = await import('./mochi-menu')
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query')
+    // MochiMenu renders EntityAvatar, which queries for the accent colour.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    return render(
+      <QueryClientProvider client={client}>
+        <I18nProvider i18n={i18n}>
+          <MochiMenu {...props} />
+        </I18nProvider>
+      </QueryClientProvider>
+    )
+  }
+
+  // The trigger's accessible name is derived from the unread count, so it
+  // reports whether the data reached MochiMenu without needing to open the
+  // Radix portal. NotificationsSection's own rendering is covered above.
+  it('counts unread notifications when a source is supplied', async () => {
+    await renderMenu({
+      notifications: {
+        items: [notification('/feeds/abc')],
+        markAsRead: () => {},
+        markAllAsRead: () => {},
+      },
+    })
+    expect(screen.getByLabelText('Open menu (1 unread notification)')).toBeInTheDocument()
+  })
+
+  it('offers no notification affordance when no source is supplied', async () => {
+    await renderMenu({})
+    // Plain "Open menu": no count, so nothing claims the user has none either.
+    expect(screen.getByLabelText('Open menu')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/unread/i)).not.toBeInTheDocument()
+  })
+})

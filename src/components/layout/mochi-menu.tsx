@@ -10,7 +10,6 @@ import {
 import { cn } from '../../lib/utils'
 import { onShellMessage } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
-import { useNotifications } from '../../hooks/use-notifications'
 import useDialogState from '../../hooks/use-dialog-state'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import {
@@ -30,12 +29,30 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { EntityAvatar } from '../entity-avatar'
 import { SignOutDialog } from '../sign-out-dialog'
-import { NotificationsSection } from './notification-menu'
+import { NotificationsSection, type Notification } from './notification-menu'
 import { t, plural } from '@lingui/core/macro'
+
+/**
+ * Notifications are supplied by whoever can read them, never fetched here.
+ * This component ships inside every app's bundle, and the notifications
+ * service is readable only by an app holding notifications/read - which, of
+ * the apps that render this menu, is only the menu app. A shared component
+ * cannot reach that data, so it takes it.
+ *
+ * Omit `notifications` and the menu renders no notification affordance at all.
+ * That is the honest answer for an app running top-window with no shell: an
+ * empty list and a zero badge would assert the user has nothing waiting, which
+ * is a claim this component is in no position to make.
+ */
+export type MochiMenuNotifications = {
+  items: Notification[]
+  markAsRead: (id: string) => void
+  markAllAsRead: () => void
+}
 
 type MochiMenuProps = {
   direction?: 'horizontal' | 'vertical'
-  showNotifications?: boolean
+  notifications?: MochiMenuNotifications
   showLogo?: boolean
   className?: string
 }
@@ -67,19 +84,19 @@ function UserIcon({
 
 export function MochiMenu({
   direction = 'horizontal',
-  showNotifications = true,
+  notifications,
   showLogo = true,
   className,
 }: MochiMenuProps) {
   const [signOutOpen, setSignOutOpen] = useDialogState()
   const [menuOpen, setMenuOpen] = useState(false)
   const { isMobile } = useScreenSize()
-  const { notifications, markAsRead, markAllAsRead } = useNotifications()
 
   const name = useAuthStore((s) => s.name)
   const identity = useAuthStore((s) => s.identity)
   const avatar = useAuthStore((s) => s.avatar)
-  const unreadCount = notifications.filter((n) => n.read === 0).length
+  const unreadCount =
+    notifications?.items.filter((n) => n.read === 0).length ?? 0
 
   // The people app announces an avatar change with shellSetAvatar. Outside the
   // shell that message lands on this same window, so the menu picks up the new
@@ -130,14 +147,14 @@ export function MochiMenu({
         </div>
       </DropdownMenuLabel>
 
-      {showNotifications && (
+      {notifications && (
         <>
           <DropdownMenuSeparator />
           <NotificationsSection
             onClose={() => setMenuOpen(false)}
-            notifications={notifications}
-            markAsRead={markAsRead}
-            markAllAsRead={markAllAsRead}
+            notifications={notifications.items}
+            markAsRead={notifications.markAsRead}
+            markAllAsRead={notifications.markAllAsRead}
           />
         </>
       )}
@@ -154,7 +171,7 @@ export function MochiMenu({
       className='rounded p-1 hover:bg-hover active:bg-interactive-active'
     >
       <UserIcon
-        unreadCount={showNotifications ? unreadCount : 0}
+        unreadCount={unreadCount}
         identity={identity}
         name={name}
         version={avatar || undefined}

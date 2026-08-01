@@ -11,11 +11,11 @@ import { useScreenSize } from '../../hooks/use-screen-size'
 import { useSidebar } from '../ui/sidebar'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { MochiMenu } from './mochi-menu'
+import { MochiMenu, type MochiMenuNotifications } from './mochi-menu'
 import { t } from '@lingui/core/macro'
 
 type TopBarProps = {
-  showNotifications?: boolean
+  notifications?: MochiMenuNotifications
   showSidebarTrigger?: boolean
   vertical?: boolean
   className?: string
@@ -23,7 +23,7 @@ type TopBarProps = {
 }
 
 export function TopBar({
-  showNotifications = true,
+  notifications,
   showSidebarTrigger = false,
   vertical = false,
   className,
@@ -79,7 +79,7 @@ export function TopBar({
         <div className='flex-1' />
 
         <MochiMenu
-          showNotifications={showNotifications}
+          notifications={notifications}
           showLogo={false}
         />
       </header>
@@ -113,7 +113,7 @@ export function TopBar({
 
           <div className='flex justify-center'>
             <MochiMenu
-              showNotifications={showNotifications}
+              notifications={notifications}
               showLogo={false}
             />
           </div>
@@ -135,7 +135,7 @@ export function TopBar({
     >
       <MochiMenu
         direction={vertical ? 'vertical' : 'horizontal'}
-        showNotifications={showNotifications}
+        notifications={notifications}
       />
 
       {!vertical && <div className='flex-1' />}

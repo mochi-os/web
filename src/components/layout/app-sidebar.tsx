@@ -21,13 +21,13 @@ import { NavGroup } from './nav-group'
 import { Button } from '../ui/button'
 import { Skeleton } from '../ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { MochiMenu } from './mochi-menu'
+import { MochiMenu, type MochiMenuNotifications } from './mochi-menu'
 
 import type { SidebarData } from './types'
 
 type AppSidebarProps = {
   data: SidebarData
-  showNotifications?: boolean
+  notifications?: MochiMenuNotifications
   sidebarFooter?: React.ReactNode
   isLoading?: boolean
   hideMenu?: boolean
@@ -69,7 +69,7 @@ function CollapseBtn() {
 
 export function AppSidebar({
   data,
-  showNotifications = true,
+  notifications,
   sidebarFooter,
   isLoading,
   hideMenu,
@@ -130,7 +130,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <MochiMenu
                   direction={state === 'expanded' ? 'horizontal' : 'vertical'}
-                  showNotifications={showNotifications}
+                  notifications={notifications}
                   className='p-2'
                 />
               </SidebarMenuItem>

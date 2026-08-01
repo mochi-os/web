@@ -16,6 +16,7 @@ import { SearchProvider } from '../../context/search-provider'
 
 import { SidebarInset, SidebarProvider } from '../ui/sidebar'
 import { TopBar } from './top-bar'
+import type { MochiMenuNotifications } from './mochi-menu'
 import { AppSidebar } from './app-sidebar'
 import { useVerifySession } from '../../hooks/use-verify-session'
 
@@ -48,7 +49,7 @@ type AuthenticatedLayoutProps = {
   children?: React.ReactNode
   sidebarData?: SidebarData
   sidebarFooter?: React.ReactNode
-  showNotifications?: boolean
+  notifications?: MochiMenuNotifications
   usePageHeaderForMobileNav?: boolean
   title?: string
   mobileTitle?: React.ReactNode
@@ -64,7 +65,7 @@ type AuthenticatedLayoutProps = {
 export function AuthenticatedLayout({
   children,
   sidebarData,
-  showNotifications = true,
+  notifications,
   title,
   mobileTitle: _mobileTitle,
   sidebarFooter,
@@ -106,7 +107,9 @@ export function AuthenticatedLayout({
   const isLogoutInProgress = useAuthStore((state) => state.isLogoutInProgress)
 
   // When in shell, suppress notifications in the app (menu app handles them)
-  const effectiveShowNotifications = inShell ? false : showNotifications
+  // In the shell the menu app supplies the header and its own notifications;
+  // the app's copy of the menu must not show a second, separate list.
+  const effectiveNotifications = inShell ? undefined : notifications
 
   const shellInit = getShellInitData()
   const defaultOpen = inShell
@@ -172,7 +175,7 @@ export function AuthenticatedLayout({
           {/* Desktop sidebar */}
           <AppSidebar
             data={sidebarData}
-            showNotifications={effectiveShowNotifications}
+            notifications={effectiveNotifications}
             sidebarFooter={sidebarFooter}
             isLoading={isLoadingSidebar}
             hideMenu={inShell}
@@ -183,7 +186,7 @@ export function AuthenticatedLayout({
             <header className='fixed top-0 left-0 right-0 z-[60] h-12 overflow-visible border-b bg-background md:hidden'>
               <div className='flex h-full items-center overflow-visible px-2'>
                 <TopBar
-                  showNotifications={effectiveShowNotifications}
+                  notifications={effectiveNotifications}
                   showSidebarTrigger
                 />
               </div>
@@ -238,7 +241,7 @@ export function AuthenticatedLayout({
               )}
             >
               <TopBar
-                showNotifications={showNotifications}
+                notifications={notifications}
                 className='w-full'
                 mobileTitle={_mobileTitle}
               />
@@ -248,7 +251,7 @@ export function AuthenticatedLayout({
           {/* Desktop vertical TopBar (hidden in shell) */}
           {!inShell && (
             <div className='hidden h-full shrink-0 lg:flex'>
-              <TopBar showNotifications={showNotifications} vertical />
+              <TopBar notifications={notifications} vertical />
             </div>
           )}
 
