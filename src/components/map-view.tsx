@@ -166,6 +166,15 @@ export interface MapViewProps {
   className?: string
 }
 
+// Leaflet assigns string popup content with innerHTML. Place names come from
+// remote peers' posts and from OpenStreetMap, so hand it an element whose text
+// is set as text and never parsed as markup.
+function textPopup(text: string): HTMLElement {
+  const element = document.createElement('span')
+  element.textContent = text
+  return element
+}
+
 export function MapView({
   lat,
   lon,
@@ -252,13 +261,13 @@ export function MapView({
       // Add origin marker
       const originMarker = L.marker([originLat, originLon], { icon: blueMarkerIcon, interactive }).addTo(map)
       if (originName && interactive) {
-        originMarker.bindPopup(originName)
+        originMarker.bindPopup(textPopup(originName))
       }
 
       // Add destination marker at unwrapped longitude (consistent with arc)
       const destMarker = L.marker([lat, destLon], { icon: greenMarkerIcon, interactive }).addTo(map)
       if (name && interactive) {
-        destMarker.bindPopup(name)
+        destMarker.bindPopup(textPopup(name))
       }
 
       // Draw great circle arc
@@ -274,7 +283,7 @@ export function MapView({
       // Single point display
       const destMarker = L.marker([lat, lon], { icon: blueMarkerIcon, interactive }).addTo(map)
       if (name && interactive) {
-        destMarker.bindPopup(name)
+        destMarker.bindPopup(textPopup(name))
       }
       map.setView([lat, lon], effectiveZoom)
     }

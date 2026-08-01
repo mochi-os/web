@@ -170,14 +170,6 @@ export function getShellInitData(): ShellInitData | null {
   return shellInitData
 }
 
-/** Send a navigation event to the shell (intra-app) */
-export function shellNavigate(path: string): void {
-  if (!isInShell()) {
-    window.location.href = path
-    return
-  }
-  window.parent.postMessage({ type: 'navigate', path }, '*')
-}
 
 /**
  * Ask the shell to navigate back. Inside the sandboxed iframe the browser

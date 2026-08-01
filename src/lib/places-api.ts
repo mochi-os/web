@@ -36,7 +36,11 @@ function featureToPlace(feature: PhotonFeature): PhotonPlace {
 }
 
 // Search for places by query string
-export async function searchPlaces(query: string, limit = 10): Promise<PhotonPlace[]> {
+export async function searchPlaces(
+  query: string,
+  limit = 10,
+  signal?: AbortSignal
+): Promise<PhotonPlace[]> {
   if (!query || query.trim().length < 2) {
     return []
   }
@@ -46,7 +50,7 @@ export async function searchPlaces(query: string, limit = 10): Promise<PhotonPla
     limit: String(limit),
   })
 
-  const response = await fetch(`${PHOTON_URL}?${params}`)
+  const response = await fetch(`${PHOTON_URL}?${params}`, { signal })
   if (!response.ok) {
     throw new Error(`Photon API error: ${response.status}`)
   }

@@ -5,6 +5,7 @@ import { t } from '@lingui/core/macro'
 import { useAuthStore } from '../stores/auth-store'
 import { authEndpoints } from './auth-endpoints'
 import { requestHelpers } from './request'
+import { getSafeNavigationTarget } from './safe-navigation'
 import { getAuthLoginUrl } from './app-path'
 import { mergeProfileCookie } from './profile-cookie'
 import { toast } from './toast-utils'
@@ -35,7 +36,13 @@ class AuthManager {
   private getLogoutRedirectUrl(reason?: string, redirectUrl?: string): string {
     const loginUrl = getAuthLoginUrl()
     if (redirectUrl) {
-      return `${loginUrl}?redirect=${encodeURIComponent(redirectUrl)}`
+      // Post-login redirects are a classic open-redirect: send only somewhere
+      // on this origin, whoever supplied the target.
+      const safe = getSafeNavigationTarget(redirectUrl, window.location.origin)
+      if (safe) {
+        return `${loginUrl}?redirect=${encodeURIComponent(safe)}`
+      }
+      return loginUrl
     }
 
     if (reason) {

@@ -82,7 +82,6 @@ export * from './components/layout/team-switcher'
 export * from './components/layout/top-nav'
 export { AppSidebar } from './components/layout/app-sidebar'
 export { NavGroup } from './components/layout/nav-group'
-export { NavUser } from './components/layout/nav-user'
 export type {
   SidebarData,
   NavGroup as NavGroupType,
@@ -174,11 +173,7 @@ export * from './components/view-tabs'
 export * from './context/direction-provider'
 export * from './context/font-provider'
 export * from './context/mobile-page-header-context'
-export {
-  LayoutProvider,
-  useLayout,
-  type Collapsible as LayoutCollapsible,
-} from './context/layout-provider'
+export { LayoutProvider, useLayout } from './context/layout-provider'
 export * from './context/theme-provider'
 export * from './context/locale-provider'
 export * from './context/i18n-provider'
@@ -241,14 +236,11 @@ export {
   getAuthLoginUrl,
   isDomainEntityRouting,
   getEntityFingerprint,
-  getEntityClass,
   normalizeEntityUrl,
-  NOTIFICATIONS_PATH,
 } from './lib/app-path'
 export {
   isInShell,
   initShellBridge,
-  shellNavigate,
   shellNavigateBack,
   shellNavigateExternal,
   shellNavigateTop,
@@ -309,7 +301,6 @@ export { extractStatus } from './lib/error-normalizer'
 export * from './lib/handle-server-error'
 export * from './lib/query-client'
 export * from './lib/request'
-export * from './lib/show-submitted-data'
 export * from './lib/utils'
 export * from './lib/locale-format'
 export * from './lib/rtl'

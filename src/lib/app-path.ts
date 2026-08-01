@@ -19,7 +19,6 @@ function hasMeta(name: string): boolean {
 }
 
 // Canonical path for cross-app API calls to the notifications app
-export const NOTIFICATIONS_PATH = '/notifications'
 
 // Check if we're on a domain with entity routing (subdomain or custom domain)
 export function isDomainEntityRouting(): boolean {
@@ -48,11 +47,6 @@ export function getEntityFingerprint(): string | null {
 }
 
 // Get the entity class from server context (null when not in entity context)
-export function getEntityClass(): string | null {
-  const meta = getMeta('mochi:class')
-  if (meta) return meta
-  return getShellInitData()?.domain?.class ?? null
-}
 
 // Get the app path (e.g. "/wikis"). Empty string when not path-routed.
 export function getAppPath(): string {
