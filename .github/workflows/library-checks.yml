@@ -19,6 +19,11 @@ on:
     branches:
       - main
       - master
+  schedule:
+    # Mondays 05:07 UTC, for the audit job below. npm advisories are published
+    # without anyone touching this repository, so they need a clock rather than
+    # a push. Off the hour, and off core's :17 and world's :37.
+    - cron: '7 5 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -56,3 +61,40 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+  # The JavaScript side had no dependency scanning of any kind while the Go side
+  # ran govulncheck and Trivy on a schedule in both core and world. The esbuild
+  # advisory that prompted this was found by someone running pnpm audit by hand,
+  # which is not a gate.
+  #
+  # Scoped honestly: this audits THIS library's graph, not the whole workspace.
+  # The canonical lockfile is the umbrella's, and the umbrella has no CI - it is
+  # not on GitHub - so a full-graph scan can only run locally today, via
+  # `make audit` at the umbrella root. Covering the shared library that every
+  # app depends on is most of the value, and it is what CI can reach.
+  audit:
+    # Scheduled and manual only. Advisories arrive on their own schedule, and a
+    # new one appearing would otherwise fail an unrelated pull request.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Audit dependencies
+        # high and critical only, matching the Trivy severity gate on the Go
+        # side. pnpm audit has no reachability analysis, so a lower threshold
+        # reports advisories in dev-only tooling that no shipped bundle
+        # contains, and a gate nobody believes is worse than no gate.
+        run: pnpm audit --audit-level high

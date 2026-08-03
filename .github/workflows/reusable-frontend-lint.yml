@@ -87,11 +87,18 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      # Per-app pnpm-lock.yaml files are stale (predate the monorepo workspace
-      # — the canonical lockfile is mochi/pnpm-lock.yaml in the umbrella, which
-      # CI can't see), so --frozen-lockfile bails on the workspace:* / file:
-      # specifier mismatch. --no-frozen-lockfile regenerates an in-memory
-      # lockfile for this run; the committed per-app lockfile is ignored.
+      # App repositories carry NO lockfile at all - the stale per-app ones this
+      # comment used to describe have since been deleted - and the canonical
+      # mochi/pnpm-lock.yaml lives in the umbrella, which CI cannot see. So
+      # --frozen-lockfile has nothing to freeze against and bails.
+      #
+      # Understand what that costs: every run resolves fresh from the semver
+      # ranges in package.json, so CI can test against versions no developer
+      # has, and a bad release is picked up the moment it is published. The fix
+      # is to make the canonical lockfile reachable from an app checkout, which
+      # is a question about how app repositories relate to the workspace rather
+      # than a flag on this line. Until then this is unpinned by necessity, not
+      # by preference.
       - name: Install dependencies
         working-directory: ${{ github.workspace }}
         run: pnpm install --no-frozen-lockfile
