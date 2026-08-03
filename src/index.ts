@@ -92,6 +92,7 @@ export * from './components/layout/game-header-stats'
 // Entity object model Components - shared by the crm and projects apps
 export * from './components/entity/entity-board-card'
 export * from './components/entity/entity-field-editor'
+export * from './components/entity/entity-option-dialog'
 export * from './components/entity/keyboard-shortcuts-help'
 
 // Game Components - shared by the chess, go and words apps.
@@ -194,6 +195,9 @@ export * from './context/locale-provider'
 export * from './context/i18n-provider'
 export * from './context/search-provider'
 
+// Entity object model - shared by the crm and projects apps
+export * from './context/entity-sidebar-context'
+
 // Game session - shared by the chess, go and words apps
 export * from './context/game-sidebar-context'
 export * from './context/game-websocket-context'
@@ -232,6 +236,7 @@ export * from './hooks/use-image-object-urls'
 export * from './hooks/use-accounts'
 export * from './hooks/use-destinations'
 export * from './hooks/use-debounce'
+export * from './hooks/use-keyboard-shortcuts'
 export * from './hooks/use-pending-items'
 export * from './hooks/use-merge-on-scroll-top'
 export * from './hooks/use-list-auto-animate'
@@ -314,6 +319,7 @@ export * from './lib/cookies'
 export { extractStatus } from './lib/error-normalizer'
 export * from './lib/handle-server-error'
 export * from './lib/query-client'
+export * from './lib/rank'
 export * from './lib/request'
 export * from './lib/utils'
 export * from './lib/locale-format'
