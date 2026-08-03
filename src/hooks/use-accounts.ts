@@ -46,11 +46,15 @@ export function useAccounts(
   const queryParams = capability ? `?capability=${capability}` : ''
   const appId = getAppIdFromBase(appBase)
 
+  // The two hooks below silence query/exhaustive-deps: queryParams is derived
+  // from capability and appId from appBase, and both capability and appBase are
+  // already in the key, so it varies with everything the request varies with.
+  // The rule cannot follow a derived value.
   const {
     data: providersData,
     isLoading: isProvidersLoading,
     error: providersError,
-  } = useQuery({
+  } = useQuery({ // eslint-disable-line @tanstack/query/exhaustive-deps
     queryKey: ['accounts', 'providers', appBase, capability],
     queryFn: async () => {
       try {
@@ -71,7 +75,7 @@ export function useAccounts(
     isLoading: isAccountsLoading,
     error: accountsError,
     refetch,
-  } = useQuery({
+  } = useQuery({ // eslint-disable-line @tanstack/query/exhaustive-deps
     queryKey: ['accounts', 'list', appBase, capability],
     queryFn: async () => {
       try {

@@ -108,7 +108,10 @@ export function SearchEntityDialog({
 
   // Search query
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: [entityClass, 'directory-search', debouncedSearch],
+    // searchEndpoint belongs in the key: it is a separate prop from
+    // entityClass, so two callers sharing a class but pointing at different
+    // endpoints would otherwise read each other's cached results.
+    queryKey: [entityClass, 'directory-search', searchEndpoint, debouncedSearch],
     queryFn: async () => {
       const response = await requestHelpers.get<DirectoryEntry[] | { results: DirectoryEntry[] }>(
         `${searchEndpoint}?search=${encodeURIComponent(debouncedSearch)}`

@@ -52,7 +52,9 @@ export interface UseDestinationsResult {
 export function useDestinations(appBase: string = ''): UseDestinationsResult {
   const appId = getAppIdFromBase(appBase)
 
-  const { data: destinationsData, isLoading, isError, error, refetch } = useQuery({
+  // appId is derived from appBase, which is already in the key, and is used only
+  // to label a permission error. The rule cannot follow a derived value.
+  const { data: destinationsData, isLoading, isError, error, refetch } = useQuery({ // eslint-disable-line @tanstack/query/exhaustive-deps
     queryKey: ['destinations', appBase],
     queryFn: async () => {
       try {
