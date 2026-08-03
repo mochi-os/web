@@ -66,24 +66,34 @@ export function AuditTimeline({
   const [error, setError] = useState<string | null>(null)
 
   const fetchRef = useRef(fetchAudit)
+  // The macro has to see a literal `t` tag, so the message is built during
+  // render and read from a ref. That keeps `t` out of the fetch deps below,
+  // so switching locale no longer refetches every trail on screen.
+  const failureMessage = t`Failed to load history`
+  const messageRef = useRef(failureMessage)
   useEffect(() => {
     fetchRef.current = fetchAudit
+    messageRef.current = failureMessage
   })
 
   useEffect(() => {
     let cancelled = false
+    // Clear both, or the previous object's trail stays on screen under the new
+    // heading, and an error on one object would blank every later one.
+    setEntries(null)
+    setError(null)
     fetchRef
       .current({ kind, object: String(object), limit: 100 })
       .then((r) => {
         if (!cancelled) setEntries(r.audit)
       })
       .catch((err) => {
-        if (!cancelled) setError(getErrorMessage(err, t`Failed to load history`))
+        if (!cancelled) setError(getErrorMessage(err, messageRef.current))
       })
     return () => {
       cancelled = true
     }
-  }, [kind, object, t])
+  }, [kind, object])
 
   if (error) return null
   if (!entries || entries.length === 0) return null
