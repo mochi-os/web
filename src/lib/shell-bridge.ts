@@ -6,6 +6,8 @@
 // and cannot access cookies, localStorage, or the parent DOM. All communication
 // happens via postMessage.
 
+import { isSameOriginResource } from './safe-navigation'
+
 type DomainRouteInfo = {
   method: string
   entity: string
@@ -168,14 +170,6 @@ export function getShellInitData(): ShellInitData | null {
   return shellInitData
 }
 
-/** Send a navigation event to the shell (intra-app) */
-export function shellNavigate(path: string): void {
-  if (!isInShell()) {
-    window.location.href = path
-    return
-  }
-  window.parent.postMessage({ type: 'navigate', path }, '*')
-}
 
 /**
  * Ask the shell to navigate back. Inside the sandboxed iframe the browser
@@ -266,6 +260,18 @@ export function shellSetLanguage(language: string): void {
   if (isInShell()) {
     window.parent.postMessage({ type: 'language-set', language }, '*')
   }
+}
+
+/**
+ * Announce that a person's avatar image changed. The menus render the avatar
+ * from a URL that never changes and is served with a five-minute cache
+ * lifetime, so without a fresh version token the browser keeps showing the
+ * old image. Posted even outside the shell: in the top window window.parent
+ * is the window itself, which is how a MochiMenu in the same page hears it
+ * (via onShellMessage); inside the shell it reaches the shell menu instead.
+ */
+export function shellSetAvatar(person: string, version: string): void {
+  window.parent.postMessage({ type: 'avatar-set', person, version }, '*')
 }
 
 /** Write text to the clipboard. Uses the shell proxy when sandboxed. */
@@ -822,11 +828,14 @@ export function installShellNavigationSync(): void {
  * Outside the shell, returns the URL unchanged.
  */
 export function authenticatedUrl(url: string): string {
-  if (!isInShell() || !shellInitData) return url
+  if (!isInShell() || !shellInitData || !url) return url
 
-  // Only add token to same-origin URLs (relative paths or same host)
-  // External URLs (https://other-server.com/...) don't need our token
-  if (/^https?:\/\//i.test(url)) return url
+  // Only add the token to same-origin http(s) URLs. Resolve first rather than
+  // pattern-matching the string: a protocol-relative URL ("//host/path") names
+  // another origin without ever spelling out a scheme, so a "starts with
+  // http(s)://" test reads it as local and would append the token to a URL the
+  // browser then sends to that host.
+  if (!isSameOriginResource(url)) return url
 
   const token = shellInitData.token
   if (!token) return url

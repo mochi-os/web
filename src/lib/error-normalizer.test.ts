@@ -14,7 +14,7 @@
 // Mochi envelope (handlers that haven't yet adopted respond_error).
 
 import { describe, it, expect } from 'vitest'
-import { normalizeError } from './error-normalizer'
+import { normalizeError, detectHtmlResponse } from './error-normalizer'
 
 function axios(status: number, data: unknown) {
   return { response: { status, data } }
@@ -141,5 +141,49 @@ describe('normalizeError', () => {
   it('surfaces HTTP status', () => {
     const e = axios(409, { error: 'x', message: 'X' })
     expect(normalizeError(e).status).toBe(409)
+  })
+})
+
+// A path naming no action falls through to the SPA catch-all, which answers
+// 200 with index.html. Two apps had independently worked around that (the
+// repositories client and the wikis page component) before the shared response
+// interceptor started rejecting it.
+describe('detectHtmlResponse', () => {
+  const indexHtml = '<!doctype html>\n<html><head><title>Feeds</title></head><body><div id="root"></div></body></html>'
+
+  it('detects a served SPA document and takes its title', () => {
+    expect(detectHtmlResponse(indexHtml)).toEqual({ detail: 'Feeds' })
+  })
+
+  it('prefers the pre block, which carries the server-side cause', () => {
+    const errorPage = '<!doctype html><html><head><title>Error</title></head><body><pre>no such action</pre></body></html>'
+    expect(detectHtmlResponse(errorPage)).toEqual({ detail: 'no such action' })
+  })
+
+  it('reports HTML with no usable explanation as detail-free', () => {
+    expect(detectHtmlResponse('<!doctype html><html><body>x</body></html>')).toEqual({})
+    expect(detectHtmlResponse('<html><body>x</body></html>')).toEqual({})
+    // Present but empty must not become the detail.
+    expect(detectHtmlResponse('<!doctype html><title>   </title>')).toEqual({})
+  })
+
+  it('tolerates leading whitespace and mixed case', () => {
+    expect(detectHtmlResponse('\n\n  <!DOCTYPE HTML><TITLE>Wikis</TITLE>')).toEqual({ detail: 'Wikis' })
+  })
+
+  it('passes over anything that is not an HTML document', () => {
+    expect(detectHtmlResponse({ data: { id: 1 } })).toBeNull()
+    expect(detectHtmlResponse('{"data":{"id":1}}')).toBeNull()
+    expect(detectHtmlResponse('')).toBeNull()
+    expect(detectHtmlResponse(null)).toBeNull()
+    expect(detectHtmlResponse(undefined)).toBeNull()
+    expect(detectHtmlResponse(42)).toBeNull()
+    // A string that merely mentions markup is not a document.
+    expect(detectHtmlResponse('the page contains <html> in its body')).toBeNull()
+  })
+
+  it('passes over binary bodies, so downloads are unaffected', () => {
+    expect(detectHtmlResponse(new Blob([indexHtml], { type: 'text/html' }))).toBeNull()
+    expect(detectHtmlResponse(new ArrayBuffer(8))).toBeNull()
   })
 })

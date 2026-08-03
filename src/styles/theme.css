@@ -1,3 +1,21 @@
+/* Web fonts, self-hosted. These used to arrive from Google Fonts via a <link>
+   the Vite plugin injected into every app, which meant every page view of
+   every app disclosed the visitor's IP, User-Agent and this server's origin to
+   a third party — the same disclosure markdown-url.ts blocks foreign images
+   for. Serving them ourselves keeps that inside the deployment.
+
+   Each file declares one weight split by unicode-range, so a browser fetches
+   only the subsets it actually renders, and only if something uses the family
+   at all. That matters for Atkinson Hyperlegible, which nothing loads unless
+   the reader has chosen the dyslexia font preference. */
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/400-italic.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
+@import '@fontsource/atkinson-hyperlegible/700-italic.css';
+
 :root {
   color-scheme: light;
 
@@ -77,10 +95,11 @@
      themed pages (font_stacks/style_preset_vars in core/server/themes.go), so
      pages served without a theme style — OpenGraph-served public pages,
      servers with no default_theme — render in the same font as everything
-     else. Atkinson Hyperlegible stays loaded via the Vite plugin's Google
-     Fonts <link> (see lib/web/src/vite/mochi-plugin.js) but is applied only
-     by the dyslexia font preference. --font-mono leads with the loaded IBM
-     Plex Mono webfont — keep it in sync with the plugin's <link>. */
+     else. Atkinson Hyperlegible is declared by the @font-face imports at the
+     top of this file but applied only by the dyslexia font preference, so it
+     is never fetched unless a reader turns that on. --font-mono leads with the
+     self-hosted IBM Plex Mono — keep the weights it needs in sync with those
+     imports. */
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;

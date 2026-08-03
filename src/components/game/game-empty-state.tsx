@@ -1,9 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import type { LucideIcon } from 'lucide-react'
+import { Plus, type LucideIcon } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Plus } from 'lucide-react'
 import { Button } from '../ui/button'
 import { EmptyState } from '../ui/empty-state'
 import { getAppPath } from '../../lib/app-path'

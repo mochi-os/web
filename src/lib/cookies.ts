@@ -5,7 +5,9 @@ import Cookies from 'js-cookie'
 
 export interface CookieOptions {
   maxAge?: number
-  httpOnly?: boolean
+  // No httpOnly: a cookie written from JavaScript cannot be httpOnly, and
+  // passing the flag through makes the browser reject the write outright.
+  // Only the server can set it.
   secure?: boolean
   sameSite?: 'strict' | 'lax' | 'none'
   path?: string

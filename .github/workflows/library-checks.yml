@@ -1,0 +1,58 @@
+# Copyright © 2026 Mochisoft OÜ
+# SPDX-License-Identifier: Apache-2.0
+
+# This library had no CI of its own. The workflow beside this one is
+# `workflow_call` only: 22 app repos invoke it for THEIR directories, checking
+# this package out merely as a sibling so the app can build. Nothing ever ran
+# this package's lint, tests or typecheck - which is why two lint errors sat
+# unnoticed until someone ran the command by hand.
+#
+# Unlike the app callers, this needs no synthesised workspace root: the package
+# declares everything it uses, including the lingui eslint plugin and the react
+# pair it tests against, so a plain install works from a bare checkout.
+
+name: Library Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      # Ordered cheapest-signal-first: types, then the suite, then style.
+      - name: Typecheck
+        run: pnpm exec tsc -b
+
+      - name: Test
+        run: pnpm test
+
+      - name: Lint
+        run: pnpm lint

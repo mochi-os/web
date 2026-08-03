@@ -121,7 +121,13 @@ function applyColorThemeToDOM(ct: ColorTheme | null) {
     installedProperties.add(key)
   }
   if (ct) {
-    if (ct.hue) {
+    // The hue triple arrives over postMessage from an app we do not trust -
+    // the shell relays whatever any app sends to every other app's iframe - so
+    // it gets the same guard as the overrides below rather than being install-
+    // on-sight. These three substitute into oklch(), where a fetching value
+    // makes the declaration invalid rather than beaconing, but validating both
+    // paths the same way is what makes that reasoning checkable.
+    if (ct.hue && !isFetchingValue(ct.hue) && !isFetchingValue(ct.chroma) && !isFetchingValue(ct.hueBg)) {
       install('--hue', ct.hue)
       install('--hue-chroma', ct.chroma)
       install('--hue-bg', ct.hueBg)

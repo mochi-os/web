@@ -15,25 +15,17 @@ export function mochiPlugin(options = {}) {
   const onlyEn = process.env.BUILD_LOCALES === 'en'
   const STUB_ID = '\0mochi-empty-locale'
 
-  // Web fonts referenced by --font-sans / --font-mono and the user's
-  // font preference. Injected into every app's <head> so iframe SPAs all
-  // pick up the same fonts without each app's index.html duplicating the
-  // tags. display=swap keeps text legible during the network fetch.
-  const FONT_LINKS = [
-    '<link rel="preconnect" href="https://fonts.googleapis.com">',
-    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
-    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap">',
-  ].join('\n    ')
+  // Fonts are no longer injected here. They used to arrive as a Google Fonts
+  // <link> in every app's <head>, which disclosed every visitor's IP and this
+  // server's origin to a third party on every page view. They are now
+  // self-hosted @font-face declarations at the top of lib/web's theme.css,
+  // which every app already imports — so they travel with the stylesheet
+  // rather than needing an HTML transform, and the browser fetches only the
+  // subsets and families it actually renders.
 
   return {
     name: 'mochi',
     enforce: 'pre',
-    transformIndexHtml(html) {
-      // Skip if the app's index.html already loads its own fonts to
-      // avoid duplicate <link> tags fetching the same stylesheet.
-      if (/fonts\.googleapis\.com/.test(html)) return html
-      return html.replace(/<\/head>/i, `    ${FONT_LINKS}\n  </head>`)
-    },
     resolveId(source) {
       if (!onlyEn) return null
       const m = /(?:^|\/)locales\/([^/]+)\/messages\.po$/.exec(source)

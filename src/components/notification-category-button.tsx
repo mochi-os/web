@@ -1,7 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { SlidersHorizontal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
@@ -9,14 +8,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Skeleton } from './ui/skeleton'
 import { cn, naturalCompare } from '../lib/utils'
-import { useAuthStore } from '../stores/auth-store'
-import { toast } from '../lib/toast-utils'
-import { getErrorMessage } from '../lib/handle-server-error'
 import { t } from '@lingui/core/macro'
 
-const MENU_PATH = '/menu'
-
-interface Category {
+/**
+ * Category assignment for one notification topic.
+ *
+ * This component used to fetch the menu app's routes directly, with the
+ * CONSUMING app's token — which core refuses with app_token_mismatch, so on
+ * every page but the menu app's own the picker silently failed to load and the
+ * catch swallowed it. lib/web ships inside every app's bundle and cannot hold
+ * another app's grants, so it now holds no data and performs no request: the
+ * consumer supplies both, from whichever service it is entitled to read.
+ */
+export interface NotificationCategory {
   id: number
   label: string
   // Read-time translated label for the seeded categories; label is the
@@ -25,7 +29,7 @@ interface Category {
   default: number
 }
 
-interface TopicRow {
+export interface NotificationTopic {
   app: string
   topic: string
   object: string
@@ -33,92 +37,44 @@ interface TopicRow {
   category: number | null
 }
 
-async function menuFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = useAuthStore.getState().token || ''
-  const res = await fetch(`${MENU_PATH}/${path}`, {
-    credentials: 'same-origin',
-    ...init,
-    headers: {
-      ...init?.headers,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  })
-  if (!res.ok) throw new Error(`Menu API error: ${res.status}`)
-  return res.json()
-}
-
 interface Props {
-  app: string
-  topic?: string
-  object?: string
+  /** Null while the consumer is still loading them. */
+  categories: NotificationCategory[] | null
+  /** The topic row this notification belongs to, or null if none exists yet. */
+  topic: NotificationTopic | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onCategoryChange: (topic: NotificationTopic, category: string) => Promise<void>
+  saving?: boolean
   className?: string
 }
 
-export function NotificationCategoryButton({ app, topic = '', object = '', className }: Props) {
-  const [open, setOpen] = useState(false)
-  const [categories, setCategories] = useState<Category[] | null>(null)
-  const [row, setRow] = useState<TopicRow | null>(null)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const params = new URLSearchParams({ app, topic, object })
-        const [catsRes, rowRes] = await Promise.all([
-          menuFetch<{ data: Category[] }>('-/notifications/categories'),
-          menuFetch<{ data: TopicRow | null }>(`-/notifications/topic/lookup?${params.toString()}`),
-        ])
-        if (cancelled) return
-        const cats = [...(catsRes.data || [])].sort((a, b) => {
-          if (a.id === 0) return 1
-          if (b.id === 0) return -1
-          return naturalCompare(a.display ?? a.label, b.display ?? b.label)
-        })
-        setCategories(cats)
-        setRow(rowRes.data || null)
-      } catch {
-        if (!cancelled) {
-          setCategories([])
-          setRow(null)
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [open, app, topic, object])
+export function NotificationCategoryButton({
+  categories,
+  topic: row,
+  open,
+  onOpenChange,
+  onCategoryChange,
+  saving = false,
+  className,
+}: Props) {
+  // Categories arrive already sorted by the consumer's loader? No — sorting is
+  // presentation, so it stays here: default category last, the rest by name.
+  const ordered = categories
+    ? [...categories].sort((a, b) => {
+        if (a.id === 0) return 1
+        if (b.id === 0) return -1
+        return naturalCompare(a.display ?? a.label, b.display ?? b.label)
+      })
+    : null
 
   const onChange = async (value: string) => {
     if (!row) return
-    setSaving(true)
-    try {
-      const params = new URLSearchParams({
-        app: row.app,
-        topic: row.topic,
-        object: row.object,
-        category: value,
-      })
-      await menuFetch('-/notifications/topic/category/set', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-      })
-      setRow({ ...row, category: parseInt(value, 10) })
-      const cat = categories?.find((c) => String(c.id) === value)
-      const label = row.label || row.topic
-      toast.success(cat ? `${label}: ${cat.display ?? cat.label}` : `${label} updated`)
-      setTimeout(() => setOpen(false), 0)
-    } catch (error) {
-      toast.error(getErrorMessage(error, t`Failed to update category`))
-    } finally {
-      setSaving(false)
-    }
+    await onCategoryChange(row, value)
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -144,7 +100,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
       >
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground"><Trans>Category for this notification</Trans></p>
-          {!categories ? (
+          {!ordered ? (
             <Skeleton className="h-9 w-full" />
           ) : !row ? (
             <p className="text-xs text-muted-foreground"><Trans>No topic record yet — try again after the next notification.</Trans></p>
@@ -158,7 +114,7 @@ export function NotificationCategoryButton({ app, topic = '', object = '', class
                 <SelectValue placeholder={t`Unassigned`} />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {ordered.map((cat) => (
                   <SelectItem key={cat.id} value={String(cat.id)}>{cat.display ?? cat.label}</SelectItem>
                 ))}
               </SelectContent>

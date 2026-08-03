@@ -10,6 +10,7 @@ import axios, {
 } from 'axios'
 import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
+import { detectHtmlResponse } from './error-normalizer'
 import { useAuthStore } from '../stores/auth-store'
 
 const devConsole = globalThis.console
@@ -142,6 +143,24 @@ function makeHandleApiResponseSuccess(
   return function handleApiResponseSuccess<T>(
     response: AxiosResponse<T>
   ): AxiosResponse<T> {
+    // A 200 carrying index.html means the request fell through to the SPA
+    // catch-all, so the path named no action - a routing mistake in the
+    // caller's URL. Fail here rather than handing HTML back as data, which
+    // surfaces later as a parse error or an empty component.
+    const html = detectHtmlResponse(response.data)
+    if (html) {
+      const summary = t`The server returned a web page instead of data.`
+      const error = new Error(
+        html.detail ? `${summary} ${html.detail}` : summary
+      ) as Error & { status?: number }
+      error.status = response.status
+      logDevError('[API] HTML response where data was expected', {
+        url: getRequestUrl(response.config),
+        detail: html.detail,
+      })
+      throw error
+    }
+
     // Check for application-level errors in successful HTTP responses
     // Some backends return HTTP 200 with error details in the response body
     const responseData = response.data as unknown

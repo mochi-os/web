@@ -14,6 +14,7 @@ import {
   setLogoutHandler,
 } from './api-response-interceptors'
 import { clearContentTypeHeader } from './clear-content-type-header'
+import { isSameOriginRequest } from './safe-navigation'
 
 export { setLogoutHandler }
 
@@ -58,7 +59,7 @@ apiClient.interceptors.request.use(
     const token = useAuthStore.getState().token
 
     config.headers = config.headers ?? {}
-    if (token) {
+    if (token && isSameOriginRequest(config.baseURL, config.url)) {
       ;(config.headers as Record<string, string>).Authorization =
         token.startsWith('Bearer ') ? token : `Bearer ${token}`
     }

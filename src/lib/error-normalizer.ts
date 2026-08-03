@@ -103,6 +103,38 @@ export function extractErrorMessageFromPayload(payload: unknown): {
   }
 }
 
+/**
+ * Detect an HTML document served where data was expected, and pull out
+ * whatever explanation the page carries.
+ *
+ * A Mochi request that names a path with no matching action falls through to
+ * the SPA catch-all, which answers 200 with index.html. Left alone that
+ * surfaces far from its cause - as a parse error, or a component rendering
+ * nothing - so the response interceptor turns it into an error that names it.
+ *
+ * Returns null when the body is not an HTML document. Bodies that are not
+ * strings (a Blob or ArrayBuffer from a download) are never HTML by this test,
+ * so binary responses are unaffected.
+ *
+ * The message itself is built by the caller: this file is imported by tests
+ * without babel, so it cannot use the Lingui macro.
+ */
+export function detectHtmlResponse(body: unknown): { detail?: string } | null {
+  if (typeof body !== 'string') return null
+
+  const trimmed = body.trimStart()
+  const lowered = trimmed.slice(0, 16).toLowerCase()
+  if (!lowered.startsWith('<!') && !lowered.startsWith('<html')) return null
+
+  // A Go error page puts the cause in <pre>; otherwise the title is the best
+  // hint available.
+  const pre = asNonEmptyString(trimmed.match(/<pre>([^<]*)<\/pre>/i)?.[1])
+  const title = asNonEmptyString(trimmed.match(/<title>([^<]*)<\/title>/i)?.[1])
+  const detail = pre ?? title
+
+  return detail ? { detail } : {}
+}
+
 export function extractStatus(error: unknown): number | undefined {
   if (!isRecord(error)) return undefined
 

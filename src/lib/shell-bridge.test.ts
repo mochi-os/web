@@ -232,3 +232,68 @@ describe('theme value rules', () => {
     expect(shell).toContain('if (isFontSize(value)) install(key, value)')
   })
 })
+
+describe('authenticatedUrl', () => {
+  // Load the bridge and drive it to the initialised in-shell state, which is
+  // the only state in which authenticatedUrl adds anything.
+  async function loadInShell(token = 'test-token') {
+    const bridge = await import('./shell-bridge')
+    const ready = bridge.initShellBridge()
+    dispatchFromParent({ type: 'init', token, inShell: true })
+    await ready
+    return bridge
+  }
+
+  it('appends the token to a same-origin path', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    // Positive control: proves the in-shell state was reached at all, so a
+    // later "unchanged" assertion means refusal rather than an inert bridge.
+    expect(authenticatedUrl('/chat/abc/-/attachments/1')).toBe(
+      '/chat/abc/-/attachments/1?token=test-token'
+    )
+  })
+
+  it('keeps an existing query string', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('/x?a=1')).toBe('/x?a=1&token=test-token')
+  })
+
+  it('percent-encodes the token', async () => {
+    const { authenticatedUrl } = await loadInShell('a/b+c=d')
+    expect(authenticatedUrl('/x')).toBe('/x?token=a%2Fb%2Bc%3Dd')
+  })
+
+  it('strips a Bearer prefix', async () => {
+    const { authenticatedUrl } = await loadInShell('Bearer abc123')
+    expect(authenticatedUrl('/x')).toBe('/x?token=abc123')
+  })
+
+  it('does not add the token to a protocol-relative URL', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('//attacker.example/image')).toBe('//attacker.example/image')
+  })
+
+  it('does not add the token to an absolute foreign URL', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('https://attacker.example/image')).toBe(
+      'https://attacker.example/image'
+    )
+  })
+
+  it('does not add the token to a non-HTTP scheme', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('data:image/png;base64,AAAA')).toBe('data:image/png;base64,AAAA')
+    expect(authenticatedUrl('javascript:alert(1)')).toBe('javascript:alert(1)')
+  })
+
+  it('returns the URL unchanged outside the shell', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, get: () => window })
+    const { authenticatedUrl } = await import('./shell-bridge')
+    expect(authenticatedUrl('/chat/abc/-/attachments/1')).toBe('/chat/abc/-/attachments/1')
+  })
+
+  it('returns the URL unchanged when the shell supplied no token', async () => {
+    const { authenticatedUrl } = await loadInShell('')
+    expect(authenticatedUrl('/x')).toBe('/x')
+  })
+})
