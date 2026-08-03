@@ -16,12 +16,19 @@ interface PushState {
   subscribed: boolean
 }
 
+// Request ids are a plain counter, so they are trivial to guess, and the only
+// other thing a reply is matched on is a fixed type string. Every listener here
+// therefore pins the source window: only the shell, our direct parent, may
+// answer. The iframe's own origin is opaque so event.origin cannot be pinned
+// instead, which is why the main bridge and the storage proxy guard the same
+// way — see shell-bridge.ts and shell-storage.ts.
 let shellPushIdCounter = 0
 
 function shellPushSubscribe(): Promise<void> {
   const id = ++shellPushIdCounter
   return new Promise((resolve, reject) => {
     function onMessage(event: MessageEvent) {
+      if (event.source !== window.parent) return
       const data = event.data
       if (!data || data.type !== 'push-result' || data.id !== id) return
       window.removeEventListener('message', onMessage)
@@ -37,6 +44,7 @@ function shellPushStatus(): Promise<{ subscribed: boolean; permission: Notificat
   const id = ++shellPushIdCounter
   return new Promise((resolve, reject) => {
     function onMessage(event: MessageEvent) {
+      if (event.source !== window.parent) return
       const data = event.data
       if (!data || data.type !== 'push-status-result' || data.id !== id) return
       window.removeEventListener('message', onMessage)
@@ -52,6 +60,7 @@ function shellPushUnsubscribe(): Promise<void> {
   const id = ++shellPushIdCounter
   return new Promise((resolve, reject) => {
     function onMessage(event: MessageEvent) {
+      if (event.source !== window.parent) return
       const data = event.data
       if (!data || data.type !== 'push-unsubscribe-result' || data.id !== id) return
       window.removeEventListener('message', onMessage)
