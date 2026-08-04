@@ -50,8 +50,14 @@ export function AccountAdd({
   const [addToExisting, setAddToExisting] = useState(true)
   const [setAsDefault, setSetAsDefault] = useState(false)
 
-  // Ensure providers is always an array (defensive check)
-  const providersList = Array.isArray(providers) ? providers : []
+  // Ensure providers is always an array (defensive check). Memoised on the
+  // prop: rebuilt each render it would be a new array every time, so the
+  // useMemo below - which depends on it - would recompute on every render
+  // and memoise nothing.
+  const providersList = useMemo(
+    () => (Array.isArray(providers) ? providers : []),
+    [providers]
+  )
 
   // Filter out browser provider from the add dialog
   const availableProviders = useMemo(
@@ -82,6 +88,10 @@ export function AccountAdd({
       setAddToExisting(true)
       setSetAsDefault(isAiType(type) && !hasExistingAiAccount)
     }
+  // Deliberately keyed on the dialog opening: this RESETS the form to its
+  // defaults, so it must read hasExistingAiAccount and providersList as they
+  // are at that moment rather than re-running whenever they change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, availableProviders])
 
   const selectedProvider = providersList.find((p) => p.type === selectedType)
@@ -90,6 +100,9 @@ export function AccountAdd({
   useEffect(() => {
     setFields(getDefaultFields(selectedProvider))
     setSetAsDefault(isAiType(selectedType) && !hasExistingAiAccount)
+  // Same: this resets the fields when the chosen provider type changes, and
+  // must not re-run because a value it reads happened to change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedType])
 
   const handleSubmit = async (e: React.FormEvent) => {

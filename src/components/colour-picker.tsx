@@ -103,6 +103,10 @@ export function ColourPicker({ value, onChange, onClear, actions, className, col
       setHsv(hexToHsv(value));
       setHexInput(value);
     }
+  // hsv is read to compare against the incoming prop, deliberately NOT depended
+  // on: this effect calls setHsv, so depending on it would make it retrigger on
+  // its own write. It exists to react to the VALUE prop changing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Draw the saturation/value gradient
@@ -127,7 +131,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className, col
     vGrad.addColorStop(1, "rgba(0,0,0,1)");
     ctx.fillStyle = vGrad;
     ctx.fillRect(0, 0, w, h);
-  }, [hsv[0]]);
+  }, [hsv[0]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Draw the hue strip
   const drawHue = useCallback(() => {
@@ -164,7 +168,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className, col
     const s = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const v = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
     updateFromHsv(hsv[0], s, v);
-  }, [hsv[0], updateFromHsv]);
+  }, [hsv[0], updateFromHsv]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hue canvas interaction
   const handleHueInteraction = useCallback((clientX: number) => {
@@ -173,7 +177,7 @@ export function ColourPicker({ value, onChange, onClear, actions, className, col
     const rect = canvas.getBoundingClientRect();
     const h = Math.max(0, Math.min(360, ((clientX - rect.left) / rect.width) * 360));
     updateFromHsv(h, hsv[1], hsv[2]);
-  }, [hsv[1], hsv[2], updateFromHsv]);
+  }, [hsv[1], hsv[2], updateFromHsv]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mouse event handlers
   useEffect(() => {
