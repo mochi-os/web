@@ -139,6 +139,15 @@ class EntityWebsocketManager {
     }
     const ws = this.connections.get(key)
     if (ws) {
+      // Detach before closing. `close()` is asynchronous, so a subscriber that
+      // arrives before the close event lands opens a replacement connection —
+      // and the old socket's onclose would then delete that live connection
+      // from the map and schedule a second one on top of it, leaving an orphan
+      // socket delivering every event twice.
+      ws.onopen = null
+      ws.onmessage = null
+      ws.onclose = null
+      ws.onerror = null
       ws.close()
       this.connections.delete(key)
     }
