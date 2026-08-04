@@ -92,6 +92,8 @@ export * from './components/layout/game-header-stats'
 // Entity object model Components - shared by the crm and projects apps
 export * from './components/entity/entity-board-card'
 export * from './components/entity/entity-field-editor'
+export * from './components/entity/add-field-dialog'
+export * from './components/entity/entity-board-column'
 export * from './components/entity/entity-option-dialog'
 export * from './components/entity/keyboard-shortcuts-help'
 
@@ -237,6 +239,12 @@ export * from './hooks/use-accounts'
 export * from './hooks/use-destinations'
 export * from './hooks/use-debounce'
 export * from './hooks/use-keyboard-shortcuts'
+export * from './hooks/use-entity-websocket'
+export {
+  entityWebsocketManager,
+  type EntityWebsocketEvent,
+  type EntityWebsocketListener,
+} from './lib/entity-websocket-manager'
 export * from './hooks/use-pending-items'
 export * from './hooks/use-merge-on-scroll-top'
 export * from './hooks/use-list-auto-animate'
