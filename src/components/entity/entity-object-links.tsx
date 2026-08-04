@@ -95,7 +95,12 @@ export function EntityObjectLinks<TObject extends EntityObject>({
       const cls = classes.find((c) => c.id === obj.class)
       const title = (cls?.title ? obj.values[cls.title] : '') || ''
       if (title) return title
-      return prefix !== undefined ? `${prefix}-${obj.number}` : t`Untitled`
+      // `number` is optional on the shared object, so guard it the same way
+      // linkDisplayName below does — formatting it blind prints "PREFIX-undefined".
+      if (prefix !== undefined && typeof obj.number === 'number') {
+        return `${prefix}-${obj.number}`
+      }
+      return t`Untitled`
     },
     [classes, prefix, t],
   )
@@ -240,7 +245,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
         if (linkedObjectIds.has(obj.id)) return false
         const title = objectTitle(obj).toLowerCase()
         if (title.includes(q)) return true
-        if (prefix === undefined) return false
+        if (prefix === undefined || typeof obj.number !== 'number') return false
         return `${prefix}-${obj.number}`.toLowerCase().includes(q)
       })
       .slice(0, 10)
