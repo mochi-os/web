@@ -6,7 +6,7 @@
 // controls move into a bottom sheet behind one button.
 
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Trans, useLingui } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import { Eye, SlidersHorizontal } from "lucide-react";
@@ -33,6 +33,7 @@ import {
 import { SortDirectionButton } from "../ui/sort-direction-button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { ViewTabs } from "../view-tabs";
+import { useScreenSize } from "../../hooks/use-screen-size";
 import type { FilterState } from "../filter-bar";
 import type {
   EntityField,
@@ -40,16 +41,22 @@ import type {
   EntityView,
 } from "../../types/entity-object";
 
-function useBuiltInSortOptions() {
+// `number` is only offered where the app issues numbered objects. Sorting a crm
+// by it compared 0 against 0 for every pair, so the option sat in the dropdown
+// and did nothing. A view that already stores it keeps it listed either way, or
+// the dropdown renders blank next to a list it is genuinely sorting.
+function useBuiltInSortOptions(numbered: boolean, activeSortId: string) {
   const { t } = useLingui();
   return useMemo(
     () => [
       { id: "rank", label: t`Manual` },
-      { id: "number", label: t`Number` },
+      ...(numbered || activeSortId === "number"
+        ? [{ id: "number", label: t`Number` }]
+        : []),
       { id: "created", label: t`Created` },
       { id: "updated", label: t`Updated` },
     ],
-    [t],
+    [t, numbered, activeSortId],
   );
 }
 
@@ -63,6 +70,11 @@ export interface EntityViewOptionsBarProps {
   sort: EntitySortState | null;
   onSortChange: (sort: EntitySortState) => void;
   showSort: boolean;
+  /**
+   * True where the app numbers its objects (projects), which is what makes the
+   * built-in Number sort meaningful. Apps without numbering (crm) leave it off.
+   */
+  numbered?: boolean;
 }
 
 export function EntityViewOptionsBar({
@@ -75,10 +87,21 @@ export function EntityViewOptionsBar({
   sort,
   onSortChange,
   showSort,
+  numbered = false,
 }: EntityViewOptionsBarProps) {
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false);
-  const builtInSortOptions = useBuiltInSortOptions();
   const hasSearchValue = filters.search.trim().length > 0;
+
+  // The sheet is only ever mounted below `sm`. Its overlay is a sibling of the
+  // panel and carries no responsive class of its own, so leaving the sheet open
+  // across the breakpoint covered the page with a dim layer while the panel
+  // itself was hidden — and the sheet suppresses interact-outside, so tapping it
+  // did nothing. Rotating a phone to landscape was enough to reach it.
+  const { size } = useScreenSize();
+  const isCompact = size === "xs";
+  useEffect(() => {
+    if (!isCompact) setIsMobileControlsOpen(false);
+  }, [isCompact]);
 
   // Build sort options: built-in + fields with 'sort' flag.
   // A view's designed default sort can name any field (the design editor lists
@@ -96,6 +119,7 @@ export function EntityViewOptionsBar({
     }
     return options;
   }, [fields, activeSortId]);
+  const builtInSortOptions = useBuiltInSortOptions(numbered, activeSortId);
 
   const updateSearch = (search: string) => {
     onFilterChange({ ...filters, search });
@@ -135,10 +159,13 @@ export function EntityViewOptionsBar({
         </div>
       </div>
 
-      <Sheet open={isMobileControlsOpen} onOpenChange={setIsMobileControlsOpen}>
+      <Sheet
+        open={isCompact && isMobileControlsOpen}
+        onOpenChange={setIsMobileControlsOpen}
+      >
         <SheetContent
           side="bottom"
-          className="max-h-[80vh] gap-0 rounded-t-lg p-0 sm:hidden"
+          className="max-h-[80vh] gap-0 rounded-t-lg p-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <SheetHeader>
@@ -225,8 +252,6 @@ export function EntityViewOptionsBar({
         {/* Views sit with the page title on the left; searching, filtering and
             sorting are actions on what is shown, so they gather on the right. */}
         <div className="ms-auto flex items-center gap-2">
-          {/* <div className="bg-border mx-1 h-6 w-px shrink-0" /> */}
-
           <Input
             type="search"
             placeholder={t`Search...`}
