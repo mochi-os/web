@@ -174,14 +174,26 @@ export function EntityOptionDialog({
               </Button>
             </>
           ) : (
-            <Button
-              type='button'
-              onClick={() => void handleAdd()}
-              disabled={!name.trim()}
-            >
-              <Plus className='size-4' />
-              <Trans>Add option</Trans>
-            </Button>
+            <>
+              {/* Add mode had no way out but Escape: the header's close button
+                  is suppressed so it cannot collide with the edit-mode actions
+                  menu, and only edit mode carried a Cancel. */}
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => onOpenChange(false)}
+              >
+                <Trans>Cancel</Trans>
+              </Button>
+              <Button
+                type='button'
+                onClick={() => void handleAdd()}
+                disabled={!name.trim()}
+              >
+                <Plus className='size-4' />
+                <Trans>Add option</Trans>
+              </Button>
+            </>
           )}
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>
