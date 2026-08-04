@@ -19,8 +19,9 @@ import {
   useRef,
 } from "react";
 import { useLingui } from "@lingui/react/macro";
-import { cn, naturalCompare } from "../../lib/utils";
+import { cn } from "../../lib/utils";
 import { rankCompare } from "../../lib/rank";
+import { sortEntityObjects } from "../../lib/entity-sort";
 import {
   EntityBoardColumn,
   type EntityBoardColumnRow,
@@ -74,51 +75,6 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
   onReorderColumns?: (order: string[]) => void;
   preview?: boolean;
 }
-
-// Sort objects within a group by the active sort field
-function sortObjects<TObject extends EntityObject>(
-  objects: TObject[],
-  sort?: EntitySortState | null,
-): TObject[] {
-  const sortField = sort?.field || "rank";
-  const sortDirection = sort?.direction || "asc";
-  const multiplier = sortDirection === "asc" ? 1 : -1;
-
-  return [...objects].sort((a, b) => {
-    let aVal: string | number;
-    let bVal: string | number;
-
-    if (sortField === "rank") {
-      aVal = a.rank || "";
-      bVal = b.rank || "";
-    } else if (sortField === "number") {
-      aVal = a.number || 0;
-      bVal = b.number || 0;
-    } else if (sortField === "created") {
-      aVal = a.created || 0;
-      bVal = b.created || 0;
-    } else if (sortField === "updated") {
-      aVal = a.updated || 0;
-      bVal = b.updated || 0;
-    } else {
-      const fieldId = sortField.startsWith("field:") ? sortField.slice(6) : sortField;
-      aVal = a.values[fieldId] || "";
-      bVal = b.values[fieldId] || "";
-    }
-
-    if (typeof aVal === "number" && typeof bVal === "number") {
-      return (aVal - bVal) * multiplier;
-    }
-    // Rank keys are opaque fractional-index strings — compare BINARY (rankCompare),
-    // never naturalCompare (case/accent-insensitive + numeric-aware reorders them
-    // and lands dragged cards at the wrong slot, #53).
-    if (sortField === "rank") {
-      return rankCompare(String(aVal), String(bVal)) * multiplier;
-    }
-    return naturalCompare(String(aVal), String(bVal)) * multiplier;
-  });
-}
-
 
 export function EntityBoardContainer<TObject extends EntityObject>({
   design,
@@ -194,7 +150,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
       }
     }
     for (const key of Object.keys(map)) {
-      map[key] = sortObjects(map[key], { field: "rank", direction: "asc" });
+      map[key] = sortEntityObjects(map[key], { field: "rank", direction: "asc" });
     }
     return map;
   }, [objects, objectMap]);
@@ -365,7 +321,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
 
     // Sort each column
     Object.keys(grouped).forEach((status) => {
-      grouped[status] = sortObjects(grouped[status], sort);
+      grouped[status] = sortEntityObjects(grouped[status], sort);
     });
 
     return grouped;
@@ -407,7 +363,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     // Sort each cell
     Object.keys(grouped).forEach((rowId) => {
       Object.keys(grouped[rowId]).forEach((colId) => {
-        grouped[rowId][colId] = sortObjects(grouped[rowId][colId], sort);
+        grouped[rowId][colId] = sortEntityObjects(grouped[rowId][colId], sort);
       });
     });
 

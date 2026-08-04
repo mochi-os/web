@@ -98,6 +98,11 @@ export * from './components/entity/entity-board-container'
 export * from './components/entity/entity-field-dialog'
 export * from './components/entity/entity-view-sheet'
 export * from './components/entity/entity-option-dialog'
+export * from './components/entity/entity-tree-view'
+export * from './components/entity/entity-design-preview'
+export * from './lib/entity-sort'
+export * from './lib/entity-endpoints'
+export * from './lib/entity-api'
 export * from './components/entity/keyboard-shortcuts-help'
 
 // Game Components - shared by the chess, go and words apps.
