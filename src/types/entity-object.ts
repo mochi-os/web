@@ -134,6 +134,23 @@ export interface EntitySortState {
 }
 
 /**
+ * An entity's schema: everything crm's `CrmDetails` and projects'
+ * `ProjectDetails` hold apart from the container itself.
+ *
+ * Both app types are structurally this plus their own container key (`crm: Crm`
+ * / `project: Project`), so an app passes its details object straight in and
+ * the shared component never sees the container. The id it does need arrives
+ * separately as `containerId`.
+ */
+export interface EntityDesign {
+  classes: EntityClass[]
+  fields: Record<string, EntityField[]>
+  options: Record<string, Record<string, EntityFieldOption[]>>
+  views: EntityView[]
+  hierarchy: Record<string, string[]>
+}
+
+/**
  * In-flight board drag. Describes where the card would land if dropped now, so
  * columns and cards can render a gap without committing the move.
  */
