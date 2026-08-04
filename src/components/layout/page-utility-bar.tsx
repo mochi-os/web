@@ -31,9 +31,13 @@ export function PageUtilityBar({
     >
       {scrollable ? (
         <div className='overflow-x-auto no-scrollbar'>
+          {/* w-full alongside min-w-max: the row fills the bar when the
+              content is narrower than it, which is what gives an `ms-auto`
+              child somewhere to travel to. Once the content is wider,
+              min-w-max wins again and the bar scrolls as before. */}
           <div
             className={cn(
-              'flex min-w-max items-center gap-2 px-4',
+              'flex w-full min-w-max items-center gap-2 px-4',
               compact ? 'min-h-12 py-2' : 'min-h-[52px] py-2.5',
               contentClassName
             )}

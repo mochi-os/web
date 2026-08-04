@@ -222,73 +222,77 @@ export function EntityViewOptionsBar({
       <PageUtilityBar compact scrollable className="hidden sm:block">
         <ViewTabs variant="pill" views={views} activeViewId={activeViewId} onViewChange={onViewChange} />
 
-        <div className="bg-border mx-1 h-6 w-px shrink-0" />
+        {/* Views sit with the page title on the left; searching, filtering and
+            sorting are actions on what is shown, so they gather on the right. */}
+        <div className="ms-auto flex items-center gap-2">
+          {/* <div className="bg-border mx-1 h-6 w-px shrink-0" /> */}
 
-        <Input
-          type="search"
-          placeholder={t`Search...`}
-          value={filters.search}
-          onChange={(e) => updateSearch(e.target.value)}
-          className="h-9 w-[200px] text-xs"
-        />
+          <Input
+            type="search"
+            placeholder={t`Search...`}
+            value={filters.search}
+            onChange={(e) => updateSearch(e.target.value)}
+            className="h-9 w-[200px] text-xs"
+          />
 
-        <Button
-          variant={filters.watched ? "default" : "ghost"}
-          size="sm"
-          className="px-2 text-xs"
-          aria-label={t`Toggle watched filter`}
-          onClick={() => onFilterChange({ ...filters, watched: !filters.watched })}
-        >
-          <Eye className="size-3.5 sm:me-1" />
-          <span><Trans>Watched</Trans></span>
-        </Button>
+          <Button
+            variant={filters.watched ? "default" : "ghost"}
+            size="sm"
+            className="px-2 text-xs"
+            aria-label={t`Toggle watched filter`}
+            onClick={() => onFilterChange({ ...filters, watched: !filters.watched })}
+          >
+            <Eye className="size-3.5 sm:me-1" />
+            <span><Trans>Watched</Trans></span>
+          </Button>
 
-        {showSort && (
-          <div className="flex items-center gap-2">
-            <Select
-              value={sort?.field || "rank"}
-              onValueChange={(value) =>
-                onSortChange({ field: value, direction: sort?.direction || "asc" })
-              }
-            >
-              <SelectTrigger className="w-[132px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {sortFieldOptions.length > 0 && (
-                  <>
-                    <SelectGroup>
-                      {sortFieldOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectSeparator />
-                  </>
-                )}
-                <SelectGroup>
-                  {builtInSortOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <SortDirectionButton
-              direction={sort?.direction || "asc"}
-              onToggle={() =>
-                onSortChange({
-                  field: sort?.field || "rank",
-                  direction: sort?.direction === "asc" ? "desc" : "asc",
-                })
-              }
-              size="sm"
-              className="size-9"
-            />
-          </div>
-        )}
+          {showSort && (
+            <div className="flex items-center gap-2">
+              <Select
+                value={sort?.field || "rank"}
+                onValueChange={(value) =>
+                  onSortChange({ field: value, direction: sort?.direction || "asc" })
+                }
+              >
+                <SelectTrigger className="w-[132px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortFieldOptions.length > 0 && (
+                    <>
+                      <SelectGroup>
+                        {sortFieldOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectSeparator />
+                    </>
+                  )}
+                  <SelectGroup>
+                    {builtInSortOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <SortDirectionButton
+                direction={sort?.direction || "asc"}
+                onToggle={() =>
+                  onSortChange({
+                    field: sort?.field || "rank",
+                    direction: sort?.direction === "asc" ? "desc" : "asc",
+                  })
+                }
+                size="sm"
+                className="size-9"
+              />
+            </div>
+          )}
+        </div>
       </PageUtilityBar>
     </>
   );
