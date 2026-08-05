@@ -281,7 +281,9 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
     const cls = design.classes.find((c) => c.id === obj.class);
     const title = (cls?.title ? obj.values[cls.title] : "") || "";
     if (title) return title;
-    return prefix !== undefined ? `${prefix}-${obj.number}` : t`Untitled`;
+    return prefix !== undefined && typeof obj.number === "number"
+      ? `${prefix}-${obj.number}`
+      : t`Untitled`;
   };
 
   // Filter objects to only show valid parents based on hierarchy rules
@@ -514,7 +516,7 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                         <SelectValue placeholder={t`None`}>
                           {currentParent
                             ? objectTitle(currentParent)
-                            : "None"}
+                            : t`None`}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="z-[60]">
