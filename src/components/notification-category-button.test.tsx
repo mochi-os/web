@@ -84,4 +84,17 @@ describe('NotificationCategoryButton', () => {
     expect(screen.getByText(/No topic record yet/)).toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
+
+  it('names the topic the category applies to', () => {
+    // The assignment is topic-wide, not per-notification; the popover says
+    // which topic so the confirmation toast makes sense afterwards.
+    renderButton({ open: true })
+    expect(screen.getByText('New posts')).toBeInTheDocument()
+  })
+
+  it('links to the category editor in settings', () => {
+    renderButton({ open: true })
+    const link = screen.getByRole('link', { name: 'Manage categories' })
+    expect(link).toHaveAttribute('href', '/settings/user/notifications')
+  })
 })

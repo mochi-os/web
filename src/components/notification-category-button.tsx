@@ -99,7 +99,10 @@ export function NotificationCategoryButton({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground"><Trans>Category for this notification</Trans></p>
+          <p className="text-xs font-medium text-muted-foreground"><Trans>Category for these notifications</Trans></p>
+          {row && (row.label || row.topic) ? (
+            <p className="text-sm font-medium">{row.label || row.topic}</p>
+          ) : null}
           {!ordered ? (
             <Skeleton className="h-9 w-full" />
           ) : !row ? (
@@ -120,6 +123,12 @@ export function NotificationCategoryButton({
               </SelectContent>
             </Select>
           )}
+          <a
+            href="/settings/user/notifications"
+            className="block text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            <Trans>Manage categories</Trans>
+          </a>
         </div>
       </PopoverContent>
     </Popover>
