@@ -228,6 +228,11 @@ export {
   createLastGameStorage,
   type LastGameStorage,
 } from './hooks/use-last-game-storage'
+export {
+  createLastEntityStorage,
+  type LastEntityStorage,
+} from './hooks/use-last-entity-storage'
+export * from './lib/create-saved-store'
 
 // Stores
 export * from './stores/auth-store'
