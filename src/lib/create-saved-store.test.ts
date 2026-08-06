@@ -6,24 +6,29 @@
 // server failure has to put back exactly what was there.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { MessageDescriptor } from '@lingui/core'
 import { createSavedStore } from './create-saved-store'
-import { msg } from '@lingui/core/macro'
 
 interface Row {
   id: string
   name: string
 }
 
+// Descriptors are built by hand rather than with the msg macro on purpose.
+// Every app extracts its catalogs from ../../../lib/web/src/**, test files
+// included, so a macro here would push these fixtures into all 22 apps.
+const fixture = (id: string): MessageDescriptor => ({ id, message: id })
+
 const MESSAGES = {
-  saving: msg`Saving...`,
-  saved: msg`Saved`,
-  addFailed: msg`Failed to save`,
-  removing: msg`Removing...`,
-  removed: msg`Removed from saved`,
-  removeFailed: msg`Failed to remove`,
-  clearing: msg`Clearing...`,
-  cleared: msg`Cleared`,
-  clearFailed: msg`Failed to clear`,
+  saving: fixture('test.saving'),
+  saved: fixture('test.saved'),
+  addFailed: fixture('test.add-failed'),
+  removing: fixture('test.removing'),
+  removed: fixture('test.removed'),
+  removeFailed: fixture('test.remove-failed'),
+  clearing: fixture('test.clearing'),
+  cleared: fixture('test.cleared'),
+  clearFailed: fixture('test.clear-failed'),
 }
 
 function makeStore() {
