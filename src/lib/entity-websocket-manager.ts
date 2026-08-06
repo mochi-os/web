@@ -111,12 +111,18 @@ class EntityWebsocketManager {
       }
 
       ws.onclose = () => {
+        // Only the socket that owns the map entry may act here. A socket the
+        // server closed keeps its handlers while CLOSING, and a subscriber
+        // arriving in that window opens a replacement — which this handler
+        // would otherwise delete and double up with a reconnect.
+        if (this.connections.get(key) !== ws) return
         this.connectionAttempts.set(key, false)
         this.connections.delete(key)
         this.scheduleReconnect(key)
       }
 
       ws.onerror = () => {
+        if (this.connections.get(key) !== ws) return
         this.connectionAttempts.set(key, false)
       }
     } catch {

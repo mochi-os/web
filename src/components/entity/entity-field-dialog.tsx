@@ -37,7 +37,6 @@ interface EditFieldDialogProps {
   onAddOption: () => void;
   onEditOption: (option: EntityFieldOption) => void;
   onDeleteOption: (optionId: string) => void;
-  onReorderOptions: (order: string[]) => void;
 }
 
 export function EditFieldDialog({

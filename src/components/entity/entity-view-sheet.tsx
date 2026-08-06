@@ -529,5 +529,3 @@ export function ViewSheet({
     </Sheet>
   );
 }
-
-// Class Sheet (create + edit)
