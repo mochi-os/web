@@ -59,7 +59,6 @@ interface ConnectionEntry {
   idleTimer?: ReturnType<typeof setTimeout>
   connectPromise?: Promise<void>
   keyPromise?: Promise<string | undefined>
-  closingReason?: 'idle' | 'manual' | 'force'
   pendingReconnect?: boolean
   lastError?: string
   messageListeners: Set<ChatWebsocketListener>
@@ -277,7 +276,7 @@ export class ChatWebsocketManager {
         this.updateStatus(entry, 'error', 'socket-error')
       }
       socket.onclose = (event) => {
-        this.handleClose(entry, event)
+        this.handleClose(entry, socket, event)
       }
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -381,31 +380,20 @@ export class ChatWebsocketManager {
     return null
   }
 
-  private handleClose(entry: ConnectionEntry, event: CloseEvent) {
+  private handleClose(
+    entry: ConnectionEntry,
+    socket: WebSocket,
+    event: CloseEvent
+  ) {
+    // Client-initiated closes detach their handlers and settle synchronously
+    // in closeSocket, so only a server or network close arrives here. Even
+    // so, act only for the socket that still owns the entry: a stale close
+    // event must not clear a replacement's reference or reconnect on top of
+    // it.
+    if (entry.socket !== socket) {
+      return
+    }
     entry.socket = undefined
-    const reason = entry.closingReason
-    entry.closingReason = undefined
-
-    if (reason === 'idle') {
-      this.updateStatus(entry, 'idle')
-      return
-    }
-
-    if (reason === 'manual') {
-      this.updateStatus(entry, 'idle')
-      return
-    }
-
-    if (reason === 'force') {
-      this.updateStatus(entry, 'connecting')
-      if (this.online) {
-        void this.ensureSocket(entry)
-      } else {
-        entry.pendingReconnect = true
-        this.updateStatus(entry, 'error', 'offline')
-      }
-      return
-    }
 
     if (event.wasClean) {
       this.updateStatus(entry, 'idle')
@@ -456,7 +444,7 @@ export class ChatWebsocketManager {
 
   private closeSocket(
     entry: ConnectionEntry,
-    reason: ConnectionEntry['closingReason']
+    reason: 'idle' | 'manual' | 'force'
   ) {
     if (!entry.socket) {
       if (reason === 'force' && this.online && this.hasListeners(entry)) {
@@ -465,10 +453,19 @@ export class ChatWebsocketManager {
       return
     }
 
-    entry.closingReason = reason
+    // Detach before closing and settle the terminal state synchronously.
+    // close() completes asynchronously, and ensureSocket may open a
+    // replacement in that window; a dying socket that kept its handlers
+    // would clear the replacement's reference from its late close event
+    // and leave it orphaned but delivering — one duplicate per cycle.
+    const socket = entry.socket
+    socket.onopen = null
+    socket.onmessage = null
+    socket.onerror = null
+    socket.onclose = null
     this.updateStatus(entry, 'closing')
     try {
-      entry.socket.close()
+      socket.close()
     } catch (error) {
       if (import.meta.env.DEV) {
         devConsole?.error?.(
@@ -479,6 +476,19 @@ export class ChatWebsocketManager {
     } finally {
       entry.socket = undefined
     }
+
+    if (reason === 'force') {
+      this.updateStatus(entry, 'connecting')
+      if (this.online) {
+        void this.ensureSocket(entry)
+      } else {
+        entry.pendingReconnect = true
+        this.updateStatus(entry, 'error', 'offline')
+      }
+      return
+    }
+
+    this.updateStatus(entry, 'idle')
   }
 
   private scheduleIdleClose(entry: ConnectionEntry) {
