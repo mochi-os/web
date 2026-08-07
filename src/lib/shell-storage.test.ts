@@ -113,3 +113,64 @@ describe('shell-storage getItem', () => {
     expect(await settledValue(pending)).toBe('PENDING')
   })
 })
+
+// The direct (not-in-shell) path. The shell prefixes every key with
+// `app:<name>:` before touching its own localStorage, so this path has to
+// agree or the same logical value lands in two different slots depending on
+// how the page was loaded, and two top-window apps collide on a bare key.
+describe('storage keys are namespaced by app outside the shell', () => {
+  beforeEach(() => {
+    // Undo the outer stub: parent IS window here, so isInShell() is false and
+    // these calls take the direct localStorage path rather than postMessage.
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get() {
+        return window
+      },
+    })
+    localStorage.clear()
+  })
+  afterEach(() => {
+    localStorage.clear()
+    window.history.replaceState(null, '', '/')
+  })
+
+  function atPath(path: string) {
+    window.history.replaceState(null, '', path)
+  }
+
+  it('writes under the same app: prefix the shell uses', async () => {
+    const { getItem, setItem } = await import('./shell-storage')
+    atPath('/feeds/')
+    setItem('sidebar', 'open')
+    // Exactly the shape shell.js builds: 'app:' + appName + ':' + key.
+    expect(localStorage.getItem('app:feeds:sidebar')).toBe('open')
+    expect(localStorage.getItem('sidebar')).toBeNull()
+    expect(await getItem('sidebar')).toBe('open')
+  })
+
+  it('keeps two apps apart on the same key', async () => {
+    const { getItem, setItem } = await import('./shell-storage')
+    atPath('/feeds/')
+    setItem('view', 'grid')
+    atPath('/forums/')
+    setItem('view', 'list')
+
+    expect(await getItem('view')).toBe('list')
+    atPath('/feeds/')
+    expect(await getItem('view')).toBe('grid')
+    // Before this both wrote the bare key 'view' and the second clobbered the
+    // first - the collision the namespace exists to prevent.
+    expect(localStorage.getItem('view')).toBeNull()
+  })
+
+  it('removes the namespaced key, not a bare one', async () => {
+    const { getItem, setItem, removeItem } = await import('./shell-storage')
+    atPath('/wikis/')
+    setItem('draft', 'x')
+    expect(localStorage.getItem('app:wikis:draft')).toBe('x')
+    removeItem('draft')
+    expect(localStorage.getItem('app:wikis:draft')).toBeNull()
+    expect(await getItem('draft')).toBeNull()
+  })
+})

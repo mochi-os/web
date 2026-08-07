@@ -7,6 +7,18 @@
 // When not in shell, uses real localStorage directly.
 
 import { isInShell } from './shell-bridge'
+import { getAppPath } from './app-path'
+
+// The shell namespaces every key as `app:<name>:` before touching its own
+// localStorage (see shell.js storagePrefix). The direct path below must use
+// the SAME namespace, or a value written while running in the shell is
+// invisible to the same app loaded as the top window, and two top-window apps
+// collide on a bare key. Applied only when NOT in the shell: in the shell the
+// parent adds it, and doing it here too would prefix twice.
+function namespaced(key: string): string {
+  const app = getAppPath().replace(/^\//, '')
+  return `app:${app}:${key}`
+}
 
 let requestId = 0
 const pendingRequests = new Map<number, (value: string | null) => void>()
@@ -35,7 +47,7 @@ if (typeof window !== 'undefined') {
 export async function getItem(key: string): Promise<string | null> {
   if (!isInShell()) {
     try {
-      return localStorage.getItem(key)
+      return localStorage.getItem(namespaced(key))
     } catch {
       return null
     }
@@ -60,7 +72,7 @@ export async function getItem(key: string): Promise<string | null> {
 export function setItem(key: string, value: string): void {
   if (!isInShell()) {
     try {
-      localStorage.setItem(key, value)
+      localStorage.setItem(namespaced(key), value)
     } catch {
       // Ignore storage errors
     }
@@ -73,7 +85,7 @@ export function setItem(key: string, value: string): void {
 export function removeItem(key: string): void {
   if (!isInShell()) {
     try {
-      localStorage.removeItem(key)
+      localStorage.removeItem(namespaced(key))
     } catch {
       // Ignore storage errors
     }
