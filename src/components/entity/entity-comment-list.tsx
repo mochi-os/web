@@ -25,6 +25,7 @@ import { textUnchanged } from "../../lib/change-detection";
 import { findCommentTextInTree } from "../../lib/comment-tree";
 import { cn } from "../../lib/utils";
 import { removePendingFile } from "../../lib/attachment-utils";
+import { moveItem } from "../../lib/reorder";
 import {
   ComposerAttachments,
   SendShortcutHint,
@@ -145,15 +146,17 @@ export function EntityCommentList({
       files?: File[];
     }) => {
       if (files?.length) {
-        return upload((onProgress) =>
-          createComment(
-            containerId,
-            objectId,
-            content,
-            parent,
-            files,
-            onProgress,
-          ),
+        return upload(
+          (onProgress) =>
+            createComment(
+              containerId,
+              objectId,
+              content,
+              parent,
+              files,
+              onProgress,
+            ),
+          { sizes: files.map((file) => file.size) },
         );
       }
       return createComment(containerId, objectId, content, parent, files);
@@ -368,8 +371,12 @@ export function EntityCommentList({
             state={
               isSendingComment ? "uploading" : createFailed ? "error" : "idle"
             }
+            progress={uploadProgress?.slices}
             onRemove={(file) =>
               setNewFiles((prev) => removePendingFile(prev, file))
+            }
+            onReorder={(from, to) =>
+              setNewFiles((prev) => moveItem(prev, from, to))
             }
             // Retry sends the draft, so it is only offered while there is one.
             onRetry={

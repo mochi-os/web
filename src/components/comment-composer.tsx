@@ -1,33 +1,18 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
-import { Trans } from '@lingui/react/macro'
-import { Paperclip, RotateCcw, X } from 'lucide-react'
-import {
-  Attachment,
-  AttachmentAction,
-  AttachmentActions,
-  AttachmentContent,
-  AttachmentDescription,
-  AttachmentGroup,
-  AttachmentMedia,
-  AttachmentTitle,
-} from './ui/attachment'
 import { ConfirmDialog } from './confirm-dialog'
-import { useFormat } from '../hooks/use-format'
+import {
+  AttachmentComposer,
+  type AttachmentComposerProps,
+  type ComposerFileState,
+} from './attachment-composer'
 import { pendingFileKey } from '../lib/attachment-utils'
+import type { UploadSlice } from '../lib/upload-slices'
 import { toast } from '../lib/toast-utils'
 import { cn } from '../lib/utils'
-
-/**
- * Lifecycle of the files a composer is holding.
- *
- * `idle` — picked, not sent yet. `uploading` — in flight. `error` — the send
- * failed and the files are still staged so the user can retry.
- */
-export type ComposerFileState = 'idle' | 'uploading' | 'error'
 
 const isMacPlatform = () =>
   typeof navigator !== 'undefined' &&
@@ -190,70 +175,65 @@ interface ComposerAttachmentsProps {
   files: File[]
   previewUrls: (string | null)[]
   state?: ComposerFileState
+  /**
+   * Per-file upload progress, index-aligned with `files`. Safe to align by
+   * index here: every caller of this wrapper stages the same array it uploads.
+   * A composer whose list differs from its body — chat, the post edit forms —
+   * uses `AttachmentComposer` directly and maps by key.
+   */
+  progress?: UploadSlice[]
   onRemove: (file: File) => void
   onRetry?: () => void
+  /** Supply to let the files be dragged into a different order. */
+  onReorder?: (from: number, to: number) => void
+  /** Defaults to `grid` once reordering is on, `row` otherwise. */
+  layout?: AttachmentComposerProps['layout']
+  /** Defaults to `tile` once reordering is on, `inline` otherwise. */
+  preview?: AttachmentComposerProps['preview']
 }
 
 /**
- * Staged attachment list for a composer. Renders nothing when empty, so the
- * caller does not have to guard it.
+ * `File[]` convenience wrapper around `AttachmentComposer`, for the composers
+ * that stage plain files and nothing else. Anything holding a richer item —
+ * the edit forms with their saved-and-new mix, chat with its voice notes —
+ * maps onto `ComposerItem` and uses `AttachmentComposer` directly.
  */
 export function ComposerAttachments({
   files,
   previewUrls,
   state = 'idle',
+  progress,
   onRemove,
   onRetry,
+  onReorder,
+  layout,
+  preview,
 }: ComposerAttachmentsProps) {
-  const { formatFileSize } = useFormat()
-  if (files.length === 0) return null
+  const items = useMemo(
+    () =>
+      files.map((file, i) => ({
+        key: pendingFileKey(file),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        previewUrl: file.type.startsWith('image/') ? previewUrls[i] : null,
+        progress: progress?.[i],
+      })),
+    [files, previewUrls, progress]
+  )
 
   return (
-    <div className='space-y-1'>
-      <AttachmentGroup>
-        {files.map((file, i) => {
-          const isImage = file.type.startsWith('image/')
-          const previewUrl = previewUrls[i]
-          return (
-            <Attachment key={pendingFileKey(file)} state={state} size="sm">
-              <AttachmentMedia variant={isImage ? 'image' : 'icon'}>
-                {isImage && previewUrl ? (
-                  <img src={previewUrl} alt={file.name} draggable={false} />
-                ) : (
-                  <Paperclip />
-                )}
-              </AttachmentMedia>
-              <AttachmentContent>
-                <AttachmentTitle>{file.name}</AttachmentTitle>
-                <AttachmentDescription>
-                  {formatFileSize(file.size)}
-                </AttachmentDescription>
-              </AttachmentContent>
-              {state !== 'uploading' && (
-                <AttachmentActions>
-                  <AttachmentAction
-                    onClick={() => onRemove(file)}
-                    aria-label={t`Remove`}
-                  >
-                    <X className='size-4' />
-                  </AttachmentAction>
-                </AttachmentActions>
-              )}
-            </Attachment>
-          )
-        })}
-      </AttachmentGroup>
-      {state === 'error' && onRetry && (
-        <button
-          type='button'
-          onClick={onRetry}
-          className='text-destructive hover:bg-destructive/10 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs transition-colors active:translate-y-px'
-        >
-          <RotateCcw className='size-3' />
-          <Trans>Retry</Trans>
-        </button>
-      )}
-    </div>
+    <AttachmentComposer
+      items={items}
+      // Reordering names in a sideways-scrolling row is no use to anyone, so
+      // asking for it opts into the grid of previews unless told otherwise.
+      layout={layout ?? (onReorder ? 'grid' : 'row')}
+      preview={preview ?? (onReorder ? 'tile' : 'inline')}
+      state={state}
+      onRemove={(index) => onRemove(files[index])}
+      onReorder={onReorder}
+      onRetry={onRetry}
+    />
   )
 }
 

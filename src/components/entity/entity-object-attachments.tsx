@@ -22,6 +22,7 @@ import {
   AttachmentTitle,
   AttachmentTrigger,
 } from "../ui/attachment";
+import { AttachmentComposer } from "../attachment-composer";
 import { AttachmentGallery } from "../attachment-gallery";
 import { Button } from "../ui/button";
 import { ConfirmDialog } from "../confirm-dialog";
@@ -29,7 +30,13 @@ import { UploadProgress } from "../ui/upload-progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { getAppPath } from "../../lib/app-path";
 import { useFormat } from "../../hooks/use-format";
-import { isImage, isVideo, getFileIcon } from "../../lib/attachment-utils";
+import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
+import {
+  isImage,
+  isVideo,
+  getFileIcon,
+  pendingFileKey,
+} from "../../lib/attachment-utils";
 import { getErrorMessage } from "../../lib/handle-server-error";
 import { authenticatedUrl } from "../../lib/shell-bridge";
 import { toast } from "../../lib/toast-utils";
@@ -67,6 +74,11 @@ export function EntityObjectAttachments({
 }: EntityObjectAttachmentsProps) {
   const { t } = useLingui()
   const [deleteTarget, setDeleteTarget] = useState<AttachmentData | null>(null);
+  // This field has no staging step — the picker uploads straight away — so the
+  // files being sent are held here for the life of the request, purely to have
+  // something to draw the per-file progress on.
+  const [inFlight, setInFlight] = useState<File[]>([]);
+  const inFlightPreviews = useImageObjectUrls(inFlight);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { formatFileSize } = useFormat();
@@ -82,18 +94,24 @@ export function EntityObjectAttachments({
 
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
-      return upload((onProgress) =>
-        uploadAttachments(containerId, objectId, files, onProgress),
+      return upload(
+        (onProgress) =>
+          uploadAttachments(containerId, objectId, files, onProgress),
+        { sizes: files.map((file) => file.size) },
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    // Awaited, so the in-flight tiles stay up until the refreshed gallery is in
+    // the cache. Clearing them the moment the response lands would blank the
+    // field for as long as the refetch takes.
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["attachments", containerId, objectId],
       });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, t`Failed to upload attachment`));
     },
+    onSettled: () => setInFlight([]),
   });
 
   const deleteMutation = useMutation({
@@ -114,7 +132,9 @@ export function EntityObjectAttachments({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      uploadMutation.mutate(Array.from(files));
+      const picked = Array.from(files);
+      setInFlight(picked);
+      uploadMutation.mutate(picked);
     }
     e.target.value = "";
   };
@@ -127,7 +147,7 @@ export function EntityObjectAttachments({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[120px_1fr] gap-4 items-start">
+      <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
         <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
           <Paperclip className="size-3.5" />
           <Trans>Files</Trans>
@@ -143,13 +163,16 @@ export function EntityObjectAttachments({
     return null;
   }
 
+  // minmax(0,1fr): a plain 1fr floors at the column's min-content width, so a
+  // wide gallery row or a long file name pushes the whole panel sideways
+  // instead of wrapping inside the column.
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-4 items-start">
+    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
       <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
         <Paperclip className="size-3.5" />
         <Trans>Files</Trans>
       </label>
-      <div className="space-y-2 pt-1">
+      <div className="min-w-0 space-y-2 pt-1">
         {images.length > 0 && (
           <AttachmentGallery
             attachments={images}
@@ -182,7 +205,7 @@ export function EntityObjectAttachments({
           />
         )}
         {files.length > 0 && (
-          <AttachmentGroup>
+          <AttachmentGroup layout="grid">
             {files.map((file) => {
               const FileIcon = getFileIcon(file.type);
               return (
@@ -242,6 +265,20 @@ export function EntityObjectAttachments({
               multiple
               className="hidden"
               onChange={handleFileChange}
+            />
+            {/* Neither removable nor reorderable: the bytes are already going. */}
+            <AttachmentComposer
+              items={inFlight.map((file, i) => ({
+                key: pendingFileKey(file),
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                previewUrl: inFlightPreviews[i],
+                progress: uploadProgress?.slices?.[i],
+              }))}
+              layout="grid"
+              preview="tile"
+              state="uploading"
             />
             <UploadProgress progress={uploadProgress} />
             <Button
