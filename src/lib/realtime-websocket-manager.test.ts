@@ -145,3 +145,54 @@ describe('ChatWebsocketManager close races', () => {
     expect(MockWebSocket.instances).toHaveLength(2)
   })
 })
+
+// The socket URL carries the session JWT in its query string, because a
+// browser cannot set a header on a WebSocket handshake. api-client.ts gates
+// the equivalent Authorization header on the request being same-origin; this
+// path has to make the same decision, or a baseUrl pointing elsewhere takes
+// the token with it.
+describe('ChatWebsocketManager token scoping', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    MockWebSocket.instances = []
+    vi.stubGlobal('WebSocket', MockWebSocket)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  async function connect(baseUrl: string) {
+    const manager = new ChatWebsocketManager({
+      baseUrl,
+      getToken: () => 'Bearer secret-jwt',
+    })
+    manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    const url = MockWebSocket.instances[0]?.url ?? ''
+    manager.dispose()
+    return url
+  }
+
+  it('sends the token to this origin', async () => {
+    // Companion to the refusals below: without it, "no token in the URL"
+    // would pass just as well against a manager that never connects.
+    const url = await connect(window.location.origin)
+    expect(url).toContain('key=k1')
+    expect(url).toContain('token=secret-jwt')
+  })
+
+  it('withholds the token from another origin', async () => {
+    const url = await connect('https://evil.example')
+    expect(url).toContain('key=k1')
+    expect(url).not.toContain('secret-jwt')
+    expect(url).not.toContain('token=')
+  })
+
+  it('withholds the token from another port on this host', async () => {
+    // A port is part of an origin, and this is the case a host-only check
+    // would wave through.
+    const url = await connect(`${window.location.protocol}//${window.location.hostname}:8443`)
+    expect(url).not.toContain('secret-jwt')
+  })
+})

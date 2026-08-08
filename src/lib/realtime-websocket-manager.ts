@@ -188,6 +188,19 @@ export class ChatWebsocketManager {
     }
   }
 
+  /** Whether baseUrl resolves to the page's own origin. */
+  private sameOrigin(): boolean {
+    if (typeof window === 'undefined') return false
+    try {
+      return (
+        new URL(this.baseUrl || window.location.origin, window.location.origin)
+          .origin === window.location.origin
+      )
+    } catch {
+      return false
+    }
+  }
+
   private getOrCreateEntry(chatId: string): ConnectionEntry {
     const existing = this.connections.get(chatId)
     if (existing) {
@@ -251,7 +264,13 @@ export class ChatWebsocketManager {
     const socketUrl = new URL(websocketUrl)
     socketUrl.searchParams.set('key', chatKey)
 
-    const token = this.getToken?.()
+    // Same-origin only, matching what api-client.ts does before attaching an
+    // Authorization header. baseUrl is an option or a build-time env var, so it
+    // is not guaranteed to be this origin - and the token goes into the query
+    // string here, because a browser cannot set a header on a WebSocket
+    // handshake. Tested against the http(s) base rather than the wss URL: the
+    // scheme is part of an origin, so wss://host never equals https://host.
+    const token = this.sameOrigin() ? this.getToken?.() : undefined
     if (token) {
       const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
       socketUrl.searchParams.set('token', rawToken)

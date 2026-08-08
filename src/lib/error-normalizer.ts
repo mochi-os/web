@@ -128,6 +128,14 @@ export function detectHtmlResponse(body: unknown): { detail?: string } | null {
 
   // A Go error page puts the cause in <pre>; otherwise the title is the best
   // hint available.
+  //
+  // Development only. The detail is shown to the user by the response
+  // interceptor, and on a panic page that <pre> is a stack trace with
+  // filesystem paths in it. The signal that matters in production - that an
+  // HTML body arrived where JSON was expected - is the non-null return, which
+  // is unaffected; only the internals are withheld.
+  if (!import.meta.env.DEV) return {}
+
   const pre = asNonEmptyString(trimmed.match(/<pre>([^<]*)<\/pre>/i)?.[1])
   const title = asNonEmptyString(trimmed.match(/<title>([^<]*)<\/title>/i)?.[1])
   const detail = pre ?? title

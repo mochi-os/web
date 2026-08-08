@@ -13,7 +13,7 @@
 // to handle and assert no regression on shapes that don't match the
 // Mochi envelope (handlers that haven't yet adopted respond_error).
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { normalizeError, detectHtmlResponse } from './error-normalizer'
 
 function axios(status: number, data: unknown) {
@@ -158,6 +158,30 @@ describe('detectHtmlResponse', () => {
   it('prefers the pre block, which carries the server-side cause', () => {
     const errorPage = '<!doctype html><html><head><title>Error</title></head><body><pre>no such action</pre></body></html>'
     expect(detectHtmlResponse(errorPage)).toEqual({ detail: 'no such action' })
+  })
+
+  it('withholds the server-side cause outside development', () => {
+    // The <pre> on a Go panic page is a stack trace with filesystem paths in
+    // it, and the response interceptor shows the detail to the user. In
+    // production the detection must still fire - an HTML body where JSON was
+    // expected is the signal callers act on - but carry nothing.
+    const panic = '<!doctype html><html><head><title>Error</title></head><body>' +
+      '<pre>runtime error: index out of range\n\t/home/build/core/server/web.go:412</pre></body></html>'
+
+    vi.stubEnv('DEV', false)
+    try {
+      const production = detectHtmlResponse(panic)
+      expect(production).not.toBeNull()
+      expect(production).toEqual({})
+    } finally {
+      vi.unstubAllEnvs()
+    }
+
+    // Companion: the same body still yields its cause in development, so the
+    // check above means "withheld", not "detection stopped working".
+    expect(detectHtmlResponse(panic)).toEqual({
+      detail: 'runtime error: index out of range\n\t/home/build/core/server/web.go:412',
+    })
   })
 
   it('reports HTML with no usable explanation as detail-free', () => {
