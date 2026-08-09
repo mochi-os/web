@@ -49,6 +49,7 @@ import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
 import { useFormat } from "../../hooks/use-format";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
 import { pendingFileKey, removePendingFile } from "../../lib/attachment-utils";
+import { mergePendingFiles } from "../../lib/composer-files";
 import { rankBetween, rankCompare } from "../../lib/rank";
 import { EntityFieldEditor } from "./entity-field-editor";
 import type { EntityDesign, EntityObject } from "../../types/entity-object";
@@ -572,7 +573,14 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                       {pendingFiles.map((file, i) => {
                         const isImage = file.type.startsWith("image/");
                         return (
-                          <Attachment key={pendingFileKey(file)} state="uploading" size="sm">
+                          <Attachment
+                            key={pendingFileKey(file)}
+                            // Staged files are not uploading until the form is
+                            // submitted; the uploading state pulses and dims
+                            // the preview, which reads as a blinking image.
+                            state={createMutation.isPending ? "uploading" : "idle"}
+                            size="sm"
+                          >
                             <AttachmentMedia variant={isImage ? "image" : "icon"}>
                               {isImage && pendingFilePreviewUrls[i] ? (
                                 <img
@@ -611,11 +619,17 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                     multiple
                     className="hidden"
                     onChange={(e) => {
-                      const files = e.target.files;
-                      if (files && files.length > 0) {
-                        setPendingFiles((prev) => [...prev, ...Array.from(files)]);
-                      }
+                      // Copy the FileList before clearing the input: it is
+                      // live, so resetting the value empties it, and a state
+                      // updater React defers (which it does as soon as the
+                      // hook has a pending update, e.g. after removing a
+                      // staged file) would then read no files at all and
+                      // silently drop the pick.
+                      const picked = Array.from(e.target.files ?? []);
                       e.target.value = "";
+                      if (picked.length > 0) {
+                        setPendingFiles((prev) => mergePendingFiles(prev, picked));
+                      }
                     }}
                   />
                   <Button

@@ -148,6 +148,7 @@ function AttachmentAction({
   className,
   variant,
   size = "icon",
+  type = "button",
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
@@ -155,6 +156,10 @@ function AttachmentAction({
       data-slot="attachment-action"
       variant={variant ?? "ghost"}
       size={size}
+      // A bare button defaults to type="submit", and these actions live inside
+      // composer and create forms: removing a staged file submitted the form,
+      // creating the record and closing the dialog under the user.
+      type={type}
       className={cn(className)}
       {...props}
     />
