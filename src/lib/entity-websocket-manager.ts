@@ -16,7 +16,13 @@
 
 import { useAuthStore } from '../stores/auth-store'
 
-const RECONNECT_DELAY = 3000
+// Reconnect backoff. A flat retry means every open tab in every app hammers
+// the server at a fixed rate for as long as it is down, and they stay in
+// lockstep because they all failed at the same moment. Doubling from 1s to a
+// 30s ceiling, with jitter to break that lockstep, backs off a sustained
+// outage while still reconnecting quickly after a blip.
+const RECONNECT_DELAY_MINIMUM = 1000
+const RECONNECT_DELAY_MAXIMUM = 30000
 
 /**
  * A server event for a subscribed entity. `type` is the only field every
@@ -47,9 +53,14 @@ class EntityWebsocketManager {
   private reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private subscribers = new Map<string, Set<EntityWebsocketListener>>()
   private connectionAttempts = new Map<string, boolean>()
+  private reconnectFailures = new Map<string, number>()
+  // Keys whose reconnect was deferred because the browser reported offline.
+  private pendingReconnect = new Set<string>()
+  private onlineListener = false
 
   /** Subscribe to `key`. Returns the unsubscribe function. */
   subscribe(key: string, callback: EntityWebsocketListener): () => void {
+    this.watchOnline()
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, new Set())
     }
@@ -99,6 +110,9 @@ class EntityWebsocketManager {
 
       ws.onopen = () => {
         this.connectionAttempts.set(key, false)
+        // A connection that lasted is not a failure: reset so the next drop
+        // retries promptly instead of inheriting an old backoff.
+        this.reconnectFailures.delete(key)
       }
 
       ws.onmessage = (event) => {
@@ -131,9 +145,38 @@ class EntityWebsocketManager {
     }
   }
 
+  // Reconnect everything that was waiting the moment the network returns,
+  // rather than leaving each key to discover it on its own timer.
+  private watchOnline() {
+    if (this.onlineListener || typeof window === 'undefined') return
+    this.onlineListener = true
+    window.addEventListener('online', () => {
+      const waiting = [...this.pendingReconnect]
+      this.pendingReconnect.clear()
+      for (const key of waiting) {
+        // Coming back online is not a failure, so reconnect immediately.
+        this.reconnectFailures.delete(key)
+        if (this.subscribers.get(key)?.size) this.connect(key)
+      }
+    })
+  }
+
   private scheduleReconnect(key: string) {
     if (!this.subscribers.get(key)?.size) return
-    const t = setTimeout(() => this.connect(key), RECONNECT_DELAY)
+    // Offline: don't burn retries against a network that cannot answer. The
+    // online listener reconnects every waiting key the moment it returns,
+    // which is faster than any timer would have been anyway.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.pendingReconnect.add(key)
+      return
+    }
+    const failures = this.reconnectFailures.get(key) ?? 0
+    this.reconnectFailures.set(key, failures + 1)
+    const base = Math.min(RECONNECT_DELAY_MINIMUM * 2 ** failures, RECONNECT_DELAY_MAXIMUM)
+    // Full jitter: without it every tab that dropped together retries
+    // together, and the reconnect storm is what finished off the server.
+    const delay = Math.round(base / 2 + Math.random() * (base / 2))
+    const t = setTimeout(() => this.connect(key), delay)
     this.reconnectTimers.set(key, t)
   }
 

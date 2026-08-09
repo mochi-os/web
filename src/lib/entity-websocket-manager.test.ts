@@ -67,6 +67,76 @@ describe('entityWebsocketManager', () => {
     vi.useRealTimers()
   })
 
+  // A flat retry means every open tab in every app hammers the server at a
+  // fixed rate for as long as it is down, and they stay in lockstep because
+  // they all dropped at the same moment.
+  it('backs off further on each successive failure', () => {
+    const stop = entityWebsocketManager.subscribe('backoff', () => {})
+    // Deterministic jitter: full-jitter halves the base and adds up to half
+    // again, so pinning random to 1 gives exactly the base delay.
+    vi.spyOn(Math, 'random').mockReturnValue(1)
+
+    const delays: number[] = []
+    for (let i = 0; i < 4; i++) {
+      const socket = MockWebSocket.instances[MockWebSocket.instances.length - 1]
+      const before = MockWebSocket.instances.length
+      socket.onclose?.()
+      // Walk the clock until the reconnect fires, and record how long it took.
+      let waited = 0
+      while (MockWebSocket.instances.length === before && waited < 120000) {
+        vi.advanceTimersByTime(250)
+        waited += 250
+      }
+      delays.push(waited)
+    }
+
+    expect(delays[1]).toBeGreaterThan(delays[0])
+    expect(delays[2]).toBeGreaterThan(delays[1])
+    // And it stops growing rather than running away.
+    expect(delays[3]).toBeLessThanOrEqual(31000)
+    stop()
+  })
+
+  it('resets the backoff once a connection succeeds', () => {
+    const stop = entityWebsocketManager.subscribe('reset', () => {})
+    vi.spyOn(Math, 'random').mockReturnValue(1)
+
+    // Fail twice to climb the backoff.
+    for (let i = 0; i < 2; i++) {
+      MockWebSocket.instances[MockWebSocket.instances.length - 1].onclose?.()
+      vi.advanceTimersByTime(60000)
+    }
+    // Now succeed, then drop again: the next retry must be the short one, not
+    // the escalated one it had climbed to.
+    const socket = MockWebSocket.instances[MockWebSocket.instances.length - 1]
+    socket.open()
+    const before = MockWebSocket.instances.length
+    socket.onclose?.()
+    vi.advanceTimersByTime(1000)
+    expect(MockWebSocket.instances.length).toBeGreaterThan(before)
+    stop()
+  })
+
+  // Retrying against a network that cannot answer just burns the backoff, so
+  // the key waits for the online event instead.
+  it('defers the reconnect while offline and resumes when the network returns', () => {
+    const stop = entityWebsocketManager.subscribe('offline', () => {})
+    const original = Object.getOwnPropertyDescriptor(navigator, 'onLine')
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+
+    const before = MockWebSocket.instances.length
+    MockWebSocket.instances[MockWebSocket.instances.length - 1].onclose?.()
+    vi.advanceTimersByTime(120000)
+    expect(MockWebSocket.instances.length).toBe(before)
+
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+    window.dispatchEvent(new Event('online'))
+    expect(MockWebSocket.instances.length).toBeGreaterThan(before)
+
+    if (original) Object.defineProperty(navigator, 'onLine', original)
+    stop()
+  })
+
   it('closes the connection when the last subscriber leaves, with handlers detached', () => {
     const unsubscribe = entityWebsocketManager.subscribe('kA', () => {})
     const [ws] = socketsFor('kA')
