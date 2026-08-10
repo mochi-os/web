@@ -277,6 +277,8 @@ export * from './lib/api-client'
 export {
   getAppPath,
   getRouterBasepath,
+  getAppBasepath,
+  createAppHistory,
   getApiBasepath,
   isDomainEntityRouting,
   getEntityFingerprint,
@@ -336,6 +338,8 @@ export type {
   MicSessionError,
   MicSessionState,
 } from './lib/shell-mic-session'
+export { cameraOpen } from './lib/shell-camera-session'
+export type { CameraDevice, CameraError, CameraOpen, CameraOptions, CameraSession } from './lib/shell-camera-session'
 export * as shellStorage from './lib/shell-storage'
 export { useShellStorage } from './hooks/use-shell-storage'
 export * from './lib/auth-endpoints'
