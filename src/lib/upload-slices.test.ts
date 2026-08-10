@@ -98,4 +98,72 @@ describe('uploadSlices', () => {
     const slices = uploadSlices(1000, sum(sizes), sizes)
     expect(states(slices)).toEqual(['sent', 'sent', 'uploading'])
   })
+
+  // The cases above pin down specific counters. These assert the properties
+  // that have to hold for every counter, over randomised shapes — a bar that
+  // slides backwards or two tiles filling at once are the failures a fixed
+  // input set is least likely to catch. The generator is seeded so a failure
+  // is reproducible rather than a flake.
+  describe('invariants', () => {
+    function makeRandom(seed: number) {
+      let state = seed
+      return () => {
+        state = (state * 1103515245 + 12345) % 2147483648
+        return state / 2147483648
+      }
+    }
+
+    it('holds across randomised uploads', () => {
+      const random = makeRandom(20260810)
+
+      for (let run = 0; run < 300; run++) {
+        const count = 1 + Math.floor(random() * 8)
+        const sizes = Array.from({ length: count }, () =>
+          // A mix of ordinary files and the occasional empty one, which is the
+          // shape that used to make the "which file is in flight" test fail.
+          random() < 0.15 ? 0 : 1 + Math.floor(random() * 5_000_000)
+        )
+        const payload = sum(sizes)
+        if (payload === 0) continue
+        // Realistic framing: a boundary preamble per part plus the text fields.
+        const total = payload + 180 * count + Math.floor(random() * 400)
+
+        let previous: number[] = sizes.map(() => 0)
+        const steps = 25
+
+        for (let step = 0; step <= steps; step++) {
+          const sent = Math.round((total * step) / steps)
+          const slices = uploadSlices(sent, total, sizes)
+          expect(slices).not.toBeNull()
+          const list = slices!
+
+          const seen = states(list)!
+          const firstWaiting = seen.indexOf('waiting')
+          const lastSent = seen.lastIndexOf('sent')
+
+          list.forEach((slice, i) => {
+            expect(slice.fraction).toBeGreaterThanOrEqual(0)
+            expect(slice.fraction).toBeLessThanOrEqual(1)
+            if (slice.state === 'sent') expect(slice.fraction).toBe(1)
+            if (slice.state === 'waiting') expect(slice.fraction).toBe(0)
+            // Never goes backwards as the counter climbs.
+            expect(slice.fraction).toBeGreaterThanOrEqual(previous[i])
+          })
+
+          // At most one file is on the wire at a time.
+          expect(seen.filter((s) => s === 'uploading').length).toBeLessThanOrEqual(1)
+          // Ordered sent… uploading… waiting, with no interleaving.
+          if (firstWaiting !== -1) expect(lastSent).toBeLessThan(firstWaiting)
+
+          previous = list.map((slice) => slice.fraction)
+        }
+
+        // The request finishing has to leave every file finished, or a bar
+        // sits short of full while the upload is demonstrably over.
+        const done = uploadSlices(total, total, sizes)!
+        expect(done.every((slice) => slice.state === 'sent')).toBe(true)
+        expect(done.every((slice) => slice.fraction === 1)).toBe(true)
+      }
+    })
+  })
 })
