@@ -42,6 +42,14 @@ export type UseDragReorderOptions = {
    * not once at the end, so the list on screen is always the live order.
    */
   onMove: (from: number, to: number) => void
+  /**
+   * The drag finished and the list is in a new order. Called once, on release,
+   * and never for a drag that was cancelled or one that ended where it began —
+   * so a list that has to save its order sends one request per drag rather than
+   * one per slot crossed. Read the order from your own state; the `onMove`
+   * calls that produced it have all already been made.
+   */
+  onCommit?: () => void
   /** Set false to leave the list static (a single item, or a save in flight). */
   enabled?: boolean
 }
@@ -75,6 +83,7 @@ export type UseDragReorderResult = {
 export function useDragReorder({
   count,
   onMove,
+  onCommit,
   enabled = true,
 }: UseDragReorderOptions): UseDragReorderResult {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
@@ -94,10 +103,12 @@ export function useDragReorder({
   // Read through refs inside the listeners: they are attached for the length
   // of a gesture and must not answer with the render that started it.
   const onMoveRef = useRef(onMove)
+  const onCommitRef = useRef(onCommit)
   const countRef = useRef(count)
   const enabledRef = useRef(enabled)
   useEffect(() => {
     onMoveRef.current = onMove
+    onCommitRef.current = onCommit
     countRef.current = count
     enabledRef.current = enabled
   })
@@ -118,8 +129,13 @@ export function useDragReorder({
     event.preventDefault()
   }, [])
 
+  /**
+   * `drop` is a release: the order stands and is worth saving. `cancel` puts
+   * the item back. `discard` walks away from a gesture that never became a
+   * drag, or one whose component is going — neither leaves an order to save.
+   */
   const stop = useCallback(
-    (revert: boolean) => {
+    (outcome: 'drop' | 'cancel' | 'discard') => {
       const gesture = gestureRef.current
       gestureRef.current = null
 
@@ -132,8 +148,12 @@ export function useDragReorder({
       document.body.style.removeProperty('user-select')
       document.body.style.removeProperty('cursor')
 
-      if (gesture?.active && revert && gesture.index !== gesture.originIndex) {
-        onMoveRef.current(gesture.index, gesture.originIndex)
+      const moved = Boolean(gesture?.active) && gesture!.index !== gesture!.originIndex
+      if (moved && outcome === 'cancel') {
+        onMoveRef.current(gesture!.index, gesture!.originIndex)
+      }
+      if (moved && outcome === 'drop') {
+        onCommitRef.current?.()
       }
       setDraggingIndex(null)
       setGestureLive(false)
@@ -199,7 +219,7 @@ export function useDragReorder({
     const gesture = gestureRef.current
     const container = containerRef.current
     if (!gesture || !container) {
-      stop(false)
+      stop('discard')
       return
     }
 
@@ -275,7 +295,7 @@ export function useDragReorder({
       )
       if (gesture.pointerType === 'touch') {
         // Moving before the hold expires is a scroll, so let the page have it.
-        if (travelled > TOUCH_SLOP) stop(false)
+        if (travelled > TOUCH_SLOP) stop('discard')
         return
       }
       if (travelled > POINTER_SLOP) activate()
@@ -285,17 +305,17 @@ export function useDragReorder({
       const gesture = gestureRef.current
       if (!gesture || event.pointerId !== gesture.pointerId) return
       // The live moves already left the list in its final order.
-      stop(false)
+      stop('drop')
     }
 
     const onPointerCancel = (event: PointerEvent) => {
       const gesture = gestureRef.current
       if (!gesture || event.pointerId !== gesture.pointerId) return
-      stop(true)
+      stop('cancel')
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') stop(true)
+      if (event.key === 'Escape') stop('cancel')
     }
 
     window.addEventListener('pointermove', onPointerMove)
@@ -316,7 +336,7 @@ export function useDragReorder({
   useEffect(() => {
     stopRef.current = stop
   }, [stop])
-  useEffect(() => () => stopRef.current(false), [])
+  useEffect(() => () => stopRef.current('discard'), [])
 
   const getItemProps = useCallback(
     (index: number) => ({

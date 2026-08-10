@@ -44,10 +44,19 @@ function tileRect(index: number) {
   } as DOMRect
 }
 
-function List({ initial, onOrder }: { initial: string[]; onOrder: (o: string[]) => void }) {
+function List({
+  initial,
+  onOrder,
+  onCommit,
+}: {
+  initial: string[]
+  onOrder: (o: string[]) => void
+  onCommit?: () => void
+}) {
   const [items, setItems] = useState(initial)
   const { draggingIndex, getGroupProps, getItemProps } = useDragReorder({
     count: items.length,
+    onCommit,
     onMove: (from, to) =>
       setItems((current) => {
         const next = moveItem(current, from, to)
@@ -200,6 +209,64 @@ describe('useDragReorder', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(orders.at(-1)).toEqual(['a', 'b', 'c'])
+  })
+
+  // A list that is already saved has to write the new order somewhere, and the
+  // live moves are far too many to send: one drag across a grid crosses several
+  // slots and each crossing is a move.
+  describe('onCommit', () => {
+    it('fires once when the drag is let go, however many slots it crossed', () => {
+      const onCommit = vi.fn()
+      render(
+        <List initial={['a', 'b', 'c', 'd']} onOrder={() => {}} onCommit={onCommit} />
+      )
+
+      fireEvent.pointerDown(screen.getByTestId('tile-d'), pointer('mouse', 50, 170))
+      fireEvent.pointerMove(window, pointer('mouse', 50, 160))
+      fireEvent.pointerMove(window, pointer('mouse', 170, 50))
+      flushFrame()
+      fireEvent.pointerMove(window, pointer('mouse', 50, 50))
+      flushFrame()
+      expect(onCommit).not.toHaveBeenCalled()
+
+      fireEvent.pointerUp(window, pointer('mouse', 50, 50))
+      expect(onCommit).toHaveBeenCalledTimes(1)
+    })
+
+    it('stays quiet when the drag is cancelled and the tile goes back', () => {
+      const onCommit = vi.fn()
+      render(<List initial={['a', 'b', 'c']} onOrder={() => {}} onCommit={onCommit} />)
+
+      fireEvent.pointerDown(screen.getByTestId('tile-c'), pointer('mouse', 290, 50))
+      fireEvent.pointerMove(window, pointer('mouse', 280, 50))
+      fireEvent.pointerMove(window, pointer('mouse', 50, 50))
+      flushFrame()
+      fireEvent.keyDown(window, { key: 'Escape' })
+
+      expect(onCommit).not.toHaveBeenCalled()
+    })
+
+    it('stays quiet when the tile is let go in the slot it started in', () => {
+      const onCommit = vi.fn()
+      render(<List initial={['a', 'b', 'c']} onOrder={() => {}} onCommit={onCommit} />)
+
+      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerMove(window, pointer('mouse', 70, 50))
+      flushFrame()
+      fireEvent.pointerUp(window, pointer('mouse', 70, 50))
+
+      expect(onCommit).not.toHaveBeenCalled()
+    })
+
+    it('stays quiet for a press that never became a drag', () => {
+      const onCommit = vi.fn()
+      render(<List initial={['a', 'b', 'c']} onOrder={() => {}} onCommit={onCommit} />)
+
+      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerUp(window, pointer('mouse', 50, 50))
+
+      expect(onCommit).not.toHaveBeenCalled()
+    })
   })
 
   it('ignores a press that lands on a control inside the tile', () => {
