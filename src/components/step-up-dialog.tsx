@@ -97,8 +97,17 @@ export function StepUpDialog({
   // waits for everything required.
   const [earnedToken, setEarnedToken] = useState<string | null>(null)
 
+  // Bumped every time the dialog opens or closes. An OAuth verify polls for up
+  // to two minutes, and dismissing the dialog does not stop it - so without
+  // this the proof from an abandoned ceremony still arrived, still called
+  // onVerified, and still ran whatever action the caller had pending, which by
+  // then may be a different one the user picked afterwards. Captured before the
+  // await and compared after: a result from a previous life is discarded.
+  const generation = useRef(0)
+
   // On open: learn the user's factors and, if email is one, send the code.
   useEffect(() => {
+    generation.current += 1
     if (!open) return
     let cancelled = false
     setLoading(true)
@@ -215,12 +224,17 @@ export function StepUpDialog({
   const verifyOauth = async (provider: string) => {
     setBusy(true)
     setError('')
+    const mine = generation.current
     try {
-      await apply(await client.oauthVerify(provider), !!submitLabel)
+      const result = await client.oauthVerify(provider)
+      // Dismissed, or reopened for something else, while the popup was open.
+      if (generation.current !== mine) return
+      await apply(result, !!submitLabel)
     } catch {
+      if (generation.current !== mine) return
       setError(t`Couldn't verify with that account. Please try again.`)
     } finally {
-      setBusy(false)
+      if (generation.current === mine) setBusy(false)
     }
   }
 

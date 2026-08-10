@@ -33,6 +33,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from './ui/responsive-dialog'
+import { ConfirmDialog } from './confirm-dialog'
 import { toast } from '../lib/toast-utils'
 import { getErrorMessage } from '../lib/handle-server-error'
 import { getAppPath } from '../lib/app-path'
@@ -83,6 +84,7 @@ export function OptionsMenu({
   const { t } = useLingui()
   const rssEntity = entityId || (showRss ? '*' : null)
 
+  const [revokeRssOpen, setRevokeRssOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [link, setLink] = useState('')
   const [copied, setCopied] = useState(false)
@@ -128,6 +130,7 @@ export function OptionsMenu({
     if (!rssEntity) return
     try {
       await revokeRssToken(rssEntity)
+      setRevokeRssOpen(false)
       toast.success(t`RSS access revoked`)
     } catch (error) {
       toast.error(getErrorMessage(error, t`Failed to revoke RSS access`))
@@ -177,7 +180,7 @@ export function OptionsMenu({
                 <DropdownMenuItem onSelect={() => void handleCopyRssUrl('all')}>
                   <Trans>Posts and comments</Trans>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => void handleRevokeRss()}>
+                <DropdownMenuItem onSelect={() => setRevokeRssOpen(true)}>
                   <Trans>Revoke access</Trans>
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
@@ -234,6 +237,20 @@ export function OptionsMenu({
           </div>
         </ResponsiveDialogContent>
       </ResponsiveDialog>
+
+      <ConfirmDialog
+        open={revokeRssOpen}
+        onOpenChange={setRevokeRssOpen}
+        title={t`Revoke RSS access?`}
+        // The second sentence is doing real work. Revoking is also the only
+        // way to reissue - minting returns the existing token unchanged, so a
+        // feed whose token is gone stays broken until the row is cleared - and
+        // nothing else in the interface says so.
+        desc={t`Anything subscribed to this feed will stop receiving it. You can copy a new URL afterwards.`}
+        confirmText={t`Revoke`}
+        destructive
+        handleConfirm={() => void handleRevokeRss()}
+      />
     </>
   )
 }

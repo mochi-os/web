@@ -1,4 +1,5 @@
-import { t } from '@lingui/core/macro'
+import { t, plural } from '@lingui/core/macro'
+import { i18n } from '@lingui/core'
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +8,48 @@ import { t } from '@lingui/core/macro'
 
 function pad(n: number): string {
   return n < 10 ? '0' + n : String(n)
+}
+
+// The language the interface is being shown in, which is what month names and
+// meridiem markers follow. It is NOT the same as the format preferences this
+// module's other functions take: a reader can want German month names with
+// DD/MM/YYYY ordering. ResolvedLocale carries only the preferences, so the
+// language comes from the active catalogue.
+//
+// Intl is used directly here on purpose - this module is the canonical
+// formatter and is allowlisted in check-i18n-format.py for exactly that
+// reason. Call sites still go through useFormat().
+function language(): string {
+  return i18n.locale || 'en'
+}
+
+// Cached: constructing an Intl formatter is expensive relative to formatting,
+// and these run per row in long lists.
+const monthFormatters = new Map<string, Intl.DateTimeFormat>()
+const meridiemFormatters = new Map<string, Intl.DateTimeFormat>()
+
+function monthShort(date: Date): string {
+  const lang = language()
+  let formatter = monthFormatters.get(lang)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(lang, { month: 'short' })
+    monthFormatters.set(lang, formatter)
+  }
+  return formatter.format(date)
+}
+
+function meridiem(date: Date): string {
+  const lang = language()
+  let formatter = meridiemFormatters.get(lang)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(lang, { hour: 'numeric', hour12: true })
+    meridiemFormatters.set(lang, formatter)
+  }
+  // formatToParts rather than a string match: the marker's position and
+  // spelling vary by language (Japanese puts 午前 first), so there is nothing
+  // reliable to slice off the formatted string.
+  const part = formatter.formatToParts(date).find((p) => p.type === 'dayPeriod')
+  return part ? part.value : date.getHours() >= 12 ? 'PM' : 'AM'
 }
 
 // --- User-facing formatting (respects preferences) ---
@@ -30,14 +73,14 @@ export function formatDate(date: Date, dateFormat: DateFormat): string {
     case 'MM/DD/YYYY':
       return `${m}/${d}/${y}`
     case 'D MMM YYYY':
-      return `${date.getDate()} ${date.toLocaleString('en', { month: 'short' })} ${y}`
+      return `${date.getDate()} ${monthShort(date)} ${y}`
   }
 }
 
 export function formatTime(date: Date, timeFormat: TimeFormat): string {
   if (timeFormat === '12h') {
     let h = date.getHours()
-    const ampm = h >= 12 ? 'PM' : 'AM'
+    const ampm = meridiem(date)
     h = h % 12 || 12
     return `${h}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${ampm}`
   }
@@ -59,11 +102,28 @@ export function formatRelativeTime(timestamp: number, dateFormat: DateFormat): s
   const now = Date.now() / 1000
   const diff = now - timestamp
 
+  // The unit abbreviations are translated, not just the "Just now" beside
+  // them: "m" for minutes is an English convention, and a language may need a
+  // different letter, a different order, or no abbreviation at all. Kept as
+  // plurals so a language that inflects the abbreviation can say so - English
+  // does not, which is why both cases read alike here.
   if (diff < 60) return t`Just now`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d`
-  if (diff < 2592000) return `${Math.floor(diff / 604800)}w`
+  if (diff < 3600) {
+    const count = Math.floor(diff / 60)
+    return plural(count, { one: '#m', other: '#m' })
+  }
+  if (diff < 86400) {
+    const count = Math.floor(diff / 3600)
+    return plural(count, { one: '#h', other: '#h' })
+  }
+  if (diff < 604800) {
+    const count = Math.floor(diff / 86400)
+    return plural(count, { one: '#d', other: '#d' })
+  }
+  if (diff < 2592000) {
+    const count = Math.floor(diff / 604800)
+    return plural(count, { one: '#w', other: '#w' })
+  }
 
   return formatDate(new Date(timestamp * 1000), dateFormat)
 }

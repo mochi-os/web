@@ -39,6 +39,7 @@ import { naturalCompare } from "../../lib/utils";
 import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
 import { removePendingFile } from "../../lib/attachment-utils";
+import { mergePendingFiles } from "../../lib/composer-files";
 import { moveItem } from "../../lib/reorder";
 import { rankBetween, rankCompare } from "../../lib/rank";
 import { EntityFieldEditor } from "./entity-field-editor";
@@ -580,11 +581,17 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                     multiple
                     className="hidden"
                     onChange={(e) => {
-                      const files = e.target.files;
-                      if (files && files.length > 0) {
-                        setPendingFiles((prev) => [...prev, ...Array.from(files)]);
-                      }
+                      // Copy the FileList before clearing the input: it is
+                      // live, so resetting the value empties it, and a state
+                      // updater React defers (which it does as soon as the
+                      // hook has a pending update, e.g. after removing a
+                      // staged file) would then read no files at all and
+                      // silently drop the pick.
+                      const picked = Array.from(e.target.files ?? []);
                       e.target.value = "";
+                      if (picked.length > 0) {
+                        setPendingFiles((prev) => mergePendingFiles(prev, picked));
+                      }
                     }}
                   />
                   <Button
