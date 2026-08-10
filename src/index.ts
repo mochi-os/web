@@ -162,6 +162,7 @@ export * from './components/load-more-trigger'
 export * from './components/config-drawer'
 export * from './components/new-items-pill'
 export * from './components/confirm-dialog'
+export * from './components/attachment-composer'
 export * from './components/comment-composer'
 export * from './components/date-picker'
 export * from './components/faceless-avatar'
@@ -188,6 +189,8 @@ export * from './components/step-up-dialog'
 export * from './components/person-picker'
 export * from './components/post-title-bar'
 export * from './components/search-entity-page'
+export * from './components/inline-entity-search'
+export * from './components/recommended-entities'
 export * from './components/search-entity-dialog'
 export * from './components/select-dropdown'
 export * from './components/sign-out-dialog'
@@ -226,6 +229,11 @@ export {
   createLastGameStorage,
   type LastGameStorage,
 } from './hooks/use-last-game-storage'
+export {
+  createLastEntityStorage,
+  type LastEntityStorage,
+} from './hooks/use-last-entity-storage'
+export * from './lib/create-saved-store'
 
 // Stores
 export * from './stores/auth-store'
@@ -265,6 +273,8 @@ export {
 export * from './hooks/use-pending-items'
 export * from './hooks/use-merge-on-scroll-top'
 export * from './hooks/use-list-auto-animate'
+export * from './hooks/use-drag-reorder'
+export * from './hooks/use-persisted-reorder'
 export * from './hooks/use-format'
 export * from './hooks/use-upload-progress'
 export * from './hooks/use-load-more'
@@ -356,6 +366,8 @@ export * from './lib/rtl'
 export * from './lib/chat-ui'
 export * from './lib/places-api'
 export * from './lib/attachment-utils'
+export * from './lib/reorder'
+export * from './lib/upload-slices'
 export * from './lib/send-attachment-error'
 export * from './lib/toast-utils'
 export * from './lib/toast-action'

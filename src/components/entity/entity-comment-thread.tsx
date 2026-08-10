@@ -29,6 +29,7 @@ import { cn } from "../../lib/utils";
 import { MentionTextarea, renderMentions } from "../mention-textarea";
 import { textUnchanged } from "../../lib/change-detection";
 import { removePendingFile } from "../../lib/attachment-utils";
+import { moveItem } from "../../lib/reorder";
 import {
   ComposerAttachments,
   SendShortcutHint,
@@ -404,9 +405,14 @@ export function EntityCommentThread({
             state={
               isSubmittingReply ? "uploading" : replyFailed ? "error" : "idle"
             }
+            progress={uploadProgress?.slices}
             onRemove={(file: File) =>
               setReplyFiles((prev) => removePendingFile(prev, file))
             }
+            onReorder={(from, to) =>
+              setReplyFiles((prev) => moveItem(prev, from, to))
+            }
+            groupMedia
             // Retry sends the draft, so it is only offered while there is one.
             onRetry={
               replyDraft.trim() ? () => void handleSubmitReply() : undefined

@@ -98,6 +98,41 @@ describe('useImageObjectUrls', () => {
     expect(result.current).toEqual(['blob:test/1'])
   })
 
+  // Drag-to-reorder rebuilds the array on every slot the pointer crosses. If a
+  // URL were tied to its position rather than to the File, every image on
+  // screen would be handed a new src mid-drag and reload.
+  it('keeps each URL with its file when the list is reordered', () => {
+    const a = image('a.png')
+    const b = image('b.png')
+    const { rerender, result } = renderHook(
+      ({ files }) => useImageObjectUrls(files),
+      { initialProps: { files: [a, b] } }
+    )
+    expect(result.current).toEqual(['blob:test/1', 'blob:test/2'])
+
+    rerender({ files: [b, a] })
+
+    expect(result.current).toEqual(['blob:test/2', 'blob:test/1'])
+    expect(calls.filter((c) => c.kind === 'create')).toHaveLength(2)
+    expect(calls.filter((c) => c.kind === 'revoke')).toHaveLength(0)
+  })
+
+  it('revokes only the file that was removed', () => {
+    const a = image('a.png')
+    const b = image('b.png')
+    const { rerender, result } = renderHook(
+      ({ files }) => useImageObjectUrls(files),
+      { initialProps: { files: [a, b] } }
+    )
+
+    rerender({ files: [b] })
+
+    expect(result.current).toEqual(['blob:test/2'])
+    expect(calls.filter((c) => c.kind === 'revoke').map((c) => c.url)).toEqual([
+      'blob:test/1',
+    ])
+  })
+
   it('revokes everything on unmount', () => {
     const { unmount } = renderHook(() =>
       useImageObjectUrls([image('a.png'), image('b.png')])

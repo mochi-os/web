@@ -33,23 +33,14 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
-import {
-  Attachment,
-  AttachmentGroup,
-  AttachmentMedia,
-  AttachmentContent,
-  AttachmentTitle,
-  AttachmentDescription,
-  AttachmentActions,
-  AttachmentAction,
-} from "../ui/attachment";
+import { ComposerAttachments } from "../comment-composer";
 import { UploadProgress } from "../ui/upload-progress";
 import { naturalCompare } from "../../lib/utils";
 import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
-import { useFormat } from "../../hooks/use-format";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
-import { pendingFileKey, removePendingFile } from "../../lib/attachment-utils";
+import { removePendingFile } from "../../lib/attachment-utils";
 import { mergePendingFiles } from "../../lib/composer-files";
+import { moveItem } from "../../lib/reorder";
 import { rankBetween, rankCompare } from "../../lib/rank";
 import { EntityFieldEditor } from "./entity-field-editor";
 import type { EntityDesign, EntityObject } from "../../types/entity-object";
@@ -123,7 +114,6 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   uploadAttachments,
   searchUsers,
 }: EntityCreateObjectDialogProps<TObject>) {
-  const { formatFileSize } = useFormat();
   const [error, setError] = useState<string | null>(null);
   const [selectedClass, setSelectedType] = useState(design.classes[0]?.id || "");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -344,8 +334,10 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
 
       // Upload any attached files
       if (pendingFiles.length > 0) {
-        await upload((onProgress) =>
-          uploadAttachments(recordId, objectId, pendingFiles, onProgress),
+        await upload(
+          (onProgress) =>
+            uploadAttachments(recordId, objectId, pendingFiles, onProgress),
+          { sizes: pendingFiles.map((file) => file.size) },
         );
       }
 
@@ -568,51 +560,22 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                   <Trans>Files</Trans>
                 </label>
                 <div className="space-y-2 pt-1">
-                  {pendingFiles.length > 0 && (
-                    <AttachmentGroup>
-                      {pendingFiles.map((file, i) => {
-                        const isImage = file.type.startsWith("image/");
-                        return (
-                          <Attachment
-                            key={pendingFileKey(file)}
-                            // Staged files are not uploading until the form is
-                            // submitted; the uploading state pulses and dims
-                            // the preview, which reads as a blinking image.
-                            state={createMutation.isPending ? "uploading" : "idle"}
-                            size="sm"
-                          >
-                            <AttachmentMedia variant={isImage ? "image" : "icon"}>
-                              {isImage && pendingFilePreviewUrls[i] ? (
-                                <img
-                                  src={pendingFilePreviewUrls[i]}
-                                  alt={file.name}
-                                  draggable={false}
-                                />
-                              ) : (
-                                <Paperclip />
-                              )}
-                            </AttachmentMedia>
-                            <AttachmentContent>
-                              <AttachmentTitle>{file.name}</AttachmentTitle>
-                              <AttachmentDescription>
-                                {formatFileSize(file.size)}
-                              </AttachmentDescription>
-                            </AttachmentContent>
-                            <AttachmentActions>
-                              <AttachmentAction
-                                onClick={() =>
-                                  setPendingFiles((prev) => removePendingFile(prev, file))
-                                }
-                                aria-label={t`Remove`}
-                              >
-                                <X className="size-4" />
-                              </AttachmentAction>
-                            </AttachmentActions>
-                          </Attachment>
-                        );
-                      })}
-                    </AttachmentGroup>
-                  )}
+                  <ComposerAttachments
+                    files={pendingFiles}
+                    previewUrls={pendingFilePreviewUrls}
+                    // The object is created first and the files uploaded after,
+                    // so the tiles sit inert for a moment before they start
+                    // filling. That gap is the record being written, not a stall.
+                    state={createMutation.isPending ? "uploading" : "idle"}
+                    progress={uploadProgress?.slices}
+                    onRemove={(file) =>
+                      setPendingFiles((prev) => removePendingFile(prev, file))
+                    }
+                    onReorder={(from, to) =>
+                      setPendingFiles((prev) => moveItem(prev, from, to))
+                    }
+                    groupMedia
+                  />
                   <input
                     ref={fileInputRef}
                     type="file"
