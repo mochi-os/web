@@ -50,6 +50,12 @@ export type UseDragReorderOptions = {
    * calls that produced it have all already been made.
    */
   onCommit?: () => void
+  /**
+   * Veto a landing slot. Return false and the item stays where it is while the
+   * drag carries on, so a list drawn in blocks can hold each item inside its
+   * own. Omit and every slot accepts.
+   */
+  canMove?: (from: number, to: number) => boolean
   /** Set false to leave the list static (a single item, or a save in flight). */
   enabled?: boolean
 }
@@ -84,6 +90,7 @@ export function useDragReorder({
   count,
   onMove,
   onCommit,
+  canMove,
   enabled = true,
 }: UseDragReorderOptions): UseDragReorderResult {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
@@ -104,11 +111,13 @@ export function useDragReorder({
   // of a gesture and must not answer with the render that started it.
   const onMoveRef = useRef(onMove)
   const onCommitRef = useRef(onCommit)
+  const canMoveRef = useRef(canMove)
   const countRef = useRef(count)
   const enabledRef = useRef(enabled)
   useEffect(() => {
     onMoveRef.current = onMove
     onCommitRef.current = onCommit
+    canMoveRef.current = canMove
     countRef.current = count
     enabledRef.current = enabled
   })
@@ -177,6 +186,9 @@ export function useDragReorder({
       pointRef.current.y - bounds.top
     )
     if (target === null || target === gesture.index) return
+    // A refused slot leaves the gesture live rather than ending it: the pointer
+    // is free to travel back over its own block and carry on reordering there.
+    if (canMoveRef.current?.(gesture.index, target) === false) return
 
     onMoveRef.current(gesture.index, target)
     gesture.index = target

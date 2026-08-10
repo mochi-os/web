@@ -344,7 +344,10 @@ function AttachmentTile({
             draggable={false}
             className={cn(
               "absolute inset-0 size-full object-cover",
-              state === "uploading" && "opacity-60"
+              // The blanket dim is the indeterminate signal. With a real slice
+              // the fill and the queued dim say it better, and stacking the two
+              // put a waiting tile at 30% — which reads as broken, not queued.
+              state === "uploading" && !progress && "opacity-60"
             )}
           />
         ) : previewUrl ? (
@@ -357,7 +360,10 @@ function AttachmentTile({
             draggable={false}
             className={cn(
               "absolute inset-0 size-full object-cover",
-              state === "uploading" && "opacity-60"
+              // The blanket dim is the indeterminate signal. With a real slice
+              // the fill and the queued dim say it better, and stacking the two
+              // put a waiting tile at 30% — which reads as broken, not queued.
+              state === "uploading" && !progress && "opacity-60"
             )}
           />
         ) : (

@@ -574,6 +574,7 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                     onReorder={(from, to) =>
                       setPendingFiles((prev) => moveItem(prev, from, to))
                     }
+                    groupMedia
                   />
                   <input
                     ref={fileInputRef}

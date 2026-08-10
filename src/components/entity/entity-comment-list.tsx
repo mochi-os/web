@@ -378,6 +378,7 @@ export function EntityCommentList({
             onReorder={(from, to) =>
               setNewFiles((prev) => moveItem(prev, from, to))
             }
+            groupMedia
             // Retry sends the draft, so it is only offered while there is one.
             onRetry={
               newComment.trim() ? () => void handleCreate() : undefined

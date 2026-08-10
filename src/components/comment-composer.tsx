@@ -190,6 +190,8 @@ interface ComposerAttachmentsProps {
   layout?: AttachmentComposerProps['layout']
   /** Defaults to `tile` once reordering is on, `inline` otherwise. */
   preview?: AttachmentComposerProps['preview']
+  /** Draw the images and video first, as the posted comment will. */
+  groupMedia?: AttachmentComposerProps['groupMedia']
 }
 
 /**
@@ -208,6 +210,7 @@ export function ComposerAttachments({
   onReorder,
   layout,
   preview,
+  groupMedia,
 }: ComposerAttachmentsProps) {
   const items = useMemo(
     () =>
@@ -232,6 +235,7 @@ export function ComposerAttachments({
       state={state}
       onRemove={(index) => onRemove(files[index])}
       onReorder={onReorder}
+      groupMedia={groupMedia}
       onRetry={onRetry}
     />
   )

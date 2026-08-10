@@ -58,15 +58,31 @@ describe('useUploadProgress', () => {
   })
 
   // The tiles are already on screen when the request starts, so an undefined
-  // first value would make every fill pop in a frame late.
-  it('seeds every file at zero before the first progress event', async () => {
+  // first value would make every fill pop in a frame late. The seed comes from
+  // the same derivation as every later value, so the first file reads as on the
+  // wire rather than queued behind nothing.
+  it('seeds from the derivation before the first progress event', async () => {
     const { result } = renderHook(() => useUploadProgress())
     const { request, settled } = start(result, [1000, 3000])
 
     expect(result.current.progress?.slices).toEqual([
-      { fraction: 0, state: 'waiting' },
+      { fraction: 0, state: 'uploading' },
       { fraction: 0, state: 'waiting' },
     ])
+
+    request.resolve('done')
+    await act(async () => {
+      await settled
+    })
+  })
+
+  // Every file empty leaves nothing to derive from, and the seed must not
+  // invent slices the derivation would refuse to produce.
+  it('seeds nothing when every file is empty', async () => {
+    const { result } = renderHook(() => useUploadProgress())
+    const { request, settled } = start(result, [0, 0])
+
+    expect(result.current.progress?.slices).toBeUndefined()
 
     request.resolve('done')
     await act(async () => {

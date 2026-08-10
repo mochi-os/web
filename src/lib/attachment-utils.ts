@@ -20,6 +20,16 @@ export function isVideo(type: string): boolean {
   return type.startsWith('video/')
 }
 
+/**
+ * Images and video: the attachments that render as a preview rather than as a
+ * named row. One predicate rather than the pair spelled out at each site, so
+ * the composer and the gallery cannot come to disagree about which block an
+ * attachment belongs in.
+ */
+export function isMedia(type: string): boolean {
+  return isImage(type) || isVideo(type)
+}
+
 // Keys are handed out per File object and remembered here, so the same file
 // answers the same key for as long as it is staged and two files never share
 // one. Weak, so a key costs nothing once the composer has let the file go.

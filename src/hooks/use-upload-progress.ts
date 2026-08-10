@@ -60,18 +60,19 @@ export function useUploadProgress() {
       request: (onProgress: (event: AxiosProgressEvent) => void) => Promise<Result>,
       options?: UploadOptions
     ): Promise<Result> => {
-      sizesRef.current = options?.sizes
+      const sizes = options?.sizes
+      sizesRef.current = sizes
+      // The tiles are already on screen, so they get their zero state now
+      // rather than a frame late. It comes from the same function that will
+      // produce every later value — scaled against the payload, since the body
+      // size is not known until the first event — so the shape cannot disagree
+      // with itself at the one point the request has not started.
+      const payload = sizes?.reduce((a, b) => a + b, 0) ?? 0
       setProgress({
         sent: 0,
         total: null,
         phase: 'uploading',
-        // Before the first progress event there is no body size to scale
-        // against, so every file starts at zero rather than unknown — the tiles
-        // are already on screen and must not pop in a frame late.
-        slices: options?.sizes?.map(() => ({
-          fraction: 0,
-          state: 'waiting' as const,
-        })),
+        slices: sizes ? (uploadSlices(0, payload, sizes) ?? undefined) : undefined,
       })
       try {
         return await request(track)

@@ -15,7 +15,7 @@ import {
 } from './ui/attachment'
 import { useLightboxHash } from '../hooks/use-lightbox-hash'
 import { formatVideoDuration, useVideoThumbnailCached } from '../hooks/use-video-thumbnail'
-import { getFileIcon, isImage, isVideo } from '../lib/attachment-utils'
+import { getFileIcon, isMedia, isVideo } from '../lib/attachment-utils'
 import { useFormat } from '../hooks/use-format'
 
 export interface GalleryAttachment {
@@ -140,8 +140,8 @@ export function AttachmentGallery({
     [getPreviewUrl, resolveThumb]
   )
 
-  const media = (attachments ?? []).filter((att) => isImage(att.type) || isVideo(att.type))
-  const files = (attachments ?? []).filter((att) => !isImage(att.type) && !isVideo(att.type))
+  const media = (attachments ?? []).filter((att) => isMedia(att.type))
+  const files = (attachments ?? []).filter((att) => !isMedia(att.type))
 
   const lightboxMedia: LightboxMedia[] = media.map((att) => ({
     id: att.id,
