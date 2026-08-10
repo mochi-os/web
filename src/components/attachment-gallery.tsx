@@ -212,12 +212,24 @@ export function AttachmentGallery({
     )
   })
 
+  // Wrapped rather than stacked: the chips already size to their own content,
+  // so several documents pack across the line instead of spending a row each.
+  // Not square tiles — a document has no thumbnail to recognise it by, and a
+  // tile narrow enough to grid neatly cuts the name off long before the part
+  // that tells one audit from another.
   const fileLinks = !hideFiles && files.length > 0 ? (
-    <div className="flex flex-col space-y-1">
+    <div className="flex flex-wrap gap-1">
       {files.map((attachment) => {
         const FileIcon = getFileIcon(attachment.type)
         return (
-          <Attachment key={attachment.id} size="sm">
+          <Attachment
+            key={attachment.id}
+            size="sm"
+            // Without a ceiling one long filename takes the whole line and the
+            // wrapping buys nothing on that row. min() keeps the narrow-screen
+            // clamp that the base max-w-full was providing.
+            className="max-w-[min(100%,20rem)]"
+          >
             <AttachmentTrigger asChild>
               <a
                 href={resolveUrl(attachment)}
