@@ -38,6 +38,7 @@ import {
   pendingFileKey,
 } from "../../lib/attachment-utils";
 import { getErrorMessage } from "../../lib/handle-server-error";
+import { useAttachmentError } from "../../hooks/use-attachment-error";
 import { authenticatedUrl } from "../../lib/shell-bridge";
 import { toast } from "../../lib/toast-utils";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
@@ -83,6 +84,7 @@ export function EntityObjectAttachments({
   const queryClient = useQueryClient();
   const { formatFileSize } = useFormat();
   const { progress: uploadProgress, upload } = useUploadProgress();
+  const attachmentError = useAttachmentError();
 
   const { data, isLoading } = useQuery({
     queryKey: ["attachments", containerId, objectId],
@@ -109,7 +111,7 @@ export function EntityObjectAttachments({
       });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, t`Failed to upload attachment`));
+      toast.error(attachmentError(error, t`Failed to upload attachment`));
     },
     onSettled: () => setInFlight([]),
   });
@@ -274,6 +276,9 @@ export function EntityObjectAttachments({
                 size: file.size,
                 type: file.type,
                 previewUrl: inFlightPreviews[i],
+                previewKind: isVideo(file.type)
+                  ? ("video" as const)
+                  : ("image" as const),
                 progress: uploadProgress?.slices?.[i],
               }))}
               layout="grid"

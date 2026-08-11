@@ -9,7 +9,7 @@ import {
   type AttachmentComposerProps,
   type ComposerFileState,
 } from './attachment-composer'
-import { pendingFileKey } from '../lib/attachment-utils'
+import { isMedia, isVideo, pendingFileKey } from '../lib/attachment-utils'
 import type { UploadSlice } from '../lib/upload-slices'
 import { toast } from '../lib/toast-utils'
 import { cn } from '../lib/utils'
@@ -219,7 +219,11 @@ export function ComposerAttachments({
         name: file.name,
         size: file.size,
         type: file.type,
-        previewUrl: file.type.startsWith('image/') ? previewUrls[i] : null,
+        // Media, not images: `useImageObjectUrls` mints a URL for a staged clip
+        // too, and asking only about images here threw it away and left the
+        // video drawing an icon inside the media block.
+        previewUrl: isMedia(file.type) ? previewUrls[i] : null,
+        previewKind: isVideo(file.type) ? ('video' as const) : ('image' as const),
         progress: progress?.[i],
       })),
     [files, previewUrls, progress]

@@ -18,5 +18,13 @@ export function handleServerError(error: unknown) {
     errMsg = t`Content not found.`
   }
 
+  // A refused body reached the toast as whatever the server happened to put in
+  // it, which for an oversized upload is not something anyone can act on. The
+  // ceiling is the account's remaining storage, so the answer is always to send
+  // less rather than to try again.
+  if (normalized.status === 413) {
+    errMsg = t`That was too large to upload. Remove or shrink files and try again.`
+  }
+
   toast.error(errMsg)
 }

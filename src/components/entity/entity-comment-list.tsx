@@ -18,6 +18,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { UploadProgress } from "../ui/upload-progress";
 import { toast } from "../../lib/toast-utils";
 import { getErrorMessage } from "../../lib/handle-server-error";
+import { useAttachmentError } from "../../hooks/use-attachment-error";
 import { useAuthStore } from "../../stores/auth-store";
 import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
@@ -116,6 +117,7 @@ export function EntityCommentList({
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((s) => s.identity);
   const { progress: uploadProgress, upload } = useUploadProgress();
+  const attachmentError = useAttachmentError();
 
   const { data, isLoading } = useQuery({
     queryKey: ["comments", containerId, objectId],
@@ -170,7 +172,7 @@ export function EntityCommentList({
       });
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, t`Failed to post comment`));
+      toast.error(attachmentError(err, t`Failed to post comment`));
     },
   });
 

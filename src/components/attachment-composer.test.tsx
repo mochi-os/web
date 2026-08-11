@@ -57,6 +57,32 @@ describe('AttachmentComposer', () => {
     expect(screen.getByText('a.png')).toBeInTheDocument()
   })
 
+  // An <img> renders nothing for a video source, so a staged clip needs the
+  // caller to say which element to draw. It used to get neither the URL nor the
+  // kind and fell through to an icon.
+  describe('video previews', () => {
+    const clip = (name: string) =>
+      item(name, { type: 'video/mp4', previewUrl: `blob:${name}`, previewKind: 'video' as const })
+
+    it('draws a video element for a staged clip', () => {
+      show({ preview: 'tile', items: [clip('clip.mp4')] })
+      const video = document.querySelector('video')
+      expect(video).toHaveAttribute('src', 'blob:clip.mp4')
+      expect(document.querySelector('img')).toBeNull()
+    })
+
+    it('draws one in an inline chip too', () => {
+      show({ preview: 'inline', items: [clip('clip.mp4')] })
+      expect(document.querySelector('video')).toHaveAttribute('src', 'blob:clip.mp4')
+    })
+
+    it('falls back to the icon when there is no preview URL', () => {
+      show({ preview: 'tile', items: [item('clip.mp4', { type: 'video/mp4' })] })
+      expect(document.querySelector('video')).toBeNull()
+      expect(screen.getByText('clip.mp4')).toBeInTheDocument()
+    })
+  })
+
   it('reports the index of the attachment being removed', () => {
     const onRemove = vi.fn()
     show({ onRemove })
@@ -282,6 +308,17 @@ describe('AttachmentComposer', () => {
         items: [doc('notes.md'), item('a.png'), doc('spec.pdf'), item('b.png')],
       })
       expect(drawnNames()).toEqual(['a.png', 'b.png', 'notes.md', 'spec.pdf'])
+    })
+
+    // Video is media to the gallery, so it has to be media here too, or the
+    // composer and the posted attachment disagree about where a clip belongs.
+    it('sorts video into the media block, not the file block', () => {
+      show({
+        preview: 'tile',
+        groupMedia: true,
+        items: [doc('notes.md'), item('clip.mp4', { type: 'video/mp4' }), item('a.png')],
+      })
+      expect(drawnNames()).toEqual(['clip.mp4', 'a.png', 'notes.md'])
     })
 
     it('keeps the staged order inside each block', () => {
