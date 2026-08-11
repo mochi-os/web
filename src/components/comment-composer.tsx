@@ -192,6 +192,10 @@ interface ComposerAttachmentsProps {
   preview?: AttachmentComposerProps['preview']
   /** Draw the images and video first, as the posted comment will. */
   groupMedia?: AttachmentComposerProps['groupMedia']
+  /** Names for the two blocks `groupMedia` draws. */
+  blockLabels?: AttachmentComposerProps['blockLabels']
+  /** The app's own "add files" tile, drawn as the last cell of the grid. */
+  addSlot?: AttachmentComposerProps['addSlot']
 }
 
 /**
@@ -211,6 +215,8 @@ export function ComposerAttachments({
   layout,
   preview,
   groupMedia,
+  blockLabels,
+  addSlot,
 }: ComposerAttachmentsProps) {
   const items = useMemo(
     () =>
@@ -240,6 +246,8 @@ export function ComposerAttachments({
       onRemove={(index) => onRemove(files[index])}
       onReorder={onReorder}
       groupMedia={groupMedia}
+      blockLabels={blockLabels}
+      addSlot={addSlot}
       onRetry={onRetry}
     />
   )
