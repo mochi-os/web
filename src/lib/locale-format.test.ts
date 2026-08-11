@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
-import { formatDate, formatTime, formatRelativeTime } from './locale-format'
+import { formatDate, formatTime, formatDateTime, formatRelativeTime } from './locale-format'
 
 // A date whose month abbreviation differs visibly between languages.
 const MARCH = new Date(2026, 2, 14, 15, 30, 0)
@@ -121,5 +121,49 @@ describe('relative-time units are translatable', () => {
     expect(formatRelativeTime(now() - 10, 'YYYY-MM-DD')).toBe('Just now')
     // Older than a month falls through to an absolute date.
     expect(formatRelativeTime(now() - 5184000, 'YYYY-MM-DD')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
+
+describe('the timezone preference reaches the rendered value', () => {
+  beforeEach(() => load('en'))
+
+  // A fixed instant, so the assertions below do not depend on the machine's
+  // own zone: 2026-03-14T15:30:00Z.
+  const INSTANT = new Date(Date.UTC(2026, 2, 14, 15, 30, 0))
+
+  it('renders the same instant differently either side of the world', () => {
+    expect(formatTime(INSTANT, '24h', 'UTC')).toBe('15:30:00')
+    expect(formatTime(INSTANT, '24h', 'Asia/Tokyo')).toBe('00:30:00')
+    expect(formatTime(INSTANT, '24h', 'America/Los_Angeles')).toBe('08:30:00')
+  })
+
+  it('rolls the date over when the zone crosses midnight', () => {
+    expect(formatDate(INSTANT, 'YYYY-MM-DD', 'UTC')).toBe('2026-03-14')
+    // Tokyo is already the next day at 15:30Z.
+    expect(formatDate(INSTANT, 'YYYY-MM-DD', 'Asia/Tokyo')).toBe('2026-03-15')
+  })
+
+  it('applies the zone to the 12-hour clock and its meridiem', () => {
+    expect(formatTime(INSTANT, '12h', 'UTC')).toBe('3:30:00 PM')
+    expect(formatTime(INSTANT, '12h', 'Asia/Tokyo')).toBe('12:30:00 AM')
+  })
+
+  it('applies the zone to the month name form', () => {
+    expect(formatDate(INSTANT, 'D MMM YYYY', 'Asia/Tokyo')).toBe('15 Mar 2026')
+  })
+
+  it('combines both halves in formatDateTime', () => {
+    expect(formatDateTime(INSTANT, 'YYYY-MM-DD', '24h', 'Asia/Tokyo')).toBe('2026-03-15 00:30:00')
+  })
+
+  it('falls back to local time when the zone is absent or unusable', () => {
+    // No preference: identical to the plain Date getters, which is what every
+    // existing caller relied on before the parameter existed.
+    const local = new Date(2026, 2, 14, 15, 30, 0)
+    expect(formatTime(local, '24h')).toBe('15:30:00')
+    expect(formatDate(local, 'YYYY-MM-DD')).toBe('2026-03-14')
+    // A zone Intl rejects must degrade rather than throw inside a render.
+    expect(formatTime(local, '24h', 'Not/AZone')).toBe('15:30:00')
+    expect(formatDate(local, 'YYYY-MM-DD', 'Not/AZone')).toBe('2026-03-14')
   })
 })
