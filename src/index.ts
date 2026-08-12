@@ -228,6 +228,7 @@ export * from './context/game-websocket-context'
 export * from './context/game-websocket-provider'
 export { useGameWebsocketManager } from './hooks/use-game-websocket-manager'
 export * from './hooks/use-game-websocket'
+export * from './hooks/create-game-hooks'
 export {
   createLastGameStorage,
   type LastGameStorage,
