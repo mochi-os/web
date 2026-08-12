@@ -4,7 +4,7 @@
 import * as React from 'react'
 import { cn } from '../../lib/utils'
 
-function Textarea({ className, ref, ...props }: React.ComponentProps<'textarea'>) {
+function Textarea({ className, ref, onInput, ...props }: React.ComponentProps<'textarea'>) {
   const innerRef = React.useRef<HTMLTextAreaElement | null>(null)
 
   const autoResize = React.useCallback((el: HTMLTextAreaElement | null) => {
@@ -25,6 +25,12 @@ function Textarea({ className, ref, ...props }: React.ComponentProps<'textarea'>
         if (typeof ref === 'function') ref(el)
         else if (ref) ref.current = el
         autoResize(el)
+      }}
+      // Uncontrolled usage (e.g. react-hook-form register) never changes
+      // props.value, so the effect alone would only size the initial render.
+      onInput={(e) => {
+        autoResize(e.currentTarget)
+        onInput?.(e)
       }}
       data-slot='textarea'
       className={cn(

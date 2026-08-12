@@ -2,7 +2,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { forwardRef, useEffect, useRef, useState, type ReactNode } from 'react'
+import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/utils'
 import { computeMentionDropdownPosition } from './mention-dropdown-position'
@@ -77,6 +77,17 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   /** Last value written locally (keystroke / insert). Skips redundant prop sync. */
   const lastLocalValueRef = useRef(value)
+
+  const autoResize = useCallback((el: HTMLTextAreaElement | null) => {
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }
+  }, [])
+
+  useEffect(() => {
+    autoResize(textareaRef.current)
+  }, [value, autoResize])
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [asyncResults, setAsyncResults] = useState<MentionUser[]>([])
@@ -279,6 +290,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
           } else if (forwardedRef) {
             forwardedRef.current = node
           }
+          autoResize(node)
         }}
         value={value}
         onChange={handleChange}
