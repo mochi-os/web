@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
-import { type LocalePreferences, getShellInitData, onShellMessage } from '../lib/shell-bridge'
+import { type LocalePreferences, getShellInitData, onShellMessage, isInShell } from '../lib/shell-bridge'
 import type { DateFormat, TimeFormat, TimestampDisplay, NumberFormat } from '../lib/locale-format'
 import { setActiveLocale } from './i18n-provider'
 
@@ -173,14 +173,38 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     return shellData?.locale ?? defaultRaw
   })
 
-  // Listen for locale changes from the shell
+  // Shell init data arrives by postMessage AFTER this tree mounts, so the
+  // useState initialiser above sees null on the first render and 'init' has to
+  // be handled here as well as 'locale-change' - listening only for the latter
+  // meant the preferences never arrived at all unless the user changed one
+  // mid-session.
   useEffect(() => {
     const unsub = onShellMessage((msg) => {
-      if (msg.type === 'locale-change' && msg.locale) {
+      if ((msg.type === 'locale-change' || msg.type === 'init') && msg.locale) {
         setRaw(msg.locale as LocalePreferences)
       }
     })
     return () => unsub()
+  }, [])
+
+  // Top-window pages (settings, login, anonymous public URLs) have no shell to
+  // send them anything, so they must ask the server themselves. The endpoint
+  // needs only a session cookie and returns the same preferences the shell
+  // would have forwarded; anonymous callers just fail and keep the defaults.
+  useEffect(() => {
+    if (isInShell() || typeof fetch !== 'function') return
+    let cancelled = false
+    fetch('/_/shell', { method: 'POST', credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled || !body) return
+        const preferences = (body.locale ?? body.data?.locale) as LocalePreferences | undefined
+        if (preferences) setRaw(preferences)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const locale = useMemo(() => resolveLocale(raw), [raw])
@@ -194,6 +218,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       timeFormat: locale.timeFormat,
       timestampDisplay: locale.timestampDisplay,
       numberFormat: locale.numberFormat,
+      timezone: locale.timezone,
     })
   }, [locale])
 

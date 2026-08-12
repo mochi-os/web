@@ -197,6 +197,21 @@ export function shellNavigateExternal(url: string): void {
 }
 
 /**
+ * Open a genuinely off-origin URL (an externally hosted asset, a seller's own
+ * download link) in a new tab.
+ *
+ * Not shellNavigateExternal: despite the name, that one is for crossing
+ * between Mochi apps, and the shell drops anything whose origin isn't its own
+ * — so an external URL sent there is silently discarded and the click appears
+ * to do nothing. The app iframe is sandboxed with allow-popups and
+ * allow-popups-to-escape-sandbox, so window.open works here and the opened tab
+ * is not itself sandboxed.
+ */
+export function shellOpenExternal(url: string): boolean {
+  return window.open(url, '_blank', 'noopener,noreferrer') !== null
+}
+
+/**
  * Navigate the top-level window to an arbitrary URL (e.g. an OAuth consent
  * page on another origin). Required when the iframe can't navigate itself
  * because the destination refuses to load in frames (X-Frame-Options).
@@ -407,7 +422,18 @@ export function shellDownload(url: string, name: string): Promise<boolean> {
   }
   const id = ++downloadIdCounter
   return new Promise((resolve) => {
-    downloadCallbacks.set(id, resolve)
+    // A shell page that predates the download channel never answers, and a
+    // promise that never settles leaves the caller's spinner up for good.
+    const timer = setTimeout(() => {
+      if (downloadCallbacks.has(id)) {
+        downloadCallbacks.delete(id)
+        resolve(false)
+      }
+    }, 10000)
+    downloadCallbacks.set(id, (ok) => {
+      clearTimeout(timer)
+      resolve(ok)
+    })
     window.parent.postMessage({ type: 'download', url: absolute, name, id }, '*')
   })
 }
@@ -854,9 +880,25 @@ export function shellRequestPermission(
   permission: string,
   restricted: boolean
 ): Promise<'granted' | 'denied'> {
+  // Only the shell can show this dialog. In the top window window.parent is
+  // window itself, so the message would be posted to a document with no
+  // handler and the promise would never settle - denied is both the honest
+  // answer and the safe one.
+  if (!isInShell()) return Promise.resolve('denied')
   const id = ++permissionIdCounter
   return new Promise((resolve) => {
-    permissionCallbacks.set(id, resolve as (r: string) => void)
+    // Generous, because a real person has to read the dialog and decide; the
+    // point is only that a shell which never answers cannot hang the caller.
+    const timer = setTimeout(() => {
+      if (permissionCallbacks.has(id)) {
+        permissionCallbacks.delete(id)
+        resolve('denied')
+      }
+    }, 120000)
+    permissionCallbacks.set(id, ((result: string) => {
+      clearTimeout(timer)
+      resolve(result as 'granted' | 'denied')
+    }) as (r: string) => void)
     window.parent.postMessage({ type: 'request-permission', id, app, permission, restricted }, '*')
   })
 }

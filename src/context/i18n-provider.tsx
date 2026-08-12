@@ -86,15 +86,15 @@ function registerCustomFormatters(): void {
   const formats = (i18n as unknown as { formats?: Record<string, FormatFn> }).formats ?? {}
   formats.mochiDate = (v: unknown) => {
     const d = v instanceof Date ? v : new Date(v as string | number)
-    return fmtDate(d, activeLocale.dateFormat)
+    return fmtDate(d, activeLocale.dateFormat, activeLocale.timezone)
   }
   formats.mochiTime = (v: unknown) => {
     const d = v instanceof Date ? v : new Date(v as string | number)
-    return fmtTime(d, activeLocale.timeFormat)
+    return fmtTime(d, activeLocale.timeFormat, activeLocale.timezone)
   }
   formats.mochiDateTime = (v: unknown) => {
     const d = v instanceof Date ? v : new Date(v as string | number)
-    return fmtDateTime(d, activeLocale.dateFormat, activeLocale.timeFormat)
+    return fmtDateTime(d, activeLocale.dateFormat, activeLocale.timeFormat, activeLocale.timezone)
   }
   formats.mochiNumber = (v: unknown) => {
     return fmtNumber(typeof v === 'number' ? v : Number(v), activeLocale.numberFormat)

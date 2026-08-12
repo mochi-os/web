@@ -304,6 +304,7 @@ export {
   initShellBridge,
   shellNavigateBack,
   shellNavigateExternal,
+  shellOpenExternal,
   shellNavigateTop,
   shellDownload,
   shellSaveBlob,

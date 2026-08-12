@@ -14,9 +14,9 @@ import {
 export function useFormat() {
   const { locale } = useLocale()
   return {
-    formatDate: (date: Date) => formatDate(date, locale.dateFormat),
-    formatTime: (date: Date) => formatTime(date, locale.timeFormat),
-    formatDateTime: (date: Date) => formatDateTime(date, locale.dateFormat, locale.timeFormat),
+    formatDate: (date: Date) => formatDate(date, locale.dateFormat, locale.timezone),
+    formatTime: (date: Date) => formatTime(date, locale.timeFormat, locale.timezone),
+    formatDateTime: (date: Date) => formatDateTime(date, locale.dateFormat, locale.timeFormat, locale.timezone),
     formatTimestamp: (ts: number, fallback?: string) => formatUserTimestamp(ts, locale, fallback),
     formatNumber: (value: number, decimals?: number) => formatNumber(value, locale.numberFormat, decimals),
     formatFileSize: (bytes: number) => formatFileSize(bytes, locale.numberFormat),
