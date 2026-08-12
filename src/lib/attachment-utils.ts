@@ -1,11 +1,14 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { File, FileText, Image } from 'lucide-react'
+import { File, FileText, Image, Video } from 'lucide-react'
 
 // Get appropriate icon component for content type
 export function getFileIcon(type: string) {
-  if (type.startsWith('image/')) return Image
+  if (isImage(type)) return Image
+  // Video answered with the generic file icon, so a clip that had no preview
+  // yet was indistinguishable from an archive.
+  if (isVideo(type)) return Video
   if (type.startsWith('text/')) return FileText
   return File
 }

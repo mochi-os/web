@@ -9,7 +9,7 @@ import {
   type AttachmentComposerProps,
   type ComposerFileState,
 } from './attachment-composer'
-import { pendingFileKey } from '../lib/attachment-utils'
+import { isMedia, isVideo, pendingFileKey } from '../lib/attachment-utils'
 import type { UploadSlice } from '../lib/upload-slices'
 import { toast } from '../lib/toast-utils'
 import { cn } from '../lib/utils'
@@ -192,6 +192,10 @@ interface ComposerAttachmentsProps {
   preview?: AttachmentComposerProps['preview']
   /** Draw the images and video first, as the posted comment will. */
   groupMedia?: AttachmentComposerProps['groupMedia']
+  /** Names for the two blocks `groupMedia` draws. */
+  blockLabels?: AttachmentComposerProps['blockLabels']
+  /** The app's own "add files" tile, drawn as the last cell of the grid. */
+  addSlot?: AttachmentComposerProps['addSlot']
 }
 
 /**
@@ -211,6 +215,8 @@ export function ComposerAttachments({
   layout,
   preview,
   groupMedia,
+  blockLabels,
+  addSlot,
 }: ComposerAttachmentsProps) {
   const items = useMemo(
     () =>
@@ -219,7 +225,11 @@ export function ComposerAttachments({
         name: file.name,
         size: file.size,
         type: file.type,
-        previewUrl: file.type.startsWith('image/') ? previewUrls[i] : null,
+        // Media, not images: `useImageObjectUrls` mints a URL for a staged clip
+        // too, and asking only about images here threw it away and left the
+        // video drawing an icon inside the media block.
+        previewUrl: isMedia(file.type) ? previewUrls[i] : null,
+        previewKind: isVideo(file.type) ? ('video' as const) : ('image' as const),
         progress: progress?.[i],
       })),
     [files, previewUrls, progress]
@@ -236,6 +246,8 @@ export function ComposerAttachments({
       onRemove={(index) => onRemove(files[index])}
       onReorder={onReorder}
       groupMedia={groupMedia}
+      blockLabels={blockLabels}
+      addSlot={addSlot}
       onRetry={onRetry}
     />
   )

@@ -4,7 +4,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "@radix-ui/react-slot"
-import { X } from "lucide-react"
+import { GripVertical, Plus, X } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import type { UploadSlice } from "../../lib/upload-slices"
@@ -285,6 +285,13 @@ type AttachmentTileProps = Omit<React.ComponentProps<"div">, "children"> & {
   progress?: UploadSlice | null
   /** Lifts the tile while the pointer is carrying it. */
   dragging?: boolean
+  /**
+   * This tile can be dragged into a different place, which draws the grip and
+   * position chip. Purely the affordance — the drag itself is the caller's.
+   */
+  draggable?: boolean
+  /** 1-based place in the list, shown beside the grip. */
+  position?: number
   /** Small label over the bottom-left of the preview, such as "New". */
   badge?: React.ReactNode
   onRemove?: () => void
@@ -309,6 +316,8 @@ function AttachmentTile({
   state = "idle",
   progress,
   dragging = false,
+  draggable = false,
+  position,
   badge,
   onRemove,
   removeLabel,
@@ -323,7 +332,7 @@ function AttachmentTile({
       data-slot="attachment-tile"
       data-state={state}
       className={cn(
-        "group/tile bg-card text-card-foreground relative flex w-24 shrink-0 flex-col overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] sm:w-32",
+        "group/tile bg-card text-card-foreground relative flex w-24 shrink-0 flex-col overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none sm:w-32",
         state === "error" && "border-destructive/40",
         dragging && "ring-primary z-10 scale-[1.04] shadow-lg ring-2",
         className
@@ -343,7 +352,7 @@ function AttachmentTile({
             playsInline
             draggable={false}
             className={cn(
-              "absolute inset-0 size-full object-cover",
+              "absolute inset-0 size-full object-contain",
               // The blanket dim is the indeterminate signal. With a real slice
               // the fill and the queued dim say it better, and stacking the two
               // put a waiting tile at 30% — which reads as broken, not queued.
@@ -351,21 +360,42 @@ function AttachmentTile({
             )}
           />
         ) : previewUrl ? (
-          // Absolutely positioned, not merely sized: an in-flow image keeps its
-          // intrinsic height as a minimum, and a tall screenshot then forces the
-          // square open from the inside and drags the whole row with it.
-          <img
-            src={previewUrl}
-            alt={name}
-            draggable={false}
-            className={cn(
-              "absolute inset-0 size-full object-cover",
-              // The blanket dim is the indeterminate signal. With a real slice
-              // the fill and the queued dim say it better, and stacking the two
-              // put a waiting tile at 30% — which reads as broken, not queued.
-              state === "uploading" && !progress && "opacity-60"
-            )}
-          />
+          <>
+            {/*
+             * A blurred, over-scaled copy of the same image fills the square
+             * behind the real one, so `object-contain` letterboxing reads as a
+             * deliberate backdrop instead of dead grey bands. Costs nothing
+             * extra over the network: the browser already has this bitmap.
+             */}
+            <img
+              src={previewUrl}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 size-full scale-110 object-cover opacity-40 blur-xl"
+            />
+            {/*
+             * Absolutely positioned, not merely sized: an in-flow image keeps
+             * its intrinsic height as a minimum, and a tall screenshot then
+             * forces the square open from the inside and drags the whole row
+             * with it. `object-contain` so a portrait photo and a wide
+             * screenshot both show what was actually attached — a centre crop
+             * of a screenshot is unrecognisable, which is the one case where
+             * picking the right file out of ten matters most.
+             */}
+            <img
+              src={previewUrl}
+              alt={name}
+              draggable={false}
+              className={cn(
+                "absolute inset-0 size-full object-contain",
+                // The blanket dim is the indeterminate signal. With a real slice
+                // the fill and the queued dim say it better, and stacking the two
+                // put a waiting tile at 30% — which reads as broken, not queued.
+                state === "uploading" && !progress && "opacity-60"
+              )}
+            />
+          </>
         ) : (
           <div
             className={cn(
@@ -374,6 +404,23 @@ function AttachmentTile({
             )}
           >
             {icon}
+          </div>
+        )}
+        {/*
+         * The only thing that said a tile could be reordered was the cursor
+         * turning into a grab hand, which nothing on a touch screen ever sees
+         * and nobody reads on a desktop either. The grip says it can move; the
+         * number says where it currently is, which is the thing being edited.
+         * pointer-events-none so the press still reaches the tile and starts
+         * the drag — this is a marker, not a handle you have to aim at.
+         */}
+        {draggable && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/55 py-0.5 pr-1.5 pl-1 text-[11px] leading-none font-medium text-white backdrop-blur-sm"
+          >
+            <GripVertical className="size-3" />
+            {position != null && <span>{position}</span>}
           </div>
         )}
         {badge && (
@@ -425,8 +472,41 @@ function AttachmentTile({
   )
 }
 
+/**
+ * The "add files" cell at the end of a tile grid.
+ *
+ * Same footprint as a tile on purpose: it reads as the next empty place in the
+ * list rather than as a button that happens to sit nearby, and it gives an
+ * empty composer something to show — which is also the only visible hint that
+ * the area takes a drop.
+ *
+ * Carries no copy: `label` is a node the app supplies, so the 22 app catalogs
+ * gain nothing new from this file.
+ */
+function AttachmentAddTile({
+  label,
+  className,
+  ...props
+}: React.ComponentProps<"button"> & { label?: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      data-slot="attachment-add-tile"
+      className={cn(
+        "text-muted-foreground hover:border-ring hover:text-foreground focus-visible:ring-ring flex aspect-square w-24 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 sm:w-32",
+        className
+      )}
+      {...props}
+    >
+      <Plus className="size-5" />
+      {label && <span className="px-2 text-xs font-medium">{label}</span>}
+    </button>
+  )
+}
+
 export {
   Attachment,
+  AttachmentAddTile,
   AttachmentProgress,
   AttachmentTile,
   AttachmentGroup,

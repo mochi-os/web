@@ -33,11 +33,16 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
-import { ComposerAttachments } from "../comment-composer";
+import {
+  ComposerAttachments,
+  dropActiveClass,
+  useComposerDrop,
+} from "../comment-composer";
 import { UploadProgress } from "../ui/upload-progress";
-import { naturalCompare } from "../../lib/utils";
+import { cn, naturalCompare } from "../../lib/utils";
 import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
+import { useAttachmentError } from "../../hooks/use-attachment-error";
 import { removePendingFile } from "../../lib/attachment-utils";
 import { mergePendingFiles } from "../../lib/composer-files";
 import { moveItem } from "../../lib/reorder";
@@ -121,8 +126,16 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const pendingFilePreviewUrls = useImageObjectUrls(pendingFiles);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // One staging path for the picker and for a drop, so the two cannot come to
+  // disagree about what counts as a file already staged.
+  const addFiles = (picked: File[]) => {
+    if (picked.length === 0) return;
+    setPendingFiles((prev) => mergePendingFiles(prev, picked));
+  };
   const queryClient = useQueryClient();
   const { progress: uploadProgress, upload } = useUploadProgress();
+  const attachmentError = useAttachmentError();
 
   // Filter classes to those allowed by the current view
   const availableClasses = useMemo(() => {
@@ -377,14 +390,29 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
       onOpenChange(false);
     },
     onError: (err: Error) => {
-      setError(err.message);
+      // An oversized attachment used to surface here as whatever the server
+      // put in the body, which said nothing about the files.
+      setError(attachmentError(err, err.message));
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Claims the drop for the whole dialog. Without this the browser takes it,
+  // navigates to the dropped file, and the half-filled form goes with it.
+  const { isDragActive, dropzoneProps } = useComposerDrop({
+    onFiles: addFiles,
+    disabled: createMutation.isPending,
+  });
+
+  // Shared by the Create button and the composer's retry, so a second attempt
+  // clears the banner the same way the first one does.
+  const submit = () => {
     setError(null);
     createMutation.mutate();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submit();
   };
 
   const handleFieldChange = (fieldId: string, value: string) => {
@@ -485,9 +513,15 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 overflow-hidden"
+          {...dropzoneProps}
+        >
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-2xl space-y-6">
+            {/* The outline sits on the field stack rather than the form: the
+                form is the scroll clip, and an outline on it would be cut off. */}
+            <div className={cn("max-w-2xl space-y-6", isDragActive && dropActiveClass)}>
               {creatableClasses.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   <Trans>No item types can be created yet. Create the required parent items first.</Trans>
@@ -566,7 +600,16 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                     // The object is created first and the files uploaded after,
                     // so the tiles sit inert for a moment before they start
                     // filling. That gap is the record being written, not a stall.
-                    state={createMutation.isPending ? "uploading" : "idle"}
+                    // Driven off the same `error` the banner reads, rather than
+                    // a second flag that could disagree with it.
+                    state={
+                      createMutation.isPending
+                        ? "uploading"
+                        : error
+                          ? "error"
+                          : "idle"
+                    }
+                    onRetry={submit}
                     progress={uploadProgress?.slices}
                     onRemove={(file) =>
                       setPendingFiles((prev) => removePendingFile(prev, file))
@@ -590,9 +633,7 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                       // silently drop the pick.
                       const picked = Array.from(e.target.files ?? []);
                       e.target.value = "";
-                      if (picked.length > 0) {
-                        setPendingFiles((prev) => mergePendingFiles(prev, picked));
-                      }
+                      addFiles(picked);
                     }}
                   />
                   <Button

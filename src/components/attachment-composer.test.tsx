@@ -11,6 +11,11 @@ import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { AttachmentComposer, type ComposerItem } from './attachment-composer'
 
+/** A tile leads with its position chip, so the name is the paragraph's. */
+function tileName(tile: HTMLElement) {
+  return tile.querySelector('p')?.textContent
+}
+
 function item(name: string, extra: Partial<ComposerItem> = {}): ComposerItem {
   return { key: name, name, size: 1024, type: 'image/png', ...extra }
 }
@@ -55,6 +60,32 @@ describe('AttachmentComposer', () => {
     show({ preview: 'tile' })
     expect(document.querySelectorAll('[data-slot=attachment-tile]')).toHaveLength(2)
     expect(screen.getByText('a.png')).toBeInTheDocument()
+  })
+
+  // An <img> renders nothing for a video source, so a staged clip needs the
+  // caller to say which element to draw. It used to get neither the URL nor the
+  // kind and fell through to an icon.
+  describe('video previews', () => {
+    const clip = (name: string) =>
+      item(name, { type: 'video/mp4', previewUrl: `blob:${name}`, previewKind: 'video' as const })
+
+    it('draws a video element for a staged clip', () => {
+      show({ preview: 'tile', items: [clip('clip.mp4')] })
+      const video = document.querySelector('video')
+      expect(video).toHaveAttribute('src', 'blob:clip.mp4')
+      expect(document.querySelector('img')).toBeNull()
+    })
+
+    it('draws one in an inline chip too', () => {
+      show({ preview: 'inline', items: [clip('clip.mp4')] })
+      expect(document.querySelector('video')).toHaveAttribute('src', 'blob:clip.mp4')
+    })
+
+    it('falls back to the icon when there is no preview URL', () => {
+      show({ preview: 'tile', items: [item('clip.mp4', { type: 'video/mp4' })] })
+      expect(document.querySelector('video')).toBeNull()
+      expect(screen.getByText('clip.mp4')).toBeInTheDocument()
+    })
   })
 
   it('reports the index of the attachment being removed', () => {
@@ -196,7 +227,7 @@ describe('AttachmentComposer', () => {
         if (slot !== 'attachment-tile') {
           return { left: 0, top: 0, right: 260, bottom: 100 } as DOMRect
         }
-        const first = this.textContent?.startsWith('a.png')
+        const first = tileName(this) === 'a.png'
         return first
           ? ({ left: 0, top: 0, right: 100, bottom: 100 } as DOMRect)
           : ({ left: 160, top: 0, right: 260, bottom: 100 } as DOMRect)
@@ -230,6 +261,73 @@ describe('AttachmentComposer', () => {
     expect(onReorder).not.toHaveBeenCalled()
   })
 
+  // Dragging was the only way to change the order, which left a keyboard with
+  // no way in at all.
+  describe('keyboard reordering', () => {
+    const tile = (name: string) =>
+      screen.getByText(name).closest('[data-slot=attachment-tile]')!
+
+    it('moves the focused tile with the arrow keys', () => {
+      const onReorder = vi.fn()
+      show({ preview: 'tile', onReorder })
+
+      fireEvent.keyDown(tile('a.png'), { key: 'ArrowRight' })
+      expect(onReorder).toHaveBeenCalledWith(0, 1)
+
+      fireEvent.keyDown(tile('b.png'), { key: 'ArrowLeft' })
+      expect(onReorder).toHaveBeenCalledWith(1, 0)
+    })
+
+    it('stops at the ends of the list', () => {
+      const onReorder = vi.fn()
+      show({ preview: 'tile', onReorder })
+
+      fireEvent.keyDown(tile('a.png'), { key: 'ArrowLeft' })
+      fireEvent.keyDown(tile('b.png'), { key: 'ArrowRight' })
+
+      expect(onReorder).not.toHaveBeenCalled()
+    })
+
+    // Same wall the pointer meets, or the two ways of reordering would disagree
+    // about what the list is allowed to become.
+    it('holds inside its own block when the media is grouped', () => {
+      const onReorder = vi.fn()
+      show({
+        preview: 'tile',
+        groupMedia: true,
+        onReorder,
+        items: [item('notes.md', { type: 'text/plain' }), item('a.png'), item('b.png')],
+      })
+
+      // b.png is drawn last in the media block, with the file block after it.
+      fireEvent.keyDown(tile('b.png'), { key: 'ArrowRight' })
+      expect(onReorder).not.toHaveBeenCalled()
+    })
+
+    it('leaves the tiles static when there is nothing to reorder', () => {
+      show({ preview: 'tile' })
+      expect(tile('a.png')).not.toHaveAttribute('tabindex')
+    })
+
+    it('freezes the keys while a send is in flight', () => {
+      const onReorder = vi.fn()
+      show({ preview: 'tile', onReorder, state: 'uploading' })
+
+      fireEvent.keyDown(tile('a.png'), { key: 'ArrowRight' })
+      expect(onReorder).not.toHaveBeenCalled()
+    })
+  })
+
+  // The add tile is the only thing an empty composer has to show, so an empty
+  // list with one is not the same as an empty list without.
+  it('renders the add slot, with or without staged files', () => {
+    show({ preview: 'tile', addSlot: <button type='button'>add</button> })
+    expect(screen.getByText('add')).toBeInTheDocument()
+
+    const { container } = show({ items: [], addSlot: <button type='button'>add</button> })
+    expect(container).not.toBeEmptyDOMElement()
+  })
+
   // The posted comment draws its media in one block and everything else in
   // another, so a composer that interleaves the two shows an order the post
   // will not keep. Grouping changes how the staged array is drawn and nothing
@@ -238,9 +336,11 @@ describe('AttachmentComposer', () => {
     const doc = (name: string) => item(name, { type: 'text/plain' })
     const staged = [doc('notes.md'), item('a.png'), item('b.png')]
 
+    // The tile's own text is the name paragraph. Read that rather than the
+    // tile's whole textContent: the grip chip puts the position in front of it.
     const drawnNames = () =>
       Array.from(document.querySelectorAll('[data-slot=attachment-tile]')).map(
-        (tile) => tile.textContent?.replace('1.0 KB', '')
+        (tile) => tile.querySelector('p')?.textContent
       )
 
     // jsdom does no layout, so the tiles are handed a row of rectangles in the
@@ -251,7 +351,7 @@ describe('AttachmentComposer', () => {
           if (this.getAttribute('data-slot') !== 'attachment-tile') {
             return { left: 0, top: 0, right: 1000, bottom: 100 } as DOMRect
           }
-          const slot = names.findIndex((name) => this.textContent?.startsWith(name))
+          const slot = names.findIndex((name) => tileName(this) === name)
           return {
             left: slot * 160,
             top: 0,
@@ -284,6 +384,17 @@ describe('AttachmentComposer', () => {
       expect(drawnNames()).toEqual(['a.png', 'b.png', 'notes.md', 'spec.pdf'])
     })
 
+    // Video is media to the gallery, so it has to be media here too, or the
+    // composer and the posted attachment disagree about where a clip belongs.
+    it('sorts video into the media block, not the file block', () => {
+      show({
+        preview: 'tile',
+        groupMedia: true,
+        items: [doc('notes.md'), item('clip.mp4', { type: 'video/mp4' }), item('a.png')],
+      })
+      expect(drawnNames()).toEqual(['clip.mp4', 'a.png', 'notes.md'])
+    })
+
     it('keeps the staged order inside each block', () => {
       show({
         preview: 'tile',
@@ -308,6 +419,32 @@ describe('AttachmentComposer', () => {
       fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
 
       expect(onRemove).toHaveBeenCalledWith(1)
+    })
+
+    // The blocks refuse each other's drops, which read as a broken drag while
+    // nothing on screen said there were two blocks at all.
+    it('names the two blocks when the app supplies names', () => {
+      show({
+        preview: 'tile',
+        layout: 'grid',
+        groupMedia: true,
+        items: staged,
+        blockLabels: { media: 'Photos', files: 'Files' },
+      })
+      expect(screen.getByText('Photos')).toBeInTheDocument()
+      expect(screen.getByText('Files')).toBeInTheDocument()
+    })
+
+    it('leaves out the file label when every attachment is media', () => {
+      show({
+        preview: 'tile',
+        layout: 'grid',
+        groupMedia: true,
+        items: [item('a.png'), item('b.png')],
+        blockLabels: { media: 'Photos', files: 'Files' },
+      })
+      expect(screen.getByText('Photos')).toBeInTheDocument()
+      expect(screen.queryByText('Files')).not.toBeInTheDocument()
     })
 
     it('reorders by staged index, not by drawn position', () => {

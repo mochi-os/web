@@ -20,6 +20,10 @@ function image(name: string) {
   return new File(['x'], name, { type: 'image/png' })
 }
 
+function video(name: string) {
+  return new File(['x'], name, { type: 'video/mp4' })
+}
+
 function other(name: string) {
   return new File(['x'], name, { type: 'application/pdf' })
 }
@@ -58,12 +62,34 @@ describe('useImageObjectUrls', () => {
     expect(calls.filter((c) => c.kind === 'create')).toHaveLength(2)
   })
 
-  it('maps a non-image to null without minting a URL for it', () => {
+  it('maps anything that is not media to null without minting a URL for it', () => {
     const { result } = renderHook(() =>
       useImageObjectUrls([image('a.png'), other('b.pdf')])
     )
     expect(result.current).toEqual(['blob:test/1', null])
     expect(calls.filter((c) => c.kind === 'create')).toHaveLength(1)
+  })
+
+  // A staged clip draws a <video> the same way a photo draws an <img>, and the
+  // URL points at a local File, so the preview costs nothing to fetch.
+  it('mints a URL for video as well as for images', () => {
+    const { result } = renderHook(() =>
+      useImageObjectUrls([image('a.png'), video('b.mp4'), other('c.pdf')])
+    )
+    expect(result.current).toEqual(['blob:test/1', 'blob:test/2', null])
+  })
+
+  it('revokes a video URL when its file leaves the list', () => {
+    const clip = video('b.mp4')
+    const { rerender } = renderHook(({ files }) => useImageObjectUrls(files), {
+      initialProps: { files: [clip] },
+    })
+
+    rerender({ files: [] })
+
+    expect(calls.filter((c) => c.kind === 'revoke').map((c) => c.url)).toEqual([
+      'blob:test/1',
+    ])
   })
 
   it('creates the replacements BEFORE revoking what they replace', () => {

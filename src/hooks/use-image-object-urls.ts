@@ -2,10 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useEffect, useMemo, useRef } from 'react'
+import { isMedia } from '../lib/attachment-utils'
 
 /**
- * Creates object URLs for image files and revokes them once they are no longer
- * displayed. Array index matches the input `files` array.
+ * Creates object URLs for image and video files and revokes them once they are
+ * no longer displayed. Array index matches the input `files` array.
+ *
+ * Video is included because the composer draws a `<video>` for a staged clip
+ * exactly as it draws an `<img>` for a photo. A URL here points at a local
+ * File, so the preview costs no network however large the clip is. Anything
+ * that is not media gets null and falls back to its icon.
  *
  * URLs are minted during render, so callers have valid URLs in the same render
  * that files changed — no flash, no extra render cycle.
@@ -32,7 +38,7 @@ export function useImageObjectUrls(files: readonly File[]): (string | null)[] {
   const urls = useMemo(
     () =>
       files.map((file) => {
-        if (!file.type.startsWith('image/')) return null
+        if (!isMedia(file.type)) return null
         const cached = cacheRef.current.get(file)
         if (cached) return cached
         const url = URL.createObjectURL(file)

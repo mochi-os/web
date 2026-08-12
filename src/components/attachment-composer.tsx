@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, type KeyboardEvent, type ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
 import { Trans } from '@lingui/react/macro'
 import type { UploadSlice } from '../lib/upload-slices'
@@ -103,6 +103,21 @@ export interface AttachmentComposerProps {
    * from splitting the two apart.
    */
   groupMedia?: boolean
+  /**
+   * Names for the two blocks `groupMedia` draws, as nodes the app supplies for
+   * the same reason `meta` and `badge` are: a string added here lands in all 22
+   * app catalogs, and only the composers that group have anything to name.
+   *
+   * Without them the blocks are still separated by a rule, so the wall a drag
+   * cannot cross is visible either way.
+   */
+  blockLabels?: { media?: ReactNode; files?: ReactNode }
+  /**
+   * Rendered as the last cell of the grid, for the app's own "add files" tile.
+   * It belongs in the grid rather than the dialog footer: adding files is
+   * something you do to this list, not to the dialog.
+   */
+  addSlot?: ReactNode
   /** Offered when `state` is `error`. */
   onRetry?: () => void
   className?: string
@@ -120,6 +135,8 @@ export function AttachmentComposer({
   onRemove,
   onReorder,
   groupMedia = false,
+  blockLabels,
+  addSlot,
   onRetry,
   className,
 }: AttachmentComposerProps) {
@@ -156,16 +173,62 @@ export function AttachmentComposer({
     canMove: groupMedia ? sameBlock : undefined,
   })
 
-  if (items.length === 0) return null
+  if (items.length === 0 && !addSlot) return null
 
   const canDrag = reorderable && items.length > 1
   const removable = state !== 'uploading' && Boolean(onRemove)
   const dragClass = cn('select-none', canDrag && 'cursor-grab active:cursor-grabbing')
 
+  /**
+   * Arrow keys move the focused tile one place. Until now the order could only
+   * be changed by dragging, which left keyboard users — and anyone on a screen
+   * reader — with no way to change it at all. Left and right only: the grid
+   * wraps at a width nothing here knows, so up and down have no honest meaning.
+   */
+  const moveByKey = (position: number, delta: number) => {
+    const to = position + delta
+    if (to < 0 || to >= items.length) return
+    if (groupMedia && !sameBlock(position, to)) return
+    onReorder?.(order[position], order[to])
+  }
+
+  const keyProps = (position: number) =>
+    canDrag
+      ? {
+          tabIndex: 0,
+          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+            const step =
+              event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+            if (step === 0) return
+            event.preventDefault()
+            // Read the direction off the tile rather than assuming: in an RTL
+            // locale the tile to the visual right is the previous one.
+            const rtl =
+              getComputedStyle(event.currentTarget).direction === 'rtl'
+            moveByKey(position, rtl ? -step : step)
+          },
+        }
+      : {}
+
+  // Media takes the first `mediaCount` drawn positions, so the rule goes in
+  // front of the first file. `w-full` in a wrapping flex row is what breaks the
+  // line — the two blocks would otherwise run together mid-row and the refused
+  // drop between them would look like a bug. Grid only: a full-width child in
+  // the sideways-scrolling row would be a gap as wide as the composer.
+  const dividerAt =
+    layout === 'grid' && groupMedia && mediaCount > 0 && mediaCount < items.length
+      ? mediaCount
+      : -1
+
   return (
     <div className={cn('space-y-1', className)}>
+      {blockLabels?.media && mediaCount > 0 && (
+        <div className='text-muted-foreground text-[11px] font-medium'>
+          {blockLabels.media}
+        </div>
+      )}
       <AttachmentGroup layout={layout} {...getGroupProps()}>
-        {order.map((index, position) => {
+        {order.flatMap((index, position) => {
           const item = items[index]
           const FileIcon = getFileIcon(item.type)
           const itemState = item.state ?? state
@@ -193,8 +256,21 @@ export function AttachmentComposer({
               (item.meta ?? totalLabel)
             )
 
+          const rule =
+            position === dividerAt ? (
+              <div key='block-rule' className='flex w-full items-center gap-2 pt-1'>
+                {blockLabels?.files && (
+                  <span className='text-muted-foreground text-[11px] font-medium'>
+                    {blockLabels.files}
+                  </span>
+                )}
+                <span aria-hidden className='bg-border h-px flex-1' />
+              </div>
+            ) : null
+
           if (preview === 'tile') {
-            return (
+            return [
+              rule,
               <AttachmentTile
                 key={item.key}
                 name={item.name}
@@ -206,15 +282,20 @@ export function AttachmentComposer({
                 state={itemState}
                 progress={slice}
                 dragging={draggingIndex === position}
+                draggable={canDrag}
+                position={canDrag ? position + 1 : undefined}
+                aria-label={item.name}
                 onRemove={removable ? () => onRemove?.(index) : undefined}
                 removeLabel={t`Remove`}
                 {...getItemProps(position)}
+                {...keyProps(position)}
                 className={dragClass}
-              />
-            )
+              />,
+            ]
           }
 
-          return (
+          return [
+            rule,
             <Attachment
               key={item.key}
               state={itemState}
@@ -250,9 +331,10 @@ export function AttachmentComposer({
                   </AttachmentAction>
                 </AttachmentActions>
               )}
-            </Attachment>
-          )
+            </Attachment>,
+          ]
         })}
+        {addSlot}
       </AttachmentGroup>
       {state === 'error' && onRetry && (
         <button
