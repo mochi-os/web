@@ -297,3 +297,68 @@ describe('authenticatedUrl', () => {
     expect(authenticatedUrl('/x')).toBe('/x')
   })
 })
+
+// The child stops waiting for `init` after 5s, but the shell's own ready
+// watchdog is 10s — twice that — so init landing in the 5-10s window is
+// ordinary, not pathological. Removing the listener at the timeout discarded
+// it permanently and the app ran tokenless until the ten-minute refresh.
+describe('initShellBridge', () => {
+  it('accepts init that arrives before the timeout', async () => {
+    const { initShellBridge } = await import('./shell-bridge')
+    const pending = initShellBridge()
+    dispatchFromParent({ type: 'init', token: 'early', inShell: true })
+    await expect(pending).resolves.toMatchObject({ token: 'early', inShell: true })
+  })
+
+  it('resolves with an empty token when the shell never answers', async () => {
+    vi.useFakeTimers()
+    try {
+      const { initShellBridge } = await import('./shell-bridge')
+      const pending = initShellBridge()
+      vi.advanceTimersByTime(5000)
+      await expect(pending).resolves.toMatchObject({ token: '', inShell: true })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('still applies init that arrives after the timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const { initShellBridge, getShellInitData } = await import('./shell-bridge')
+      const pending = initShellBridge()
+      vi.advanceTimersByTime(5000)
+      const settled = await pending
+      expect(settled.token).toBe('')
+
+      dispatchFromParent({ type: 'init', token: 'late', inShell: true })
+
+      // Visible through the cached accessor...
+      expect(getShellInitData()?.token).toBe('late')
+      // ...and through the object an earlier caller already holds, which is
+      // the only way a component that awaited the promise sees it. The bridge
+      // fills the resolved object in place for exactly that reason.
+      expect(settled.token).toBe('late')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('ignores a late init that did not come from the shell', async () => {
+    vi.useFakeTimers()
+    try {
+      const { initShellBridge, getShellInitData } = await import('./shell-bridge')
+      const pending = initShellBridge()
+      vi.advanceTimersByTime(5000)
+      await pending
+
+      // Same payload, but not stamped with the parent as its source.
+      window.dispatchEvent(
+        new MessageEvent('message', { data: { type: 'init', token: 'injected', inShell: true } }),
+      )
+      expect(getShellInitData()?.token).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

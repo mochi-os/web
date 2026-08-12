@@ -134,8 +134,12 @@ export function initShellBridge(): Promise<ShellInitData> {
   }
 
   shellInitPromise = new Promise((resolve) => {
+    // Resolve after 5s so nothing hangs waiting for a shell that will not
+    // answer — but the listener STAYS. The shell's own ready watchdog is
+    // 10s, twice this, so init legitimately arrives after we have given up;
+    // removing the listener here discarded it permanently and left the app
+    // running tokenless until the ten-minute token refresh.
     const timeoutId = window.setTimeout(() => {
-      window.removeEventListener('message', onMessage)
       shellInitData = { token: '', inShell: true }
       resolve(shellInitData)
     }, 5000)
@@ -147,13 +151,21 @@ export function initShellBridge(): Promise<ShellInitData> {
       if (event.source !== window.parent) return
       const data = event.data
       if (!data || typeof data !== 'object') return
+      if (data.type !== 'init') return
 
-      if (data.type === 'init') {
-        window.clearTimeout(timeoutId)
-        window.removeEventListener('message', onMessage)
+      window.clearTimeout(timeoutId)
+      if (shellInitData) {
+        // Late arrival: the promise already resolved with the placeholder
+        // above, and callers hold THAT object. Fill it in place rather than
+        // replacing the reference — the same in-place update token-refresh
+        // relies on, and the only way an already-resolved caller sees the
+        // token without a second notification channel.
+        Object.assign(shellInitData, data)
+      } else {
         shellInitData = data as ShellInitData
-        resolve(shellInitData)
       }
+      // A no-op once settled, which is what makes the late path safe.
+      resolve(shellInitData)
     }
 
     window.addEventListener('message', onMessage)

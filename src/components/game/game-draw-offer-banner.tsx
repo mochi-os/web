@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 
 interface GameDrawOfferBannerProps {
@@ -42,7 +42,12 @@ export function GameDrawOfferBanner({
           )}
         </Button>
         <Button size='sm' onClick={onAccept} disabled={disabled}>
-          {isAccepting ? <Loader2 className='size-4 animate-spin' /> : t`Accept`}
+          {isAccepting ? (
+            <Loader2 className='size-4 animate-spin' />
+          ) : (
+            <Check className='size-4' />
+          )}
+          {t`Accept`}
         </Button>
       </div>
     </div>

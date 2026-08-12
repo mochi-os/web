@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import { Trans } from '@lingui/react/macro'
-import { Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { Button } from './button'
 import { Input } from './input'
 import { cn } from '../../lib/utils'
@@ -74,8 +74,9 @@ export function SecretField({
           {saving ? (
             <Loader2 className='h-4 w-4 animate-spin' />
           ) : (
-            <Trans>Save</Trans>
+            <Check className='size-4' />
           )}
+          <Trans>Save</Trans>
         </Button>
       )}
     </div>
