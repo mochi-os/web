@@ -8,8 +8,14 @@
 // The dialog stays app-side, since each app's is its own. The title is a
 // callback, so go still shows "(13×13)" and chess still shows the name alone.
 //
-// Every string arrives resolved from the app, so both keep their own wording
-// and neither adds a message to the other apps' catalogs.
+// words holds a third copy, 132 lines, and it is why the avatar and the badge
+// are both optional. words lists no opponent avatar at all — its games can
+// have up to four players, so there is no single opponent to draw — and it
+// marks the games waiting on you with a "!" the other two have no equivalent
+// for.
+//
+// Every string arrives resolved from the app, so each keeps its own wording
+// and none adds a message to the other apps' catalogs.
 
 import { useMemo, type FC, type ReactNode } from 'react'
 import { Plus } from 'lucide-react'
@@ -89,12 +95,17 @@ function WebsocketStatusIndicator({
 
 interface GameLayoutProps<G extends GameSummary> {
   games: G[]
-  /** Path segment the asset proxy is mounted under, e.g. "chess". */
-  appName: string
+  /**
+   * Path segment the asset proxy is mounted under, e.g. "chess". Required to
+   * draw opponent avatars; omit it, like words, and the entries carry no icon.
+   */
+  appName?: string
   /** The other player's identity, so their avatar can be fetched. */
-  opponentId: (game: G) => string
+  opponentId?: (game: G) => string
   /** What the sidebar entry reads. go appends the board size here. */
   gameTitle: (game: G) => string
+  /** Short marker on an entry, e.g. words' "!" for the games awaiting you. */
+  badge?: (game: G) => string | undefined
   labels: GameLayoutLabels
   onNewGame: () => void
   /** Connection dot in the sidebar footer. Omit to hide it. */
@@ -107,6 +118,7 @@ export function GameLayout<G extends GameSummary>({
   appName,
   opponentId,
   gameTitle,
+  badge,
   labels,
   onNewGame,
   websocketStatus,
@@ -119,16 +131,22 @@ export function GameLayout<G extends GameSummary>({
     const activeGames = sorted.filter((g) => g.status === 'active')
     const completedGames = sorted.filter((g) => g.status !== 'active')
 
+    const entry = (game: G) => ({
+      title: gameTitle(game),
+      url: `/${game.id}`,
+      icon:
+        appName && opponentId
+          ? opponentIcon(appName, game.id, opponentId(game))
+          : undefined,
+      badge: badge?.(game),
+    })
+
     const groups: SidebarData['navGroups'] = []
 
     if (activeGames.length > 0) {
       groups.push({
         title: active,
-        items: activeGames.map((game) => ({
-          title: gameTitle(game),
-          url: `/${game.id}`,
-          icon: opponentIcon(appName, game.id, opponentId(game)),
-        })),
+        items: activeGames.map(entry),
       })
     }
 
@@ -138,9 +156,7 @@ export function GameLayout<G extends GameSummary>({
         // Styled like words' completed entries rather than printing the raw
         // untranslated status enum after the name.
         items: completedGames.map((game) => ({
-          title: gameTitle(game),
-          url: `/${game.id}`,
-          icon: opponentIcon(appName, game.id, opponentId(game)),
+          ...entry(game),
           className: 'text-muted-foreground',
         })),
       })
@@ -164,6 +180,7 @@ export function GameLayout<G extends GameSummary>({
     appName,
     opponentId,
     gameTitle,
+    badge,
     onNewGame,
     active,
     completed,

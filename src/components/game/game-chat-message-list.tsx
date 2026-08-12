@@ -7,9 +7,16 @@
 // — the date grouping, the two scroll effects, the skeleton, the error and
 // empty states and the bubbles — was the same in both.
 //
+// words holds a third copy, 305 lines, and it is the reason the system labels
+// are optional: words has no draw, so it supplies `resigned` alone and the
+// other three events keep falling through to the stored body. Its move line is
+// the richest of the three — plays, passes and exchanges all arrive as type
+// 'move' and are told apart by the event marker — which is exactly what the
+// render prop is for.
+//
 // The move line is a render prop, so each game keeps its own wording. Every
-// other string arrives resolved from the app, so neither app adds a message to
-// the other apps' catalogs.
+// other string arrives resolved from the app, so no app adds a message to the
+// other apps' catalogs.
 
 import {
   Fragment,
@@ -49,12 +56,17 @@ export interface GameChatMessage {
 /**
  * System events, resolved by the app. A legacy row with no `event` renders its
  * stored `body` instead, which is why none of these is a fallback.
+ *
+ * Each is optional, and an absent one — or a callback returning nullish — also
+ * falls back to the body. That is how a game without draws (words) supplies
+ * `resigned` alone, and how words keeps showing the body for a resignation
+ * whose actor name is empty.
  */
 export interface GameChatSystemLabels {
-  resigned: (name: string) => string
-  drawOffered: (name: string) => string
-  drawAgreed: string
-  drawDeclined: (name: string) => string
+  resigned?: (name: string) => ReactNode
+  drawOffered?: (name: string) => ReactNode
+  drawAgreed?: ReactNode
+  drawDeclined?: (name: string) => ReactNode
 }
 
 interface GameChatMessageListProps<M extends GameChatMessage> {
@@ -64,7 +76,7 @@ interface GameChatMessageListProps<M extends GameChatMessage> {
   messagesError: unknown
   currentUserIdentity: string
   emptyLabel: string
-  systemLabels: GameChatSystemLabels
+  systemLabels?: GameChatSystemLabels
   /** The move line. chess marks captures, go localises "Pass". */
   renderMove: (message: M, isSent: boolean) => ReactNode
 }
@@ -76,7 +88,7 @@ export function GameChatMessageList<M extends GameChatMessage>({
   messagesError,
   currentUserIdentity,
   emptyLabel,
-  systemLabels,
+  systemLabels = {},
   renderMove,
 }: GameChatMessageListProps<M>) {
   const { formatDate, formatDateTime } = useFormat()
@@ -215,16 +227,17 @@ export function GameChatMessageList<M extends GameChatMessage>({
             // the actor name. Legacy rows (no event) fall back to the body.
             if (message.type === 'system') {
               const name = message.name
-              let text = message.body
+              let label: ReactNode = null
               if (message.event === 'resign') {
-                text = systemLabels.resigned(name)
+                label = systemLabels.resigned?.(name)
               } else if (message.event === 'draw_offer') {
-                text = systemLabels.drawOffered(name)
+                label = systemLabels.drawOffered?.(name)
               } else if (message.event === 'draw_accept') {
-                text = systemLabels.drawAgreed
+                label = systemLabels.drawAgreed
               } else if (message.event === 'draw_decline') {
-                text = systemLabels.drawDeclined(name)
+                label = systemLabels.drawDeclined?.(name)
               }
+              const text = label ?? message.body
               return (
                 <div
                   key={`${message.id}-${index}`}
