@@ -43,18 +43,27 @@ export function useLoadMore<T, P = Record<string, unknown>>(
 
   const firstRun = useRef(true)
   const paramsKeyRef = useRef(paramsKey)
-  const initialRef = useRef(initial)
+  const initialItemsRef = useRef(initial?.items)
 
-  // Sync to new `initial` reference (e.g. after a route loader re-run).
-  // Callers must pass a stable reference that only changes when loader data changes.
+  // Sync to fresh loader data (e.g. after a route loader re-run), keyed on the
+  // items array rather than the wrapper object. Callers build the wrapper
+  // inline — `initial: data ? { items: data.rows, total: data.total } : undefined`
+  // reads naturally and every page here writes it that way — so the wrapper is
+  // a new reference on every render. Keying on it re-ran this effect after each
+  // append, resetting the list to the loader's first page and the page counter
+  // to 1: "Load more" fetched page 2 forever and the list never grew. The items
+  // array comes from loader data, so its identity changes only when the loader
+  // actually re-runs, which is the event this is meant to follow.
+  const initialItems = initial?.items
+  const initialTotal = initial?.total
   useEffect(() => {
-    if (initial && initial !== initialRef.current) {
-      initialRef.current = initial
-      setItems(initial.items)
-      setTotal(initial.total)
+    if (initialItems && initialItems !== initialItemsRef.current) {
+      initialItemsRef.current = initialItems
+      setItems(initialItems)
+      setTotal(initialTotal ?? 0)
       setPage(1)
     }
-  }, [initial])
+  }, [initialItems, initialTotal])
 
   const fetchPage = useCallback(
     async (nextPage: number, replace: boolean) => {
