@@ -72,7 +72,11 @@ export function EntityLayout<Row extends EntityListRow>({
 
     const rowItems: NavItem[] = sorted.map((row) => ({
       title: row.name,
-      url: viewUrl(row.fingerprint ?? row.id),
+      // `||`, not `??`: fingerprint is a required string, so a container
+      // without one carries "" rather than null, and `??` would hand viewUrl an
+      // empty id and link the entry to the list root. Both apps' own layouts
+      // had the same `??` before this moved here.
+      url: viewUrl(row.fingerprint || row.id),
       icon,
     }))
 
