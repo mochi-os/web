@@ -193,7 +193,10 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   // an exact replacement does — an emptied winner or draw offer is falsy, so
   // `payload.x || current.x` silently keeps the stale one. Refetching also
   // updates the list, which a detail-only merge left showing the old status.
-  if (msgType !== 'move' && payload[snapshotField]) {
+  // A 'state' frame is a repair by definition and counts whether or not it
+  // carries the position field; words' own hook treated it that way, and chess
+  // and go only ever saw one with a fen, so neither noticed the difference.
+  if (msgType !== 'move' && (payload[snapshotField] || msgType === 'state')) {
     void queryClient.invalidateQueries({
       queryKey: keys.detail(gameId),
       exact: true,
