@@ -34,8 +34,8 @@ export interface GameMessagesPage {
 }
 
 /**
- * The calls the shared hooks make. An app's own client has these and more; the
- * extra ones (chess's move history, go's pass) stay in the app.
+ * The calls every game has. An app's own client has these and more; the extra
+ * ones (chess's move history, go's pass) stay in the app.
  */
 export interface GameApiShape {
   list: () => Promise<unknown>
@@ -47,11 +47,20 @@ export interface GameApiShape {
   sendMessage: (gameId: string, payload: never) => Promise<unknown>
   move: (gameId: string, payload: never) => Promise<unknown>
   resign: (gameId: string) => Promise<unknown>
+  delete: (gameId: string) => Promise<unknown>
+  getFriendsForNewGame: () => Promise<unknown>
+}
+
+/**
+ * The draw calls, which not every game has. chess and go do; words has no draw
+ * offer at all. An api carrying all three is handed the three draw hooks, and
+ * one carrying none is handed none, so a game without draws cannot destructure
+ * a hook whose endpoint it lacks.
+ */
+export interface GameDrawApi {
   drawOffer: (gameId: string) => Promise<unknown>
   drawAccept: (gameId: string) => Promise<unknown>
   drawDecline: (gameId: string) => Promise<unknown>
-  delete: (gameId: string) => Promise<unknown>
-  getFriendsForNewGame: () => Promise<unknown>
 }
 
 export const gameQueryKeys = {
@@ -86,7 +95,7 @@ export function createGameHooks<A extends GameApiShape>(
   type SendResponse = Result<A['sendMessage']>
   type MoveResponse = Result<A['move']>
   type ResignResponse = Result<A['resign']>
-  type DrawResponse = Result<A['drawOffer']>
+  type DrawResponse = A extends GameDrawApi ? Result<A['drawOffer']> : never
   type DeleteResponse = Result<A['delete']>
   type NewGameResponse = Result<A['getFriendsForNewGame']>
 
@@ -300,18 +309,30 @@ export function createGameHooks<A extends GameApiShape>(
     (gameId) => gamesApi.resign(gameId),
     true,
   )
-  const useDrawOfferMutation = gameAction<DrawResponse>(
-    (gameId) => gamesApi.drawOffer(gameId),
-    false,
-  )
-  const useDrawAcceptMutation = gameAction<DrawResponse>(
-    (gameId) => gamesApi.drawAccept(gameId),
-    true,
-  )
-  const useDrawDeclineMutation = gameAction<DrawResponse>(
-    (gameId) => gamesApi.drawDecline(gameId),
-    false,
-  )
+
+  // Narrowed rather than required, so an api without the three still satisfies
+  // GameApiShape. The non-null calls below only ever run through `drawHooks`,
+  // which is spread in only when all three are present.
+  const draws = gamesApi as Partial<GameDrawApi>
+  const hasDraws =
+    typeof draws.drawOffer === 'function' &&
+    typeof draws.drawAccept === 'function' &&
+    typeof draws.drawDecline === 'function'
+
+  const drawHooks = {
+    useDrawOfferMutation: gameAction<DrawResponse>(
+      (gameId) => draws.drawOffer!(gameId),
+      false,
+    ),
+    useDrawAcceptMutation: gameAction<DrawResponse>(
+      (gameId) => draws.drawAccept!(gameId),
+      true,
+    ),
+    useDrawDeclineMutation: gameAction<DrawResponse>(
+      (gameId) => draws.drawDecline!(gameId),
+      false,
+    ),
+  }
 
   const useDeleteGameMutation = (
     options?: UseMutationOptions<
@@ -337,7 +358,7 @@ export function createGameHooks<A extends GameApiShape>(
     })
   }
 
-  return {
+  const base = {
     gameKeys: gameQueryKeys,
     useGameDetailQuery,
     useGamesQuery,
@@ -346,9 +367,15 @@ export function createGameHooks<A extends GameApiShape>(
     useMoveMutation,
     useNewGameFriendsQuery,
     useResignMutation,
-    useDrawOfferMutation,
-    useDrawAcceptMutation,
-    useDrawDeclineMutation,
     useDeleteGameMutation,
   }
+
+  // The cast is what lets one factory serve both: chess and go satisfy
+  // GameDrawApi and see the draw hooks on the returned type, words does not and
+  // does not. The runtime spread and the conditional type agree by
+  // construction, since both key on the same three calls being present.
+  return {
+    ...base,
+    ...(hasDraws ? drawHooks : {}),
+  } as typeof base & (A extends GameDrawApi ? typeof drawHooks : object)
 }

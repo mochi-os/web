@@ -26,13 +26,19 @@ import {
 } from '../lib/realtime-websocket-manager'
 import { useGameWebsocketManager } from './use-game-websocket-manager'
 
-/** The game fields this hook writes. Each app's own Game type is this and more. */
+/**
+ * The game fields this hook writes. Each app's own Game type is this and more.
+ *
+ * `draw_offer` and `fen` are optional: words has no draw offer to clear, and it
+ * carries its position as `board`. Which field marks a repair snapshot is the
+ * `snapshotField` option.
+ */
 export interface GameWebsocketGame {
   id: string
   status: string
   winner: string | null
-  draw_offer: string | null
-  fen: string
+  draw_offer?: string | null
+  fen?: string
 }
 
 export interface GameWebsocketMessage {
@@ -125,7 +131,8 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   queryClient: QueryClient,
   unknownSenderLabel: string,
   keys: GameWebsocketKeys,
-  mergeMove: MergeMovePayload<G>,
+  mergeMove: MergeMovePayload<G> | undefined,
+  snapshotField: string,
 ) => {
   if (!gameId) return
 
@@ -186,7 +193,7 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   // an exact replacement does — an emptied winner or draw offer is falsy, so
   // `payload.x || current.x` silently keeps the stale one. Refetching also
   // updates the list, which a detail-only merge left showing the old status.
-  if (msgType !== 'move' && payload.fen) {
+  if (msgType !== 'move' && payload[snapshotField]) {
     void queryClient.invalidateQueries({
       queryKey: keys.detail(gameId),
       exact: true,
@@ -195,22 +202,29 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   }
 
   if (msgType === 'move') {
-    queryClient.setQueryData<DetailCache>(keys.detail(gameId), (current) => {
-      if (!current) return current
-      return {
-        ...current,
-        game: {
-          ...current.game,
-          // The app's own Game is this shape plus its own fields, which is
-          // exactly what mergeMove is there to read and write.
-          ...mergeMove(current.game as G, payload),
-          fen: (payload.fen as string) || current.game.fen,
-          status: (payload.status as string) || current.game.status,
-          winner: (payload.winner as string) || current.game.winner,
-          draw_offer: null,
-        },
-      }
-    })
+    // No mergeMove means the game cannot be patched from the payload at all.
+    // words is the case: its rack and bag are private per-player state, so the
+    // copies in the frame are not the ones this viewer is entitled to, and the
+    // refetch below is the only correct response. Games that can patch do, for
+    // responsiveness, and still refetch afterwards.
+    if (mergeMove) {
+      queryClient.setQueryData<DetailCache>(keys.detail(gameId), (current) => {
+        if (!current) return current
+        return {
+          ...current,
+          game: {
+            ...current.game,
+            // The app's own Game is this shape plus its own fields, which is
+            // exactly what mergeMove is there to read and write.
+            ...mergeMove(current.game as G, payload),
+            fen: (payload.fen as string) || current.game.fen,
+            status: (payload.status as string) || current.game.status,
+            winner: (payload.winner as string) || current.game.winner,
+            draw_offer: null,
+          },
+        }
+      })
+    }
 
     // The merge above is for responsiveness only. A move payload is a complete
     // snapshot like any other, and the merge cannot clear falsy fields (an
@@ -282,7 +296,17 @@ export interface UseGameWebsocketOptions<
   keys: GameWebsocketKeys
   /** Resolved by the app, so no string is added to every app's catalog. */
   unknownSenderLabel: string
-  mergeMove: MergeMovePayload<G>
+  /**
+   * Merges the game-specific fields of a move payload. Omit it when the game's
+   * state cannot be patched from the frame, as words' cannot: the move is then
+   * applied by refetching alone.
+   */
+  mergeMove?: MergeMovePayload<G>
+  /**
+   * Payload field whose presence marks a complete applied snapshot. chess and
+   * go carry the position as `fen`, words as `board`. Defaults to `fen`.
+   */
+  snapshotField?: string
 }
 
 export function useGameWebsocket<G extends GameWebsocketGame>({
@@ -291,6 +315,7 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
   keys,
   unknownSenderLabel,
   mergeMove,
+  snapshotField = 'fen',
 }: UseGameWebsocketOptions<G>): UseGameWebsocketResult {
   const manager = useGameWebsocketManager()
   const queryClient = useQueryClient()
@@ -317,6 +342,7 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
           unknownSenderLabel,
           keys,
           mergeMove,
+          snapshotField,
         )
       },
       onStatusChange: (nextSnapshot) => {
@@ -327,7 +353,16 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
     return () => {
       unsubscribe()
     }
-  }, [gameId, gameKey, manager, queryClient, unknownSenderLabel, keys, mergeMove])
+  }, [
+    gameId,
+    gameKey,
+    manager,
+    queryClient,
+    unknownSenderLabel,
+    keys,
+    mergeMove,
+    snapshotField,
+  ])
 
   const forceReconnect = useCallback(() => {
     if (gameId && manager) {
