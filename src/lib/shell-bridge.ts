@@ -833,7 +833,16 @@ export function installShellNavigationSync(): void {
   // browser-back skip it (e.g. listing -> back lands on the Home app, not the
   // app's own home).
   const notifyShell = (replace: boolean) => {
-    const path = window.location.pathname + window.location.search + window.location.hash
+    // The iframe's own URL carries the shell's private _shell marker. The
+    // relayed path is the app's logical URL and must shed it: from the top
+    // history it re-enters the iframe src, where a second tagging plus the
+    // router's search serialization snowballs duplicate keys into
+    // ever-nesting JSON (?_shell=%5B%22%5B1%2C1%5D%22%2C1%5D).
+    const params = new URLSearchParams(window.location.search)
+    params.delete('_shell')
+    const query = params.toString()
+    const path =
+      window.location.pathname + (query ? `?${query}` : '') + window.location.hash
     window.parent.postMessage({ type: 'navigate', path, replace }, '*')
   }
 

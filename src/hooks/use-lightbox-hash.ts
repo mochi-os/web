@@ -48,7 +48,13 @@ export function useLightboxHash(
   // Update hash without triggering navigation
   const updateHash = useCallback(
     (id: string | null) => {
-      const base = window.location.pathname + window.location.search
+      // Drop the shell's private _shell marker from the search: pushing it
+      // back into history re-broadcasts it through the shell relay and it
+      // accumulates across round trips.
+      const params = new URLSearchParams(window.location.search)
+      params.delete('_shell')
+      const query = params.toString()
+      const base = window.location.pathname + (query ? `?${query}` : '')
       if (id) {
         const newHash = `#${hashPrefix}-${id}`
         if (window.location.hash !== newHash) {
