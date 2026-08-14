@@ -54,6 +54,13 @@ function getInitialTheme(): Theme {
   if (shellData?.theme) {
     return shellData.theme as Theme
   }
+  // The server states the preference when it is "follow the system", because
+  // the class it renders alongside is only what that resolved to at load. Read
+  // it first: a page served while the OS was dark carries class="dark", and
+  // taking that as the preference freezes it there — the change listener below
+  // is gated on 'system', so it would never fire again and the page would stop
+  // following the system until a reload.
+  if (document.documentElement.dataset.appearance === 'auto') return 'system'
   // Respect server-rendered class (shell page sets class="dark" before JS loads)
   if (document.documentElement.classList.contains('dark')) return 'dark'
   if (document.documentElement.classList.contains('light')) return 'light'
