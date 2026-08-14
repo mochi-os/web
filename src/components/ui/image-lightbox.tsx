@@ -76,9 +76,7 @@ export function ImageLightbox({
   // is why this is a fullscreen request and not a message asking the shell to
   // hide its header. The request can be refused (top-window contexts without
   // the gesture, older shells, browser policy) and the lightbox is fine
-  // windowed, so refusals are swallowed. A manual exit (Esc consumed by the
-  // browser, system UI) leaves the lightbox open windowed; closing still
-  // cleans up whatever fullscreen state remains.
+  // windowed, so refusals are swallowed.
   useEffect(() => {
     if (!open) return
     document.documentElement.requestFullscreen?.().catch(() => {})
@@ -88,6 +86,21 @@ export function ImageLightbox({
       }
     }
   }, [open])
+
+  // Leaving fullscreen leaves the lightbox. The browser consumes the Esc that
+  // exits fullscreen without delivering a keydown, so without this the viewer
+  // needed a second press to close — and however fullscreen ends (Esc, system
+  // UI, navigation), a windowed leftover lightbox is not what the exit meant.
+  // The close path removes this listener before its own exitFullscreen runs,
+  // so a normal close never re-enters here.
+  useEffect(() => {
+    if (!open) return
+    const change = () => {
+      if (!document.fullscreenElement) onOpenChange(false)
+    }
+    document.addEventListener('fullscreenchange', change)
+    return () => document.removeEventListener('fullscreenchange', change)
+  }, [open, onOpenChange])
 
   // Reset loading/error state, zoom, and pause video when media changes
   useEffect(() => {
@@ -347,7 +360,11 @@ export function ImageLightbox({
               play/pause but close is here only */}
           <div
             className={cn(
-              'absolute left-1/2 top-3 flex max-w-[90vw] -translate-x-1/2 flex-col items-center gap-1 bg-black/50 px-4 py-2 text-white transition-opacity duration-300',
+              // backdrop-blur keeps the text legible when the box straddles
+              // an image edge: without it the translucent strip is nearly
+              // invisible over the letterbox and fights bright image content
+              // mid-word.
+              'absolute left-1/2 top-3 flex max-w-[90vw] -translate-x-1/2 flex-col items-center gap-1 bg-black/60 backdrop-blur-md px-4 py-2 text-white transition-opacity duration-300',
               // A one-row bar keeps the pill; the caption row would stretch
               // fully-round corners into a lozenge, so it squares them a step.
               currentMedia.caption ? 'rounded-2xl' : 'rounded-full',
