@@ -69,6 +69,26 @@ export function ImageLightbox({
     if (!ok) toast.error(t`Download failed`)
   }, [currentMedia, downloading])
 
+  // Fullscreen tracks the lightbox lifecycle: the tap that opened it is the
+  // gesture, and closing gives the window back. This is what hides the shell
+  // chrome (and the browser's) while viewing — the browser owns the trust
+  // story (its "press Esc to exit" overlay, forced exit on navigation), which
+  // is why this is a fullscreen request and not a message asking the shell to
+  // hide its header. The request can be refused (top-window contexts without
+  // the gesture, older shells, browser policy) and the lightbox is fine
+  // windowed, so refusals are swallowed. A manual exit (Esc consumed by the
+  // browser, system UI) leaves the lightbox open windowed; closing still
+  // cleans up whatever fullscreen state remains.
+  useEffect(() => {
+    if (!open) return
+    document.documentElement.requestFullscreen?.().catch(() => {})
+    return () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {})
+      }
+    }
+  }, [open])
+
   // Reset loading/error state, zoom, and pause video when media changes
   useEffect(() => {
     setIsLoading(true)
@@ -321,28 +341,20 @@ export function ImageLightbox({
             )}
           </div>
 
-          {/* Caption overlay. Persistent rather than joining the auto-hiding
-              controls: it is content being read, not chrome. Sits higher over
-              a video so it never covers the native controls. */}
-          {currentMedia.caption && (
-            <div
-              className={cn(
-                'absolute left-1/2 max-h-40 max-w-[min(90vw,40rem)] -translate-x-1/2 overflow-y-auto rounded-xl bg-black/60 px-4 py-2 text-center text-sm text-white',
-                isVideo ? 'bottom-20' : 'bottom-4'
-              )}
-            >
-              {currentMedia.caption}
-            </div>
-          )}
-
-          {/* Top bar overlay with filename, counter, and controls */}
-          {/* For videos, always show controls — native player handles play/pause but close is here only */}
+          {/* Top bar overlay with filename, counter, controls, and — when the
+              image carries one — the caption as a second row in the same box.
+              For videos, always show controls — native player handles
+              play/pause but close is here only */}
           <div
             className={cn(
-              'absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-4 rounded-full bg-black/50 px-4 py-2 text-white transition-opacity duration-300',
+              'absolute left-1/2 top-3 flex max-w-[90vw] -translate-x-1/2 flex-col items-center gap-1 bg-black/50 px-4 py-2 text-white transition-opacity duration-300',
+              // A one-row bar keeps the pill; the caption row would stretch
+              // fully-round corners into a lozenge, so it squares them a step.
+              currentMedia.caption ? 'rounded-2xl' : 'rounded-full',
               isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
           >
+            <div className='flex max-w-full items-center gap-4'>
             <span className='min-w-0 truncate text-sm text-white/70'>
               {hasMultiple && <>{currentIndex + 1}/{images.length} · </>}
               {currentMedia.name}
@@ -376,6 +388,12 @@ export function ImageLightbox({
                 <TooltipContent><Trans>Close</Trans></TooltipContent>
               </Tooltip>
             </div>
+            </div>
+            {currentMedia.caption && (
+              <span className='max-h-32 max-w-full overflow-y-auto text-center text-base text-white/70'>
+                {currentMedia.caption}
+              </span>
+            )}
           </div>
 
           {/* Navigation buttons */}

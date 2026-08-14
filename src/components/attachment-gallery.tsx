@@ -211,7 +211,11 @@ export function AttachmentGallery({
                   setAspect(attachment.id, img.naturalWidth / img.naturalHeight)
                 }
               }}
-              className='h-full w-full object-cover transition-transform group-hover/thumb:scale-105'
+              // text-transparent hides the alt text some browsers paint in
+              // the box while the bytes load (a caption flashing at the top
+              // of the tile); assistive technology reads the attribute, not
+              // the pixel colour.
+              className='h-full w-full object-cover text-transparent transition-transform group-hover/thumb:scale-105'
             />
           )}
           {caption && (
