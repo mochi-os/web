@@ -212,24 +212,32 @@ describe('theme value rules', () => {
     expect(isThemeFontSize('inherit')).toBe(false)
   })
 
-  // The shell is a plain script that cannot import this module, so its copy of
-  // these rules is the one that drifts. This asserts the copies still agree
-  // rather than trusting a comment to keep them in step.
-  it('matches the shell script copy of the same rules', async () => {
+  // The rules above stay live for the IFRAME side: an app styling its own
+  // document is its own business, and applyColorThemeToDOM still filters what
+  // it installs there.
+  //
+  // The shell script used to carry a duplicate of them, because it applied the
+  // same app-supplied values to the TRUSTED root and a plain script cannot
+  // import this module. It no longer accepts those values at all — the root is
+  // installed from the server's own resolution of the user's preference — so
+  // there is no copy left to drift. This asserts that replacement holds,
+  // because a shell that went back to installing an app's values could paint
+  // the permission dialog's text in its background colour.
+  it('leaves the trusted shell root to the server instead of copying these rules', async () => {
     const { readFileSync } = await import('node:fs')
     const { resolve } = await import('node:path')
     // vitest runs with lib/web as the working directory.
     const shell = readFileSync(
       resolve(process.cwd(), '../../apps/menu/web/public/shell.js'), 'utf8')
 
-    // The literals as they must appear in shell.js. Written out rather than
-    // extracted so a change to either copy fails here loudly.
-    expect(shell).toContain('/^--[A-Za-z0-9_-]+$/')
-    expect(shell).toContain('/url|image|src|element|cross-fade|paint|\\\\|\\/\\*/i')
-    expect(shell).toContain('n >= 50 && n <= 200')
-    // And the rules must actually be applied, not merely defined.
-    expect(shell).toContain('if (isFetchingValue(value)) continue')
-    expect(shell).toContain('if (isFontSize(value)) install(key, value)')
+    // The root is installed from the server's declarations, re-read whenever an
+    // app reports that the preference changed.
+    expect(shell).toContain('function applyThemeDeclarations')
+    expect(shell).toContain('function refreshTheme')
+    expect(shell).toContain('refreshTheme();')
+    // And never from the reporting app's own values.
+    expect(shell).not.toContain('applyThemeVars(data.colorTheme)')
+    expect(shell).not.toContain('theme.overrides')
   })
 })
 

@@ -40,16 +40,12 @@ export async function subscribe(
   }
 }
 
-export async function unsubscribe(): Promise<boolean> {
-  try {
-    const registration = await navigator.serviceWorker.ready
-    const subscription = await registration.pushManager.getSubscription()
-    if (subscription) return subscription.unsubscribe()
-    return true
-  } catch {
-    return false
-  }
-}
+// There is deliberately no unsubscribe() here. Dropping the browser
+// subscription is only half of it: the account row the subscription was
+// registered as has to go too, or the server keeps pushing to a dead endpoint.
+// That belongs to the shell, which owns the account API — see the menu app's
+// removeBrowserAccount. Apps reach it through usePush() in ../hooks/use-push,
+// which proxies unsubscribe to the shell over postMessage.
 
 export function getSubscriptionData(sub: PushSubscription) {
   const json = sub.toJSON()
