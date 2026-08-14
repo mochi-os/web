@@ -1,11 +1,11 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useMemo, type KeyboardEvent, type ReactNode } from 'react'
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
 import { Trans } from '@lingui/react/macro'
 import type { UploadSlice } from '../lib/upload-slices'
-import { RotateCcw, X } from 'lucide-react'
+import { Check, RotateCcw, X } from 'lucide-react'
 import {
   Attachment,
   AttachmentAction,
@@ -17,10 +17,26 @@ import {
   AttachmentTile,
   AttachmentTitle,
 } from './ui/attachment'
+import { Button } from './ui/button'
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from './ui/responsive-dialog'
+import { Textarea } from './ui/textarea'
 import { useDragReorder } from '../hooks/use-drag-reorder'
 import { useFormat } from '../hooks/use-format'
 import { getFileIcon, isMedia } from '../lib/attachment-utils'
 import { cn } from '../lib/utils'
+
+/**
+ * The longest caption the composer stages. Matches the bound the attachment
+ * library holds peer captions to, so a caption that survives locally is never
+ * silently truncated when it federates.
+ */
+export const attachmentCaptionMaximum = 1000
 
 /**
  * Lifecycle of the files a composer is holding.
@@ -54,7 +70,9 @@ export interface ComposerItem {
   previewUrl?: string | null
   /** A video preview needs a <video>; an <img> renders nothing for one. */
   previewKind?: 'image' | 'video'
-  /** Second line. Defaults to the formatted size. */
+  /** Shown in the caption editor and, when set, as the second line. */
+  caption?: string
+  /** Second line. Defaults to the caption, then the formatted size. */
   meta?: ReactNode
   /** Small label over the preview, such as a translated "New" chip. */
   badge?: ReactNode
@@ -120,6 +138,14 @@ export interface AttachmentComposerProps {
   addSlot?: ReactNode
   /** Offered when `state` is `error`. */
   onRetry?: () => void
+  /**
+   * Supply to let media attachments carry captions. Draws the caption button
+   * on every media tile; the button opens the editor and this receives what
+   * was saved (an empty string removes the caption). Tile preview only —
+   * the inline list has no room for a third line, and no composer that uses
+   * it stages captioned media.
+   */
+  onCaption?: (index: number, caption: string) => void
   className?: string
 }
 
@@ -138,12 +164,15 @@ export function AttachmentComposer({
   blockLabels,
   addSlot,
   onRetry,
+  onCaption,
   className,
 }: AttachmentComposerProps) {
   const { formatFileSize } = useFormat()
   // A send in flight owns the order it is uploading; letting a drag race it
   // would change the list under the request that is already using it.
   const reorderable = Boolean(onReorder) && state !== 'uploading'
+  // Staged index of the item whose caption is being edited, or null.
+  const [captioning, setCaptioning] = useState<number | null>(null)
 
   // Indices into `items`, in the order they are drawn. Everything handed back
   // to the caller — a removal, a reorder — is translated through this, so the
@@ -253,7 +282,7 @@ export function AttachmentComposer({
                 {sentLabel} of {totalLabel}
               </Trans>
             ) : (
-              (item.meta ?? totalLabel)
+              (item.meta ?? (item.caption || totalLabel))
             )
 
           const rule =
@@ -287,6 +316,12 @@ export function AttachmentComposer({
                 aria-label={item.name}
                 onRemove={removable ? () => onRemove?.(index) : undefined}
                 removeLabel={t`Remove`}
+                onCaption={
+                  onCaption && isMedia(item.type) && state !== 'uploading'
+                    ? () => setCaptioning(index)
+                    : undefined
+                }
+                captionLabel={item.caption ? t`Edit caption` : t`Add caption`}
                 {...getItemProps(position)}
                 {...keyProps(position)}
                 className={dragClass}
@@ -346,6 +381,91 @@ export function AttachmentComposer({
           <Trans>Retry</Trans>
         </button>
       )}
+      {captioning != null && items[captioning] && (
+        <AttachmentCaptionDialog
+          item={items[captioning]}
+          onSave={(caption) => {
+            onCaption?.(captioning, caption)
+            setCaptioning(null)
+          }}
+          onClose={() => setCaptioning(null)}
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * The caption editor for one media attachment: the preview large enough to see
+ * which photo is being captioned, and the text. Saving an empty text removes
+ * the caption; there is no separate control for that. The composer opens it
+ * for staged files; managers of saved attachments (the wiki attachments
+ * browser) open it directly with an item built from the saved row.
+ */
+export function AttachmentCaptionDialog({
+  item,
+  onSave,
+  onClose,
+}: {
+  item: Pick<ComposerItem, 'name' | 'caption' | 'previewUrl' | 'previewKind'>
+  onSave: (caption: string) => void
+  onClose: () => void
+}) {
+  const [value, setValue] = useState(item.caption ?? '')
+
+  return (
+    <ResponsiveDialog open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent className='sm:max-w-md'>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
+            <Trans>Caption</Trans>
+          </ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
+        <div className='space-y-3'>
+          {item.previewUrl && (
+            <div className='bg-muted flex max-h-[40vh] items-center justify-center overflow-hidden rounded-[8px]'>
+              {item.previewKind === 'video' ? (
+                <video
+                  src={item.previewUrl}
+                  muted
+                  playsInline
+                  className='max-h-[40vh] max-w-full object-contain'
+                />
+              ) : (
+                <img
+                  src={item.previewUrl}
+                  alt={item.name}
+                  className='max-h-[40vh] max-w-full object-contain'
+                />
+              )}
+            </div>
+          )}
+          <Textarea
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={(event) => {
+              // Captions are a line or two; Enter saves, Shift+Enter breaks.
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                onSave(value.trim())
+              }
+            }}
+            maxLength={attachmentCaptionMaximum}
+            rows={2}
+            autoFocus
+            aria-label={t`Caption`}
+          />
+        </div>
+        <ResponsiveDialogFooter className='gap-2 pt-2'>
+          <Button type='button' variant='outline' onClick={onClose}>
+            <Trans>Cancel</Trans>
+          </Button>
+          <Button type='button' onClick={() => onSave(value.trim())}>
+            <Check className='size-4' />
+            <Trans>Save</Trans>
+          </Button>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

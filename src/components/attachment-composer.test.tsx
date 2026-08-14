@@ -318,6 +318,75 @@ describe('AttachmentComposer', () => {
     })
   })
 
+  // Captions ride the media tiles: the button opens the editor, the editor
+  // hands back what was saved, and the caller owns where it lands.
+  describe('captions', () => {
+    it('offers the caption button on media tiles when asked', () => {
+      show({ preview: 'tile', onCaption: vi.fn() })
+      expect(screen.getAllByRole('button', { name: 'Add caption' })).toHaveLength(2)
+    })
+
+    it('offers nothing without the callback, or on non-media files', () => {
+      show({ preview: 'tile' })
+      expect(screen.queryByRole('button', { name: 'Add caption' })).toBeNull()
+
+      show({
+        preview: 'tile',
+        onCaption: vi.fn(),
+        items: [item('notes.md', { type: 'text/plain' })],
+      })
+      expect(screen.queryByRole('button', { name: 'Add caption' })).toBeNull()
+    })
+
+    it('names the button by whether a caption exists', () => {
+      show({
+        preview: 'tile',
+        onCaption: vi.fn(),
+        items: [item('a.png', { caption: 'The harbour' }), item('b.png')],
+      })
+      expect(screen.getByRole('button', { name: 'Edit caption' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Add caption' })).toBeInTheDocument()
+    })
+
+    it('shows the caption in place of the size line', () => {
+      show({ preview: 'tile', items: [item('a.png', { caption: 'The harbour' })] })
+      expect(screen.getByText('The harbour')).toBeInTheDocument()
+      expect(screen.queryByText('1.0 KB')).toBeNull()
+    })
+
+    it('saves through the editor by staged index', () => {
+      const onCaption = vi.fn()
+      show({ preview: 'tile', onCaption })
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'Add caption' })[1])
+      fireEvent.change(screen.getByRole('textbox', { name: 'Caption' }), {
+        target: { value: 'The harbour' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+      expect(onCaption).toHaveBeenCalledWith(1, 'The harbour')
+    })
+
+    it('saves on Enter and keeps Shift+Enter for a line break', () => {
+      const onCaption = vi.fn()
+      show({ preview: 'tile', onCaption })
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'Add caption' })[0])
+      const editor = screen.getByRole('textbox', { name: 'Caption' })
+      fireEvent.change(editor, { target: { value: 'Quay' } })
+      fireEvent.keyDown(editor, { key: 'Enter', shiftKey: true })
+      expect(onCaption).not.toHaveBeenCalled()
+      fireEvent.keyDown(editor, { key: 'Enter' })
+
+      expect(onCaption).toHaveBeenCalledWith(0, 'Quay')
+    })
+
+    it('withdraws the caption buttons while a send is in flight', () => {
+      show({ preview: 'tile', onCaption: vi.fn(), state: 'uploading' })
+      expect(screen.queryByRole('button', { name: 'Add caption' })).toBeNull()
+    })
+  })
+
   // The add tile is the only thing an empty composer has to show, so an empty
   // list with one is not the same as an empty list without.
   it('renders the add slot, with or without staged files', () => {

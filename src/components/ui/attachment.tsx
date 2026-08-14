@@ -4,7 +4,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "@radix-ui/react-slot"
-import { GripVertical, Plus, X } from "lucide-react"
+import { Captions, GripVertical, Plus, X } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import type { UploadSlice } from "../../lib/upload-slices"
@@ -297,6 +297,10 @@ type AttachmentTileProps = Omit<React.ComponentProps<"div">, "children"> & {
   onRemove?: () => void
   /** Translated; the tile holds no copy of its own. */
   removeLabel?: string
+  /** Opens the caption editor. The affordance only draws when supplied. */
+  onCaption?: () => void
+  /** Translated; the tile holds no copy of its own. */
+  captionLabel?: string
 }
 
 /**
@@ -321,6 +325,8 @@ function AttachmentTile({
   badge,
   onRemove,
   removeLabel,
+  onCaption,
+  captionLabel,
   className,
   ...props
 }: AttachmentTileProps) {
@@ -436,6 +442,18 @@ function AttachmentTile({
             className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white group-hover/tile:opacity-100 [@media(hover:none)]:opacity-100"
           >
             <X className="size-3.5" strokeWidth={2.5} />
+          </button>
+        )}
+        {onCaption && (
+          <button
+            type="button"
+            onClick={onCaption}
+            aria-label={captionLabel}
+            // Same reveal rules as the remove button; bottom corner so the two
+            // never crowd each other, opposite the badge.
+            className="absolute right-1.5 bottom-1.5 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white group-hover/tile:opacity-100 [@media(hover:none)]:opacity-100"
+          >
+            <Captions className="size-3.5" />
           </button>
         )}
         {progress && (

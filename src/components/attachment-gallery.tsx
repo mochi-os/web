@@ -17,12 +17,14 @@ import { useLightboxHash } from '../hooks/use-lightbox-hash'
 import { formatVideoDuration, useVideoThumbnailCached } from '../hooks/use-video-thumbnail'
 import { getFileIcon, isMedia, isVideo } from '../lib/attachment-utils'
 import { useFormat } from '../hooks/use-format'
+import { cn } from '../lib/utils'
 
 export interface GalleryAttachment {
   id: string
   name: string
   type: string
   size: number
+  caption?: string
   url?: string
   thumbnail_url?: string
   preview_url?: string
@@ -48,6 +50,10 @@ export interface AttachmentGalleryProps {
   hideFiles?: boolean
   // Optional sibling overlay rendered next to each media tile (e.g. hover-delete on CRM cards).
   renderMediaOverlay?: (att: GalleryAttachment) => ReactNode
+  // Draw each media tile's caption over its bottom edge. Opt-in per surface:
+  // post galleries want it, 80px comment rows have no room for legible text.
+  // The lightbox shows the full caption either way.
+  showCaptions?: boolean
 }
 
 const DEFAULT_ASPECT = 1.5
@@ -109,6 +115,7 @@ export function AttachmentGallery({
   inline = false,
   hideFiles = false,
   renderMediaOverlay,
+  showCaptions = false,
 }: AttachmentGalleryProps) {
   const { formatFileSize } = useFormat()
   // Aspect-ratio per attachment, measured onLoad. Drives flex-grow / flex-basis for the justified-grid layout.
@@ -148,6 +155,7 @@ export function AttachmentGallery({
     name: att.name,
     url: resolveUrl(att),
     type: isVideo(att.type) ? 'video' : 'image',
+    caption: att.caption,
   }))
 
   const { open, currentIndex, openLightbox, closeLightbox, setCurrentIndex } =
@@ -166,6 +174,11 @@ export function AttachmentGallery({
   // spacer with massive flex-grow absorbs any surplus on a sparse last row.
   const mediaButtons = visibleMedia.map((attachment, index) => {
     const ratio = aspects[attachment.id] ?? DEFAULT_ASPECT
+    // The caption scrim and the "+N" overflow overlay both claim the tile's
+    // face; when both apply, the count wins — the caption is still in the
+    // lightbox, the count is nowhere else.
+    const overflowTile = index === visibleMedia.length - 1 && extraCount > 0
+    const caption = showCaptions && !overflowTile ? attachment.caption : undefined
     return (
       <div
         key={attachment.id}
@@ -191,7 +204,7 @@ export function AttachmentGallery({
           ) : (
             <img
               src={resolveTile(attachment)}
-              alt={attachment.name}
+              alt={attachment.caption || attachment.name}
               onLoad={(e: SyntheticEvent<HTMLImageElement>) => {
                 const img = e.currentTarget
                 if (img.naturalWidth && img.naturalHeight) {
@@ -201,7 +214,20 @@ export function AttachmentGallery({
               className='h-full w-full object-cover transition-transform group-hover/thumb:scale-105'
             />
           )}
-          {index === visibleMedia.length - 1 && extraCount > 0 && (
+          {caption && (
+            <div className='pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent pt-5'>
+              <p
+                className={cn(
+                  'line-clamp-2 px-1.5 pb-1 text-start text-[11px] leading-tight text-white',
+                  // The video duration badge holds the corner; leave it room.
+                  isVideo(attachment.type) && 'pe-12'
+                )}
+              >
+                {caption}
+              </p>
+            </div>
+          )}
+          {overflowTile && (
             <div className='absolute inset-0 flex items-center justify-center bg-black/50'>
               <span className='text-2xl font-bold text-white'>+{extraCount}</span>
             </div>

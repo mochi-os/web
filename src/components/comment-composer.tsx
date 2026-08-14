@@ -196,6 +196,13 @@ interface ComposerAttachmentsProps {
   blockLabels?: AttachmentComposerProps['blockLabels']
   /** The app's own "add files" tile, drawn as the last cell of the grid. */
   addSlot?: AttachmentComposerProps['addSlot']
+  /**
+   * Captions keyed by `pendingFileKey(file)`. Keyed rather than index-aligned
+   * so a reorder or removal never re-attaches a caption to the wrong file.
+   */
+  captions?: Record<string, string>
+  /** Supply to let media files carry captions; see `AttachmentComposer`. */
+  onCaption?: (file: File, caption: string) => void
 }
 
 /**
@@ -217,6 +224,8 @@ export function ComposerAttachments({
   groupMedia,
   blockLabels,
   addSlot,
+  captions,
+  onCaption,
 }: ComposerAttachmentsProps) {
   const items = useMemo(
     () =>
@@ -230,9 +239,10 @@ export function ComposerAttachments({
         // video drawing an icon inside the media block.
         previewUrl: isMedia(file.type) ? previewUrls[i] : null,
         previewKind: isVideo(file.type) ? ('video' as const) : ('image' as const),
+        caption: captions?.[pendingFileKey(file)],
         progress: progress?.[i],
       })),
-    [files, previewUrls, progress]
+    [files, previewUrls, progress, captions]
   )
 
   return (
@@ -249,6 +259,9 @@ export function ComposerAttachments({
       blockLabels={blockLabels}
       addSlot={addSlot}
       onRetry={onRetry}
+      onCaption={
+        onCaption ? (index, caption) => onCaption(files[index], caption) : undefined
+      }
     />
   )
 }

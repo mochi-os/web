@@ -19,6 +19,7 @@ export type LightboxMedia = {
   name: string
   url: string
   type: 'image' | 'video'
+  caption?: string
 }
 
 // Legacy type alias for backwards compatibility
@@ -299,7 +300,7 @@ export function ImageLightbox({
                     <img
                       ref={imgRef}
                       src={currentMedia.url}
-                      alt={currentMedia.name}
+                      alt={currentMedia.caption || currentMedia.name}
                       className={cn(
                         'max-h-full max-w-full object-contain transition-opacity duration-200',
                         isLoading ? 'opacity-0' : 'opacity-100'
@@ -319,6 +320,20 @@ export function ImageLightbox({
               </div>
             )}
           </div>
+
+          {/* Caption overlay. Persistent rather than joining the auto-hiding
+              controls: it is content being read, not chrome. Sits higher over
+              a video so it never covers the native controls. */}
+          {currentMedia.caption && (
+            <div
+              className={cn(
+                'absolute left-1/2 max-h-40 max-w-[min(90vw,40rem)] -translate-x-1/2 overflow-y-auto rounded-xl bg-black/60 px-4 py-2 text-center text-sm text-white',
+                isVideo ? 'bottom-20' : 'bottom-4'
+              )}
+            >
+              {currentMedia.caption}
+            </div>
+          )}
 
           {/* Top bar overlay with filename, counter, and controls */}
           {/* For videos, always show controls — native player handles play/pause but close is here only */}
