@@ -94,7 +94,7 @@ describe('shellRequestPermission', () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
     shellRequestPermission('feeds', 'accounts/read', false)
-    shellRequestPermission('people', 'groups/manage', false)
+    shellRequestPermission('people', 'groups/write', false)
 
     expect(parentPostMessage).toHaveBeenCalledTimes(2)
     const id1 = parentPostMessage.mock.calls[0][0].id
@@ -106,7 +106,7 @@ describe('shellRequestPermission', () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
     const promise1 = shellRequestPermission('feeds', 'accounts/read', false)
-    const promise2 = shellRequestPermission('people', 'groups/manage', false)
+    const promise2 = shellRequestPermission('people', 'groups/write', false)
 
     const id1 = parentPostMessage.mock.calls[0][0].id
     const id2 = parentPostMessage.mock.calls[1][0].id
