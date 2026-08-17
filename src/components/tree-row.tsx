@@ -67,6 +67,14 @@ export interface TreeRowProps {
   isDragAfter: boolean
   canReorder: boolean
   canReparent: boolean
+  /**
+   * Whether this row may start a drag at all. The board only marks a card
+   * draggable when it has somewhere to drop it; this row did so unconditionally,
+   * which handed a reader without write access a grab cursor and a drop
+   * indicator for a move the tree then refused. Defaults to true so existing
+   * callers are unchanged.
+   */
+  canDrag?: boolean
   onToggleExpand: () => void
   onClick: () => void
   onDragStart: () => void
@@ -136,6 +144,7 @@ export function TreeRow({
   isDragAfter,
   canReorder,
   canReparent,
+  canDrag = true,
   onToggleExpand,
   onClick,
   onDragStart,
@@ -308,7 +317,7 @@ export function TreeRow({
       )}
       style={borderColor ? { borderInlineStartColor: borderColor } : undefined}
       onClick={onClick}
-      draggable
+      draggable={canDrag}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move'
         e.dataTransfer.setData('text/plain', object.id)
