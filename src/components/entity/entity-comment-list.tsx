@@ -8,34 +8,21 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useLingui } from '@lingui/react/macro'
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, MessageSquare, Paperclip, Send, X } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import type { AxiosProgressEvent } from "axios";
-import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { ListSkeleton } from "../ui/list-skeleton";
-import { MentionTextarea } from "../mention-textarea";
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
-import { UploadProgress } from "../ui/upload-progress";
 import { toast } from "../../lib/toast-utils";
 import { getErrorMessage } from "../../lib/handle-server-error";
 import { useAttachmentError } from "../../hooks/use-attachment-error";
 import { useAuthStore } from "../../stores/auth-store";
-import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
 import { textUnchanged } from "../../lib/change-detection";
 import { findCommentTextInTree } from "../../lib/comment-tree";
-import { cn } from "../../lib/utils";
-import { removePendingFile } from "../../lib/attachment-utils";
-import { moveItem } from "../../lib/reorder";
 import {
-  ComposerAttachments,
-  SendShortcutHint,
-  dropActiveClass,
-  offlineBlocked,
-  useComposerDrop,
+  CommentBox,
   useDiscardGuard,
 } from "../comment-composer";
-import { mergePendingFiles } from "../../lib/composer-files";
 import { EntityCommentThread } from "./entity-comment-thread";
 import type { EntityComment } from "../../types/entity-object";
 
@@ -83,37 +70,29 @@ export function EntityCommentList({
 }: EntityCommentListProps) {
   const { t } = useLingui()
   const [newComment, setNewComment] = useState("");
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const newFileImageUrls = useImageObjectUrls(newFiles);
+  // The comment box owns its files and reports their count; it is always on
+  // screen, so clearing it means remounting it (the key), not closing it.
+  const [newFileCount, setNewFileCount] = useState(0);
+  const [composerKey, setComposerKey] = useState(0);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [createFailed, setCreateFailed] = useState(false);
   const [isSendingComment, setIsSendingComment] = useState(false);
 
   const [replyFileCount, setReplyFileCount] = useState(0);
   const pendingReplyTarget = useRef<string | null>(null);
 
-  const addNewFiles = useCallback((incoming: File[]) => {
-    setCreateFailed(false);
-    setNewFiles((prev) => mergePendingFiles(prev, incoming));
-  }, []);
-
-  // Editing the draft after a failure means the red attachments and the Retry
-  // button no longer describe what is in the box.
-  const handleNewCommentChange = useCallback((value: string) => {
-    setNewComment(value);
-    setCreateFailed(false);
+  const clearComposer = useCallback(() => {
+    setNewComment("");
+    setNewFileCount(0);
+    setComposerKey((key) => key + 1);
   }, []);
 
   useEffect(() => {
-    setNewComment("");
-    setNewFiles([]);
-    setCreateFailed(false);
+    clearComposer();
     setReplyingTo(null);
     setReplyDraft("");
     setReplyFileCount(0);
-  }, [objectId]);
+  }, [objectId, clearComposer]);
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((s) => s.identity);
   const { progress: uploadProgress, upload } = useUploadProgress();
@@ -213,22 +192,13 @@ export function EntityCommentList({
     },
   });
 
-  const handleCreate = async () => {
-    const trimmed = newComment.trim();
-    if (!trimmed || isSendingComment || offlineBlocked()) return;
-    setCreateFailed(false);
+  // Rejects on failure so the box keeps the draft and its attachments staged
+  // for Retry; the mutation already reported it.
+  const handleCreate = async (content: string, files?: File[]) => {
     setIsSendingComment(true);
     try {
-      await createMutation.mutateAsync({
-        content: trimmed,
-        files: newFiles.length > 0 ? newFiles : undefined,
-      });
+      await createMutation.mutateAsync({ content, files });
       setNewComment("");
-      setNewFiles([]);
-    } catch {
-      // The mutation already reported it; keep the draft and its attachments
-      // staged so Retry sends the same comment again.
-      setCreateFailed(true);
     } finally {
       setIsSendingComment(false);
     }
@@ -262,32 +232,14 @@ export function EntityCommentList({
     deleteMutation.mutate(commentId);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      addNewFiles(Array.from(e.target.files));
-    }
-    e.target.value = "";
-  };
-
-  const { isDragActive, dropzoneProps } = useComposerDrop({
-    onFiles: addNewFiles,
-    disabled: isSendingComment,
-  });
-
   // The page composer is always on screen, so there is nothing to close —
   // discarding clears it in place.
-  const discardNewComment = useCallback(() => {
-    setNewComment("");
-    setNewFiles([]);
-    setCreateFailed(false);
-  }, []);
-
-  const hasDraft = newComment.trim().length > 0 || newFiles.length > 0;
+  const hasDraft = newComment.trim().length > 0 || newFileCount > 0;
 
   const { requestClose, discardDialog } = useDiscardGuard({
     hasText: newComment.trim().length > 0,
-    hasFiles: newFiles.length > 0,
-    onDiscard: discardNewComment,
+    hasFiles: newFileCount > 0,
+    onDiscard: clearComposer,
     locked: isSendingComment,
   });
 
@@ -346,110 +298,20 @@ export function EntityCommentList({
   return (
     <div className="space-y-4">
       {!readOnly && (
-        <div
-          className={cn("space-y-2", isDragActive && dropActiveClass)}
-          {...dropzoneProps}
-        >
-          <MentionTextarea
-            className="placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        <div>
+          <CommentBox
+            key={composerKey}
             value={newComment}
-            onValueChange={handleNewCommentChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                void handleCreate();
-              } else if (e.key === "Escape") {
-                requestClose();
-              }
-            }}
+            onValueChange={setNewComment}
+            onSubmit={handleCreate}
+            // Cancel only once there is something to discard.
+            onClose={hasDraft ? requestClose : undefined}
+            onFilesChange={setNewFileCount}
+            people={people}
+            progress={uploadProgress}
             placeholder={t`Add a comment...`}
             rows={3}
-            disabled={isSendingComment}
-            people={people}
           />
-          <ComposerAttachments
-            files={newFiles}
-            previewUrls={newFileImageUrls}
-            state={
-              isSendingComment ? "uploading" : createFailed ? "error" : "idle"
-            }
-            progress={uploadProgress?.slices}
-            onRemove={(file) =>
-              setNewFiles((prev) => removePendingFile(prev, file))
-            }
-            onReorder={(from, to) =>
-              setNewFiles((prev) => moveItem(prev, from, to))
-            }
-            groupMedia
-            // Retry sends the draft, so it is only offered while there is one.
-            onRetry={
-              newComment.trim() ? () => void handleCreate() : undefined
-            }
-          />
-          {isSendingComment && <UploadProgress progress={uploadProgress} />}
-          <div className="flex items-center justify-end gap-2">
-            <SendShortcutHint />
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isSendingComment}
-                  aria-label={t`Attach comment files`}
-                >
-                  <Paperclip className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t`Attach comment files`}</TooltipContent>
-            </Tooltip>
-            {hasDraft && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={requestClose}
-                    disabled={isSendingComment}
-                    aria-label={t`Cancel comment`}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t`Cancel comment`}</TooltipContent>
-              </Tooltip>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  className="size-8"
-                  disabled={!newComment.trim() || isSendingComment}
-                  onClick={() => void handleCreate()}
-                  aria-label={t`Submit comment`}
-                >
-                  {isSendingComment ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Send className="size-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t`Submit comment`}</TooltipContent>
-            </Tooltip>
-          </div>
           {discardDialog}
         </div>
       )}
