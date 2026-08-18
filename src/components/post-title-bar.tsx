@@ -34,8 +34,12 @@ export function PostTitleBar({
         className
       )}
     >
+      {/* Side by side from md: the title takes what the meta leaves, and the
+          meta takes the width it needs on one line - a long forum name, author
+          and full date-time run to well past half the bar - as long as the
+          title keeps a third; past that the meta wraps between its parts. */}
       <div className='flex flex-col gap-2 md:flex-row md:items-start md:justify-between'>
-        <div className='min-w-0 flex-1'>
+        <div className='min-w-0 flex-1 md:min-w-[33%]'>
           <div
             className={cn(
               size === 'card'
@@ -49,7 +53,7 @@ export function PostTitleBar({
           </div>
         </div>
         {(trailing || meta) && (
-          <div className='flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 md:ms-4 md:max-w-[50%] md:justify-end'>
+          <div className='flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 md:ms-4 md:justify-end'>
             {trailing && (
               <div
                 className={cn(

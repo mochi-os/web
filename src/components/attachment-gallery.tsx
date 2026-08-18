@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useCallback, useState, type ReactNode, type SyntheticEvent } from 'react'
+import { useCallback, useEffect, useState, type ReactNode, type SyntheticEvent } from 'react'
 import { Loader2, Play } from 'lucide-react'
 import { useLingui } from '@lingui/react/macro'
 import { ImageLightbox, type LightboxMedia } from './ui/image-lightbox'
@@ -54,6 +54,15 @@ export interface AttachmentGalleryProps {
   // post galleries want it, 80px comment rows have no room for legible text.
   // The lightbox shows the full caption either way.
   showCaptions?: boolean
+  // The lightbox comments slot, passed straight through: the count and the
+  // thread panel for one media item, keyed by its attachment id. See
+  // ImageLightbox for the contract.
+  commentCount?: (attachmentId: string) => number
+  renderComments?: (attachmentId: string) => ReactNode
+  // Open the lightbox on a given attachment id from outside (a comment's
+  // thumbnail chip), with the comments panel open. Called with a function
+  // the caller can invoke; null when the id is not among the media.
+  openerRef?: React.MutableRefObject<((attachmentId: string) => void) | null>
 }
 
 const DEFAULT_ASPECT = 1.5
@@ -116,6 +125,9 @@ export function AttachmentGallery({
   hideFiles = false,
   renderMediaOverlay,
   showCaptions = false,
+  commentCount,
+  renderComments,
+  openerRef,
 }: AttachmentGalleryProps) {
   const { formatFileSize } = useFormat()
   // Aspect-ratio per attachment, measured onLoad. Drives flex-grow / flex-basis for the justified-grid layout.
@@ -161,6 +173,26 @@ export function AttachmentGallery({
   const { open, currentIndex, openLightbox, closeLightbox, setCurrentIndex } =
     useLightboxHash(lightboxMedia)
 
+  // Whether the lightbox was opened from a comment's chip, in which case it
+  // starts with the comments panel showing. A tile tap starts it closed.
+  const [openedForComments, setOpenedForComments] = useState(false)
+
+  // Expose "open at this attachment" to the caller. The comments chip in a
+  // thread lives outside the gallery, so it reaches in through this ref.
+  useEffect(() => {
+    if (!openerRef) return
+    openerRef.current = (attachmentId: string) => {
+      const index = media.findIndex((att) => att.id === attachmentId)
+      if (index >= 0) {
+        setOpenedForComments(true)
+        openLightbox(index)
+      }
+    }
+    return () => {
+      openerRef.current = null
+    }
+  }, [openerRef, media, openLightbox])
+
   if (!attachments || attachments.length === 0) {
     return null
   }
@@ -192,6 +224,7 @@ export function AttachmentGallery({
           type='button'
           onClick={(e) => {
             e.stopPropagation()
+            setOpenedForComments(false)
             openLightbox(index)
           }}
           className='group/thumb bg-muted relative block h-full w-full overflow-hidden rounded-[8px] border'
@@ -292,6 +325,9 @@ export function AttachmentGallery({
       open={open}
       onOpenChange={(isOpen) => !isOpen && closeLightbox()}
       onIndexChange={setCurrentIndex}
+      commentCount={commentCount}
+      renderComments={renderComments}
+      commentsInitiallyOpen={openedForComments}
     />
   )
 

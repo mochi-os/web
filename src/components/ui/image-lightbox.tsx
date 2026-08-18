@@ -3,14 +3,15 @@
 
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Trans } from '@lingui/react/macro'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { ChevronLeft, ChevronRight, Download, FileWarning, ImageOff, Loader2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, FileWarning, ImageOff, Loader2, MessageCircle, X } from 'lucide-react'
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { cn } from '../../lib/utils'
 import { shellDownload } from '../../lib/shell-bridge'
 import { toast } from '../../lib/toast-utils'
+import { useShellStorage } from '../../hooks/use-shell-storage'
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip'
 import { t } from '@lingui/core/macro'
 
@@ -31,6 +32,18 @@ type ImageLightboxProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onIndexChange: (index: number) => void
+  /**
+   * The comments slot. Supplied together, these draw a comment button in the
+   * title pill (with the count for the current image) that toggles a panel
+   * beside the image on wide screens and over its lower part on narrow ones.
+   * The lightbox owns only the chrome: what a comment IS, and the thread the
+   * panel shows, are the app's — it renders `renderComments(mediaId)` and
+   * nothing else, so this component's trust surface does not change.
+   */
+  commentCount?: (mediaId: string) => number
+  renderComments?: (mediaId: string) => ReactNode
+  /** Open with the comments panel already showing (a comment's chip was clicked). */
+  commentsInitiallyOpen?: boolean
 }
 
 // Displays images and videos in a full-screen lightbox with navigation controls
@@ -40,10 +53,39 @@ export function ImageLightbox({
   open,
   onOpenChange,
   onIndexChange,
+  commentCount,
+  renderComments,
+  commentsInitiallyOpen = false,
 }: ImageLightboxProps) {
   const hasMultiple = images.length > 1
   const currentMedia = images[currentIndex]
   const isVideo = currentMedia?.type === 'video'
+
+  // The comments panel. It follows the current image while open, since the
+  // slot re-renders on the media id. Whether it STARTS open is the user's
+  // remembered preference - the last way they left it - so a photo browser
+  // gets a clean viewer every time and a discussion reader gets the panel
+  // every time, after one toggle each. Not "open when there are comments":
+  // that would start the picture covered on some images and clean on others
+  // for the same gesture. Explicit intent still wins - opening from a
+  // comment's chip shows the panel regardless, and does not move the
+  // preference. Shell storage, not localStorage: the sandboxed iframe's
+  // origin is opaque, so plain storage is partitioned away on every load.
+  const hasComments = Boolean(renderComments)
+  const [rememberedOpen, setRememberedOpen] = useShellStorage('lightbox.comments', false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  useEffect(() => {
+    setCommentsOpen(open ? commentsInitiallyOpen || rememberedOpen : false)
+    // Only the open transition seeds the panel; the preference changing
+    // while the lightbox is already open must not yank the panel around.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, commentsInitiallyOpen])
+  const toggleComments = useCallback(() => {
+    setCommentsOpen((value) => {
+      setRememberedOpen(!value)
+      return !value
+    })
+  }, [setRememberedOpen])
 
   // Track media loading and error state
   const [isLoading, setIsLoading] = useState(true)
@@ -194,15 +236,28 @@ export function ImageLightbox({
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const HIDE_DELAY = 3000
 
+  // While the comments panel is open the chrome stays: the viewer is
+  // reading and writing, not looking at the picture, and a composer whose
+  // toolbar fades mid-sentence is a bug. The ref (not state) lets the
+  // timer callback read the live value.
+  const commentsOpenRef = useRef(false)
+  commentsOpenRef.current = commentsOpen
+
   const showControls = useCallback(() => {
     setControlsVisible(true)
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current)
     }
+    if (commentsOpenRef.current) return
     hideTimeoutRef.current = setTimeout(() => {
-      setControlsVisible(false)
+      if (!commentsOpenRef.current) setControlsVisible(false)
     }, HIDE_DELAY)
   }, [])
+
+  // Re-arm (or hold) the chrome as the panel opens and closes.
+  useEffect(() => {
+    if (open) showControls()
+  }, [commentsOpen, open, showControls])
 
   // Set up activity listeners for showing controls
   useEffect(() => {
@@ -281,9 +336,15 @@ export function ImageLightbox({
               : <Trans>Image viewer: {currentMedia.name}</Trans>}
           </DialogPrimitive.Title>
 
-          {/* Full-screen media area */}
+          {/* Full-screen media area. With the comments panel open, on wide
+              screens the image yields a column to it; on narrow ones the panel
+              covers the lower part instead (see below) and the image keeps
+              its size. Keyboard navigation and swipe stay on the image. */}
           <div
-            className='flex h-full w-full items-center justify-center'
+            className={cn(
+              'flex h-full w-full items-center justify-center',
+              hasComments && commentsOpen && 'sm:pr-[24rem]'
+            )}
             onTouchStart={hasMultiple ? handleTouchStart : undefined}
             onTouchEnd={hasMultiple ? handleTouchEnd : undefined}
           >
@@ -365,6 +426,9 @@ export function ImageLightbox({
               // invisible over the letterbox and fights bright image content
               // mid-word.
               'absolute left-1/2 top-3 flex max-w-[90vw] -translate-x-1/2 flex-col items-center gap-1 bg-black/60 backdrop-blur-md px-4 py-2 text-white transition-opacity duration-300',
+              // Centred over the image, not the window: with the panel open
+              // on a wide screen the image area is the left remainder.
+              hasComments && commentsOpen && 'sm:left-[calc(50%-12rem)] sm:max-w-[calc(90vw-24rem)]',
               // A one-row bar keeps the pill; the caption row would stretch
               // fully-round corners into a lozenge, so it squares them a step.
               currentMedia.caption ? 'rounded-2xl' : 'rounded-full',
@@ -377,6 +441,28 @@ export function ImageLightbox({
               {currentMedia.name}
             </span>
             <div className='flex shrink-0 items-center gap-1 text-white/70'>
+              {hasComments && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type='button'
+                      onClick={toggleComments}
+                      aria-pressed={commentsOpen}
+                      aria-label={t`Comments`}
+                      className={cn(
+                        'flex items-center gap-1 rounded-full px-2 py-2 transition-colors hover:bg-white/20 hover:text-white',
+                        commentsOpen && 'bg-white/20 text-white'
+                      )}
+                    >
+                      <MessageCircle className='size-5' />
+                      {(commentCount?.(currentMedia.id) ?? 0) > 0 && (
+                        <span className='text-xs tabular-nums'>{commentCount?.(currentMedia.id)}</span>
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t`Comments`}</TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -413,6 +499,26 @@ export function ImageLightbox({
             )}
           </div>
 
+          {/* Comments panel: a right-hand column on wide screens, a sheet
+              over the lower part of the image on narrow ones. Rendered by
+              the app; the lightbox only places it. Its own scroll, so a long
+              thread never scrolls the image behind it. Pointer activity
+              inside it must not re-arm the auto-hide (the panel already
+              holds the chrome), and it must not reach the swipe handlers on
+              the media area — hence stopPropagation. */}
+          {hasComments && commentsOpen && (
+            <div
+              className='absolute inset-x-0 bottom-0 flex max-h-[55vh] flex-col overflow-hidden bg-background text-foreground sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:max-h-none sm:w-[24rem] sm:border-l'
+              onTouchStart={(event) => event.stopPropagation()}
+              onTouchEnd={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <div className='min-h-0 flex-1 overflow-y-auto'>
+                {renderComments?.(currentMedia.id)}
+              </div>
+            </div>
+          )}
+
           {/* Navigation buttons */}
           {hasMultiple && (
             <>
@@ -437,6 +543,7 @@ export function ImageLightbox({
                     onClick={goToNext}
                     className={cn(
                       'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
+                      hasComments && commentsOpen && 'sm:right-[25rem]',
                       isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                     )}
                     aria-label={t`Next image`}

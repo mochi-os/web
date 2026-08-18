@@ -3,13 +3,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
+import { Loader2, Paperclip, Send, X } from 'lucide-react'
 import { ConfirmDialog } from './confirm-dialog'
 import {
   AttachmentComposer,
   type AttachmentComposerProps,
   type ComposerFileState,
 } from './attachment-composer'
-import { isMedia, isVideo, pendingFileKey } from '../lib/attachment-utils'
+import { MentionTextarea, type MentionUser } from './mention-textarea'
+import { Button } from './ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import { UploadProgress } from './ui/upload-progress'
+import { useImageObjectUrls } from '../hooks/use-image-object-urls'
+import type { Upload } from '../hooks/use-upload-progress'
+import { isMedia, isVideo, pendingFileKey, removePendingFile } from '../lib/attachment-utils'
+import { mergePendingFiles } from '../lib/composer-files'
+import { moveItem } from '../lib/reorder'
 import type { UploadSlice } from '../lib/upload-slices'
 import { toast } from '../lib/toast-utils'
 import { cn } from '../lib/utils'
@@ -320,4 +329,230 @@ export function useDiscardGuard({
   )
 
   return { requestClose, discardDialog }
+}
+
+export interface CommentBoxProps {
+  /** The draft, held by the caller so it can survive the box closing. */
+  value: string
+  onValueChange: (value: string) => void
+  /**
+   * Sends the draft with whatever files are staged. Reject to keep the box
+   * open in its failed state - draft and files intact - with Retry offered.
+   */
+  onSubmit: (body: string, files?: File[]) => void | Promise<void>
+  /**
+   * Given, the box carries a Cancel button and closes on Escape, both through
+   * this - so the caller owns any discard guard (`useDiscardGuard`). Neither
+   * fires while a send is in flight.
+   */
+  onClose?: () => void
+  /** Which pair of labels the buttons carry. */
+  kind?: 'comment' | 'reply'
+  placeholder?: string
+  /** Upload progress of the send in flight, if the caller tracks one. */
+  progress?: Upload | null
+  /** Mention sources, as `MentionTextarea` takes them. */
+  people?: MentionUser[]
+  onSearchPeople?: (query: string) => Promise<MentionUser[]>
+  /** Reports the staged file count, so a guard outside can ask before discarding. */
+  onFilesChange?: (count: number) => void
+  rows?: number
+  autoFocus?: boolean
+  className?: string
+  textareaClassName?: string
+}
+
+/**
+ * The comment box: a mention-aware textarea, staged attachments with drop,
+ * reorder and per-file retry, upload progress, and the attach / cancel / send
+ * row. One box for every place a comment or reply is written, so a top-level
+ * comment, a reply and a comment on an image all take attachments the same
+ * way. The box owns its files and its sending state; the draft is the
+ * caller's.
+ */
+export function CommentBox({
+  value,
+  onValueChange,
+  onSubmit,
+  onClose,
+  kind = 'comment',
+  placeholder,
+  progress,
+  people,
+  onSearchPeople,
+  onFilesChange,
+  rows = 2,
+  autoFocus,
+  className,
+  textareaClassName,
+}: CommentBoxProps) {
+  const [files, setFiles] = useState<File[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const previewUrls = useImageObjectUrls(files)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    onFilesChange?.(files.length)
+  }, [files.length, onFilesChange])
+
+  const addFiles = useCallback((incoming: File[]) => {
+    setFailed(false)
+    setFiles((prev) => mergePendingFiles(prev, incoming))
+  }, [])
+
+  // Editing after a failure means the red attachments and the Retry button no
+  // longer describe what is in the box.
+  const handleValueChange = useCallback(
+    (next: string) => {
+      setFailed(false)
+      onValueChange(next)
+    },
+    [onValueChange]
+  )
+
+  const { isDragActive, dropzoneProps } = useComposerDrop({
+    onFiles: addFiles,
+    disabled: submitting,
+  })
+
+  const submit = useCallback(async () => {
+    const body = value.trim()
+    if (!body || submitting || offlineBlocked()) return
+    setSubmitting(true)
+    setFailed(false)
+    try {
+      await onSubmit(body, files.length > 0 ? files : undefined)
+      setFiles([])
+    } catch {
+      // The caller reported the failure; the draft and files stay for Retry.
+      setFailed(true)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [value, files, submitting, onSubmit])
+
+  const close = useCallback(() => {
+    if (!submitting) onClose?.()
+  }, [submitting, onClose])
+
+  const labels =
+    kind === 'reply'
+      ? { attach: t`Attach reply files`, cancel: t`Cancel reply`, send: t`Submit reply` }
+      : { attach: t`Attach comment files`, cancel: t`Cancel comment`, send: t`Submit comment` }
+
+  return (
+    <div
+      className={cn('space-y-2', isDragActive && dropActiveClass, className)}
+      // Close on Escape from anywhere in the box: after picking a file, focus
+      // sits on a button, so the textarea's Escape never fires.
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && onClose) close()
+      }}
+      {...dropzoneProps}
+    >
+      <MentionTextarea
+        placeholder={placeholder}
+        value={value}
+        onValueChange={handleValueChange}
+        people={people}
+        onSearchPeople={onSearchPeople}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault()
+            void submit()
+          }
+        }}
+        className={cn(
+          'placeholder:text-muted-foreground min-h-0 disabled:cursor-not-allowed disabled:opacity-50',
+          textareaClassName
+        )}
+        rows={rows}
+        autoFocus={autoFocus}
+        disabled={submitting}
+      />
+      <ComposerAttachments
+        files={files}
+        previewUrls={previewUrls}
+        state={submitting ? 'uploading' : failed ? 'error' : 'idle'}
+        progress={progress?.slices}
+        onRemove={(file) => setFiles((prev) => removePendingFile(prev, file))}
+        onReorder={(from, to) => setFiles((prev) => moveItem(prev, from, to))}
+        groupMedia
+        // Retry sends the draft, so it is only offered while there is one.
+        onRetry={value.trim() ? () => void submit() : undefined}
+      />
+      {submitting && <UploadProgress progress={progress ?? null} />}
+      <div className='flex items-center justify-end gap-2'>
+        <SendShortcutHint />
+        <input
+          ref={fileRef}
+          type='file'
+          multiple
+          onChange={(event) => {
+            if (event.target.files) addFiles(Array.from(event.target.files))
+            event.target.value = ''
+          }}
+          className='hidden'
+        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='size-8'
+              onClick={() => fileRef.current?.click()}
+              disabled={submitting}
+              aria-label={labels.attach}
+            >
+              <Paperclip className='size-4' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{labels.attach}</TooltipContent>
+        </Tooltip>
+        {onClose && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='size-8'
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  close()
+                }}
+                disabled={submitting}
+                aria-label={labels.cancel}
+              >
+                <X className='size-4' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{labels.cancel}</TooltipContent>
+          </Tooltip>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type='button'
+              size='icon'
+              className='size-8'
+              disabled={!value.trim() || submitting}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                void submit()
+              }}
+              aria-label={labels.send}
+            >
+              {submitting ? <Loader2 className='size-4 animate-spin' /> : <Send className='size-4' />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{labels.send}</TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  )
 }
