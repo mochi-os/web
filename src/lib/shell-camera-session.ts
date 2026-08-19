@@ -135,6 +135,7 @@ function directOpen(options: CameraOptions): Promise<{ session: CameraSession; o
   if (!media?.getUserMedia || typeof createImageBitmap === 'undefined') {
     return Promise.resolve({
       session,
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- CameraError mirrors DOMException: name and message are diagnostics the caller branches on, and every other failure path carries the browser's own untranslated message
       opened: { ok: false, error: { name: 'NotSupportedError', message: 'Camera access requires a secure context' } },
     })
   }
@@ -183,6 +184,7 @@ function directOpen(options: CameraOptions): Promise<{ session: CameraSession; o
           session,
           opened: {
             ok: false as const,
+            // eslint-disable-next-line lingui/no-unlocalized-strings -- 'Error' is the DOMException name fallback, not a label: the message beside it comes from the browser
             error: { name: e?.name ?? 'Error', message: e?.message ?? String(err) },
           },
         }
