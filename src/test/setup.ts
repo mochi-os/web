@@ -54,7 +54,8 @@ global.IntersectionObserver = class IntersectionObserver {
 // render all the way through, which walks them into the next jsdom gap: the
 // Web Animations API. @formkit/auto-animate calls el.animate() from a
 // MutationObserver, so the throw lands outside any test's stack and surfaces
-// as an unhandled error while the tests still report green. Completing the set
+// as an unhandled error rather than a failure: every test still reports as
+// passed and only the process exit code says otherwise. Completing the set
 // keeps the suite honest about what actually failed.
 Element.prototype.animate = vi.fn().mockImplementation(() => ({
   cancel: vi.fn(),

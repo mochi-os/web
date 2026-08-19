@@ -1024,10 +1024,14 @@ describe('shared client surface', () => {
     expect(stale).toEqual([])
   })
 
-  it('reaches 48 of the 65 methods, over 65 shared routes', () => {
+  // Each of the 65 methods references exactly one member of the shared table
+  // and no member is referenced twice, so reaching a method is reaching its
+  // route: 48 methods reached is 48 of the 65 routes, not 65.
+  it('reaches 48 of the 65 client methods, one route each', () => {
     const surface = Object.keys(build())
     expect(surface).toHaveLength(65)
-    expect(reached.size).toBe(surface.length - NEVER_TESTED_ON_MAIN.length)
     expect(Object.keys(entityEndpoints)).toHaveLength(65)
+    expect(reached.size).toBe(surface.length - NEVER_TESTED_ON_MAIN.length)
+    expect(reached.size).toBe(48)
   })
 })
