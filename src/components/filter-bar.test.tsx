@@ -1,0 +1,112 @@
+// Copyright © 2026 Mochisoft OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+// FilterBar has been shared since before the page-sharing branch — each app's
+// filter-bar.tsx was already a one-line re-export of this file. What the apps
+// still carried was this suite, byte identical in both, and removing the app
+// copies left the component with nothing. It is asserted once here instead.
+//
+// Ported unchanged from apps/crm/web/src/features/views/components/filter-bar.test.tsx
+// at main (7 blocks); only the render helper and the component path move.
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from './entity/entity-test-utils'
+import { FilterBar, type FilterState } from './filter-bar'
+
+describe('FilterBar', () => {
+  const defaultFilters: FilterState = {
+    search: '',
+    watched: false,
+  }
+  const mockOnFilterChange = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should not render when no filters are active', () => {
+    const { container } = render(
+      <FilterBar filters={defaultFilters} onFilterChange={mockOnFilterChange} />
+    )
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('should show search filter chip when search is active', () => {
+    render(
+      <FilterBar
+        filters={{ ...defaultFilters, search: 'my search' }}
+        onFilterChange={mockOnFilterChange}
+      />
+    )
+
+    expect(screen.getByText('Search:')).toBeInTheDocument()
+    expect(screen.getByText('my search')).toBeInTheDocument()
+  })
+
+  it('should show watched filter chip', () => {
+    render(
+      <FilterBar
+        filters={{ ...defaultFilters, watched: true }}
+        onFilterChange={mockOnFilterChange}
+      />
+    )
+
+    expect(screen.getByText('Watched:')).toBeInTheDocument()
+    expect(screen.getByText('On')).toBeInTheDocument()
+  })
+
+  it('should clear individual filter when X button is clicked', () => {
+    render(
+      <FilterBar
+        filters={{ ...defaultFilters, search: 'test' }}
+        onFilterChange={mockOnFilterChange}
+      />
+    )
+
+    const clearButtons = screen.getAllByRole('button')
+    fireEvent.click(clearButtons[0])
+
+    expect(mockOnFilterChange).toHaveBeenCalledWith({
+      ...defaultFilters,
+      search: '',
+    })
+  })
+
+  it('should show clear all button when multiple filters are active', () => {
+    render(
+      <FilterBar
+        filters={{ search: 'test', watched: true }}
+        onFilterChange={mockOnFilterChange}
+      />
+    )
+
+    expect(screen.getByText('Clear all')).toBeInTheDocument()
+  })
+
+  it('should not show clear all button when only one filter is active', () => {
+    render(
+      <FilterBar
+        filters={{ ...defaultFilters, search: 'test' }}
+        onFilterChange={mockOnFilterChange}
+      />
+    )
+
+    expect(screen.queryByText('Clear all')).not.toBeInTheDocument()
+  })
+
+  it('should clear all filters when clear all button is clicked', () => {
+    render(
+      <FilterBar
+        filters={{ search: 'test', watched: true }}
+        onFilterChange={mockOnFilterChange}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Clear all'))
+
+    expect(mockOnFilterChange).toHaveBeenCalledWith({
+      search: '',
+      watched: false,
+    })
+  })
+})
