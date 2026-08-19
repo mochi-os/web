@@ -418,8 +418,14 @@ export function EntityTreeView<TObject extends EntityObject>({
     }
   });
 
-  // Only allow reordering when sorting by rank
-  const canReorder = sort?.field === "rank" || (!sort && true);
+  // Only allow reordering when sorting by rank, and only when the page handed
+  // us a reorder handler. Without the second half the row drew a drop line for
+  // a move the drop handler below then refused, so a reader without write
+  // access saw the indicator and nothing happened.
+  const canReorder = !!onReorder && (sort?.field === "rank" || !sort);
+
+  // A drag is worth starting only if something can receive it.
+  const canDragRows = !!onReorder || !!onReparent || !!onMoveObject;
 
   // Drag state. The state below drives the visual drop indicators, but the
   // actual drop decision is read from dragTargetRef. `dragover` is a React
@@ -653,7 +659,8 @@ export function EntityTreeView<TObject extends EntityObject>({
           isDragBefore={!preview && dragOverId === node.object.id && dropPosition === "before"}
           isDragAfter={!preview && dragOverId === node.object.id && dropPosition === "after"}
           canReorder={!preview && !!canReorderHere}
-          canReparent={!preview && !!draggedId && draggedId !== node.object.id && isReparentAllowed(draggedId, node.object.id)}
+          canReparent={!preview && !!onReparent && !!draggedId && draggedId !== node.object.id && isReparentAllowed(draggedId, node.object.id)}
+          canDrag={!preview && canDragRows}
           onToggleExpand={() => toggleExpand(node.object.id)}
           onClick={preview ? () => {} : () => onCardClick(node.object)}
           onDragStart={preview ? () => {} : () => handleDragStart(node.object.id)}
