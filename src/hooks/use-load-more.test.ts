@@ -70,7 +70,15 @@ describe('useLoadMore', () => {
   })
 
   it('still resets when the loader genuinely delivers new data', async () => {
-    const fetcher = vi.fn(async () => ({ items: rows(21, 20), total: 45 }))
+    const fetcher = vi.fn(
+      // Declared even though this fetcher ignores it: without the parameter,
+      // vi.fn types mock.calls as an empty tuple and the page assertion at the
+      // foot of this test cannot index it.
+      async (_args: { page: number; limit: number }) => ({
+        items: rows(21, 20),
+        total: 45,
+      })
+    )
     const first = rows(1, 20)
     const second = rows(100, 5)
 
