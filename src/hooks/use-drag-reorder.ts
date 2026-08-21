@@ -43,17 +43,14 @@ export type UseDragReorderOptions = {
    */
   onMove: (from: number, to: number) => void
   /**
-   * The drag finished and the list is in a new order. Called once, on release,
-   * and never for a drag that was cancelled or one that ended where it began —
-   * so a list that has to save its order sends one request per drag rather than
-   * one per slot crossed. Read the order from your own state; the `onMove`
-   * calls that produced it have all already been made.
+   * The drag finished in a new order. Called once on release, never for a
+   * cancelled drag or one that ended where it began. Read the order from your
+   * own state.
    */
   onCommit?: () => void
   /**
-   * Veto a landing slot. Return false and the item stays where it is while the
-   * drag carries on, so a list drawn in blocks can hold each item inside its
-   * own. Omit and every slot accepts.
+   * Veto a landing slot. Return false and the item stays put while the drag
+   * carries on. Omit and every slot accepts.
    */
   canMove?: (from: number, to: number) => boolean
   /** Set false to leave the list static (a single item, or a save in flight). */
@@ -74,17 +71,10 @@ export type UseDragReorderResult = {
 }
 
 /**
- * Drag-to-reorder for a wrapping grid, on mouse, pen and touch alike.
- *
- * Items move under the pointer as it travels rather than on release, and the
- * tiles they displace slide into their new places, so the order on screen is
- * always the order that will be saved.
- *
- * Targets are worked out against the slot rectangles captured when the drag
- * starts, never against the live tiles: the tiles are mid-animation for most
- * of a drag, and hit-testing a moving target makes the item flicker between
- * two slots. The grid the slots describe does not move, so one snapshot holds
- * for the whole gesture.
+ * Drag-to-reorder for a wrapping grid, on mouse, pen and touch alike. Items
+ * move under the pointer rather than on release. Targets are hit-tested against
+ * the slot rectangles captured at drag start, never the live tiles, which
+ * animate.
  */
 export function useDragReorder({
   count,
@@ -139,9 +129,8 @@ export function useDragReorder({
   }, [])
 
   /**
-   * `drop` is a release: the order stands and is worth saving. `cancel` puts
-   * the item back. `discard` walks away from a gesture that never became a
-   * drag, or one whose component is going — neither leaves an order to save.
+   * `drop` keeps the new order and commits, `cancel` puts the item back,
+   * `discard` abandons a gesture that never became a drag.
    */
   const stop = useCallback(
     (outcome: 'drop' | 'cancel' | 'discard') => {
@@ -375,10 +364,7 @@ export function useDragReorder({
 }
 
 /**
- * Nearest ancestor that actually scrolls, falling back to the page itself —
- * the composer inside a dialog scrolls its own box, the one on a post page
- * scrolls the document, and a drag has to be able to reach off-screen tiles
- * either way.
+ * Nearest ancestor that actually scrolls, falling back to the page itself.
  */
 function scrollableAncestor(element: HTMLElement): HTMLElement | null {
   let node = element.parentElement

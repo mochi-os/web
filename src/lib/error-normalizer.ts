@@ -33,13 +33,9 @@ function extractErrorFromPayloadWithSource(payload: unknown): {
 } {
   if (!isRecord(payload)) return {}
 
-  // Mochi error envelope is { error: <machine-readable code>, message:
-  // <localized human-readable string> } as produced by respond_error
-  // (core/server/labels.go). When both are present, prefer message for
-  // display; keep error as the code so callers can switch on it.
-  // Falling through to "error as message" when message is absent
-  // preserves backwards compatibility with handlers that haven't yet
-  // adopted respond_error.
+  // respond_error's envelope is { error: <code>, message: <localized text> }.
+  // Prefer message for display and keep error as the code; a payload carrying
+  // only `error` falls back to it as the message.
   const topError = asNonEmptyString(payload.error)
   const topMessage = asNonEmptyString(payload.message)
   if (topError && topMessage) {
@@ -104,20 +100,10 @@ export function extractErrorMessageFromPayload(payload: unknown): {
 }
 
 /**
- * Detect an HTML document served where data was expected, and pull out
- * whatever explanation the page carries.
- *
- * A Mochi request that names a path with no matching action falls through to
- * the SPA catch-all, which answers 200 with index.html. Left alone that
- * surfaces far from its cause - as a parse error, or a component rendering
- * nothing - so the response interceptor turns it into an error that names it.
- *
- * Returns null when the body is not an HTML document. Bodies that are not
- * strings (a Blob or ArrayBuffer from a download) are never HTML by this test,
- * so binary responses are unaffected.
- *
- * The message itself is built by the caller: this file is imported by tests
- * without babel, so it cannot use the Lingui macro.
+ * Detect an HTML document served where data was expected: a path with no
+ * matching action falls through to the SPA catch-all, which answers 200 with
+ * index.html. The caller builds the message - this file is imported without
+ * babel, so no macro.
  */
 export function detectHtmlResponse(body: unknown): { detail?: string } | null {
   if (typeof body !== 'string') return null
@@ -126,14 +112,9 @@ export function detectHtmlResponse(body: unknown): { detail?: string } | null {
   const lowered = trimmed.slice(0, 16).toLowerCase()
   if (!lowered.startsWith('<!') && !lowered.startsWith('<html')) return null
 
-  // A Go error page puts the cause in <pre>; otherwise the title is the best
-  // hint available.
-  //
-  // Development only. The detail is shown to the user by the response
-  // interceptor, and on a panic page that <pre> is a stack trace with
-  // filesystem paths in it. The signal that matters in production - that an
-  // HTML body arrived where JSON was expected - is the non-null return, which
-  // is unaffected; only the internals are withheld.
+  // Development only: on a panic page the <pre> is a stack trace with
+  // filesystem paths in it. Production keeps the signal that matters, the
+  // non-null return.
   if (!import.meta.env.DEV) return {}
 
   const pre = asNonEmptyString(trimmed.match(/<pre>([^<]*)<\/pre>/i)?.[1])

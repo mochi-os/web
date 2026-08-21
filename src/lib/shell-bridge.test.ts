@@ -212,17 +212,9 @@ describe('theme value rules', () => {
     expect(isThemeFontSize('inherit')).toBe(false)
   })
 
-  // The rules above stay live for the IFRAME side: an app styling its own
-  // document is its own business, and applyColorThemeToDOM still filters what
-  // it installs there.
-  //
-  // The shell script used to carry a duplicate of them, because it applied the
-  // same app-supplied values to the TRUSTED root and a plain script cannot
-  // import this module. It no longer accepts those values at all — the root is
-  // installed from the server's own resolution of the user's preference — so
-  // there is no copy left to drift. This asserts that replacement holds,
-  // because a shell that went back to installing an app's values could paint
-  // the permission dialog's text in its background colour.
+  // The trusted shell root is installed from the server's own resolution of the
+  // preference, never from an app's posted values - a shell that installed them
+  // could paint the permission dialog's text in its background colour.
   it('leaves the trusted shell root to the server instead of copying these rules', async () => {
     const { readFileSync } = await import('node:fs')
     const { resolve } = await import('node:path')

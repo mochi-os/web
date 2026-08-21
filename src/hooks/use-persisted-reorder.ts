@@ -27,20 +27,10 @@ export type UsePersistedReorderResult = UseDragReorderResult & {
 }
 
 /**
- * Drag-to-reorder for a list that is already saved.
- *
- * `useDragReorder` moves items as the pointer travels, which is the right feel
- * but the wrong thing to send: one drag across a grid crosses several slots and
- * would be several requests. This moves the list on screen exactly as that hook
- * does and saves once, when the pointer is let go.
- *
- * The list is frozen while a save is in flight. A second drag landing on top of
- * the first would race it, and the loser decides the order the server keeps.
- *
- * `saving` is exported because the caller has to freeze the rest of the list
- * too. Rolling back restores the order as the server last took it, so an item
- * added or removed while a save was in flight would come back — or vanish —
- * with the rollback. Gate anything that adds or removes on `saving`.
+ * Drag-to-reorder for a list that is already saved: the list moves as the
+ * pointer travels but saves once, on release, and is frozen while that save is
+ * in flight. A rollback restores the order the server last took, so gate adds
+ * and removes on `saving`.
  */
 export function usePersistedReorder<T>({
   items,

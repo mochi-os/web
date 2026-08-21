@@ -12,19 +12,9 @@ export function sleep(ms: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// naturalCompare(a, b) — case-insensitive, accent-insensitive, numeric-aware
-// string comparison for in-memory sorts. Use this in `Array.prototype.sort`
-// for any user-facing list ordered by a name/title/label string.
-//
-// Comparator behaviour:
-//   - "café" sorts equal to "cafe"
-//   - "Über" sorts equal to "uber"
-//   - "Sprint 2" sorts before "Sprint 10" (numeric: true)
-//   - Locale-undefined; uses the engine's root collator so behaviour is
-//     consistent regardless of viewer language.
-//
-// Rule: do not sort by user-facing strings in SQL — fetch unsorted (or order
-// by an intrinsic column like rank/created) and sort with naturalCompare here.
+// naturalCompare - case- and accent-insensitive, numeric-aware ("Sprint 2"
+// before "Sprint 10"), locale-undefined. Use it for any user-facing list sorted
+// by a name, title or label; SQL orders by intrinsic columns only.
 const naturalCollator = new Intl.Collator(undefined, {
   sensitivity: 'base',
   numeric: true,
@@ -51,18 +41,6 @@ export function compareVersions(a: string, b: string): number {
   return 0
 }
 
-/**
- * Generates page numbers for pagination with ellipsis
- * @param currentPage - Current page number (1-based)
- * @param totalPages - Total number of pages
- * @returns Array of page numbers and ellipsis strings
- *
- * Examples:
- * - Small dataset (≤5 pages): [1, 2, 3, 4, 5]
- * - Near beginning: [1, 2, 3, 4, '...', 10]
- * - In middle: [1, '...', 4, 5, 6, '...', 10]
- * - Near end: [1, '...', 7, 8, 9, 10]
- */
 export function getPageNumbers(currentPage: number, totalPages: number) {
   const maxVisiblePages = 5 // Maximum number of page buttons to show
   const rangeWithDots = []

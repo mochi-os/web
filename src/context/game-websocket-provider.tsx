@@ -12,9 +12,8 @@ import { GameWebsocketContext } from './game-websocket-context'
 interface GameWebsocketProviderProps {
   children: ReactNode
   /**
-   * Resolves the chat key for a game. Each game app fetches this from its own
-   * games endpoint, so the lookup is injected rather than imported. May throw —
-   * the provider catches and degrades to an unkeyed connection.
+   * Resolves the chat key for a game, injected because each app has its own
+   * endpoint. May throw; the provider degrades to an unkeyed connection.
    */
   getGameKey: (gameId: string) => Promise<string | undefined>
 }

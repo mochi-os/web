@@ -1,17 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The app shell crm and projects each grew privately. The two files were 115
-// and 119 lines and 24 lines apart once the app noun was normalised: the icon,
-// the wording, the route builder, and the mobile-nav flag projects passes and
-// crm does not.
-//
-// What stays app-side is the sidebar provider and the create dialog, both of
-// which are the app's own components. The dialog comes in as `children` so it
-// still renders beside the shell, exactly where it did before.
-//
-// Every string arrives resolved from the app, for the reason given in
-// entity-list-page.tsx.
+// The app shell shared by crm and projects. The sidebar provider and the create
+// dialog stay app-side, the dialog arriving as `children`. Every string arrives
+// resolved from the app, for the reason given in entity-list-page.tsx.
 
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { Plus, RefreshCw, Search, type LucideIcon } from 'lucide-react'

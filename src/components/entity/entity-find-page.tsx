@@ -1,17 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The find route crm and projects each grew privately. Both were the same
-// 100-line wrapper around FindEntityPage with the app noun swapped: the same
-// recommendations query, the same accessible-id memo, the same subscribe
-// handler, the same probe. 78 of crm's 84 code lines matched projects'.
-//
-// The four other apps that hold a find route (feeds, forums, repos, wikis)
-// share nothing with these two beyond FindEntityPage itself, so they are left
-// alone.
-//
-// Every string arrives resolved from the app, for the reason given in
-// entity-list-page.tsx.
+// The find route shared by crm and projects. Every string arrives resolved from
+// the app, for the reason given in entity-list-page.tsx.
 
 import { useCallback, useMemo, type ComponentProps } from 'react'
 import { useQuery } from '@tanstack/react-query'

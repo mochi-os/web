@@ -1,22 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The in-game chat list chess and go each grew privately, 273 and 265 lines
-// and twenty lines apart. Those twenty were the move line: chess tells a
-// capture from a quiet move, go localises its "Pass" sentinel. Everything else
-// — the date grouping, the two scroll effects, the skeleton, the error and
-// empty states and the bubbles — was the same in both.
-//
-// words holds a third copy, 305 lines, and it is the reason the system labels
-// are optional: words has no draw, so it supplies `resigned` alone and the
-// other three events keep falling through to the stored body. Its move line is
-// the richest of the three — plays, passes and exchanges all arrive as type
-// 'move' and are told apart by the event marker — which is exactly what the
-// render prop is for.
-//
-// The move line is a render prop, so each game keeps its own wording. Every
-// other string arrives resolved from the app, so no app adds a message to the
-// other apps' catalogs.
+// The in-game chat list shared by chess, go and words. The move line is a
+// render prop so each game keeps its own wording; every other string arrives
+// resolved from the app.
 
 import {
   Fragment,
@@ -54,13 +41,8 @@ export interface GameChatMessage {
 }
 
 /**
- * System events, resolved by the app. A legacy row with no `event` renders its
- * stored `body` instead, which is why none of these is a fallback.
- *
- * Each is optional, and an absent one — or a callback returning nullish — also
- * falls back to the body. That is how a game without draws (words) supplies
- * `resigned` alone, and how words keeps showing the body for a resignation
- * whose actor name is empty.
+ * System events, resolved by the app. Each is optional, and an absent one - or
+ * a callback returning nullish - renders the row's stored `body` instead.
  */
 export interface GameChatSystemLabels {
   resigned?: (name: string) => ReactNode

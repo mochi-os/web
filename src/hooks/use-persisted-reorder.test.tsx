@@ -1,9 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// A list that is already saved cannot just move on screen. What is under test
-// here is what happens around the drag: one save per drag, the list frozen
-// while that save is in flight, and the old order back on screen if it fails.
+// One save per drag, the list frozen while that save is in flight, and the old
+// order back on screen if it fails.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, render, screen, fireEvent } from '@testing-library/react'

@@ -68,11 +68,9 @@ export interface TreeRowProps {
   canReorder: boolean
   canReparent: boolean
   /**
-   * Whether this row may start a drag at all. The board only marks a card
-   * draggable when it has somewhere to drop it; this row did so unconditionally,
-   * which handed a reader without write access a grab cursor and a drop
-   * indicator for a move the tree then refused. Defaults to true so existing
-   * callers are unchanged.
+   * Whether this row may start a drag at all. False for a reader without write
+   * access, who would otherwise get a grab cursor and a drop indicator for a
+   * move the tree refuses. Defaults to true.
    */
   canDrag?: boolean
   onToggleExpand: () => void

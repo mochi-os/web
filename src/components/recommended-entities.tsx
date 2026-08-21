@@ -2,16 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The "Recommended <nouns>" block an app shows under its empty state, beside
-// InlineEntitySearch.
-//
-// crm, projects, feeds and forums each grew a private copy. They render the
-// same separator, heading, skeleton, error state and row, and differ only in
-// icon, noun and the api module they call, so everything app-specific is a
-// prop: `load` and `onSubscribe` are the app's own calls, and the item type
-// flows through the generic so `onSubscribe` receives the app's own row.
-//
-// The block removes itself when nothing is left to recommend, which is why it
-// renders null rather than an empty state.
+// InlineEntitySearch. `load` and `onSubscribe` are the app's own calls. Renders
+// null once nothing is left to recommend.
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '@lingui/core/macro'

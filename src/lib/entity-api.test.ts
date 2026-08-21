@@ -1,18 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// createEntityApi is the whole object/class/field client both crm and projects
-// call. Each app used to assert it through its own binding — 56 blocks in crm,
-// 53 of the same blocks in projects — while the client itself sat here with
-// nothing on it. The routes it builds and the payloads it sends are asserted
-// once, against a stub AppClient, so a change to the shared client fails here
-// rather than twice over in the apps.
-//
-// Ported from apps/crm/web/src/api/crms.test.ts at main (56 blocks): the 53
-// both apps shared, plus the three upload blocks only crm ever covered even
-// though uploadAttachments and importData have always been shared code.
-// What stays in the apps is their own wiring — request module, endpoint table,
-// resource key — and whatever routes only they have.
+// The routes createEntityApi builds and the payloads it sends, asserted once
+// against a stub AppClient rather than through each app's binding.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createEntityApi } from './entity-api'
 import { entityEndpoints } from './entity-endpoints'
@@ -979,15 +969,10 @@ describe('createEntityApi', () => {
   })
 })
 
-// The surface gate. Cross-package coverage cannot be measured here (the app
-// suites resolve @mochi/web to this source, but v8 scopes its report to the
-// vitest project root and drops everything outside it), so reach over the
-// client's own surface is the acceptance criterion instead of a coverage delta.
-//
-// These 17 methods were never invoked by either app's suite on main either.
-// Restoring them is betterment rather than remediation, so they are quoted
-// separately and listed here instead: the debt lives in the code, not in a
-// document, and the gate fails the moment anything ELSE stops being invoked.
+// Surface gate. Cross-package coverage cannot be measured here, so reach over
+// the client's own methods is the criterion instead. The list below is the
+// methods no app suite has ever invoked; the gate fails when anything else
+// stops being reached.
 const NEVER_TESTED_ON_MAIN = [
   'exportData',
   'exportDesign',

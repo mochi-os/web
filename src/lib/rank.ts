@@ -1,12 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Fractional-index rank keys (#53) — client mirror of the canonical
-// fractional-indexing in apps/projects/projects.star (Evan Wallace's algorithm:
-// integer header + fractional part; append/prepend increment/decrement the
-// header, only between bisects). Floor midpoint (`>> 1`) matches the Starlark
-// `// 2` so the optimistic drag preview lands where the server will. Used only
-// for the optimistic preview; the server computes the authoritative key.
+// Fractional-index rank keys (#53) - client mirror of the fractional-indexing
+// in apps/projects/projects.star. The floor midpoint (`>> 1`) must match the
+// Starlark `// 2`, or the optimistic preview lands where the server's key will
+// not.
 const D = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 const HEADERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 const SMALLEST = 'A' + '0'.repeat(26)

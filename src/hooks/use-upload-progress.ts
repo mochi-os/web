@@ -18,24 +18,16 @@ export interface Upload {
 
 export interface UploadOptions {
   /**
-   * Byte size of each file in the request, in body order. Supply this to get
-   * `slices` back. It must line up with the array that actually goes into the
-   * FormData, which is not always the array a composer is showing.
+   * Byte size of each file, in body order; supply it to get `slices` back. Must
+   * line up with the array that goes into the FormData, not the one on screen.
    */
   sizes?: readonly number[]
 }
 
 /**
- * Tracks the byte progress of a single in-flight upload. `upload` wraps an
- * API call, handing it an axios `onUploadProgress` callback to thread into
- * the request config; `progress` is null when idle, then {sent, total, phase}
- * while the request runs. Once the body has fully left the browser the phase
- * flips to 'processing' — the server is still generating thumbnails or
- * fanning out, and a bar parked at 100% would read as stuck.
- *
- * Pass `sizes` to also get `slices`, which splits that one counter across the
- * individual files. There is only ever one request, so this is derived rather
- * than measured; `uploadSlices` documents what that costs.
+ * Byte progress of a single in-flight upload. The phase flips to 'processing'
+ * once the body has left the browser, so a bar does not park at 100%. Pass
+ * `sizes` for per-file `slices`; see `uploadSlices`.
  */
 export function useUploadProgress() {
   const [progress, setProgress] = useState<Upload | null>(null)
@@ -62,11 +54,9 @@ export function useUploadProgress() {
     ): Promise<Result> => {
       const sizes = options?.sizes
       sizesRef.current = sizes
-      // The tiles are already on screen, so they get their zero state now
-      // rather than a frame late. It comes from the same function that will
-      // produce every later value — scaled against the payload, since the body
-      // size is not known until the first event — so the shape cannot disagree
-      // with itself at the one point the request has not started.
+      // Seed the zero state from the same function that produces every later
+      // value, scaled against the payload since the body size is not known
+      // until the first event.
       const payload = sizes?.reduce((a, b) => a + b, 0) ?? 0
       setProgress({
         sent: 0,

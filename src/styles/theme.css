@@ -1,13 +1,6 @@
-/* Web fonts, self-hosted. These used to arrive from Google Fonts via a <link>
-   the Vite plugin injected into every app, which meant every page view of
-   every app disclosed the visitor's IP, User-Agent and this server's origin to
-   a third party — the same disclosure markdown-url.ts blocks foreign images
-   for. Serving them ourselves keeps that inside the deployment.
-
-   Each file declares one weight split by unicode-range, so a browser fetches
-   only the subsets it actually renders, and only if something uses the family
-   at all. That matters for Atkinson Hyperlegible, which nothing loads unless
-   the reader has chosen the dyslexia font preference. */
+/* Web fonts, self-hosted: loading them from Google Fonts disclosed every visitor's
+ * IP and User-Agent to a third party. Each file is one weight split by
+ unicode-range, so a browser fetches only the subsets it renders. */
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
@@ -91,15 +84,10 @@
 }
 
 :root {
-  /* Font stacks. --font-sans matches the system stack the server emits for
-     themed pages (font_stacks/style_preset_vars in core/server/themes.go), so
-     pages served without a theme style — OpenGraph-served public pages,
-     servers with no default_theme — render in the same font as everything
-     else. Atkinson Hyperlegible is declared by the @font-face imports at the
-     top of this file but applied only by the dyslexia font preference, so it
-     is never fetched unless a reader turns that on. --font-mono leads with the
-     self-hosted IBM Plex Mono — keep the weights it needs in sync with those
-     imports. */
+  /* Font stacks. --font-sans matches the system stack core/server/themes.go emits,
+   * so pages served without a theme style render in the same font. Atkinson
+   * Hyperlegible is applied only by the dyslexia preference; keep --font-mono's
+   weights in sync with the imports at the top of this file. */
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -200,14 +188,9 @@
 
   /* --- Charts --- */
   --chart-1: oklch(0.81 0.17 75.35);
-  /* Chroma is capped at what sRGB can hold at this lightness, taken across
-     every hue (the floor is 0.0721, around hue 200) rather than per theme,
-     since --hue is set at runtime and CSS cannot solve the gamut boundary.
-     min() only bites on themes that exceed it: steel (0.055) is untouched,
-     while blue, terracotta and teal were each about 0.015 over and were being
-     silently gamut-mapped by the browser, which shifted their hue by up to
-     4 degrees. A theme's own primary is unaffected - it is in gamut at its
-     own lightness, and only these darker derivations were out. */
+  /* Chroma capped at what sRGB holds at this lightness across every hue (0.0721,
+   * around hue 200): --hue is set at runtime, so CSS cannot solve the gamut
+   boundary per theme. Uncapped, the browser gamut-maps and shifts the hue. */
   --chart-2: oklch(0.424 min(var(--hue-chroma), 0.072) var(--hue));
   --chart-3: oklch(0.56 0 0);
   --chart-4: oklch(0.44 0 0);
@@ -348,12 +331,9 @@
     scroll-behavior: auto !important;
   }
 
-  /* Loading spinners are functional feedback, not decoration — they
-     tell the user the app is still working. The blanket reset above
-     would freeze them after a single 0.01ms flick (reported as "the
-     spinner doesn't spin"). Re-enable continuous rotation for the
-     spin utilities; a small rotating spinner is low-motion and is the
-     standard exception to reduced-motion. */
+  /* Spinners are functional feedback: the blanket reset above freezes them after
+   * one 0.01ms flick. A small rotating spinner is the standard reduced-motion
+   exception. */
   .animate-spin {
     animation: spin 1s linear infinite !important;
   }

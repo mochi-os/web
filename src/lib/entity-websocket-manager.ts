@@ -1,34 +1,17 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Entity WebSocket manager - one connection per entity key, shared by every
-// subscriber of that key.
-//
-// This is deliberately not the same thing as ChatWebsocketManager in
-// realtime-websocket-manager.ts. That one carries connection status snapshots
-// and retry telemetry for the chat and game apps. This one is the small
-// fan-out singleton the entity apps need: subscribe by key, get parsed events,
-// reconnect on drop, close when the last subscriber leaves.
-//
-// crm, projects, repos, wikis, feeds and forums each grew a private copy of
-// this class. They are 0.92-1.00 identical to each other, so a fix to one has
-// never reached the rest. Adopting this module is what stops that.
+// One connection per entity key, shared by every subscriber of that key. Not
+// ChatWebsocketManager in realtime-websocket-manager.ts, which carries
+// connection status snapshots and retry telemetry for chat and games.
 
 import { useAuthStore } from '../stores/auth-store'
 
-// Reconnect backoff. A flat retry means every open tab in every app hammers
-// the server at a fixed rate for as long as it is down, and they stay in
-// lockstep because they all failed at the same moment. Doubling from 1s to a
-// 30s ceiling, with jitter to break that lockstep, backs off a sustained
-// outage while still reconnecting quickly after a blip.
+// Reconnect backoff, doubling to a 30s ceiling with jitter: a flat retry has
+// every tab hammering the server in lockstep for as long as it is down.
 const RECONNECT_DELAY_MINIMUM = 1000
 const RECONNECT_DELAY_MAXIMUM = 30000
 
-/**
- * A server event for a subscribed entity. `type` is the only field every
- * event carries; the rest depend on the event and are read by the app's own
- * handler.
- */
 export interface EntityWebsocketEvent {
   type: string
   object?: string
@@ -188,11 +171,9 @@ class EntityWebsocketManager {
     }
     const ws = this.connections.get(key)
     if (ws) {
-      // Detach before closing. `close()` is asynchronous, so a subscriber that
-      // arrives before the close event lands opens a replacement connection —
-      // and the old socket's onclose would then delete that live connection
-      // from the map and schedule a second one on top of it, leaving an orphan
-      // socket delivering every event twice.
+      // Detach before closing: close() is asynchronous, and a replacement
+      // opened in that window would be deleted from the map by this socket's
+      // onclose, leaving an orphan that delivers every event twice.
       ws.onopen = null
       ws.onmessage = null
       ws.onclose = null

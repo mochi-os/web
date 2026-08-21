@@ -11,29 +11,23 @@ import {
 
 interface UseEntityWebsocketOptions {
   /**
-   * The app's entity noun, as it appears in both the server event type
-   * (`<entity>/update`) and the root of the entity's query key. `'crm'` in the
-   * crm app, `'project'` in projects.
+   * The app's entity noun, used in the server event type (`<entity>/update`)
+   * and the root of the entity's query key.
    */
   entity: string
   /** Fingerprint of the subscribed entity. Undefined means do not connect. */
   fingerprint?: string
   /**
-   * Called when a bulk sync batch lands. The entity, its schema and its
-   * populated flag come from the route loader rather than react-query, so the
-   * caller re-runs the loader here.
+   * Called when a bulk sync batch lands. The entity, schema and populated flag
+   * come from the route loader, so the caller re-runs it here.
    */
   onSync?: () => void
 }
 
 /**
- * Subscribe to an entity's WebSocket events and invalidate the queries each
- * one affects.
- *
- * Shared by crm and projects, whose copies of this hook were 0.99 identical.
- * The event vocabulary below - comments, objects, values, links, attachments
- * and the design tree - is the entity object model both apps implement, so it
- * lives here rather than being passed in.
+ * Subscribe to an entity's WebSocket events and invalidate the queries each one
+ * affects. The event vocabulary below is the entity object model crm and
+ * projects both implement, so it lives here rather than being passed in.
  */
 export function useEntityWebsocket({
   entity,
@@ -60,12 +54,9 @@ export function useEntityWebsocket({
       // produce a `case` that collides with 'object/update' below, and the
       // first matching case would win.
       if (data.type === `${entity}/update`) {
-        // Arrives after a bulk sync batch (event_sync_batch) lands all of a
-        // subscribed entity's data at once. The entity + schema + populated
-        // flag come from the route loader (not a react-query key), so onSync()
-        // re-runs the loader; the objects + people lists are react-query, so
-        // invalidate those too. Together a freshly subscribed entity flips out
-        // of its loading state the moment its data arrives.
+        // A bulk sync batch has landed. The entity, schema and populated flag
+        // come from the route loader, so onSync() re-runs it; objects and
+        // people are react-query keys and are invalidated here.
         onSyncRef.current?.()
         invalidate(['objects', pid])
         invalidate(['people', pid])

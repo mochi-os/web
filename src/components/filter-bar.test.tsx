@@ -1,13 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// FilterBar has been shared since before the page-sharing branch — each app's
-// filter-bar.tsx was already a one-line re-export of this file. What the apps
-// still carried was this suite, byte identical in both, and removing the app
-// copies left the component with nothing. It is asserted once here instead.
-//
-// Ported unchanged from apps/crm/web/src/features/views/components/filter-bar.test.tsx
-// at main (7 blocks); only the render helper and the component path move.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from './entity/entity-test-utils'
 import { FilterBar, type FilterState } from './filter-bar'

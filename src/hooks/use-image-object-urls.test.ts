@@ -1,11 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The property under test is ORDER: the replacement URLs must exist before the
-// ones they replace are torn down. Revoking while rendering can invalidate a
-// URL the committed tree is still displaying, which shows up as broken images;
-// revoking in effect cleanup cannot, because the replacement has committed by
-// the time it runs.
+// The property under test is ORDER: replacement URLs must exist before the ones
+// they replace are revoked, or the committed tree shows broken images.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'

@@ -5,13 +5,9 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
 import { ThemeProvider } from './theme-provider'
 
-// The server resolves "follow the system" to a class before first paint so the
-// page does not flash. That class is a RESOLUTION, not the preference — and
-// reading it as the preference is what froze a page loaded while the OS was
-// dark, because the change listener only runs for 'system'. The effect was that
-// the same stored preference behaved differently depending on the time of day:
-// load in daylight and the page followed the OS, load after sunset and it never
-// moved again until reload.
+// The server-rendered class is a RESOLUTION of "follow the system", not the
+// preference: reading it as the preference freezes a page loaded while the OS
+// was dark, because the change listener only runs for 'system'.
 
 // One MediaQueryList per media string, reused across calls: the provider holds
 // the object it got from matchMedia and reads `.matches` off THAT when the

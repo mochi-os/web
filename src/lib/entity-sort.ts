@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // One comparator for every object list in the object/class/field apps (crm,
-// projects). The board and the tree used to carry their own copies, which is
-// how they could drift on the rank branch below.
+// projects).
 
 import { naturalCompare } from './utils'
 import { rankCompare } from './rank'

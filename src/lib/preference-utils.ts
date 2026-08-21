@@ -1,15 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// User-preference label hooks. Each returns a Record<string, string> mapping
-// preference values to their human-readable display, with translatable strings
-// resolved through Lingui's active catalog. Number/date/time format keys that
-// are already locale-neutral (e.g. 'YYYY-MM-DD', '1,000.00') stay as their
-// own display.
-//
-// Use the hook variant inside React components. The plain const exports below
-// remain for any non-React or pre-i18n consumers, but they are English only —
-// new code should prefer the hook.
+// User-preference label hooks: preference value to display text, resolved
+// through the active Lingui catalog. Format keys that are already
+// locale-neutral ('YYYY-MM-DD', '1,000.00') stay as their own display; the
+// plain const exports below are English only.
 import { useLingui } from '@lingui/react/macro'
 
 /** Display labels for the appearance preference values. */

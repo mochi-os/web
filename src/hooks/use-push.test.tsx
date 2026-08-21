@@ -1,15 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The property under test is WHO ANSWERED. Push requests are matched on a fixed
-// type string and an id from a plain counter, neither of which is a secret, so
-// the only thing separating the shell's reply from one forged by a nested frame
-// is event.source. Apps run sandboxed with an opaque origin, so event.origin
-// serialises to "null" and cannot be pinned instead — the same reasoning the
-// main bridge and the storage proxy record.
-//
-// Driven through usePush rather than the module-private helpers, so the guard is
-// exercised on the path an app actually takes.
+// Who answered. A push reply is matched on a fixed type and a counter id, so
+// the only thing separating the shell's reply from a forged one is
+// event.source; the iframe's opaque origin rules out pinning event.origin.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
@@ -47,11 +41,8 @@ function requestId(type: string): number {
   return call[0].id
 }
 
-// Drain pending microtasks and one timer turn. Every negative assertion below
-// needs this: a listener that wrongly accepted a forged reply resolves its
-// promise in a microtask, so asserting synchronously after dispatch reports
-// "not settled" whether the guard is present or not — the assertion passes for
-// the wrong reason and the test cannot fail.
+// Every negative assertion needs this: a wrongly accepted reply settles in a
+// microtask, so a synchronous check reports "not settled" either way.
 async function flush() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0))

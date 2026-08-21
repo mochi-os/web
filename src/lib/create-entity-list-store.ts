@@ -1,15 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The sidebar list store crm and projects each grew privately. Both were the
-// same 34-line zustand store over the app's `list` call, matching on every one
-// of their 26 code lines: the same loading flag, the same error string, the
-// same refresh.
-//
-// What each app passes is its own list call, the key its server answers under,
-// and its own wording for the failure. The message is a function so the lingui
-// macro behind it resolves when the failure happens, not when the store is
-// built.
+// Sidebar list store shared by crm and projects. Each app passes its own list
+// call, the key its server answers under, and a failure message as a function,
+// so the lingui macro behind it resolves when the failure happens.
 
 import { create } from 'zustand'
 import { getErrorMessage } from './handle-server-error'

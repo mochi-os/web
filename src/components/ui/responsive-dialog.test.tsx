@@ -1,13 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Guards the breakpoint swap: the root and every part must always pick the same
+// Guards the breakpoint swap: the root and every part must pick the same
 // variant, or the portal throws "`DialogPortal` must be used within `Dialog`".
-//
-// Read what this does NOT do. It passes against the pre-fix code as well: jsdom
-// delivers one resize event and React batches every listener into a single
-// commit, so the tear the fix targets cannot happen here. It catches an outright
-// mismatch, not the race. The race has to be confirmed in a real browser.
+// It catches an outright mismatch, not the race - jsdom cannot produce the
+// tear.
 
 import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'

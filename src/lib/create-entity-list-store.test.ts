@@ -1,13 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// crm and projects each grew the same 34-line sidebar list store and the same
-// six-block suite over it. The store is one factory now, so the behaviour is
-// asserted once here. What stays in the apps is their own wiring: the key their
-// server answers under and their own failure wording.
-//
-// Ported from apps/crm/web/src/stores/crms-store.test.ts at main (6 blocks).
-// `crms` becomes the factory's `rows`; everything else asserts as it did.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createEntityListStore } from './create-entity-list-store'
 

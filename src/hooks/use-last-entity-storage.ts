@@ -13,14 +13,9 @@ export interface LastEntityStorage {
 }
 
 /**
- * Remembers the entity the reader last had open, so the app can restore it on
- * launch. `null` means the "all" view, which is stored as a sentinel rather
- * than as an absent key: an absent key and "the reader chose all" have to stay
- * distinguishable for the launch route to pick the right screen.
- *
- * Each app owns its own key — they must not share one, or opening feeds would
- * move the reader's last forum. This is the entity-app counterpart of
- * createLastGameStorage, which has no "all" view and so needs no sentinel.
+ * Remembers the entity the reader last had open. `null` is the "all" view,
+ * stored as a sentinel: an absent key and "the reader chose all" must stay
+ * distinguishable. Each app owns its own key.
  */
 export function createLastEntityStorage(storageKey: string): LastEntityStorage {
   return {

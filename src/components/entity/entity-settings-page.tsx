@@ -1,17 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The settings page crm and projects each grew privately: identity, delete, and
-// the access-rule tab. The two files were 533 and 561 lines, and 417 of crm's
-// 479 code lines matched projects' in runs of twelve or more.
-//
-// What stays app-side is the route and its tab search param, the wording, the
-// name validation, the access-level ladder, and any identity row only one app
-// has. projects has a prefix; crm does not, and it arrives through
-// renderIdentityExtras rather than a flag.
-//
-// Every string arrives resolved from the app, for the reason given in
-// entity-list-page.tsx.
+// The settings page shared by crm and projects. The route, wording, name
+// validation, access ladder and any app-only identity row stay app-side, the
+// last arriving through renderIdentityExtras.
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -67,9 +59,8 @@ export interface EntitySettingsApi<TContainer> {
 }
 
 /**
- * Every visible string, resolved by the app. The two that take the container
- * name are functions: the page loads the container itself, so the app cannot
- * resolve them up front.
+ * Every visible string, resolved by the app. The two taking the container name
+ * are functions: the page loads the container itself.
  */
 export interface EntitySettingsPageLabels {
   /** Header while loading, and on the error states. */

@@ -3,16 +3,7 @@
 
 // Inline directory search: the compact search-and-subscribe panel an app shows
 // on its empty state, as opposed to the full-page FindEntityPage beside it.
-//
-// crm, projects, feeds, forums, wikis and repos each grew a private copy. They
-// render the same panel and differ only in icon, noun, the api module they call
-// and where they navigate afterwards, so everything app-specific here is a
-// prop: `search`, `probe` and `onSubscribe` are the app's own calls, and the
-// item type flows through the generic so `onSubscribe` still receives the app's
-// own row with whatever extra fields it carries.
-//
-// Only crm and projects guarded against out-of-order search responses. That
-// guard is kept here, so the other four get it by adopting the component.
+// `search`, `probe` and `onSubscribe` are the app's own calls.
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
@@ -38,10 +29,9 @@ export interface InlineEntitySearchProps<T extends InlineEntitySearchItem> {
   /** Directory search for a plain query. */
   search: (query: string) => Promise<T[]>
   /**
-   * Resolve a pasted link (mochi://<peer>/<id> or a web URL). A directory
-   * search can't find a private or unlisted entity, and can't match a URL.
-   * A link that resolves to nothing shows the empty message, not an error:
-   * the server's refusal for a private entity is a raw label key.
+   * Resolve a pasted link (mochi://<peer>/<id> or a web URL); a directory
+   * search matches neither a URL nor a private entity. Resolving to nothing
+   * shows the empty message - the server's refusal is a raw label key.
    */
   probe?: (url: string) => Promise<T[]>
   /** Subscribe and go wherever the app goes next. Owns its own toasts. */

@@ -11,12 +11,9 @@ interface LoadingContentProps {
   className?: string
 }
 
-// Centered spinner + message for a content area that is still loading or
-// syncing in — e.g. a freshly-subscribed project, feed or wiki whose data is
-// arriving over P2P. Prefer a skeleton (BoardSkeleton, ListSkeleton, …) when
-// the final layout is known; reach for this when the content shape isn't known
-// yet, or data is still syncing from a remote host and an empty view would
-// otherwise read as "broken" rather than "loading".
+// Centered spinner and message for content that is loading or still syncing
+// over P2P. Prefer a skeleton when the final layout is known; use this when it
+// is not.
 export function LoadingContent({ label, className }: LoadingContentProps) {
   return (
     <div

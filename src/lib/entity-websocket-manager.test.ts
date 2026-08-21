@@ -1,11 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The two lifecycle races that made boards deliver every event N times: a
-// close() completes asynchronously, so a replacement connection opened in the
-// CLOSING window used to be torn out of the map by the dying socket's own
-// onclose, leaving an orphan socket that still fanned events out to
-// subscribers — one more per token-refresh cycle.
+// The close/reopen races: close() completes asynchronously, so a replacement
+// opened in the CLOSING window must survive the dying socket's onclose, which
+// otherwise leaves an orphan fanning every event out twice.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { entityWebsocketManager, type EntityWebsocketEvent } from './entity-websocket-manager'

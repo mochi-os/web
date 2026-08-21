@@ -427,13 +427,9 @@ export function EntityTreeView<TObject extends EntityObject>({
   // A drag is worth starting only if something can receive it.
   const canDragRows = !!onReorder || !!onReparent || !!onMoveObject;
 
-  // Drag state. The state below drives the visual drop indicators, but the
-  // actual drop decision is read from dragTargetRef. `dragover` is a React
-  // continuous-priority event, so its setState is not flushed before the
-  // discrete `drop`/`dragend` fires — reading the state in the drop handler can
-  // therefore see a stale target (e.g. a "before" on the previous sibling,
-  // which lands the item at the top of its current parent). The ref is updated
-  // synchronously, so the drop always acts on the last computed target.
+  // The state below drives the drop indicators only; the drop decision is read
+  // from dragTargetRef. `dragover` is a continuous-priority React event, so its
+  // setState is not flushed before the discrete `drop`/`dragend` fires.
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<"before" | "after" | "on" | null>(null);

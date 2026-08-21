@@ -54,12 +54,9 @@ function getInitialTheme(): Theme {
   if (shellData?.theme) {
     return shellData.theme as Theme
   }
-  // The server states the preference when it is "follow the system", because
-  // the class it renders alongside is only what that resolved to at load. Read
-  // it first: a page served while the OS was dark carries class="dark", and
-  // taking that as the preference freezes it there — the change listener below
-  // is gated on 'system', so it would never fire again and the page would stop
-  // following the system until a reload.
+  // data-appearance states the preference; the class beside it is only what
+  // that resolved to at load. Taking the class as the preference freezes a page
+  // served dark, since the change listener below is gated on 'system'.
   if (document.documentElement.dataset.appearance === 'auto') return 'system'
   // Respect server-rendered class (shell page sets class="dark" before JS loads)
   if (document.documentElement.classList.contains('dark')) return 'dark'
@@ -104,11 +101,10 @@ function getInitialColorTheme(): ColorTheme | null {
 // isThemeFontSize in shell-bridge — a theme reaches this provider from an
 // untrusted app via the shell's relay, never only from the validated manifest.
 
-// Inline properties this provider has installed on <html>, so cleanup removes
-// exactly what the theme system owns and nothing else (authenticated-layout's
-// --sheet-top-offset must survive a theme switch). Seeded at module evaluation
-// — before any effect can add unrelated properties — with the server-rendered
-// theme variables, which the provider replaces from state on first apply.
+// Inline properties this provider installed on <html>, so cleanup removes what
+// the theme system owns and nothing else (--sheet-top-offset must survive a
+// theme switch). Seeded at module evaluation with the server-rendered
+// variables.
 const installedProperties = new Set<string>()
 {
   const style = document.documentElement.style
@@ -128,12 +124,9 @@ function applyColorThemeToDOM(ct: ColorTheme | null) {
     installedProperties.add(key)
   }
   if (ct) {
-    // The hue triple arrives over postMessage from an app we do not trust -
-    // the shell relays whatever any app sends to every other app's iframe - so
-    // it gets the same guard as the overrides below rather than being install-
-    // on-sight. These three substitute into oklch(), where a fetching value
-    // makes the declaration invalid rather than beaconing, but validating both
-    // paths the same way is what makes that reasoning checkable.
+    // The hue triple arrives over postMessage from an untrusted app - the shell
+    // relays whatever any app sends - so it gets the same guard as the
+    // overrides below rather than being installed on sight.
     if (ct.hue && !isFetchingValue(ct.hue) && !isFetchingValue(ct.chroma) && !isFetchingValue(ct.hueBg)) {
       install('--hue', ct.hue)
       install('--hue-chroma', ct.chroma)

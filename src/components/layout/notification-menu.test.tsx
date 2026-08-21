@@ -1,11 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The notification dropdown navigates to an app-authored string, in the
-// trusted top window, where nothing else stands between that string and
-// window.location. These drive the actual click rather than asserting on the
-// component's source, which is all that was possible before the vitest config
-// learned to transform the Lingui macro.
+// The dropdown navigates to an app-authored link in the trusted top window, so
+// these drive the actual click rather than asserting on the source.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'

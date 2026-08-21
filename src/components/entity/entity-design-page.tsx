@@ -1,18 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The design page crm and projects each grew privately: the header menu, the
-// design export, and the import dialog with its replace confirmation. The two
-// files were 311 and 350 lines, and 260 of crm's 277 code lines matched
-// projects' in runs of twelve or more.
-//
-// What stays app-side is the route, the wording, the design editor itself, and
-// the built-in template list, which only projects offers. The templates arrive
-// through a slot rather than a flag, so their query and their wording stay in
-// the app that has them.
-//
-// Every string arrives resolved from the app, for the reason given in
-// entity-list-page.tsx.
+// The design page shared by crm and projects: the header menu, the design
+// export and the import dialog. The route, the wording, the design editor and
+// the built-in template list stay app-side; templates arrive through a slot,
+// and every string arrives resolved from the app.
 
 import { useCallback, useRef, useState, type JSX, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'

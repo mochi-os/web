@@ -264,12 +264,10 @@ export class ChatWebsocketManager {
     const socketUrl = new URL(websocketUrl)
     socketUrl.searchParams.set('key', chatKey)
 
-    // Same-origin only, matching what api-client.ts does before attaching an
-    // Authorization header. baseUrl is an option or a build-time env var, so it
-    // is not guaranteed to be this origin - and the token goes into the query
-    // string here, because a browser cannot set a header on a WebSocket
-    // handshake. Tested against the http(s) base rather than the wss URL: the
-    // scheme is part of an origin, so wss://host never equals https://host.
+    // Same-origin only, as api-client.ts gates the Authorization header:
+    // baseUrl need not be this origin and the token travels in the query
+    // string. Tested
+    // against the http(s) base - wss://host never equals https://host.
     const token = this.sameOrigin() ? this.getToken?.() : undefined
     if (token) {
       const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
@@ -404,11 +402,8 @@ export class ChatWebsocketManager {
     socket: WebSocket,
     event: CloseEvent
   ) {
-    // Client-initiated closes detach their handlers and settle synchronously
-    // in closeSocket, so only a server or network close arrives here. Even
-    // so, act only for the socket that still owns the entry: a stale close
-    // event must not clear a replacement's reference or reconnect on top of
-    // it.
+    // Act only for the socket that still owns the entry: a stale close event
+    // must not clear a replacement's reference or reconnect on top of it.
     if (entry.socket !== socket) {
       return
     }
@@ -472,11 +467,9 @@ export class ChatWebsocketManager {
       return
     }
 
-    // Detach before closing and settle the terminal state synchronously.
-    // close() completes asynchronously, and ensureSocket may open a
-    // replacement in that window; a dying socket that kept its handlers
-    // would clear the replacement's reference from its late close event
-    // and leave it orphaned but delivering — one duplicate per cycle.
+    // Detach before closing and settle the terminal state synchronously:
+    // close() is asynchronous, and a replacement opened in that window would be
+    // orphaned by the dying socket's late close event.
     const socket = entry.socket
     socket.onopen = null
     socket.onmessage = null

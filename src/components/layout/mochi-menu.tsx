@@ -33,16 +33,9 @@ import { NotificationsSection, type Notification } from './notification-menu'
 import { t, plural } from '@lingui/core/macro'
 
 /**
- * Notifications are supplied by whoever can read them, never fetched here.
- * This component ships inside every app's bundle, and the notifications
- * service is readable only by an app holding notifications/read - which, of
- * the apps that render this menu, is only the menu app. A shared component
- * cannot reach that data, so it takes it.
- *
- * Omit `notifications` and the menu renders no notification affordance at all.
- * That is the honest answer for an app running top-window with no shell: an
- * empty list and a zero badge would assert the user has nothing waiting, which
- * is a claim this component is in no position to make.
+ * Notifications are supplied, never fetched: this ships in every app's bundle
+ * and only the menu app holds notifications/read. Omit `notifications` and the
+ * menu renders no notification affordance at all.
  */
 export type MochiMenuNotifications = {
   items: Notification[]

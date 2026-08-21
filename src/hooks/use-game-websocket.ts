@@ -1,17 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The per-game socket hook chess and go each grew privately, 276 and 271
-// lines. The resignation and draw-offer cache patches, the snapshot refetch,
-// the chat append with its duplicate guard, and the subscribe and status
-// plumbing were the same in both.
-//
-// What differs is which fields a move payload carries: chess merges fen and
-// pgn, go merges fen, sgf, previous_fen and the capture counts. That is the
-// `mergeMove` callback, and it is the only game-specific part left.
-//
-// The comments below are chess's and go's own, kept because they record why
-// the refetch is unconditional. Both apps had reached the same conclusion.
+// The per-game socket hook shared by chess, go and words. `mergeMove` is the
+// only game-specific part: which fields a move payload carries differs per
+// game.
 
 import { useCallback, useEffect, useState } from 'react'
 import {
@@ -27,11 +19,8 @@ import {
 import { useGameWebsocketManager } from './use-game-websocket-manager'
 
 /**
- * The game fields this hook writes. Each app's own Game type is this and more.
- *
- * `draw_offer` and `fen` are optional: words has no draw offer to clear, and it
- * carries its position as `board`. Which field marks a repair snapshot is the
- * `snapshotField` option.
+ * The game fields this hook writes; each app's own Game type is this and more.
+ * `draw_offer` and `fen` are optional - words carries neither.
  */
 export interface GameWebsocketGame {
   id: string
@@ -118,9 +107,8 @@ const createMessageFromPayload = (
 }
 
 /**
- * Merges the game-specific fields of a move payload. Everything the shared
- * hook already handles — status, winner, the cleared draw offer — is applied
- * around whatever this returns.
+ * Merges the game-specific fields of a move payload; status, winner and the
+ * cleared draw offer are applied around it.
  */
 export type MergeMovePayload<G extends GameWebsocketGame = GameWebsocketGame> =
   (game: G, payload: ChatWebsocketMessagePayload) => Partial<G>
@@ -186,16 +174,10 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
     })
   }
 
-  // Any non-move payload carrying a board is a complete applied snapshot: a
-  // system event whose snapshot repaired a move this client never saw, or a
-  // reconciliation 'state' payload. Refetch rather than merging field by
-  // field. A snapshot REPLACES state, and a merge cannot clear a value the way
-  // an exact replacement does — an emptied winner or draw offer is falsy, so
-  // `payload.x || current.x` silently keeps the stale one. Refetching also
-  // updates the list, which a detail-only merge left showing the old status.
-  // A 'state' frame is a repair by definition and counts whether or not it
-  // carries the position field; words' own hook treated it that way, and chess
-  // and go only ever saw one with a fen, so neither noticed the difference.
+  // A non-move payload carrying a board is a complete applied snapshot. Refetch
+  // rather than merge: a merge cannot clear a falsy field (`payload.x ||
+  // current.x` keeps a stale winner) and leaves the list showing the old
+  // status.
   if (msgType !== 'move' && (payload[snapshotField] || msgType === 'state')) {
     void queryClient.invalidateQueries({
       queryKey: keys.detail(gameId),
@@ -205,11 +187,10 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   }
 
   if (msgType === 'move') {
-    // No mergeMove means the game cannot be patched from the payload at all.
-    // words is the case: its rack and bag are private per-player state, so the
-    // copies in the frame are not the ones this viewer is entitled to, and the
-    // refetch below is the only correct response. Games that can patch do, for
-    // responsiveness, and still refetch afterwards.
+    // No mergeMove means the game cannot be patched from the frame at all -
+    // words' rack and bag are private per-player state, so the copies in the
+    // frame are not this viewer's. The refetch below is then the only correct
+    // response.
     if (mergeMove) {
       queryClient.setQueryData<DetailCache>(keys.detail(gameId), (current) => {
         if (!current) return current
@@ -229,17 +210,10 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
       })
     }
 
-    // The merge above is for responsiveness only. A move payload is a complete
-    // snapshot like any other, and the merge cannot clear falsy fields (an
-    // emptied winner survives `payload.x || current.x`) or update the list,
-    // which otherwise shows "active" after a remote win. Authoritative state
-    // comes from the refetch, and it runs UNCONDITIONALLY. An own-echo guard
-    // used to sit here and had two holes: the server emits this frame before
-    // the HTTP response returns, so a response lost after commit consumed the
-    // marker and left the list stale; and the marker was keyed by game alone,
-    // so a failed move's marker could swallow the echo of another window's
-    // successful one. One redundant refetch per own move is the price of not
-    // coupling correctness to HTTP/websocket ordering.
+    // The merge above is responsiveness only; the refetch is authoritative and
+    // runs UNCONDITIONALLY. Do not add an own-echo guard: the frame is emitted
+    // before the HTTP response returns, and a per-game marker swallows another
+    // window's echo.
     if (keys.moveHistory) {
       void queryClient.invalidateQueries({
         queryKey: keys.moveHistory(gameId),
@@ -301,8 +275,8 @@ export interface UseGameWebsocketOptions<
   unknownSenderLabel: string
   /**
    * Merges the game-specific fields of a move payload. Omit it when the game's
-   * state cannot be patched from the frame, as words' cannot: the move is then
-   * applied by refetching alone.
+   * state cannot be patched from the frame; the move is then applied by
+   * refetching.
    */
   mergeMove?: MergeMovePayload<G>
   /**

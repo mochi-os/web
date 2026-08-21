@@ -5,13 +5,10 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-// Asserted against the source, the way api-client.test.ts checks its
-// same-origin guard. Driving this through the rendered tree would be better,
-// but Radix's dropdown does not open under jsdom - it needs the full pointer
-// sequence @testing-library/user-event dispatches, and that is not a
-// dependency of this package. A test that cannot open the menu can only
-// assert that nothing happened, which passes whether or not the wiring is
-// right; this at least fails if the confirmation is taken back out.
+// Asserted against the source: Radix's dropdown does not open under jsdom
+// without
+// @testing-library/user-event, which this package does not depend on, and a test
+// that cannot open the menu passes either way.
 const SOURCE = readFileSync(resolve(__dirname, 'options-menu.tsx'), 'utf8')
 
 describe('OptionsMenu revoking RSS access', () => {

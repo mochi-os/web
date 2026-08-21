@@ -2,13 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The board itself: grouping, sorting, column ordering and the drag preview
-// that EntityBoardColumn renders a gap for. Shared by crm and projects, whose
-// copies were 0.98 identical.
-//
-// It takes the app's details object as `design` - CrmDetails and ProjectDetails
-// are both structurally EntityDesign plus their own container key - and the
-// container id separately, so nothing here reads `crm.crm` or
-// `project.project`.
+// that EntityBoardColumn renders a gap for, shared by crm and projects. It
+// takes the app's details object as `design` and the container id separately,
+// so nothing here reads `crm.crm` or `project.project`.
 
 import {
   useMemo,
@@ -170,12 +166,10 @@ export function EntityBoardContainer<TObject extends EntityObject>({
 
   const hasRows = rowField && rowOptions.length > 0;
 
-  // Measure board position to compute viewport-filling height dynamically.
-  // Observes ancestor elements for resize so the height recalculates when
-  // siblings like the view options bar appear or disappear. We use an exact
-  // height (not min-height) so a tall column can't grow the board past the
-  // viewport — column headers stay visible and cards scroll inside each
-  // column instead of the whole page.
+  // Exact height, not min-height, so a tall column cannot grow the board past
+  // the viewport: headers stay visible and cards scroll inside each column.
+  // Ancestors are observed so it recalculates when the view options bar
+  // appears.
   const boardRef = useRef<HTMLDivElement>(null);
   const [boardHeight, setBoardHeight] = useState("");
 
@@ -253,11 +247,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     boardRef.current.querySelectorAll('[data-card-id]').forEach(card => {
       const id = card.getAttribute('data-card-id');
       if (!id) return;
-      // Drop the skipped subtree's stale "First" rects from the capture map so
-      // no later render can FLIP them. The protection (droppedCardRef) clears on
-      // the first post-drop render, but the dragged card's animation can land a
-      // render later — its source rect lingers in the capture (which isn't
-      // cleared when nothing else animated). That delayed FLIP was the snap-back.
+      // Drop the skipped subtree's stale "First" rects so no later render can
+      // FLIP them: the dragged card's animation can land a render after the
+      // protection clears, and that delayed FLIP is the snap-back.
       if (skip.has(id)) { prev.delete(id); return; }
       const oldRect = prev.get(id);
       if (!oldRect) return;
@@ -370,11 +362,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     return grouped;
   }, [objects, objectMap, statusOptions, rowOptions, statusField, rowField, hasRows, sort]);
 
-  // Apply drag preview to get the card lists columns should render.
-  // For same-column moves, keep the card in the list (renderCardsWithGap will handle it).
-  // For cross-column moves, remove the card from the source column.
-  // For child-reorder moves, remove the card too: BoardCard renders a gap inside
-  // the target parent's children list, so the source column shouldn't also show it.
+  // Apply the drag preview: a same-column move keeps the card in the list,
+  // while cross-column and child-reorder moves remove it - the target parent's
+  // children list renders the gap.
   const applyPreviewToList = useCallback((list: TObject[]): TObject[] => {
     if (!dragPreview || dragPreview.mode === "on") return list;
     if (dragPreview.childReorder) return list.filter(o => o.id !== dragPreview.draggedId);
@@ -409,14 +399,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     setDragPreview(preview);
   }, [capturePositions]);
 
-  // Tear the preview down when the moved row's data lands (data-driven), rather
-  // than on dragend. The preview hides the dragged card during the drag; the
-  // optimistic move applies a render after the drop, so clearing on dragend
-  // reveals the card in its source column for one frame first (the flash). The
-  // objects-change here means the move applied, so we clear then — the card is
-  // revealed already at its destination, regardless of how slow the column is to
-  // render. previewSafetyRef (set on a successful dragend below) is the fallback
-  // so a failed/misreported drop can't leave the preview stuck.
+  // Tear the preview down when the moved row's data lands, not on dragend: the
+  // optimistic move applies a render after the drop, so an earlier clear
+  // flashes the card in its source column. previewSafetyRef is the fallback.
   const prevObjectsRef = useRef(objects);
   const previewSafetyRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
@@ -490,12 +475,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
       }
     }
 
-    // Adjust rank to account for child objects that the server includes in its
-    // scope but the board displays nested inside their parent cards. The server
-    // renumbers ALL objects with the matching status, not just top-level ones,
-    // and children can have ranks anywhere in the flat list (not necessarily
-    // adjacent to their parent). Build the full flat list, find where the
-    // top-level insertion point falls, and count preceding non-top-level objects.
+    // The server renumbers ALL objects with the matching status, including the
+    // children the board nests inside parent cards, whose ranks can fall
+    // anywhere in the flat list - so count preceding non-top-level objects.
     let adjustedRank = newRank;
     if (newRank) {
       const topLevel = (objectsByStatus[columnId] || []).filter(o => o.id !== objectId);
@@ -601,12 +583,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
         cancelAnimationFrame(scrollRafRef.current);
         scrollRafRef.current = 0;
       }
-      // Preview teardown. On a cancelled drag (no valid drop target / Escape),
-      // restore the card to its source now. On a successful drop, leave the
-      // preview up so the card stays hidden until the move's data lands (cleared
-      // by the objects-change effect above) — clearing now would flash the card
-      // in its source column. The timeout only fires if the data never lands
-      // (failed/misreported drop), so the preview can't get stuck.
+      // On a cancelled drag restore the card now; on a successful drop leave
+      // the preview up until the move's data lands, or the card flashes in its
+      // source column. The timeout only fires if the data never lands.
       if (!e || !e.dataTransfer || e.dataTransfer.dropEffect === "none") {
         clearTimeout(previewSafetyRef.current);
         handleDragPreview(null);

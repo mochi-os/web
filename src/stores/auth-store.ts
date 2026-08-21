@@ -35,13 +35,9 @@ async function fetchNonShellAppToken(app: string): Promise<string> {
   }
 }
 
-// The signed-in identity's avatar version token survives reloads in the top
-// window's localStorage: the avatar URL itself never changes and is served
-// with a five-minute cache lifetime, so after an avatar change the bare URL
-// keeps answering with the old image until the cache expires. Sandboxed
-// iframes have no usable localStorage — there the getter answers '' and the
-// setter is a no-op, which is fine because the menus only render in the top
-// window.
+// The avatar version token is kept in the top window's localStorage: the avatar
+// URL never changes and is cached for five minutes, so a change needs a fresh
+// token. Sandboxed iframes have no usable storage; the menus render only there.
 function storedAvatar(identity: string): string {
   if (!identity) return ''
   try {

@@ -44,9 +44,6 @@ describe('AttachmentComposer', () => {
     expect(document.querySelectorAll('[data-slot=attachment-tile]')).toHaveLength(0)
   })
 
-  // The three switches are independent on purpose: a chat box can want a
-  // wrapping grid of small chips, which the old "onReorder implies everything"
-  // shape could not express.
   it('takes layout and preview separately', () => {
     show({ layout: 'grid', preview: 'inline' })
     expect(document.querySelector('[data-slot=attachment-group]')).toHaveAttribute(
@@ -62,9 +59,6 @@ describe('AttachmentComposer', () => {
     expect(screen.getByText('a.png')).toBeInTheDocument()
   })
 
-  // An <img> renders nothing for a video source, so a staged clip needs the
-  // caller to say which element to draw. It used to get neither the URL nor the
-  // kind and fell through to an icon.
   describe('video previews', () => {
     const clip = (name: string) =>
       item(name, { type: 'video/mp4', previewUrl: `blob:${name}`, previewKind: 'video' as const })

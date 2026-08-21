@@ -1,24 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Right-to-left locale detection for Mochi.
-//
-// Mochi sets `document.documentElement.dir` from the active language so
-// Tailwind's logical properties (ms-, me-, ps-, pe-, text-start, text-end,
-// etc.) flip appropriately. This file is the single source of truth for
-// which locales render RTL.
-//
-// `en-x-pseudo-rtl` is a developer-facing pseudo-locale — its content stays
-// English (no separate catalog needed; activation falls through to en) but
-// the layout flips. To enable in a browser:
-//
-//   localStorage.setItem('mochi:language', 'en-x-pseudo-rtl')
-//   location.reload()
-//
-// To revert:
-//
-//   localStorage.removeItem('mochi:language')
-//   location.reload()
+// Right-to-left locale detection - the single source of truth for which locales
+// render RTL. `en-x-pseudo-rtl` is a developer pseudo-locale: English content,
+// flipped layout, enabled by setting localStorage 'mochi:language' and
+// reloading.
 
 const RTL_BASES = new Set([
   'ar',  // Arabic
@@ -35,9 +21,8 @@ const RTL_BASES = new Set([
 ])
 
 /**
- * Returns true if the given BCP 47 tag should render right-to-left.
- * Matches the bare language subtag, so `ar-EG`, `he-il`, `fa-IR` all return true.
- * Also returns true for the `en-x-pseudo-rtl` developer pseudo-locale.
+ * True when the tag renders right-to-left. Matched on the bare language subtag,
+ * plus the `en-x-pseudo-rtl` pseudo-locale.
  */
 export function isRtlLocale(lang: string | null | undefined): boolean {
   if (!lang) return false
@@ -48,13 +33,9 @@ export function isRtlLocale(lang: string | null | undefined): boolean {
 }
 
 /**
- * Set document.documentElement.dir and document.documentElement.lang based on
- * the active language. Idempotent — call on every language change including
- * initial load. Safe in SSR / non-browser contexts (no-op when document is
- * undefined). The `lang` attribute lets browser features (spellcheck, screen
- * readers, voice input, the CSS `:lang()` selector) and search engines pick
- * the right locale rules. The pseudo-locale `en-x-pseudo-rtl` is mapped down
- * to `en` so screen readers don't choke on the synthetic tag.
+ * Set documentElement.dir and lang from the active language. Idempotent, and a
+ * no-op outside a browser. `en-x-pseudo-rtl` maps down to `en` so screen
+ * readers get a real tag.
  */
 export function applyDocumentDir(lang: string | null | undefined): void {
   if (typeof document === 'undefined') return

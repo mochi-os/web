@@ -11,15 +11,9 @@ import type { UploadSlice } from "../../lib/upload-slices"
 import { Button } from "./button"
 
 /**
- * Fill for one attachment's own bytes, along the bottom edge of whatever it is
- * given as a parent.
- *
- * Decorative on purpose. The byte counts are already spelled out in the
- * description line beside it, and ten progressbar roles each announcing their
- * own percentage would bury that one useful line. Timing matches the aggregate
- * bar in `upload-progress.tsx`: two progress indicators in the same view
- * running at different speeds reads as a bug. No RTL handling is needed — the
- * fill is a block box, so it grows from the inline start either way.
+ * Fill for one attachment's own bytes along the bottom edge of its parent.
+ * Decorative on purpose: ten progressbar roles would bury the byte counts
+ * beside it. Timing matches the aggregate bar in `upload-progress.tsx`.
  */
 function AttachmentProgress({
   fraction,
@@ -279,8 +273,7 @@ type AttachmentTileProps = Omit<React.ComponentProps<"div">, "children"> & {
   state?: "idle" | "uploading" | "error"
   /**
    * This file's own share of an upload in flight. Supersedes the pulse that
-   * `state: "uploading"` draws on the name: a real fill says which of ten
-   * files is on the wire, and a pulse on every one of them says nothing.
+   * `state: "uploading"` draws on the name.
    */
   progress?: UploadSlice | null
   /** Lifts the tile while the pointer is carrying it. */
@@ -305,11 +298,7 @@ type AttachmentTileProps = Omit<React.ComponentProps<"div">, "children"> & {
 
 /**
  * One attachment as a gallery tile: a square preview with the name and size
- * beneath it, and the remove button floating over the top corner.
- *
- * The square preview is the point. A row of names tells you nothing about which
- * photo is which, and picking the photo to move is the whole job when a gallery
- * is being put in order.
+ * beneath it, and the remove button over the top corner.
  */
 function AttachmentTile({
   name,
@@ -367,12 +356,9 @@ function AttachmentTile({
           />
         ) : previewUrl ? (
           <>
-            {/*
-             * A blurred, over-scaled copy of the same image fills the square
-             * behind the real one, so `object-contain` letterboxing reads as a
-             * deliberate backdrop instead of dead grey bands. Costs nothing
-             * extra over the network: the browser already has this bitmap.
-             */}
+            {/* Blurred, over-scaled copy of the same image behind the real one,
+             * so `object-contain` letterboxing reads as a backdrop rather than
+             * grey bands. The browser already has this bitmap. */}
             <img
               src={previewUrl}
               alt=""
@@ -380,15 +366,9 @@ function AttachmentTile({
               draggable={false}
               className="absolute inset-0 size-full scale-110 object-cover opacity-40 blur-xl"
             />
-            {/*
-             * Absolutely positioned, not merely sized: an in-flow image keeps
-             * its intrinsic height as a minimum, and a tall screenshot then
-             * forces the square open from the inside and drags the whole row
-             * with it. `object-contain` so a portrait photo and a wide
-             * screenshot both show what was actually attached — a centre crop
-             * of a screenshot is unrecognisable, which is the one case where
-             * picking the right file out of ten matters most.
-             */}
+            {/* Absolutely positioned, not merely sized: an in-flow image keeps its
+             * intrinsic height as a minimum, so a tall screenshot forces the square
+             * open. `object-contain` to avoid centre-cropping. */}
             <img
               src={previewUrl}
               alt={name}
@@ -412,14 +392,9 @@ function AttachmentTile({
             {icon}
           </div>
         )}
-        {/*
-         * The only thing that said a tile could be reordered was the cursor
-         * turning into a grab hand, which nothing on a touch screen ever sees
-         * and nobody reads on a desktop either. The grip says it can move; the
-         * number says where it currently is, which is the thing being edited.
-         * pointer-events-none so the press still reaches the tile and starts
-         * the drag — this is a marker, not a handle you have to aim at.
-         */}
+        {/* Grip and position marker: the grab cursor is invisible on touch.
+         * pointer-events-none so the press still reaches the tile and starts the
+         * drag - this is a marker, not a handle. */}
         {draggable && (
           <div
             aria-hidden
@@ -491,15 +466,9 @@ function AttachmentTile({
 }
 
 /**
- * The "add files" cell at the end of a tile grid.
- *
- * Same footprint as a tile on purpose: it reads as the next empty place in the
- * list rather than as a button that happens to sit nearby, and it gives an
- * empty composer something to show — which is also the only visible hint that
- * the area takes a drop.
- *
- * Carries no copy: `label` is a node the app supplies, so the 22 app catalogs
- * gain nothing new from this file.
+ * The "add files" cell at the end of a tile grid, with the same footprint as a
+ * tile. `label` is a node the app supplies, so this file adds no catalog
+ * strings.
  */
 function AttachmentAddTile({
   label,

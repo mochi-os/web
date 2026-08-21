@@ -30,14 +30,9 @@ export function BackButton({
   const handleClick = async () => {
     if (isFallbackPendingRef.current) return
 
-    // If the user navigated here from another in-app page, take them back
-    // there. Only when there's no in-app history (deep link, fresh tab) do
-    // we fall back to the page-supplied destination.
-    //
-    // Inside the shell iframe, history.back() is a silent no-op (opaque
-    // origin, no real history entries — every push was relayed to the top
-    // window via installShellNavigationSync). Ask the shell to pop the top
-    // window's history instead; its popstate handler re-renders the iframe.
+    // Prefer real in-app history; the page-supplied destination is only for a
+    // deep link or fresh tab. history.back() is a silent no-op inside the shell
+    // iframe, so ask the shell to pop the top window's history instead.
     if (router.history.canGoBack()) {
       if (isInShell()) {
         shellNavigateBack()

@@ -4,13 +4,9 @@
 import { Trans } from '@lingui/react/macro'
 
 /**
- * Footer linking to the three server-level documents (rules / terms /
- * privacy). The links are relative, so they resolve under whichever app
- * mounts this component. The host app must declare its own `document/rules`,
- * `document/terms`, `document/privacy` SPA routes (each mounting
- * `<DocumentPage name='…' />`) plus a `-/document/get` action that calls
- * `mochi.document.get()`. Per CLAUDE.md, an app must never link to another
- * app's pages just because they render the same content.
+ * Footer linking to the server-level documents. Links are relative, so the host
+ * app must declare its own `document/rules|terms|privacy` SPA routes mounting
+ * `<DocumentPage>` plus a `-/document/get` action.
  */
 export function ServerDocumentsFooter() {
   return (

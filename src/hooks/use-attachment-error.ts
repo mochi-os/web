@@ -6,17 +6,8 @@ import { useLingui } from '@lingui/react/macro'
 import { getSendAttachmentErrorMessage } from '../lib/send-attachment-error'
 
 /**
- * The message to show when a send carrying attachments is refused.
- *
- * `getSendAttachmentErrorMessage` takes the three strings from its caller so it
- * can stay out of the catalogs. Every composer wants the same three, so they
- * live here once rather than being spelled out at each send path — and being in
- * `lib/web`, they reach every app's catalog from one extraction.
- *
- * Chat keeps its own wording, which names a message rather than a post.
- *
- * The returned function takes the fallback for the ordinary case, so a caller
- * still says "Failed to post" or "Failed to comment" in its own words.
+ * The message to show when a send carrying attachments is refused. The caller
+ * passes the ordinary-case fallback, so it keeps its own wording.
  */
 export function useAttachmentError() {
   const { t } = useLingui()

@@ -18,10 +18,7 @@ import { Trans } from '@lingui/react/macro'
 export { type Notification }
 
 /**
- * One notification row. This is the implementation the shell menu has always
- * shown; lib/web previously carried a leaner variant with a dot instead of the
- * source icon, which after the notifications became prop-supplied rendered for
- * nobody. One row now, so the two menus cannot drift again.
+ * One notification row, rendered by the shell menu and by an app's own menu.
  */
 export function NotificationItem({
   notification,
@@ -33,10 +30,8 @@ export function NotificationItem({
   onClick?: (notification: Notification) => void
   onMiddleClick?: (notification: Notification) => void
   /**
-   * Trailing control for the row, supplied by the consumer. The category
-   * picker lives here in practice, and it needs data from the notifications
-   * service - which this library cannot read on any app's behalf, so it does
-   * not try. No actions supplied, no control rendered.
+   * Trailing control for the row, supplied by the consumer: this library cannot
+   * read the notifications service. No actions supplied, no control rendered.
    */
   actions?: (notification: Notification) => React.ReactNode
 }) {
@@ -86,11 +81,8 @@ export function NotificationItem({
 }
 
 /**
- * The scrolling list, with the states a real data source produces. Both menus
- * render this: the shell's from its own query, an app's from whatever it was
- * handed. Link policy stays with the caller - the two menus deliberately
- * differ on whether an off-origin link may be opened at all - so this takes
- * handlers rather than deciding.
+ * The scrolling list, rendered by both menus. Link policy stays with the caller
+ * - the two menus differ on whether an off-origin link may be opened at all.
  */
 export function NotificationList({
   notifications,
@@ -151,10 +143,8 @@ export function NotificationList({
 }
 
 // Hosts an operator has vouched for as redirect targets, mirroring the
-// standalone notifications page so both views agree. Empty by default: a
-// notification link is app-authored, and this menu runs in the trusted top
-// window on any direct URL or deep link, where no shell filter stands between
-// the link and window.location.
+// standalone notifications page. Empty by default: notification links are
+// app-authored and this menu runs in the trusted top window.
 const TRUSTED_EXTERNAL_REDIRECT_HOSTS = (
   import.meta.env.VITE_TRUSTED_REDIRECT_HOSTS ?? ''
 )

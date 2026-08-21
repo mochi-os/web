@@ -100,11 +100,9 @@ export function getApiBasepath(): string {
   return match ? '/' + match[1] + '/' : '/'
 }
 
-// Get the auth login URL from environment or default
-// Normalize an entity-scoped URL for the current routing context.
-// API responses return absolute paths like /feeds/<entity>/-/attachments/...
-// On a whole-domain route the app/entity prefix is gone (/-/...); on a
-// subpath route the prefix becomes the route path (/feed/-/...).
+// Normalize an entity-scoped URL for the current routing context. API responses
+// carry absolute paths like /feeds/<entity>/-/...; a whole-domain route drops
+// that prefix, a subpath route replaces it with the route path.
 export function normalizeEntityUrl(url: string): string {
   if (!isDomainEntityRouting()) return url
   const idx = url.indexOf('/-/')
@@ -116,17 +114,9 @@ export function normalizeEntityUrl(url: string): string {
 }
 
 // Router basepath for apps whose routes carry the entity id as a route
-// parameter (feeds, wikis, projects, crm, market, repositories, staff).
-//
-// The domain check has to come first. Core injects mochi:app on entity-routed
-// pages as well as path-routed ones (server web.go, since 0.4.223), so
-// getAppPath() answers "/feeds" on a domain route too — and using that as the
-// basepath tells the router the URL starts with /feeds/ when it actually
-// starts with the domain's route path. Nothing then strips the real prefix and
-// the first path segment is read as an entity id.
-//
-// Off a domain route this is the previous behaviour exactly: the app path
-// without the entity fingerprint, which the routes supply themselves.
+// parameter. The domain check comes first: core injects mochi:app on domain
+// routes too, so getAppPath() would name a prefix the URL does not have and the
+// first segment would be read as an entity id.
 export function getAppBasepath(): string {
   if (isDomainEntityRouting()) return getRouterBasepath()
   const app = getAppPath()
@@ -134,12 +124,9 @@ export function getAppBasepath(): string {
   return getRouterBasepath()
 }
 
-// Splice the domain entity's fingerprint into a browser path.
-//
-// On an entity domain route the entity is named by the hostname, so it is
-// absent from the URL — but the route trees all expect it as their first
-// parameter. These two functions are that translation, and they are exported
-// for their tests.
+// Splice the domain entity's fingerprint into a browser path. On a domain route
+// the entity is named by the hostname and absent from the URL, but the route
+// trees expect it as their first parameter.
 export function entityRouterPath(path: string, base: string, fingerprint: string): string {
   if (!path.startsWith(base)) return path
   const rest = path.slice(base.length)
@@ -183,21 +170,11 @@ function parseHistoryHref(href: string, state: unknown): HistoryLocation {
   }
 }
 
-// Router history for an entity domain route, hiding the entity's fingerprint
-// from the address bar. Returns undefined everywhere else, which leaves the
-// router on its own default history.
-//
-// Only for apps whose route tree puts the entity id first ($feedId,
-// $projectId, $crmId): those trees need the fingerprint spliced back in
-// because their routes cannot match without it. An app whose tree is already
-// domain-aware (wikis' top-level $page, repositories' blob/commit/tree) must
-// NOT install this — there the domain URL genuinely has no fingerprint, and
-// splicing one in sends the root to the wrong route (docs.mochi-os.org
-// rendered "/" as a page named after the wiki's fingerprint).
-//
-// Deliberately keyed on the meta tag rather than getEntityFingerprint(): the
-// rewrite is only correct when the server rendered this page as an entity
-// route in the top window. Inside the shell no meta tags are injected at all.
+// Router history for an entity domain route, hiding the fingerprint from the
+// address bar; undefined everywhere else. Only for route trees that put the
+// entity id first - a domain-aware tree (wikis, repositories) routes its root
+// wrong with one spliced in. Keyed on the meta tag, which only a top-window
+// entity route has.
 export function createAppHistory(window_?: Window): RouterHistory | undefined {
   const win = window_ ?? (typeof window !== 'undefined' ? window : undefined)
   if (!win) return undefined

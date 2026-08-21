@@ -92,11 +92,9 @@ export function EntityViewOptionsBar({
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false);
   const hasSearchValue = filters.search.trim().length > 0;
 
-  // The sheet is only ever mounted below `sm`. Its overlay is a sibling of the
-  // panel and carries no responsive class of its own, so leaving the sheet open
-  // across the breakpoint covered the page with a dim layer while the panel
-  // itself was hidden — and the sheet suppresses interact-outside, so tapping it
-  // did nothing. Rotating a phone to landscape was enough to reach it.
+  // The sheet only mounts below `sm` and its overlay carries no responsive
+  // class, so leaving it open across the breakpoint dims the page with nothing
+  // to dismiss. Close it on leaving compact.
   const { size } = useScreenSize();
   const isCompact = size === "xs";
   useEffect(() => {

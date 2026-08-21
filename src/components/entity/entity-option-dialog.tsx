@@ -38,11 +38,8 @@ interface EntityOptionDialogProps {
 }
 
 /**
- * Add and edit a select-field option, shared by the crm and projects apps.
- *
- * One dialog rather than two: the two modes differ only in which callbacks
- * fire and which footer buttons show, and keeping them together is what stops
- * the add and edit forms drifting apart.
+ * Add and edit a select-field option, shared by the crm and projects apps. One
+ * dialog for both modes, so the add and edit forms cannot drift apart.
  */
 export function EntityOptionDialog({
   open,

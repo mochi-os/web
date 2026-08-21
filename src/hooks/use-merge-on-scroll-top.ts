@@ -14,13 +14,6 @@ interface UseMergeOnScrollTopOptions {
   threshold?: number
 }
 
-/**
- * Auto-merges pending real-time items (see `usePendingItems`) once the user
- * scrolls back to the top of the list — so reaching the top reveals the new
- * posts without an extra click on the "new posts" pill. Clicking the pill still
- * works; this adds the scroll-to-top affordance people expect from Twitter/X
- * timelines, and also covers the case where items arrive while already at top.
- */
 export function useMergeOnScrollTop({
   scrollRef,
   active,

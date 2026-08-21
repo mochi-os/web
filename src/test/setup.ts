@@ -17,10 +17,7 @@ afterEach(() => {
 });
 
 // jsdom implements none of these, and Radix's popper-backed primitives
-// (Tooltip, Select, Popover) reach for all of them on mount. Without the stubs
-// any test that renders one throws before its first assertion, which is why
-// components using them could only be tested inside the apps until now — the
-// app suites have carried the same stubs since their first test file.
+// (Tooltip, Select, Popover) reach for all of them on mount.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
@@ -50,13 +47,9 @@ global.IntersectionObserver = class IntersectionObserver {
   thresholds: number[] = [];
 } as unknown as typeof globalThis.IntersectionObserver;
 
-// Stubbing the three above lets components that previously threw on mount
-// render all the way through, which walks them into the next jsdom gap: the
-// Web Animations API. @formkit/auto-animate calls el.animate() from a
-// MutationObserver, so the throw lands outside any test's stack and surfaces
-// as an unhandled error rather than a failure: every test still reports as
-// passed and only the process exit code says otherwise. Completing the set
-// keeps the suite honest about what actually failed.
+// @formkit/auto-animate calls el.animate() from a MutationObserver, so a missing
+// Web Animations API throws outside any test's stack: every test still reports
+// as passed and only the exit code says otherwise.
 Element.prototype.animate = vi.fn().mockImplementation(() => ({
   cancel: vi.fn(),
   finish: vi.fn(),

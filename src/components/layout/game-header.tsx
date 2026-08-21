@@ -23,11 +23,8 @@ interface GameHeaderProps {
   // Fallback name for the avatar initials when the opponent has no avatar set.
   opponentName?: string
   // Avatar and style URLs on the CALLING app, for a game that proxies its
-  // players' assets through its own action rather than reaching into the
-  // people app. Words does: its route is bound to the game, so it resolves
-  // only that game's players, and it keeps the request same-app — a cross-app
-  // fetch from the shell's sandboxed iframe carries Origin: null and no
-  // cookies. Set these and the fingerprint is used for nothing but the ring.
+  // players' assets through its own action: a cross-app fetch from the
+  // sandboxed iframe carries Origin: null and no cookies.
   opponentAvatarUrl?: string | null
   opponentStyleUrl?: string | null
 }

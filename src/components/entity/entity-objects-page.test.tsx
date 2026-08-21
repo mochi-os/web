@@ -1,14 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// EntityObjectsPage is the largest thing the page-sharing branch moved here and
-// both apps now render it. Neither app ever tested it, so nothing here is a
-// port: these blocks assert the behaviour the apps differ on, which is what a
-// change to this file would silently break in one app and not the other.
-//
-// The five render slots are stubbed rather than exercised. What belongs to the
-// page is which slot it chooses, what it hands them, and the menu it builds
-// around them; what the board and tree do with that is the apps' own tests.
+// The five render slots are stubbed. What belongs to this page is which slot it
+// chooses and what it hands it; what the board and tree do is the apps' tests.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   render,

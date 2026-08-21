@@ -11,9 +11,7 @@ interface GameEmptyStateProps {
   onNewGame: () => void
   hasExistingGames: boolean
   /**
-   * Defaults to the calling app's own `images/icon.svg`, the file its launcher
-   * tile and browser tab already draw. Pass a Lucide component or another URL
-   * only for a game that wants something different.
+   * Defaults to the calling app's own `images/icon.svg`.
    */
   icon?: LucideIcon | string
 }

@@ -17,9 +17,8 @@ export interface EntityDesignPreviewProps<TObject extends EntityObject> {
   objects: TObject[]
   selectedClassId: string | null
   /**
-   * The board and the tree take their container id from different places in
-   * each app — the board from the entity record, the tree from the route — so
-   * they stay two props rather than one guessed-at id.
+   * The board takes its container id from the entity record and the tree from
+   * the route, so they stay two props rather than one guessed-at id.
    */
   boardContainerId: string
   treeContainerId: string

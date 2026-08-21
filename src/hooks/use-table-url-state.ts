@@ -88,11 +88,9 @@ export function useTableUrlState(
   const globalFilterEnabled = globalFilterCfg?.enabled ?? true
   const trimGlobal = globalFilterCfg?.trim ?? true
 
-  // Every piece of table state is DERIVED from the search params rather than
-  // seeded into useState from them. The URL is the one source of truth, so
-  // browser back/forward and any other external navigation move the filters
-  // just as they already moved pagination. Seeding state instead reads the
-  // params once, on the first render, and then silently ignores them.
+  // Every piece of table state is derived from the search params, never seeded
+  // into useState from them: seeding reads the params once and then ignores
+  // browser back/forward and any other external navigation.
   const columnFilters: ColumnFiltersState = useMemo(() => {
     const collected: ColumnFiltersState = []
     for (const cfg of columnFiltersCfg) {

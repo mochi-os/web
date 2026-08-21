@@ -1,12 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Four copies of this screen lived in crm and projects, one per container
-// route and one per object deep-link route, and none of them was ever
-// rendered by a test. The screen is what a reader sees when the container
-// will not load, so the two things worth holding are that the app's own
-// wording survives the trip through GeneralError, and that retry reaches the
-// app rather than reloading the page.
 import { FileText } from 'lucide-react'
 import { describe, expect, it, vi } from 'vitest'
 import { EntityLoadError } from './entity-load-error'

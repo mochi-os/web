@@ -42,13 +42,9 @@ function dispatchFrom(source: unknown, data: unknown) {
   window.dispatchEvent(event)
 }
 
-// Reports what `promise` settled to, or 'PENDING' if it has not settled.
-//
-// getItem is an async function, so it returns an OUTER promise that adopts the
-// inner one the listener resolves, and adoption costs extra microtask ticks.
-// Racing against Promise.resolve() therefore reports 'PENDING' even when the
-// value has leaked — an assertion that can never fail. Waiting on a real timer
-// clears every microtask the adoption needs before the verdict is read.
+// What `promise` settled to, or 'PENDING'. Waits on a real timer: getItem's
+// outer promise adopts the listener's, and the adoption ticks would read as
+// 'PENDING' even when a value leaked.
 const NOTHING = Symbol('nothing')
 async function settledValue<T>(promise: Promise<T>): Promise<T | 'PENDING'> {
   let seen: T | typeof NOTHING = NOTHING

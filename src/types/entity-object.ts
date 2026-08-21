@@ -1,13 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Shared object model for the object/class/field apps (crm, projects).
-//
-// Each app keeps its own container type — a CRM has no prefix, a project has no
-// classes with requests — but the pieces the shared components actually touch
-// are identical between them, so they live here. Apps intersect these with
-// their own container key (`crm: string` / `project: string`), which the shared
-// components deliberately never read.
+// Shared object model for the object/class/field apps (crm, projects). Apps
+// intersect these types with their own container key (`crm` / `project`), which
+// the shared components never read.
 
 export type EntityAccess = 'owner' | 'design' | 'write' | 'comment' | 'view'
 
@@ -56,11 +52,8 @@ export interface EntityClass {
   title: string
 }
 
-/**
- * The fields every object carries, whichever app owns it. `number` and
- * `readable` are optional because projects issues human-readable identifiers
- * (PROJ-14) and crm does not.
- */
+/** Fields every object carries. `number` and `readable` are optional:
+ *  projects issues human-readable identifiers (PROJ-14), crm does not. */
 export interface EntityObject {
   id: string
   class: string
@@ -134,12 +127,8 @@ export interface EntitySortState {
 }
 
 /**
- * An entity's schema: everything crm's `CrmDetails` and projects'
- * `ProjectDetails` hold apart from the container itself.
- *
- * Both app types are structurally this plus their own container key (`crm: Crm`
- * / `project: Project`), so an app passes its details object straight in and
- * the shared component never sees the container. The id it does need arrives
+ * An entity's schema: an app's details object minus its own container key, so
+ * the shared component never sees the container. The id it needs arrives
  * separately as `containerId`.
  */
 export interface EntityDesign {

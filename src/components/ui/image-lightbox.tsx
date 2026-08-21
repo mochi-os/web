@@ -34,11 +34,8 @@ type ImageLightboxProps = {
   onIndexChange: (index: number) => void
   /**
    * The comments slot. Supplied together, these draw a comment button in the
-   * title pill (with the count for the current image) that toggles a panel
-   * beside the image on wide screens and over its lower part on narrow ones.
-   * The lightbox owns only the chrome: what a comment IS, and the thread the
-   * panel shows, are the app's — it renders `renderComments(mediaId)` and
-   * nothing else, so this component's trust surface does not change.
+   * title pill and a panel beside the image. The lightbox renders
+   * `renderComments(mediaId)` and nothing else, so it owns only the chrome.
    */
   commentCount?: (mediaId: string) => number
   renderComments?: (mediaId: string) => ReactNode
@@ -61,16 +58,10 @@ export function ImageLightbox({
   const currentMedia = images[currentIndex]
   const isVideo = currentMedia?.type === 'video'
 
-  // The comments panel. It follows the current image while open, since the
-  // slot re-renders on the media id. Whether it STARTS open is the user's
-  // remembered preference - the last way they left it - so a photo browser
-  // gets a clean viewer every time and a discussion reader gets the panel
-  // every time, after one toggle each. Not "open when there are comments":
-  // that would start the picture covered on some images and clean on others
-  // for the same gesture. Explicit intent still wins - opening from a
-  // comment's chip shows the panel regardless, and does not move the
-  // preference. Shell storage, not localStorage: the sandboxed iframe's
-  // origin is opaque, so plain storage is partitioned away on every load.
+  // Whether the panel STARTS open is the reader's remembered preference;
+  // opening from a comment's chip shows it regardless and does not move the
+  // preference. Shell storage, not localStorage: the sandboxed iframe's origin
+  // is opaque.
   const hasComments = Boolean(renderComments)
   const [rememberedOpen, setRememberedOpen] = useShellStorage('lightbox.comments', false)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -96,11 +87,9 @@ export function ImageLightbox({
   const [currentScale, setCurrentScale] = useState(1)
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null)
 
-  // Download the current media. The browser won't save from the shell's
-  // sandboxed (opaque-origin) iframe — a bare <a download> is ignored
-  // cross-origin and a blob click is blocked — so shellDownload hands the fetch
-  // and save to the parent shell, which is same-origin and unsandboxed. In the
-  // top window it saves directly. Spinner while in flight; toast on failure.
+  // Download the current media. `<a download>` and blob clicks are ignored in
+  // the shell's opaque-origin iframe, so shellDownload hands the fetch and save
+  // to the parent shell; in the top window it saves directly.
   const [downloading, setDownloading] = useState(false)
 
   const handleDownload = useCallback(async () => {
@@ -111,14 +100,9 @@ export function ImageLightbox({
     if (!ok) toast.error(t`Download failed`)
   }, [currentMedia, downloading])
 
-  // Fullscreen tracks the lightbox lifecycle: the tap that opened it is the
-  // gesture, and closing gives the window back. This is what hides the shell
-  // chrome (and the browser's) while viewing — the browser owns the trust
-  // story (its "press Esc to exit" overlay, forced exit on navigation), which
-  // is why this is a fullscreen request and not a message asking the shell to
-  // hide its header. The request can be refused (top-window contexts without
-  // the gesture, older shells, browser policy) and the lightbox is fine
-  // windowed, so refusals are swallowed.
+  // Fullscreen tracks the lightbox lifecycle, which is what hides the shell
+  // chrome while viewing; the browser owns the exit affordance. The request can
+  // be refused and the lightbox is fine windowed, so refusals are swallowed.
   useEffect(() => {
     if (!open) return
     document.documentElement.requestFullscreen?.().catch(() => {})
@@ -129,12 +113,10 @@ export function ImageLightbox({
     }
   }, [open])
 
-  // Leaving fullscreen leaves the lightbox. The browser consumes the Esc that
-  // exits fullscreen without delivering a keydown, so without this the viewer
-  // needed a second press to close — and however fullscreen ends (Esc, system
-  // UI, navigation), a windowed leftover lightbox is not what the exit meant.
-  // The close path removes this listener before its own exitFullscreen runs,
-  // so a normal close never re-enters here.
+  // Leaving fullscreen leaves the lightbox: the browser consumes the Esc that
+  // exits fullscreen without delivering a keydown, so closing would take two
+  // presses. The close path removes this listener before its own
+  // exitFullscreen.
   useEffect(() => {
     if (!open) return
     const change = () => {
@@ -499,13 +481,9 @@ export function ImageLightbox({
             )}
           </div>
 
-          {/* Comments panel: a right-hand column on wide screens, a sheet
-              over the lower part of the image on narrow ones. Rendered by
-              the app; the lightbox only places it. Its own scroll, so a long
-              thread never scrolls the image behind it. Pointer activity
-              inside it must not re-arm the auto-hide (the panel already
-              holds the chrome), and it must not reach the swipe handlers on
-              the media area — hence stopPropagation. */}
+          {/* Comments panel: a right-hand column on wide screens, a sheet over the
+              image on narrow ones. stopPropagation so pointer activity inside it
+              neither re-arms the auto-hide nor reaches the swipe handlers. */}
           {hasComments && commentsOpen && (
             <div
               className='absolute inset-x-0 bottom-0 flex max-h-[55vh] flex-col overflow-hidden bg-background text-foreground sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:max-h-none sm:w-[24rem] sm:border-l'

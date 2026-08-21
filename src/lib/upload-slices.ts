@@ -2,19 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Per-file progress derived from one aggregate byte counter.
- *
- * A send is a single multipart POST carrying every file, so axios reports one
- * `loaded` for the whole body and there are no per-file events to read. The
- * files are appended to the FormData in array order, which is the order they
- * sit in the body, so walking a cumulative sum of their sizes against the
- * counter says which one is on the wire and how far into it.
- *
- * `sent` counts bytes handed to the socket, not bytes the server has taken. On
- * a fast link every slice can read `sent` well before the response arrives —
- * which is why the terminal state here is `sent` and not `done`. The
- * `processing` phase on `Upload` remains the only thing that says the server is
- * still working, and only the response says the files were stored.
+ * Per-file progress from one aggregate byte counter: the send is a single
+ * multipart POST, so a cumulative sum of the file sizes against `loaded` says
+ * which file is on the wire. `sent` counts bytes handed to the socket, not
+ * bytes the server stored.
  */
 
 export type UploadSliceState = 'waiting' | 'uploading' | 'sent'
@@ -26,11 +17,9 @@ export interface UploadSlice {
 }
 
 /**
- * Split an aggregate byte count across the files that make up the body.
- *
- * Returns null when there is nothing to derive from — an unknown body size, no
- * files, or files that are all empty. Callers fall back to the aggregate bar
- * alone, which is what they showed before per-file progress existed.
+ * Split an aggregate byte count across the files in the body. Null when there
+ * is nothing to derive from - unknown body size, no files, all empty - and
+ * callers fall back to the aggregate bar.
  */
 export function uploadSlices(
   sent: number,
@@ -42,13 +31,9 @@ export function uploadSlices(
   const payload = sizes.reduce((a, b) => a + b, 0)
   if (payload <= 0) return null
 
-  // The body is larger than the files: it also carries the text fields and a
-  // boundary preamble per part. Scaling the counter by the ratio spreads that
-  // overhead evenly instead of modelling where it actually falls. It is off by
-  // at most the total overhead — a couple of hundred bytes per part — and it is
-  // self-correcting, so the last file reaches 1 exactly when sent === total.
-  // Modelling the framing byte-for-byte would depend on the browser's boundary
-  // generation and header casing, and would drift the moment either changed.
+  // The body is larger than the files: text fields and a boundary preamble per
+  // part. Scaling by the ratio spreads that overhead evenly and self-corrects,
+  // so the last file reaches 1 exactly when sent === total.
   const effective = Math.min(Math.max(sent, 0) * (payload / total), payload)
 
   let consumed = 0

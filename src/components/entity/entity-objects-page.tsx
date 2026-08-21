@@ -1,22 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The container page crm and projects each grew privately: the board, the tree,
-// the view bar, the object dialogs, the column editing, the exports and the
-// share link. The two files were 1,261 and 1,186 lines, and 1,007 of crm's
-// 1,086 code lines matched projects' in runs of twelve or more.
-//
-// What stays app-side is the route itself (TanStack derives the path from the
-// file), the loader, the detail panel, and the five bound components this page
-// renders through slots. Each slot takes exactly the props the app's binding
-// leaves open, so an app wires one up in a single line:
-//
-//   renderBoard={(props) => <BoardContainer crm={crm} {...props} />}
-//
-// Every visible string arrives resolved from the app, as in entity-list-page.
-// Both apps already hold these strings in their own catalogs, and a lingui
-// macro here would push a new msgid into all 21 app catalogs and drop the
-// translations the two apps have today.
+// The container page shared by crm and projects; the route, loader, detail
+// panel and the five slot-rendered components stay app-side. Every visible
+// string arrives resolved from the app, for the reason given in
+// entity-list-page.tsx.
 
 import {
   useCallback,
@@ -109,14 +97,9 @@ function viewSortState(
   }
 }
 
-// Escape one CSV cell.
-//
-// Quoting and doubling embedded quotes makes the file parse correctly, but it
-// does not stop a spreadsheet EVALUATING it: Excel and Sheets strip the quotes
-// and treat a leading =, +, - or @ as a formula, so an object whose field
-// holds =HYPERLINK(...) or a DDE payload runs on whoever opens the export.
-// Prefixing with an apostrophe forces the cell to be read as text; the
-// apostrophe is not shown by the spreadsheet.
+// Escape one CSV cell. Quoting parses correctly but does not stop Excel and
+// Sheets EVALUATING a leading =, +, - or @ as a formula, so those cells take a
+// leading apostrophe, which forces text and is not displayed.
 function csvCell(value: unknown): string {
   const text = String(value ?? '')
   const escaped = text.replace(/"/g, '""')
@@ -213,9 +196,9 @@ export interface EntityObjectsPageLabels {
   /** Primary action on a narrow screen, where the class name does not fit. */
   createShort: string
   /**
-   * Primary action, given the name of the active view's single class where it
-   * has one. The name arrives as the designer wrote it: each app lowercases it
-   * inside its own macro, which is what keeps each app's existing msgid.
+   * Primary action, given the active view's single class name where it has one.
+   * The name arrives as the designer wrote it; each app lowercases it in its
+   * own macro to keep its existing msgid.
    */
   createAction: (className?: string) => string
   /** Shown instead of opening the create dialog when nothing can be created. */
@@ -306,17 +289,11 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   refreshSidebar: () => void | Promise<unknown>
   /** Where an unsubscribe leaves the reader. */
   onLeave: () => void
-  /**
-   * Passed straight to PageHeader, where it is deprecated and does nothing —
-   * the top bar renders the trigger. projects sets it and crm does not, so it
-   * is carried rather than dropped, and neither app's header changes either way.
-   */
+  /** Passed to PageHeader, where it is deprecated and does nothing; carried
+   *  because projects sets it. */
   showSidebarTrigger?: boolean
-  /**
-   * The view to fall back to while the container holds no objects, named by the
-   * class it shows. crm opens an empty CRM on its companies view; projects has
-   * no equivalent and leaves this off.
-   */
+  /** The view to fall back to while the container holds no objects, named by the
+   *  class it shows. */
   emptyViewClass?: string
   csvExport?: EntityObjectsCsvExport
   /** Design entry in the page menu, when the reader may design. */
@@ -508,12 +485,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     return result
   }, [design.fields])
 
-  // Sync view and selected object to URL for bookmarkability.
-  // Suppress @tanstack/history's subscriber notification around the call,
-  // because otherwise the router matches the /$containerId/$objectId route
-  // and triggers a full unmount/remount (making the sheet animate twice).
-  // We still go through window.history.replaceState so the shell's URL-sync
-  // monkey-patch (shell-bridge.ts) runs and updates the shell URL bar.
+  // Sync view and selected object to the URL. Suppress @tanstack/history's
+  // subscriber notification or the router matches /$containerId/$objectId and
+  // remounts; replaceState keeps the shell's URL-sync monkey-patch running.
   const isInitialMount = useRef(true)
   useEffect(() => {
     if (isInitialMount.current) {

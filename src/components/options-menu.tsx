@@ -61,11 +61,8 @@ interface OptionsMenuProps {
 }
 
 /**
- * The "⋯" entity menu shared by the feeds and forums apps.
- *
- * Navigation stays with the caller: the menu takes callbacks rather than
- * urls so each app keeps its own typed router. The share and RSS calls are
- * injected too, since each app's client returns a different response shape.
+ * The "..." entity menu shared by the feeds and forums apps. Navigation and the
+ * share/RSS calls are injected, so each app keeps its own router and client.
  */
 export function OptionsMenu({
   entityId,

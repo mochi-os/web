@@ -29,11 +29,9 @@ function serviceName(service: string): string {
   return serviceNames[service] ?? service.charAt(0).toUpperCase() + service.slice(1)
 }
 
-// The claimed source server arrives from the shell verbatim and originates
-// in the restore bundle, which a crafted backup controls — so the
-// delete-your-old-account link only renders for a bare https origin
-// (the shape the exporting server writes). The server stores a validated
-// origin too; this guards rows written before that check existed.
+// The claimed source server comes from the restore bundle, which a crafted
+// backup controls, so the delete-your-old-account link renders only for a bare
+// https origin - the shape the exporting server writes.
 function sourceOrigin(source: string): string | null {
   if (!URL.canParse(source)) return null
   const url = new URL(source)
@@ -43,13 +41,9 @@ function sourceOrigin(source: string): string | null {
 }
 
 /**
- * Shown after an account is moved onto this server from another (a
- * restore from a migration backup). Nudges the user to delete the old
- * account so the network stops routing to it, and lists third-party
- * services to re-link here. Source server and the re-link list arrive in
- * the shell init payload (restoreSource / relinks). Dismissal persists
- * account-wide: the dismiss action sets the restore.show preference to
- * "false", so the banner stays gone after reload.
+ * Shown after an account is restored onto this server from another: nudges the
+ * user to delete the old account and lists services to re-link. Source and
+ * re-link list arrive in the shell init payload; dismissal sets restore.show.
  */
 export function RestoreBanner() {
   const { t } = useLingui()

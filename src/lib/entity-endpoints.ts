@@ -1,15 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Route table shared by the object/class/field apps (crm, projects). Both
-// servers expose the same object model under the same paths, so the table is
-// the same table; an app that adds routes of its own spreads them on top:
-//
-//   const endpoints = {
-//     projects: { ...entityEndpoints, templates: '-/templates' },
-//   } as const
-//
-// Paths are relative to the baseURL set in the app's request module.
+// Route table shared by the object/class/field apps (crm, projects). Paths are
+// relative to the baseURL set in the app's request module; an app with routes
+// of its own spreads them on top: { ...entityEndpoints, templates:
+// '-/templates' }.
 
 export const entityEndpoints = {
   // Class-level endpoints (no entity context)

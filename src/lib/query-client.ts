@@ -10,11 +10,8 @@ import { toast } from './toast-utils'
 
 export interface CreateQueryClientOptions {
   /**
-   * @deprecated No-op. Previously navigated to /500 on query errors, but this
-   * prevented section-scoped error display. 5xx errors now show an inline
-   * GeneralError within the section that owns the query. The /500 page is
-   * still reachable via explicit throws in TanStack Router loaders. This field
-   * will be removed in a future cleanup.
+   * @deprecated No-op. 5xx errors show an inline GeneralError in the section that
+   * owns the query; /500 is reached only by explicit throws in router loaders.
    */
   onServerError?: () => void
   onForbidden?: () => void

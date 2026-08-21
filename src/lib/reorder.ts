@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Move one item of a list to another position, shifting everything between
- * them along by one. Returns a new array; the input is left alone.
- *
- * Indexes are clamped into the list, so a stale index left over from a drag
- * that outlived its list can never splice at a hole.
+ * Move one item to another position, shifting what lies between. Returns a new
+ * array; indexes are clamped, so a stale index cannot splice at a hole.
  */
 export function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
   const result = [...list]
@@ -31,12 +28,10 @@ export type Slot = {
 }
 
 /**
- * Index of the slot nearest to a point, measured centre to centre.
- *
- * Slots are the positions the tiles occupy, snapshotted when the drag starts,
- * not the tiles themselves — the tiles move around during a drag, the grid they
- * sit in does not. Nearest-centre rather than a containment test, so a pointer
- * in a gutter, or dragged clean off the grid, still resolves to a slot.
+ * Index of the slot nearest a point, centre to centre. Slots are the grid
+ * positions snapshotted at drag start, not the moving tiles; nearest-centre
+ * rather than containment, so a pointer in a gutter or off the grid still
+ * resolves.
  */
 export function nearestSlotIndex(
   slots: readonly Slot[],

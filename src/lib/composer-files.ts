@@ -4,14 +4,9 @@
 import { pendingFileSignature } from './attachment-utils'
 
 /**
- * Appends only the files that are not already staged.
- *
- * Picking or dropping the same file twice stages it twice and uploads it twice,
- * which is never what was meant. Matching is on the signature, not the React
- * key: the key is per File object precisely so a duplicate that gets past here
- * still renders, and asking it this question would find nothing. Returns `prev`
- * untouched when every incoming file was a duplicate, so the preview object
- * URLs keyed off the array reference are not rebuilt for nothing.
+ * Appends only the files not already staged, matched on the signature rather
+ * than the React key. Returns `prev` untouched when everything was a duplicate,
+ * so preview object URLs keyed off the array reference are not rebuilt.
  */
 export function mergePendingFiles(prev: File[], incoming: File[]): File[] {
   const added = newPendingFiles(prev, incoming)
@@ -19,12 +14,8 @@ export function mergePendingFiles(prev: File[], incoming: File[]): File[] {
 }
 
 /**
- * Which of a pick is not staged already, in the order it was picked.
- *
- * The same question `mergePendingFiles` answers, for the composers that cannot
- * use it: the edit forms hold saved attachments and new files in one list, so
- * there is no `File[]` to merge into. They pass the new files they are already
- * holding and wrap what comes back themselves.
+ * The same dedupe for composers with no `File[]` to merge into: the edit forms
+ * hold saved attachments and new files in one list.
  */
 export function newPendingFiles(staged: File[], incoming: File[]): File[] {
   const seen = new Set(staged.map(pendingFileSignature))

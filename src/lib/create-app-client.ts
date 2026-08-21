@@ -14,8 +14,7 @@ import { isSameOriginRequest } from './safe-navigation'
 
 export interface AppClientOptions {
   /**
-   * The name of the app (e.g., 'chat', 'projects', 'feeds').
-   * Used to construct the baseURL if getAppPath() is not used.
+   * App name, used for the baseURL when getAppPath() supplies none.
    */
   appName?: string
   /**

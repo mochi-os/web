@@ -419,13 +419,10 @@ function DateEditor({
   const onErrorChangeRef = useRef(onErrorChange)
   onErrorChangeRef.current = onErrorChange
 
-  // Follow the record when it changes underneath us — the detail panel swapping
-  // to another object, or someone else's edit arriving. An uncontrolled input
-  // could not do this: once the user has typed into a date input the browser
-  // sets its dirty-value flag and ignores every later defaultValue, so the
-  // previous object's date stayed on screen. Skip while focused so an update
-  // landing mid-edit doesn't yank the date out from under whoever is typing
-  // (same rule the text fields above use).
+  // Follow the record when it changes underneath us. An uncontrolled input
+  // cannot: once the user types into a date input the browser sets its
+  // dirty-value flag and ignores every later defaultValue. Skip while focused
+  // so an edit is not yanked.
   useEffect(() => {
     if (focusedRef.current) return
     setLocalValue(value)
@@ -521,11 +518,9 @@ function DateEditor({
       commit(next)
       return
     }
-    // Typing a date fires "input" per segment, so an intermediate combination
-    // — the old month with the new day — is briefly a valid date and used to be
-    // saved as one. Wait for the entry to settle. Blur, and a full commit from
-    // the picker or keyboard (handled above and via the native "change"
-    // listener below), both still land immediately.
+    // Typing a date fires "input" per segment, so an intermediate combination -
+    // old month with new day - is briefly a valid date. Wait for the entry to
+    // settle; blur and a full picker or keyboard commit still land immediately.
     clearPending()
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null

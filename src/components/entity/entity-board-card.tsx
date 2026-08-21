@@ -30,9 +30,8 @@ export interface EntityBoardCardProps<TObject extends EntityObject> {
   fields: EntityField[]
   options: Record<string, EntityFieldOption[]>
   /**
-   * Title shown when the class has no title field, or the title field is empty.
-   * crm shows a literal "Untitled"; projects shows the readable id (PROJ-14),
-   * which depends on the object, hence a function rather than a string.
+   * Title shown when the class has no title field or it is empty. A function
+   * because projects derives it from the object (PROJ-14) while crm is literal.
    */
   fallbackTitle: (object: TObject) => string
   objectMap?: Record<string, TObject>
@@ -196,11 +195,9 @@ export function EntityBoardCard<TObject extends EntityObject>({
         )
 
       case 'user': {
-        // Resolve the assignee's entity ID to a name. During a fresh
-        // subscribe the people list may not have synced yet; never fall
-        // back to printing the raw entity ID (that reads as corrupt data) —
-        // show the avatar (its asset URL resolves independently) with a
-        // skeleton in place of the name until it resolves.
+        // The people list may not have synced yet on a fresh subscribe. Never
+        // fall back to the raw entity ID - show the avatar with a skeleton in
+        // place of the name until it resolves.
         const name = peopleMap?.[value]
         return (
           <span

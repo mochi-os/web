@@ -1,17 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The query and mutation layer chess and go each grew privately, 382 and 353
-// lines. Eleven of the hooks were the same in both, down to which keys each
-// mutation invalidates and the comment explaining why a rejected move refetches
-// the board.
-//
-// Three things are genuinely per-game and stay in the app: chess's move-history
-// query, go's pass mutation, and the create mutation, whose arguments differ
-// (chess takes an opponent, go takes an opponent, a board size and a komi).
-//
-// The response types are inferred from the app's own api client, so each app
-// keeps its exact types without this file naming any of them.
+// The query and mutation layer shared by chess and go. Each app keeps its own
+// move-history query, pass mutation and create mutation; response types are
+// inferred from the app's own api client.
 
 import {
   useMutation,
@@ -52,10 +44,8 @@ export interface GameApiShape {
 }
 
 /**
- * The draw calls, which not every game has. chess and go do; words has no draw
- * offer at all. An api carrying all three is handed the three draw hooks, and
- * one carrying none is handed none, so a game without draws cannot destructure
- * a hook whose endpoint it lacks.
+ * The draw calls, which not every game has. An api carrying all three is handed
+ * the three draw hooks; one carrying none is handed none.
  */
 export interface GameDrawApi {
   drawOffer: (gameId: string) => Promise<unknown>
@@ -237,12 +227,9 @@ export function createGameHooks<A extends GameApiShape>(
         onSuccess?.(data, variables, context, mutation)
       },
       onError: (error, variables, context, mutation) => {
-        // The board is advanced locally before the request resolves, so a
-        // rejected move leaves the client showing a position the server never
-        // took. That matters most for the 409 the server returns when the
-        // position moved on under us (double submit, or the opponent's move
-        // landing first): refetch so the board snaps back to server truth
-        // instead of silently disagreeing with it.
+        // The board is advanced locally, so a rejected move leaves the client
+        // showing a position the server never took - notably the 409 when the
+        // position moved on under us. Refetch so the board snaps back.
         queryClient.invalidateQueries({
           queryKey: gameQueryKeys.detail(variables.gameId),
           exact: true,

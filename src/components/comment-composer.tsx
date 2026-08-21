@@ -30,9 +30,8 @@ const isMacPlatform = () =>
 const COARSE_POINTER = '(hover: none) and (pointer: coarse)'
 
 /**
- * False on phones and tablets, where there is no key to press and the
- * shortcut chip is just noise. Reads the query up front so the hint never
- * flashes in before it is hidden.
+ * False on phones and tablets, where there is no key to press. Reads the query
+ * up front so the hint never flashes in before it is hidden.
  */
 function useHasKeyboard(): boolean {
   const [hasKeyboard, setHasKeyboard] = useState(
@@ -53,9 +52,8 @@ function useHasKeyboard(): boolean {
 }
 
 /**
- * Send shortcut chip. Decorative only — the Send button already carries the
- * accessible name, so this stays out of the accessibility tree (and out of the
- * message catalogs).
+ * Send shortcut chip. Decorative only - the Send button carries the accessible
+ * name, so this stays out of the accessibility tree and the message catalogs.
  */
 export function SendShortcutHint({ className }: { className?: string }) {
   const hasKeyboard = useHasKeyboard()
@@ -80,11 +78,9 @@ export function SendShortcutHint({ className }: { className?: string }) {
 }
 
 /**
- * Fails a send before it starts when the browser knows it has no network.
- *
- * Without this the request just sits there spinning — uploads deliberately
- * carry no timeout — and only completes once the connection comes back.
- * Returns true when the send was blocked and already reported.
+ * Fails a send before it starts when the browser knows it has no network -
+ * uploads carry no timeout, so the request would otherwise spin. True when the
+ * send was blocked and already reported.
  */
 export function offlineBlocked(): boolean {
   if (typeof navigator === 'undefined' || navigator.onLine !== false) {
@@ -98,12 +94,9 @@ const carriesFiles = (transfer: DataTransfer | null) =>
   Array.from(transfer?.types ?? []).includes('Files')
 
 /**
- * Drag-and-drop and paste-to-attach for a composer.
- *
- * Spread `dropzoneProps` on the element that wraps the text field and the
- * attachment list. Paste rides on the same element: it bubbles up from the
- * focused textarea, and the event is only swallowed when the clipboard
- * actually carries files, so pasting text is untouched.
+ * Drag-and-drop and paste-to-attach for a composer. Spread `dropzoneProps` on
+ * the element wrapping the text field and the attachment list; paste bubbles up
+ * from the textarea and is swallowed only when the clipboard carries files.
  */
 export function useComposerDrop({
   onFiles,
@@ -185,10 +178,9 @@ interface ComposerAttachmentsProps {
   previewUrls: (string | null)[]
   state?: ComposerFileState
   /**
-   * Per-file upload progress, index-aligned with `files`. Safe to align by
-   * index here: every caller of this wrapper stages the same array it uploads.
-   * A composer whose list differs from its body — chat, the post edit forms —
-   * uses `AttachmentComposer` directly and maps by key.
+   * Per-file upload progress, index-aligned with `files`. Safe here because
+   * every caller stages the same array it uploads; one whose list differs uses
+   * `AttachmentComposer` directly and maps by key.
    */
   progress?: UploadSlice[]
   onRemove: (file: File) => void
@@ -215,10 +207,9 @@ interface ComposerAttachmentsProps {
 }
 
 /**
- * `File[]` convenience wrapper around `AttachmentComposer`, for the composers
- * that stage plain files and nothing else. Anything holding a richer item —
- * the edit forms with their saved-and-new mix, chat with its voice notes —
- * maps onto `ComposerItem` and uses `AttachmentComposer` directly.
+ * `File[]` wrapper around `AttachmentComposer`, for composers that stage plain
+ * files. Anything holding a richer item maps onto `ComposerItem` and uses
+ * `AttachmentComposer` directly.
  */
 export function ComposerAttachments({
   files,
@@ -276,11 +267,9 @@ export function ComposerAttachments({
 }
 
 /**
- * Guards closing a composer that still holds a draft.
- *
- * `requestClose` closes straight away when there is nothing to lose, asks
- * first when there is, and does nothing at all while a send is in flight —
- * which is what stops Escape from throwing away a comment mid-request.
+ * Guards closing a composer that still holds a draft. `requestClose` closes
+ * when there is nothing to lose, asks when there is, and does nothing while a
+ * send is in flight, so Escape cannot discard a comment mid-request.
  */
 export function useDiscardGuard({
   hasText,
@@ -341,9 +330,8 @@ export interface CommentBoxProps {
    */
   onSubmit: (body: string, files?: File[]) => void | Promise<void>
   /**
-   * Given, the box carries a Cancel button and closes on Escape, both through
-   * this - so the caller owns any discard guard (`useDiscardGuard`). Neither
-   * fires while a send is in flight.
+   * Given, the box carries Cancel and closes on Escape through this; the caller
+   * owns any discard guard. Neither fires while a send is in flight.
    */
   onClose?: () => void
   /** Which pair of labels the buttons carry. */
@@ -363,12 +351,9 @@ export interface CommentBoxProps {
 }
 
 /**
- * The comment box: a mention-aware textarea, staged attachments with drop,
+ * The comment box: mention-aware textarea, staged attachments with drop,
  * reorder and per-file retry, upload progress, and the attach / cancel / send
- * row. One box for every place a comment or reply is written, so a top-level
- * comment, a reply and a comment on an image all take attachments the same
- * way. The box owns its files and its sending state; the draft is the
- * caller's.
+ * row. It owns its files and sending state; the draft is the caller's.
  */
 export function CommentBox({
   value,

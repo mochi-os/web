@@ -1,11 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Both entity apps hand their live list refresh to this hook, and it shipped
-// with nothing asserting it. The parts that matter are the ones that decide
-// whether a socket opens at all: an uninitialised auth store and a missing
-// fingerprint both mean "not yet", and getting either wrong subscribes with a
-// key the server will reject, or never subscribes and leaves the page stale.
+// Pins what decides whether a socket opens at all: an uninitialised auth store
+// and a missing fingerprint both mean "not yet".
 
 import { renderHook } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

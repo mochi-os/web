@@ -1,20 +1,11 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The saved-items mirror feeds, forums and market each grew privately.
-//
-// Saved items live server-side in each app's own per-user DB, so they survive
-// reloads and follow the reader between devices. The server does not annotate a
-// row with a `saved` flag, so each app kept a synchronous in-memory mirror of
-// that state: the UI can ask `isSaved()` without awaiting, mutations apply
-// optimistically, and a failure rolls the mirror back. Call `loadSaved()` once
-// after login to hydrate it.
-//
-// The three copies differed only in what a row is — feeds and forums store a
-// post snapshot wrapped with its saved time, market stores the listing itself —
-// so the row type and its id accessor are the app's, and so are the messages,
-// which stay MessageDescriptors and are resolved at mutation time so a locale
-// switch is reflected in the next toast.
+// Synchronous mirror of the saved items each app stores server-side:
+// `isSaved()` answers without awaiting, mutations apply optimistically and roll
+// back on failure. Call `loadSaved()` once after login. Messages stay
+// MessageDescriptors, resolved at mutation time so a locale switch shows in the
+// next toast.
 
 import { i18n, type MessageDescriptor } from '@lingui/core'
 import { toastAction } from './toast-action'

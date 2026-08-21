@@ -1,18 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// One board column, shared by crm and projects. Their copies were 0.99
-// identical; the differences were the object type, the plumbing each used to
-// reach its own BoardCard, and one aria-label.
-//
-// The card plumbing is gone: this renders EntityBoardCard directly and takes
-// the same `containerId` + `fallbackTitle` pair that component already uses, so
-// crm's literal "Untitled" and projects' "PROJ-14" both fall out of one prop
-// instead of a `prefix` string threaded through the column.
-//
-// Drag state is deliberately held in refs and applied with direct DOM writes
-// rather than React state - a dragover fires on every mouse move, and
-// re-rendering a column of cards on each one drops frames.
+// One board column, shared by crm and projects. Drag state is held in refs and
+// applied with direct DOM writes rather than React state: a dragover fires on
+// every mouse move, and re-rendering a column of cards each time drops frames.
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Plural, Trans } from "@lingui/react/macro";
@@ -161,12 +152,9 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   onDragPreviewRef.current = onDragPreview;
 
   useEffect(() => {
-    // Clear preview on dragend (cancelled drag, escape key, etc.)
-    // Reset this column's drag source on dragend. The preview teardown is owned
-    // by board-container (data-driven: cleared when the moved row's data lands,
-    // or immediately on a cancelled drag), so it isn't cleared here — clearing on
-    // dragend reveals the card in its source column for a frame before the move
-    // applies (the flash).
+    // Reset this column's drag source only. Preview teardown is
+    // board-container's and is data-driven; clearing it on dragend reveals the
+    // card in its source column for a frame before the move applies.
     const onDragEnd = () => {
       dragSourceRef.current = null;
     };
@@ -268,11 +256,10 @@ export function EntityBoardColumn<TObject extends EntityObject>({
       const distFromTop = mouseY - rect.top;
       const distFromBottom = rect.bottom - mouseY;
       const cardId = targetEl.getAttribute("data-card-id") || "";
-      // The gap placeholder also has data-card-id={draggedId}. Hovering its
-      // middle would otherwise miss both drop-on (skipped: same id) and sibling
-      // reorder (only checked in the edge branch), falling through to top-level
-      // mode which sends field=columnField — and fails for classes that lack
-      // that field. Treat any hover on our own gap as the sibling-reorder branch.
+      // The gap placeholder carries data-card-id={draggedId}. Hovering its
+      // middle would miss both drop-on and sibling reorder and fall through to
+      // top-level mode, which sends field=columnField and fails for classes
+      // without it.
       const cursorOnGap = cardId === draggedId;
 
       if (!cursorOnGap && distFromTop > edgeZone && distFromBottom > edgeZone) {
@@ -429,10 +416,9 @@ export function EntityBoardColumn<TObject extends EntityObject>({
       onDrop(objectId, id, rank, rowId, dropOnCardId, childReorder?.parentId, childReorder?.rank);
     }
     // Do NOT clear the preview here: the optimistic move's data lands a render
-    // later (not batched with this handler), so clearing now reveals the card in
-    // its source column for that gap (the flash). board-container tears the
-    // preview down data-driven — when the moved row's data lands, or immediately
-    // on a cancelled drag (dragend with dropEffect "none").
+    // later, so clearing now reveals the card in its source column for that
+    // gap. board-container tears it down when the data lands, or on a cancelled
+    // drag.
   }, [id, onDrop, clearDragState]);
 
   // Render a gap placeholder where the dragged card will land.

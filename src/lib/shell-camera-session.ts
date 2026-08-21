@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Camera session for Mochi apps — the streaming sibling of the microphone
- * session. Opaque-origin iframes must not call getUserMedia directly (no
- * permission can even persist against an opaque origin): inside the shell the
- * top window owns the tracks and streams one transferable ImageBitmap per
- * camera frame over postMessage (camera.start / camera.frame / camera.stop /
- * camera.end, gated on the app's Mochi `camera` grant); outside the shell the
- * same API drives getUserMedia directly with an identical local frame pump.
- *
- * Every delivered frame is the receiver's to close(): the pump drops frames at
- * the source while one is in flight, so a slow consumer degrades to a lower
- * frame rate instead of a queue.
+ * Camera session. Inside the shell the top window owns the tracks and streams
+ * one transferable ImageBitmap per frame (camera.start / frame / stop / end,
+ * gated on the app's `camera` grant); outside it the same API drives
+ * getUserMedia. Every delivered frame is the receiver's to close().
  */
 
 import { isInShell } from './shell-bridge'
@@ -41,9 +34,8 @@ export type CameraSession = {
 let sequence = 0
 
 /**
- * Open the camera and stream frames until stop(). Resolves with the open
- * outcome; frames begin arriving after an ok. At most one session should be
- * live at a time — the shell enforces it, the direct path assumes it.
+ * Open the camera and stream frames until stop(); frames start after an ok. One
+ * session at a time - the shell enforces it, the direct path assumes it.
  */
 export function cameraOpen(options: CameraOptions): Promise<{ session: CameraSession; opened: CameraOpen }> {
   return isInShell() ? shellOpen(options) : directOpen(options)

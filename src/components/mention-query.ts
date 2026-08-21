@@ -22,9 +22,8 @@ export function getMentionQuery(text: string, cursorPos: number): string | null 
 }
 
 /**
- * True when `value` changed from outside the textarea (draft restore, parent
- * clear, etc.). Local keystrokes / insertMention update lastLocalValue first
- * so the sync effect can skip and avoid duplicate parse + stale cursor reads.
+ * True when `value` changed from outside the textarea. Local edits update
+ * lastLocalValue first, so the sync effect skips them.
  */
 export function shouldSyncMentionQueryFromValue(options: {
   propValue: string

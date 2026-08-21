@@ -46,11 +46,9 @@ function useDocumentMeta(name: DocumentName): { title: string; icon: typeof Book
 }
 
 /**
- * Render one of the server-level documents (rules / terms / privacy) by
- * fetching `-/document/get` from the current app. The host app must declare
- * `-/document/get` (mapping to a Starlark action that calls
- * `mochi.document.get(name)`) and SPA routes for `document/rules`,
- * `document/terms`, `document/privacy` that mount this component.
+ * Render one of the server-level documents. The host app must declare a
+ * `-/document/get` action calling `mochi.document.get(name)` and SPA routes for
+ * document/rules, document/terms and document/privacy that mount this.
  */
 export function DocumentPage({ name, back }: { name: DocumentName; back?: import('../../components/layout/back-button').HeaderBackConfig }) {
   const { title, icon: Icon } = useDocumentMeta(name)

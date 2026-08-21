@@ -1,29 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Lingui i18n provider for Mochi apps.
-//
-// Activates a per-language Lingui catalog using bundled PO files from each
-// app's src/locales/<lang>/messages.po (compiled on the fly by
-// @lingui/vite-plugin). Catalog selection follows:
-//   1. shell init data (`language` field) — from the user's preference or
-//      Accept-Language; piped via the menu shell's postMessage init.
-//   2. navigator.language as a final fallback for top-window apps.
-// The full BCP 47 tag is preserved end-to-end (no .split('-')[0]); variant
-// trimming is handled by the server-side resolver's fallback chain.
-//
-// To use, wrap the app's root with <I18nProvider catalogs={catalogs}> where
-// catalogs is a record of locale -> dynamic-import factory:
-//
-//   const catalogs = {
-//     en: () => import('./locales/en/messages.po'),
-//     fr: () => import('./locales/fr/messages.po'),
-//   }
-//
-// Custom formatters: mochiDate, mochiTime, mochiDateTime, mochiNumber,
-// mochiFileSize, mochiTimestamp. Used inside ICU MessageFormat as
-// `{value, mochiDate}` etc. They delegate to format helpers via the active
-// locale set by LocaleProvider — see registerLocaleFormatters() below.
+// Lingui i18n provider: activates each app's bundled PO catalog. The language
+// comes from shell init data, else navigator.language. The full BCP 47 tag is
+// kept end-to-end; variant trimming is the server-side resolver's job.
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { i18n, type Messages } from '@lingui/core'
@@ -64,10 +44,8 @@ let activeLocale: ActiveLocale = {
 }
 
 /**
- * Update the locale read by custom Lingui formatters (mochiDate, mochiNumber,
- * etc.). Called by LocaleProvider whenever the user's locale changes; the
- * next render of any <Trans>/t`` containing a custom formatter will use the
- * new locale's date/number conventions.
+ * Update the locale read by the custom Lingui formatters. Called by
+ * LocaleProvider whenever the user's locale changes.
  */
 export function setActiveLocale(locale: ActiveLocale): void {
   activeLocale = locale
@@ -119,16 +97,9 @@ function readStoredLanguage(): string | null {
 }
 
 /**
- * Write the language preference to localStorage AND a `mochi_language` cookie.
- * Called by the login page and anonymous-chrome pickers; in-shell apps use
- * shellSetLanguage instead, which persists via the menu shell + the user's
- * server-side preference.
- *
- * The cookie lets the server-side language resolver (request_language in
- * core/server/labels.go) honour the choice for both anonymous traffic and the
- * logged-in transition: without it, /_/shell would fall through to
- * Accept-Language after sign-in and the user's pre-login pick would be lost.
- * The cookie is path=/ so it covers every Mochi app and outlives the session.
+ * Write the language preference to localStorage and a `mochi_language` cookie
+ * (path=/); in-shell apps use shellSetLanguage instead. The cookie is what
+ * makes the server-side resolver honour a pre-login choice after sign-in.
  */
 export function setStoredLanguage(language: string): void {
   try {
@@ -268,19 +239,9 @@ export function I18nProvider({
     })
   }, [])
 
-  // Fetch the user's language preference from the server.
-  //
-  // Two paths converge here:
-  // - In-shell apps: shell.js fetches /_/shell once and forwards the
-  //   language to each iframe via postMessage. initShellBridge() resolves
-  //   with the forwarded data.
-  // - Top-window apps (e.g. /settings/, /login/ landing): no shell, so we
-  //   call /_/shell directly. The endpoint returns the user's `language`
-  //   preference (or Accept-Language for anonymous requests).
-  //
-  // pickInitialLanguage() runs synchronously during useState init and can
-  // only see synchronous sources (localStorage, navigator.language). The
-  // server-driven preference always wins on arrival.
+  // The server-driven language preference always wins on arrival: in-shell apps
+  // get it from initShellBridge, top-window pages must call /_/shell
+  // themselves. pickInitialLanguage() above can only see synchronous sources.
   useEffect(() => {
     let cancelled = false
 

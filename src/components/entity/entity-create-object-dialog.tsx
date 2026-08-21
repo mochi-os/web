@@ -1,12 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Create-object sheet for the object/class/field apps.
-//
-// Two container ids, deliberately: `containerId` is the route parameter the
-// object list is cached under, `recordId` is the entity record's own id that
-// the write endpoints take. They are the same value today in both apps, but
-// they come from different places and conflating them would hide it.
+// Create-object sheet for the object/class/field apps. Two container ids
+// deliberately: `containerId` is the route parameter the object list is cached
+// under, `recordId` is the entity record id the write endpoints take.
 
 
 import { Trans } from '@lingui/react/macro'
@@ -165,12 +162,10 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
     });
   }, [availableClasses, design.hierarchy, objectsData]);
 
-  // A value is usable for a class's field when the field exists there and,
-  // for enumerated fields, the value is one of that class's options. Board
-  // defaults come from whichever class the board renders, so on a
-  // multi-class view (e.g. the tickets template: ticket + task with
-  // different status sets) a default can be invalid for the class actually
-  // selected here — the server rejects it with "Invalid option" (#467).
+  // A value is usable when the field exists on the class and, for enumerated
+  // fields, is one of that class's options. A board default comes from
+  // whichever class the board renders, so on a multi-class view it can be
+  // invalid (#467).
   const usableValue = (classId: string, fieldId: string, value: string) => {
     const field = (design.fields[classId] || []).find((f) => f.id === fieldId);
     if (!field) return false;
@@ -597,11 +592,9 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                   <ComposerAttachments
                     files={pendingFiles}
                     previewUrls={pendingFilePreviewUrls}
-                    // The object is created first and the files uploaded after,
-                    // so the tiles sit inert for a moment before they start
-                    // filling. That gap is the record being written, not a stall.
-                    // Driven off the same `error` the banner reads, rather than
-                    // a second flag that could disagree with it.
+                    // The object is created before the files upload, so the
+                    // tiles sit inert for a moment - that gap is the write, not
+                    // a stall.
                     state={
                       createMutation.isPending
                         ? "uploading"
@@ -626,11 +619,9 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                     className="hidden"
                     onChange={(e) => {
                       // Copy the FileList before clearing the input: it is
-                      // live, so resetting the value empties it, and a state
-                      // updater React defers (which it does as soon as the
-                      // hook has a pending update, e.g. after removing a
-                      // staged file) would then read no files at all and
-                      // silently drop the pick.
+                      // live, so resetting the value empties it and a deferred
+                      // state updater would then read no files and drop the
+                      // pick.
                       const picked = Array.from(e.target.files ?? []);
                       e.target.value = "";
                       addFiles(picked);

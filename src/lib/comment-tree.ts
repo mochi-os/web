@@ -29,11 +29,8 @@ export function findCommentTextInTree<T>(
 }
 
 /**
- * Count every comment in a nested tree - the roots and all their replies.
- * A comment's discussion is the whole subtree, not just its top level:
- * this is what "N comments" should say for a post, and what the lightbox's
- * per-image count says for the comments anchored to that image (replies
- * inherit their parent's anchor, so a reply about a photo counts too).
+ * Count the roots and all their replies: a post's "N comments" is the whole
+ * subtree, and a reply inherits its parent's image anchor.
  */
 export function countCommentTree<T>(
   comments: readonly T[],

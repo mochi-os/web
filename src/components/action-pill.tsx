@@ -63,10 +63,8 @@ type ActionPillProps = ComponentProps<'div'> & {
   /** Expand max-width for hover-reveal actions / empty shell. */
   expandWidth?: 200 | 300
   /**
-   * When !sticky, how empty shell reveals on desktop.
-   * - max-width: feeds posts
-   * - opacity: feeds comments
-   * - none: always visible (forums post)
+   * When !sticky, how the empty shell reveals on desktop: width, fade, or
+   * always.
    */
   emptyReveal?: 'max-width' | 'opacity' | 'none'
   /** When sticky, whether ActionPillActions expand on hover (default true). */

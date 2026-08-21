@@ -9,13 +9,10 @@ import { cn } from '../../lib/utils'
 
 function TooltipProvider({
   delayDuration = 0,
-  // Close on the trigger's own pointerleave instead of Radix's default
-  // "hoverable content" grace area. The grace area only closes when a
-  // document-level pointermove lands outside it — but our apps render inside a
-  // sandboxed iframe that fills the viewport, and an iframe swallows pointermove
-  // so the parent document never sees it. A tooltip on a shell/parent-window
-  // trigger would then open on hover and never close. Our tooltips are plain
-  // text labels, so hoverable content buys nothing.
+  // Radix's hoverable-content grace area only closes on a document-level
+  // pointermove, which an iframe swallows, so a tooltip on a parent-window
+  // trigger would never close. Our tooltips are plain labels, so it buys
+  // nothing.
   disableHoverableContent = true,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
@@ -49,13 +46,10 @@ function TooltipTrigger({
       {...props}
       onFocus={(event) => {
         onFocus?.(event)
-        // Open on hover (pointer path, untouched) and on keyboard focus, but not
-        // on the programmatic focus an overlay restores to its trigger when it
-        // closes — a Tooltip on a Popover/Dropdown/Dialog trigger would otherwise
-        // stay stuck open after the overlay dismisses. Keyboard focus sets
-        // :focus-visible; the restored focus after a pointer interaction does not.
-        // Radix composes this handler before its own onOpen and skips onOpen when
-        // we preventDefault, so gating here suppresses only the unwanted open.
+        // Open on keyboard focus but not on the focus an overlay restores to
+        // its trigger, or the tooltip stays stuck open after the overlay
+        // dismisses. Radix skips its own onOpen when this handler
+        // preventDefaults.
         if (!event.defaultPrevented && !event.currentTarget.matches(':focus-visible')) {
           event.preventDefault()
         }

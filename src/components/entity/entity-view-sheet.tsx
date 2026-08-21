@@ -1,12 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The view create/edit sheet from the design editor, shared by crm and
-// projects. Their copies were identical apart from the placeholder a Select
-// stands in for an empty value: crm spelled it "__none" in four places and
-// "_none_" in a fifth, projects used one constant throughout. Projects' version
-// is the one kept.
-
 import { useState, useEffect, useMemo } from "react";
 import { Trans } from "@lingui/react/macro";
 import { t } from "@lingui/core/macro";

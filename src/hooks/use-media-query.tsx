@@ -3,12 +3,6 @@
 
 import * as React from 'react'
 
-/**
- * Custom hook for media query detection
- * @param query - Media query string (e.g., "(min-width: 768px)")
- * @returns boolean indicating if the media query matches
- * @example const isDesktop = useMediaQuery("(min-width: 768px)")
- */
 export function useMediaQuery(query: string) {
   const [value, setValue] = React.useState<boolean | undefined>(undefined)
 

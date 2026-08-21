@@ -124,12 +124,8 @@ export function detectNumberFormat(): NumberFormat {
 }
 
 /**
- * Returns the browser's preferred BCP 47 language tag (lower-cased), or 'en'
- * if the browser does not expose one. Mirrors detectDateFormat / detectTimeFormat
- * etc. — used by the settings picker to display "Detect from web browser (X)"
- * for the `language=auto` option. The actual server-side resolution still
- * happens in core/server/labels.go::request_language, which falls through the
- * Accept-Language header when the user's preference is "auto" or unset.
+ * The browser's preferred BCP 47 tag, lower-cased, or 'en'. Display only - the
+ * server resolves `auto` from Accept-Language.
  */
 export function detectLanguage(): string {
   if (typeof navigator !== 'undefined' && navigator.language) {
@@ -173,11 +169,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     return shellData?.locale ?? defaultRaw
   })
 
-  // Shell init data arrives by postMessage AFTER this tree mounts, so the
-  // useState initialiser above sees null on the first render and 'init' has to
-  // be handled here as well as 'locale-change' - listening only for the latter
-  // meant the preferences never arrived at all unless the user changed one
-  // mid-session.
+  // Shell init data arrives by postMessage after this tree mounts, so 'init'
+  // must be handled here as well as 'locale-change'.
   useEffect(() => {
     const unsub = onShellMessage((msg) => {
       if ((msg.type === 'locale-change' || msg.type === 'init') && msg.locale) {
@@ -187,10 +180,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     return () => unsub()
   }, [])
 
-  // Top-window pages (settings, login, anonymous public URLs) have no shell to
-  // send them anything, so they must ask the server themselves. The endpoint
-  // needs only a session cookie and returns the same preferences the shell
-  // would have forwarded; anonymous callers just fail and keep the defaults.
+  // Top-window pages have no shell, so they ask the server themselves; the
+  // endpoint needs only a session cookie. Anonymous callers fail and keep the
+  // defaults.
   useEffect(() => {
     if (isInShell() || typeof fetch !== 'function') return
     let cancelled = false

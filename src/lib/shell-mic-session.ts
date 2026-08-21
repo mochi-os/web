@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Microphone session host for Mochi Chat voice notes.
- * Used by Chat's local (non-shell) recorder path and mirrored in shell.js for
- * the top-level Mochi shell. Opaque-origin iframes must not call getUserMedia
- * directly — the shell owns the stream and returns a Blob over postMessage.
+ * Microphone session host, used by the local recorder path and mirrored in
+ * shell.js: opaque-origin iframes cannot call getUserMedia, so the shell owns
+ * the stream and returns a Blob.
  */
 
 export type MicSessionState = 'idle' | 'requesting' | 'recording' | 'stopping'
@@ -159,8 +158,7 @@ function attachLevelMeter(
 }
 
 /**
- * Create a single-session microphone host.
- * Only one active or requesting session is allowed at a time.
+ * Single-session microphone host: one active or requesting session at a time.
  */
 export function createMicSessionHost(deps: MicSessionHostDeps) {
   let nextRequestId = 1
@@ -617,10 +615,9 @@ export type GuardedShellMicStart =
   | { status: 'disposed' }
 
 /**
- * Start a shell mic recording with dispose-safety across the async gaps.
- * The permission prompt can outlive the caller (component unmount while the
- * user decides); a start that resolves after dispose must cancel the shell
- * session immediately or the mic stays on with no owner.
+ * Start a shell mic recording, cancelling the session if the caller was
+ * disposed while the permission prompt was open - otherwise the mic stays on
+ * with no owner.
  */
 export async function startShellMicGuarded(deps: {
   ensureSupported: () => Promise<boolean>

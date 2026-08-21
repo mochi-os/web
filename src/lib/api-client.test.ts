@@ -1,14 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Interceptor-level coverage. safe-navigation.test.ts proves the origin
-// POLICY is right; these prove each client is actually WIRED to it, by driving
-// a real request through the interceptor and inspecting the outgoing headers.
-// Testing the helper alone would let a revert of the interceptor call site
-// pass unnoticed.
-//
-// The real response interceptors run here: the vitest config transforms the
-// Lingui macro, so this module no longer has to be stubbed to be imported.
+// Each client is actually wired to the origin policy, driven through the
+// interceptor and read off the outgoing headers; safe-navigation.test.ts covers
+// the policy itself.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { InternalAxiosRequestConfig } from 'axios'
@@ -99,16 +94,9 @@ describe('createAppClient interceptor', () => {
   })
 })
 
-// crm and projects now defer to createAppClient, so the behavioural tests above
-// cover them for real. repositories still hand-rolls its interceptor because it
-// layers HTML-response detection and a download helper on top, and its package
-// has no test runner — so it is guarded by asserting on its source, the way
-// shell-bridge.test.ts guards the shell script's copy of the theme rules. That
-// is weaker than driving a request, but it is revert-sensitive: restoring it to
-// a bare `if (token)` fails here.
-//
-// Skipped rather than failed when those repositories are not checked out, since
-// each is its own git repo and lib/web is built and tested on its own.
+// repositories hand-rolls its interceptor and its package has no test runner,
+// so it is guarded by asserting on its source: restoring it to a bare `if
+// (token)` fails here. Skipped when the app repository is not checked out.
 describe('app-local interceptor call sites', async () => {
   const { existsSync, readFileSync } = await import('node:fs')
   const { resolve } = await import('node:path')

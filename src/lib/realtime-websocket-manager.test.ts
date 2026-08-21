@@ -1,11 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The chat/game manager's client-initiated close paths (idle, manual, force)
-// settle synchronously with the socket's handlers detached, so a replacement
-// opened during the asynchronous close window can no longer be clobbered by
-// the dying socket's late close event — the same orphaned-socket class the
-// entity manager fixed, where each leak delivered every event once more.
+// Client-initiated closes (idle, manual, force) settle synchronously with the
+// handlers detached, so a replacement opened during the close window is not
+// clobbered by the dying socket's late close event.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChatWebsocketManager } from './realtime-websocket-manager'
@@ -146,11 +144,9 @@ describe('ChatWebsocketManager close races', () => {
   })
 })
 
-// The socket URL carries the session JWT in its query string, because a
-// browser cannot set a header on a WebSocket handshake. api-client.ts gates
-// the equivalent Authorization header on the request being same-origin; this
-// path has to make the same decision, or a baseUrl pointing elsewhere takes
-// the token with it.
+// The socket URL carries the session JWT in its query string, because a browser
+// cannot set a header on a WebSocket handshake, so it needs the same
+// same-origin gate api-client.ts applies to the Authorization header.
 describe('ChatWebsocketManager token scoping', () => {
   beforeEach(() => {
     vi.useFakeTimers()

@@ -1,17 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Tests for error-normalizer. The Mochi server's respond_error helper
-// returns { error: <machine-readable code>, message: <localized
-// human-readable string> } - the localizer should surface the message
-// for display while preserving the code for callers that switch on it.
-// Bug pinned: previously the extractor returned the code as the message
-// because it short-circuited on the error field, so users saw raw
-// labels like "username_taken" instead of the localized text.
-//
-// The tests below cover the matrix of payload shapes the extractor has
-// to handle and assert no regression on shapes that don't match the
-// Mochi envelope (handlers that haven't yet adopted respond_error).
+// The Mochi envelope is { error: <code>, message: <localized text> }: message
+// wins for display, the code survives for callers that switch on it. Handlers
+// that send only one field must keep working.
 
 import { describe, it, expect, vi } from 'vitest'
 import { normalizeError, detectHtmlResponse } from './error-normalizer'
@@ -55,9 +47,7 @@ describe('normalizeError', () => {
     expect(n.code).toBe('username_taken')
   })
 
-  // ===== Backwards compatibility: handlers that haven't yet adopted
-  // respond_error return only one field. Behaviour must not regress for
-  // those.
+  // ===== Handlers that predate respond_error return only one field.
 
   it('falls back to error as message when message is absent', () => {
     const e = axios(400, { error: 'invalid_request' })

@@ -1,22 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Compact language picker for the login page and anonymous-chrome
-// placements (Phase 1 Wave 3 step 10 of claude/plans/languages.md).
-//
-// Renders a globe-icon button that opens a popover containing the searchable
-// list of installed catalogs (fetched once from /_/languages, identified by
-// BCP 47 tag), plus an "Auto (detect from browser)" entry pinned at the top.
-// Native names come from Intl.DisplayNames.
-//
-// On select, the choice is written to localStorage via setStoredLanguage (also
-// mirrored to a mochi_language cookie so the server-side resolver honours it
-// post-login) and the page reloads so the I18nProvider picks up the new tag
-// at boot. Picking "auto" stores the literal string "auto"; both the client
-// and server treat it as fall-through to navigator.language / Accept-Language.
-//
-// The settings preferences page uses a different code path (server-side
-// preference + shellSetLanguage broadcast) and does NOT use this component.
+// Compact language picker for login and anonymous chrome. The choice goes to
+// localStorage and a mochi_language cookie so the server resolver honours it
+// post-login, then the page reloads. Settings preferences uses a different
+// path.
 import { useMemo, useState } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
@@ -45,41 +33,25 @@ function capitalise(s: string): string {
   return s.charAt(0).toLocaleUpperCase() + s.slice(1)
 }
 
-// Explicit display-name overrides. Keyed by lower-cased BCP 47 tag.
-// Used when Intl.DisplayNames would return a name that doesn't match Mochi's
-// chosen wording (e.g. en-us → "American English") or that doesn't sort
-// alongside its parent language in the picker.
-//
-// `en` is overridden because Mochi's source `en` catalog uses neutral English
-// (per CLAUDE.md), not UK or US English; "English (international)" reads
-// honestly and treats US English as a sibling localisation, not a deviation
-// from "real" English.
+// Explicit display-name overrides, keyed by lower-cased BCP 47 tag, where
+// Intl.DisplayNames returns wording Mochi does not use (en-us -> "American
+// English"). `en` is neutral English, not UK or US.
 const displayNameOverrides: Record<string, string> = {
   'en': 'English (international)',
   'en-us': 'English (USA)',
   'es': 'Español (España)',
   'es-419': 'Español (latinoamericano)',
-  // Tags with no CLDR data — Intl.DisplayNames falls back to en-GB and
-  // returns the English exonym instead of the native autonym. The picker
-  // would otherwise show "Aymara"/"Guarani"/"Haitian Creole" instead of the
-  // self-name. Date and number formatting for these locales also fall back
-  // to en-GB at runtime; we accept that for now (Latin-script anyway) and
-  // only fix the picker label.
+  // No CLDR data: Intl.DisplayNames falls back to en-GB and returns the English
+  // exonym instead of the autonym. Only the picker label is fixed here; date
+  // and number formatting for these locales still fall back to en-GB.
   'ay': 'Aymar aru',
   'gn': "Avañe'ẽ",
   'ht': 'Kreyòl ayisyen',
 }
 
-// Native autonyms keyed by lower-cased BCP 47 tag. Browsers ship
-// Intl.DisplayNames data for only a subset of display locales, so
-// `new Intl.DisplayNames([tag]).of(tag)` falls back to the runtime default
-// (usually the English exonym) for the many less-common locales. This table
-// gives the correct self-name from CLDR so the picker reads in each
-// language's own script regardless of the browser's ICU coverage. Values are
-// final display strings — capitalisation is baked in, so they are NOT passed
-// through `capitalise` (which would corrupt caseless scripts, e.g. mapping
-// Georgian Mkhedruli to Asomtavruli). Keys overridden in
-// `displayNameOverrides` are omitted there; the override wins.
+// Native autonyms by lower-cased BCP 47 tag: Intl.DisplayNames ships data for
+// only a subset and returns the English exonym otherwise. Values are final -
+// never pass them through `capitalise`, which corrupts caseless scripts.
 const nativeNames: Record<string, string> = {
   'af': 'Afrikaans',
   'am': 'አማርኛ',
@@ -181,12 +153,9 @@ const nativeNames: Record<string, string> = {
   'zu': 'IsiZulu',
 }
 
-// resolveInstalled walks the parent chain of `tag` and returns the closest
-// match in `installed`. Mirrors the server-side resolver's fallback chain so
-// the Auto entry's display name reflects the catalog the user will actually
-// load — e.g. an `en-gb` browser falls through to `en` and shows the override
-// "English (international)" rather than the Intl.DisplayNames default
-// "British English". Returns the tag unchanged if nothing matches.
+// Walks the parent chain of `tag` for the closest match in `installed`,
+// mirroring the server-side resolver's fallback chain. Returns the tag
+// unchanged if nothing matches.
 function resolveInstalled(tag: string, installed: Set<string>): string {
   let t = tag.toLowerCase()
   while (t !== '') {
@@ -205,11 +174,9 @@ function resolveInstalled(tag: string, installed: Set<string>): string {
 export function nativeName(tag: string, displayLocale?: string): string {
   const override = displayNameOverrides[tag.toLowerCase()]
   if (override) return override
-  // No explicit display locale means the caller wants the language's own
-  // autonym (the list entries). Prefer the static table — the browser's
-  // Intl.DisplayNames lacks data for most display locales and would return
-  // the English exonym. With a display locale set (the Auto entry, which
-  // shows the detected language in the active UI locale) we must use Intl.
+  // Without a display locale the caller wants the autonym, so prefer the static
+  // table: Intl.DisplayNames lacks data for most display locales. With one set,
+  // only Intl can render the name in that locale.
   if (!displayLocale) {
     const auto = nativeNames[tag.toLowerCase()]
     if (auto) return auto
@@ -223,11 +190,8 @@ export function nativeName(tag: string, displayLocale?: string): string {
   return capitalise(name)
 }
 
-// Sort priority: 0 = Latin-script natives (English, Français, Deutsch, …),
-// 1 = non-Latin-script natives (العربية, 日本語, 한국어, עברית, …). Within each
-// bucket, naturalCompare sorts by the displayed native name. Putting Latin
-// first means English-speaking and most European users find their language
-// near the top; non-Latin readers find theirs grouped together below.
+// Sort priority: 0 = Latin-script natives, 1 = everything else. naturalCompare
+// orders within each bucket by the displayed native name.
 function scriptBucket(native: string): number {
   // Find the first letter (skip leading spaces, parens, punctuation).
   for (const ch of native) {

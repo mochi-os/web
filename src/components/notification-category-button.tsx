@@ -11,14 +11,9 @@ import { cn, naturalCompare } from '../lib/utils'
 import { t } from '@lingui/core/macro'
 
 /**
- * Category assignment for one notification topic.
- *
- * This component used to fetch the menu app's routes directly, with the
- * CONSUMING app's token — which core refuses with app_token_mismatch, so on
- * every page but the menu app's own the picker silently failed to load and the
- * catch swallowed it. lib/web ships inside every app's bundle and cannot hold
- * another app's grants, so it now holds no data and performs no request: the
- * consumer supplies both, from whichever service it is entitled to read.
+ * Category assignment for one notification topic. lib/web ships inside every
+ * app's bundle and cannot hold another app's grants, so this holds no data and
+ * makes no request: the consumer supplies both.
  */
 export interface NotificationCategory {
   id: number

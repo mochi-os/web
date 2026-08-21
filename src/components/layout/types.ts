@@ -14,10 +14,8 @@ type BaseNavItem = {
   variant?: 'default' | 'outline' | 'primary'
   className?: string
   /**
-   * Marks an aggregate ("All <items>") entry. It reuses the same `icon` as the
-   * individual items it represents, with a small hollow ring drawn at the
-   * icon's corner so it stays distinct — including in icon-collapsed mode,
-   * where the text label is hidden. See the "All X" sidebar convention.
+   * Marks an aggregate ("All <items>") entry: same `icon` as its members, with
+   * a hollow ring at the corner that stays visible in icon-collapsed mode.
    */
   aggregate?: boolean
 }

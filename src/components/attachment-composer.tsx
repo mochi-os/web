@@ -32,32 +32,21 @@ import { getFileIcon, isMedia } from '../lib/attachment-utils'
 import { cn } from '../lib/utils'
 
 /**
- * The longest caption the composer stages. Matches the bound the attachment
- * library holds peer captions to, so a caption that survives locally is never
- * silently truncated when it federates.
+ * Longest caption the composer stages. Matches the bound the attachment library
+ * holds peer captions to, so a local caption is not truncated on federation.
  */
 export const attachmentCaptionMaximum = 1000
 
 /**
- * Lifecycle of the files a composer is holding.
- *
- * `idle` — picked, not sent yet. `uploading` — in flight. `error` — the send
- * failed and the files are still staged so the user can retry.
+ * Lifecycle of a composer's files. On `error` they stay staged so the user can
+ * retry.
  */
 export type ComposerFileState = 'idle' | 'uploading' | 'error'
 
 /**
- * One attachment being staged, normalised.
- *
- * This is the composer's counterpart to `GalleryAttachment`: the shared list
- * renders this and nothing else, and each app maps its own shape onto it. The
- * apps hold four different shapes — a bare `File`, a union of saved-and-new for
- * the edit forms, and chat's `PendingAttachment` with its voice-note fields —
- * and none of them belong in a shared component.
- *
- * Anything translated (`meta`, `badge`) is a node the app supplies, so the
- * component carries no copy that would have to be re-extracted into all 22
- * app catalogs.
+ * One attachment being staged, normalised: the shared list renders this and
+ * nothing else, and each app maps its own shape onto it. Anything translated
+ * (`meta`, `badge`) is a node the app supplies, so this carries no copy.
  */
 export interface ComposerItem {
   /** Stable across renders and reorders: React key and drag identity. */
@@ -77,19 +66,14 @@ export interface ComposerItem {
   /** Small label over the preview, such as a translated "New" chip. */
   badge?: ReactNode
   /**
-   * Appearance for this one attachment, overriding the list's. One file over
-   * the size limit is an error while the rest of the list is fine.
-   * Deliberately appearance only: whether the list can be reordered or its
-   * files removed is a property of the send, not of one attachment.
+   * Appearance for this one attachment, overriding the list's. Appearance only:
+   * whether the list reorders or removes is a property of the send.
    */
   state?: ComposerFileState
   /**
-   * This file's own share of the send in flight.
-   *
-   * Per item rather than a list on the composer, because the list a composer
-   * shows is not always the list it uploads: chat hides voice notes from it,
-   * and the edit forms mix saved attachments in with the new ones. The caller
-   * owns lining the slices up with the array that actually goes into the body.
+   * This file's own share of the send in flight. Per item because the list a
+   * composer shows is not always the list it uploads; the caller lines the
+   * slices up with the array that goes into the body.
    */
   progress?: UploadSlice
 }
@@ -106,44 +90,33 @@ export interface AttachmentComposerProps {
   state?: ComposerFileState
   onRemove?: (index: number) => void
   /**
-   * Supply to let the attachments be dragged into a different order. Omit and
-   * they do not drag. Independent of `layout` and `preview` on purpose: a chat
-   * box can want reordering without wanting 128px photo tiles in it.
+   * Supply to let the attachments be dragged into a different order.
+   * Independent of `layout` and `preview`: reordering does not imply photo
+   * tiles.
    */
   onReorder?: (from: number, to: number) => void
   /**
-   * Draw the images and video first and everything else after, which is the
-   * order `AttachmentGallery` posts them in. The staged order is kept inside
-   * each block, and a drag stays in the block it started in.
-   *
-   * Off by default. What a composer draws is the order its caller holds, and
-   * only the composers whose attachments go on to the gallery gain anything
-   * from splitting the two apart.
+   * Draw images and video first and everything else after, the order
+   * `AttachmentGallery` posts them in. Staged order is kept inside each block,
+   * and a drag stays in the block it started in. Off by default.
    */
   groupMedia?: boolean
   /**
-   * Names for the two blocks `groupMedia` draws, as nodes the app supplies for
-   * the same reason `meta` and `badge` are: a string added here lands in all 22
-   * app catalogs, and only the composers that group have anything to name.
-   *
-   * Without them the blocks are still separated by a rule, so the wall a drag
-   * cannot cross is visible either way.
+   * Names for the two blocks `groupMedia` draws, as app-supplied nodes so no
+   * string lands in every app catalog. Without them a rule still separates
+   * them.
    */
   blockLabels?: { media?: ReactNode; files?: ReactNode }
   /**
    * Rendered as the last cell of the grid, for the app's own "add files" tile.
-   * It belongs in the grid rather than the dialog footer: adding files is
-   * something you do to this list, not to the dialog.
    */
   addSlot?: ReactNode
   /** Offered when `state` is `error`. */
   onRetry?: () => void
   /**
-   * Supply to let media attachments carry captions. Draws the caption button
-   * on every media tile; the button opens the editor and this receives what
-   * was saved (an empty string removes the caption). Tile preview only —
-   * the inline list has no room for a third line, and no composer that uses
-   * it stages captioned media.
+   * Supply to let media attachments carry captions: draws the caption button on
+   * every media tile and receives what was saved (empty string removes it).
+   * Tile preview only.
    */
   onCaption?: (index: number, caption: string) => void
   className?: string
@@ -209,9 +182,7 @@ export function AttachmentComposer({
   const dragClass = cn('select-none', canDrag && 'cursor-grab active:cursor-grabbing')
 
   /**
-   * Arrow keys move the focused tile one place. Until now the order could only
-   * be changed by dragging, which left keyboard users — and anyone on a screen
-   * reader — with no way to change it at all. Left and right only: the grid
+   * Arrow keys move the focused tile one place. Left and right only: the grid
    * wraps at a width nothing here knows, so up and down have no honest meaning.
    */
   const moveByKey = (position: number, delta: number) => {
@@ -239,11 +210,9 @@ export function AttachmentComposer({
         }
       : {}
 
-  // Media takes the first `mediaCount` drawn positions, so the rule goes in
-  // front of the first file. `w-full` in a wrapping flex row is what breaks the
-  // line — the two blocks would otherwise run together mid-row and the refused
-  // drop between them would look like a bug. Grid only: a full-width child in
-  // the sideways-scrolling row would be a gap as wide as the composer.
+  // The rule goes in front of the first file. `w-full` is what breaks the line
+  // in a wrapping flex row; grid only, since in the scrolling row it would be a
+  // gap as wide as the composer.
   const dividerAt =
     layout === 'grid' && groupMedia && mediaCount > 0 && mediaCount < items.length
       ? mediaCount
@@ -267,11 +236,9 @@ export function AttachmentComposer({
           // box's slices against its own list — the wrong files, filling.
           const slice = itemState === 'uploading' ? item.progress : undefined
 
-          // Byte counts only while this file is the one on the wire. "0 B of
-          // 6.4 MB" on a queued file and "6.4 MB of 6.4 MB" on a finished one
-          // are both noise, and the fill already says which is which.
-          // sentLabel/totalLabel are named to match `UploadProgress`, so the
-          // two share one message rather than adding a second to 22 catalogs.
+          // Byte counts only while this file is on the wire; on a queued or
+          // finished file they are noise. sentLabel/totalLabel match
+          // `UploadProgress` so the two share one message.
           const sentLabel = formatFileSize(
             Math.round((slice?.fraction ?? 0) * item.size)
           )
@@ -396,11 +363,9 @@ export function AttachmentComposer({
 }
 
 /**
- * The caption editor for one media attachment: the preview large enough to see
- * which photo is being captioned, and the text. Saving an empty text removes
- * the caption; there is no separate control for that. The composer opens it
- * for staged files; managers of saved attachments (the wiki attachments
- * browser) open it directly with an item built from the saved row.
+ * Caption editor for one media attachment; saving an empty text removes the
+ * caption. Opened by the composer for staged files, and directly by managers of
+ * saved attachments with an item built from the saved row.
  */
 export function AttachmentCaptionDialog({
   item,

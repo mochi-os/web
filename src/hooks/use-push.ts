@@ -16,12 +16,9 @@ interface PushState {
   subscribed: boolean
 }
 
-// Request ids are a plain counter, so they are trivial to guess, and the only
-// other thing a reply is matched on is a fixed type string. Every listener here
-// therefore pins the source window: only the shell, our direct parent, may
-// answer. The iframe's own origin is opaque so event.origin cannot be pinned
-// instead, which is why the main bridge and the storage proxy guard the same
-// way — see shell-bridge.ts and shell-storage.ts.
+// Every listener pins the source window: only the shell, our direct parent, may
+// answer. Ids are a plain counter, and the iframe's opaque origin rules out
+// pinning event.origin instead.
 let shellPushIdCounter = 0
 
 function shellPushSubscribe(): Promise<void> {

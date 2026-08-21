@@ -18,12 +18,6 @@ export interface ListSkeletonProps {
    * @default false
    */
   avatar?: boolean
-  /**
-   * The visual variant of the skeleton.
-   * 'card': Renders a stack of Cards (legacy behavior).
-   * 'simple': Renders a stack of divs.
-   * @default "card"
-   */
   variant?: 'card' | 'simple'
 }
 

@@ -255,12 +255,9 @@ export function AuthenticatedLayout({
             </div>
           )}
 
-          {/* Content — add left padding at desktop widths in shell to
-                clear the fixed menu overlay (logo + trigger button laid
-                out horizontally is ~88px wide; ps-24 = 96px). At mobile
-                widths the shell template positions the iframe below the
-                full-width menu bar (top: var(--shell-mobile-topbar-height)
-                in shell.html), so no padding is needed there. */}
+          {/* Left padding at desktop widths in shell clears the fixed menu
+              overlay (~88px wide; ps-24 = 96px). At mobile widths shell.html
+              positions the iframe below the menu bar, so none is needed. */}
           <div
             className={cn(
               '@container/content',

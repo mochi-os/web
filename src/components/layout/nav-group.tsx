@@ -66,12 +66,9 @@ function isNavSubCollapsible(item: unknown): item is NavSubCollapsible {
 function ItemIcon({ icon: Icon, aggregate }: { icon?: React.ElementType; aggregate?: boolean }) {
   if (!Icon) return <Circle className='hidden group-data-[collapsible=icon]:block' />
   if (!aggregate) return <Icon />
-  // The menu button hides direct <span> children in icon-collapsed mode
-  // (group-data-[collapsible=icon]:[&>span]:hidden — that rule exists to hide
-  // the text label). This wrapper is a <span> too, so without the override the
-  // aggregate glyph would vanish in collapsed mode. Force it back to inline-flex
-  // (needs ! to beat the more-specific label-hiding rule) so the ring stays
-  // visible exactly when the text label is hidden.
+  // The menu button hides direct <span> children in icon-collapsed mode to hide
+  // the text label, and this wrapper is a <span>. The ! override forces it back
+  // to inline-flex so the aggregate ring survives collapse.
   return (
     <span className='relative inline-flex shrink-0 group-data-[collapsible=icon]:!inline-flex'>
       <Icon className='size-4 shrink-0' />
@@ -331,11 +328,6 @@ function SidebarMenuCollapsible({
       className='group/collapsible'
     >
       <SidebarMenuItem>
-        {/*
-          If `item.url` is present, we keep the split behavior:
-          - Main part links to URL
-          - Small chevron button toggles collapse
-         */}
         {item.url ? (
            <div className='flex items-center'>
             {item.external ? (
@@ -477,11 +469,6 @@ function SidebarMenuSubCollapsible({
   return (
     <SidebarMenuSubItem>
       <Collapsible {...collapsibleProps} className='group/subcollapsible'>
-        {/*
-          If `item.url` is present, split behavior:
-          - Link toggles nav
-          - Chevron toggles collapse
-         */}
         {item.url ? (
           <div className='flex items-center'>
              <SidebarMenuSubButton

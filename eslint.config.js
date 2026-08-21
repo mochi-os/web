@@ -73,29 +73,12 @@ export default defineConfig(
       'no-duplicate-imports': 'error',
     },
   },
-  // All 23 apps import eslint-i18n-config.js; lib/web shipped without it, so
-  // the component library every app renders was the one place the lingui rule
-  // never ran. That is how five error pages reached production as untranslated
-  // English paragraphs.
-  //
-  // Enabled at 'warn' rather than the shared config's 'error' because turning
-  // it on surfaces 420 pre-existing violations, a real backlog that has to be
-  // triaged string by string (`sonnerToast.error('Failed to copy')` is genuine;
-  // much of the rest is attribute and config noise). Same staged approach the
-  // Android i18n gates took. Flip to 'error' once the backlog is cleared; the
-  // JSX-text subset is already at zero and is held there by
-  // claude/scripts/check-jsx-text.mjs.
   {
     // Tests are excluded: their strings are fixtures and `it(...)`
     // descriptions, never rendered. They accounted for 75 of the 420
     // violations found when the rule was first switched on.
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
-    // At 'error', the same as every app. Enabling the rule here first surfaced
-    // 420 violations; those were cleared by teaching the shared ignore lists
-    // about the non-prose classes, deleting a dead duplicate label table, and
-    // wrapping the genuine prose - every string of which is now translated into
-    // all 98 full locales.
     ...i18nConfig,
   },
   {
@@ -107,12 +90,9 @@ export default defineConfig(
     rules: { 'lingui/no-unlocalized-strings': 'off' },
   },
   {
-    // The shell bridge's microphone plumbing throws MicSessionError objects
-    // whose `message` is a developer diagnostic. Consumers switch on the error
-    // `name` and supply their own translated text - see apps/chat's chat-input,
-    // which maps NotAllowedError, NotReadableError, EmptyRecordingError and the
-    // rest to t`` toasts. The message string is never rendered, so wrapping it
-    // would add ~24 msgids to every locale that nobody will ever read.
+    // MicSessionError `message` is a developer diagnostic; consumers switch on
+    // the error `name` and supply their own translated text (see apps/chat's
+    // chat-input). The message string is never rendered.
     files: ['src/lib/shell-mic-session.ts', 'src/lib/shell-bridge.ts'],
     rules: { 'lingui/no-unlocalized-strings': 'off' },
   }

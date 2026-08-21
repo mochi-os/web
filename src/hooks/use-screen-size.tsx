@@ -30,16 +30,8 @@ type UseScreenSizeReturn = {
 }
 
 // One listener and one width for the whole app, read through
-// useSyncExternalStore.
-//
-// This used to be per-component useState fed by a per-component resize
-// listener. Every consumer then held its own copy of the width and flipped
-// across a breakpoint in its own update, so during a resize two components
-// could render from different widths in the same commit. ResponsiveDialog is
-// where that showed: its root picked Drawer while its content was still
-// DialogContent, and the portal threw "`DialogPortal` must be used within
-// `Dialog`". A single snapshot cannot tear, so the root and its parts always
-// agree.
+// useSyncExternalStore. Per-component widths tear: a root and its content could
+// render from opposite sides of a breakpoint in the same commit.
 let currentWidth = typeof window !== 'undefined' ? window.innerWidth : 0
 const listeners = new Set<() => void>()
 
@@ -83,15 +75,6 @@ function screenSizeFor(width: number): ScreenSize {
   return 'xs'
 }
 
-/**
- * Comprehensive hook for screen size detection
- * Provides reactive window dimensions and semantic breakpoint helpers
- *
- * @returns Object with width, size, isMobile, isTablet, and isDesktop
- * @example
- * const { isMobile, size } = useScreenSize()
- * if (isMobile) { ... }
- */
 export function useScreenSize(): UseScreenSizeReturn {
   const width = React.useSyncExternalStore(
     subscribe,

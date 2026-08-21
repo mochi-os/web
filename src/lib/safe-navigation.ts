@@ -29,18 +29,11 @@ function isTrustedExternalHost(
 }
 
 /**
- * True when a request built from `base` and `url` resolves to the current
- * origin, so the session token may be attached to it.
- *
- * Axios treats any URL matching `<scheme>://` or `//` as absolute and drops
- * the baseURL, so a route parameter that decodes to `//host` (from a path
- * segment like `%2F%2Fhost`) turns a relative endpoint into an off-origin
- * request. The combination below mirrors axios's own buildFullPath so the
- * origin compared here is the origin actually contacted.
- *
- * This is an origin comparison, not a ban on absolute URLs: callers
- * legitimately pass absolute same-origin URLs to bypass an entity-context
- * baseURL (see search-entity-page), and those must keep their token.
+ * True when a request built from `base` and `url` resolves to this origin, so
+ * the session token may be attached. Mirrors axios's buildFullPath, which drops
+ * the baseURL for a URL starting `//` - a route parameter decoding to `//host`
+ * would otherwise carry the token off-origin. Absolute same-origin URLs keep
+ * it.
  */
 export function isSameOriginRequest(
   base: string | undefined,
@@ -61,13 +54,10 @@ export function isSameOriginRequest(
 }
 
 /**
- * True when a resource URL (an image, a download) resolves to the current
- * origin over http(s), so a session token may be added to it.
- *
- * Resolution is against document.baseURI, which is what the browser itself
- * uses for a relative `src` or `href`, so the origin tested here is the origin
- * actually fetched. A protocol-relative URL resolves off-origin and is
- * refused, as is any non-http(s) scheme.
+ * True when a resource URL (image, download) resolves to this origin over
+ * http(s), so a session token may be added. Resolved against document.baseURI,
+ * as the browser resolves a relative `src`; protocol-relative URLs resolve
+ * off-origin.
  */
 export function isSameOriginResource(url: string): boolean {
   try {

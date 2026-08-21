@@ -2,17 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable lingui/no-unlocalized-strings */
-// The test harness crm and projects each grew privately. Both files were the
-// same render wrapper and the same fixture factories over the shared entity
-// object model, differing only in the container type each app wraps them in.
-//
-// What stays per app is the container fixture — a CRM has no prefix, a project
-// has one — and the details envelope, which keys the container as `crm` or
-// `project`. Everything the shared components actually read is here.
-//
-// No lingui macro is used anywhere in this file. Every app's lingui.config.js
-// scans `../../../lib/web/src/**`, so a `msg` or `t` here would extract fixture
-// strings into all 22 app catalogs.
+// Test harness shared by crm and projects; each app keeps its own container
+// fixture and details envelope. No lingui macro anywhere in this file: every
+// app's lingui.config.js scans lib/web/src/**, so fixtures would be extracted.
 
 import React, { type ReactElement } from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
@@ -155,9 +147,8 @@ export function createMockEntityObjects(count: number): EntityObject[] {
 }
 
 /**
- * The schema half of an app's details envelope. An app builds its own details
- * fixture as `{ crm: createMockCrm(), ...createMockEntityDesign() }`, so only
- * the container key stays app-side.
+ * The schema half of an app's details envelope, e.g. `{ crm: createMockCrm(),
+ * ...createMockEntityDesign() }`.
  */
 export function createMockEntityDesign(
   overrides?: Partial<EntityDesign>,

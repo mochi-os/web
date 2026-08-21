@@ -53,14 +53,10 @@ function oauthLabel(key: string): string {
   return OAUTH_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1)
 }
 
-// StepUpDialog re-verifies the user with the same factor(s) they log in
-// with (email code / TOTP / passkey) before a sensitive action, then hands
-// the caller a single-use proof token via onVerified. `children` renders
-// below the factor controls (e.g. the export passphrase field, kept beneath
-// the identity check); `canVerify` gates submission until any such extra
-// input is ready. When `submitLabel` is set the per-factor inline Verify
-// buttons are replaced by one labelled action button in the footer (e.g.
-// "Download backup" for export); without it each factor verifies inline.
+// Re-verifies the user with their login factors and hands the caller a
+// single-use proof token. `children` renders below the factor controls, gated
+// by `canVerify`; `submitLabel` replaces the inline Verify buttons with one
+// footer button.
 export function StepUpDialog({
   open,
   onOpenChange,
@@ -97,12 +93,9 @@ export function StepUpDialog({
   // waits for everything required.
   const [earnedToken, setEarnedToken] = useState<string | null>(null)
 
-  // Bumped every time the dialog opens or closes. An OAuth verify polls for up
-  // to two minutes, and dismissing the dialog does not stop it - so without
-  // this the proof from an abandoned ceremony still arrived, still called
-  // onVerified, and still ran whatever action the caller had pending, which by
-  // then may be a different one the user picked afterwards. Captured before the
-  // await and compared after: a result from a previous life is discarded.
+  // Bumped on every open and close. An OAuth verify polls for up to two minutes
+  // and dismissing the dialog does not stop it, so the generation is captured
+  // before the await and compared after: a stale result is discarded.
   const generation = useRef(0)
 
   // On open: learn the user's factors and, if email is one, send the code.
@@ -116,11 +109,9 @@ export function StepUpDialog({
     setTotpCode('')
     setProviders([])
     setSent(false)
-    // The dialog instance is reused across method changes; a prior verify (in
-    // particular an abandoned OAuth popup, which polls for up to two minutes
-    // because the sandboxed iframe's window.open returns null and so never
-    // detects the close) could leave busy=true and grey out every control.
-    // Nothing is in progress at open time, so clear it.
+    // The dialog instance is reused across method changes, and an abandoned
+    // OAuth verify can leave busy=true and grey out every control. Nothing is
+    // in progress at open time, so clear it.
     setBusy(false)
     setEarnedToken(null)
     ;(async () => {
@@ -164,11 +155,9 @@ export function StepUpDialog({
     }
   }, [loading, sent, remaining])
 
-  // A factor verified to completion yields a proof token. When `defer` is set
-  // (a factor button in a flow that has its own action button, e.g. export's
-  // Download), hold the proof so the footer button stays the explicit final
-  // step. Otherwise run the action now — awaiting it keeps the dialog busy
-  // while e.g. the export bundle builds.
+  // A completed factor yields a proof token. `defer` holds it so a flow with
+  // its own action button keeps that button as the final step; otherwise run
+  // the action now, awaiting it to keep the dialog busy.
   const apply = useCallback(
     async (r: StepUpResult, defer = false) => {
       if (r.token) {

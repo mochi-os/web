@@ -1,11 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// This component used to fetch the menu app's routes with the consuming app's
-// token, which core refuses (app_token_mismatch), so on every page but the
-// menu's own the picker silently never loaded. It now takes its data, which is
-// what makes "the picker populates" assertable at all.
-
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'

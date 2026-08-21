@@ -40,12 +40,9 @@ export async function subscribe(
   }
 }
 
-// There is deliberately no unsubscribe() here. Dropping the browser
-// subscription is only half of it: the account row the subscription was
-// registered as has to go too, or the server keeps pushing to a dead endpoint.
-// That belongs to the shell, which owns the account API — see the menu app's
-// removeBrowserAccount. Apps reach it through usePush() in ../hooks/use-push,
-// which proxies unsubscribe to the shell over postMessage.
+// There is deliberately no unsubscribe() here: the account row has to go too or
+// the server keeps pushing to a dead endpoint, and that is the shell's account
+// API. Apps reach it through usePush().
 
 export function getSubscriptionData(sub: PushSubscription) {
   const json = sub.toJSON()

@@ -1,21 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The app shell chess and go each grew privately, 165 and 168 lines and seven
-// lines apart. Those seven were the app name in the avatar URLs, go appending
-// the board size to a game's title, and the app's own NewGame dialog.
-//
-// The dialog stays app-side, since each app's is its own. The title is a
-// callback, so go still shows "(13×13)" and chess still shows the name alone.
-//
-// words holds a third copy, 132 lines, and it is why the avatar and the badge
-// are both optional. words lists no opponent avatar at all — its games can
-// have up to four players, so there is no single opponent to draw — and it
-// marks the games waiting on you with a "!" the other two have no equivalent
-// for.
-//
-// Every string arrives resolved from the app, so each keeps its own wording
-// and none adds a message to the other apps' catalogs.
+// The app shell shared by chess, go and words. Each app keeps its own NewGame
+// dialog and title callback; the avatar and badge are optional because words
+// has neither. Every string arrives resolved from the app.
 
 import { useMemo, type FC, type ReactNode } from 'react'
 import { Plus } from 'lucide-react'

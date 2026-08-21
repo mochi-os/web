@@ -1,15 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The container list page crm and projects each grew privately. The two files
-// were 187 lines apiece and 28 lines apart once the app noun was normalised,
-// and every one of those lines was the icon, the wording, the route param or
-// the api module.
-//
-// Every string arrives resolved from the app. Nothing here is wrapped in a
-// lingui macro on purpose: each app already holds its own wording in its own
-// catalog, and a macro here would push a generic phrasing into all 22 app
-// catalogs and change what these two screens say.
+// The container list page shared by crm and projects. Every string arrives
+// resolved from the app. No lingui macro here on purpose: a macro would push
+// generic wording into all 22 app catalogs.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'

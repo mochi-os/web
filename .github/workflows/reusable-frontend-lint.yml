@@ -20,13 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # Each app's pnpm-lock.yaml resolves `@mochi/web` via
-    # `file:../../../lib/web` — matching the local-dev layout
-    # `<mochi>/apps/<app>/web/` plus `<mochi>/lib/web/`. To make the same
-    # relative path resolve in CI, we mount the caller at
-    # `apps/<repo-name>/` and check out lib/web at `lib/web/`. All Python
-    # checks then run with the caller dir as working directory, so they
-    # see exactly what they would see in a vanilla `git clone <app>`.
+    # Each app resolves `@mochi/web` via `file:../../../lib/web`, the local-dev
+    # layout. Mounting the caller at apps/<repo-name>/ and lib/web at lib/web/
+    # makes the same relative path resolve, and the caller dir is the working
+    # directory so checks see a vanilla `git clone <app>`.
     defaults:
       run:
         working-directory: apps/${{ github.event.repository.name }}
@@ -44,17 +41,11 @@ jobs:
           repository: mochi-os/web
           path: lib/web
 
-      # Each app's package.json declares `"@mochi/web": "workspace:*"`, which
-      # only resolves when pnpm sees a workspace root. Locally the workspace
-      # root is the mochi umbrella's pnpm-workspace.yaml; in CI we synthesise
-      # an equivalent (plus a shim package.json) at $GITHUB_WORKSPACE so a
-      # single `pnpm install` at the root links @mochi/web → lib/web for the
-      # caller. The shim mirrors the relevant bits of mochi/package.json:
-      # `eslint-plugin-lingui` for `@mochi/web/eslint-i18n-config` (apps' lint
-      # configs extend it but don't declare the plugin themselves — locally
-      # pnpm hoists it from root) and `onlyBuiltDependencies` from the per-app
-      # pnpm-workspace.yaml files. Keep this in sync if the root grows
-      # additional hoisted devDeps that apps' lint/i18n:check expect.
+      # Apps declare `"@mochi/web": "workspace:*"`, which needs a workspace
+      # root; locally that is the umbrella. CI synthesises one plus a shim
+      # package.json at $GITHUB_WORKSPACE, mirroring mochi/package.json's
+      # eslint-plugin-lingui and onlyBuiltDependencies - keep it in sync as the
+      # root grows.
       - name: Synthesise workspace root for @mochi/web
         working-directory: ${{ github.workspace }}
         run: |
@@ -87,18 +78,10 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      # App repositories carry NO lockfile at all - the stale per-app ones this
-      # comment used to describe have since been deleted - and the canonical
-      # mochi/pnpm-lock.yaml lives in the umbrella, which CI cannot see. So
-      # --frozen-lockfile has nothing to freeze against and bails.
-      #
-      # Understand what that costs: every run resolves fresh from the semver
-      # ranges in package.json, so CI can test against versions no developer
-      # has, and a bad release is picked up the moment it is published. The fix
-      # is to make the canonical lockfile reachable from an app checkout, which
-      # is a question about how app repositories relate to the workspace rather
-      # than a flag on this line. Until then this is unpinned by necessity, not
-      # by preference.
+      # App repositories carry no lockfile and the canonical
+      # mochi/pnpm-lock.yaml lives in the umbrella, which CI cannot see, so
+      # --frozen-lockfile has nothing to freeze against. Every run resolves
+      # fresh from the semver ranges in package.json.
       - name: Install dependencies
         working-directory: ${{ github.workspace }}
         run: pnpm install --no-frozen-lockfile
@@ -126,10 +109,9 @@ jobs:
         working-directory: apps/${{ github.event.repository.name }}
         run: |
           # Every key in labels/en.conf must be translated in each non-overlay
-          # <lang>.conf. A value identical to English is allowed only when every
-          # alphabetic word is a keep-word (brand/protocol token, loanword,
-          # colour). KEEP is an inline copy of claude/scripts/i18n_glossary.py
-          # in the monorepo — keep the two in sync.
+          # <lang>.conf; a value identical to English is allowed only when every
+          # alphabetic word is a keep-word. KEEP mirrors
+          # claude/scripts/i18n_glossary.py - keep the two in sync.
           python3 - <<'PY'
           import re, sys
           from pathlib import Path
@@ -360,11 +342,7 @@ jobs:
       - name: Check Android i18n catalogues
         run: |
           # Single implementation, living with the resources it checks:
-          # clients/android/tools/check-locales.py. This step used to carry its
-          # own copy in Python-in-YAML, alongside two more in Kotlin, and the
-          # three drifted - this one never learned about <plurals> or Android's
-          # fallback chain. Delegating means there is one place to fix.
-          #
+          # clients/android/tools/check-locales.py. Add checks there, not here.
           # Repos with no Android module skip rather than fail.
           checker=$(find . -path '*/tools/check-locales.py' -not -path './node_modules/*' | head -1)
           if [ -z "$checker" ]; then

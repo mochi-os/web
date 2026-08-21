@@ -1,14 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Shared ESLint config for the lingui no-unlocalized-strings rule.
-// Imported from each app's eslint.config.js so a single ignore list
-// covers every Mochi web project.
-//
-// Set to 'error' so any new unwrapped UI string fails CI. The ignore
-// patterns and ignoreNames lists below cover legitimate non-prose
-// literals (CSS class strings, color values, font stacks, command
-// payloads, etc.) — extend them when a true false-positive surfaces
+// Shared ESLint config for the lingui no-unlocalized-strings rule, imported by
+// every app's eslint.config.js. At 'error', so a new unwrapped UI string fails
+// CI. Extend the ignore lists below when a genuine false positive surfaces,
 // rather than reaching for `// eslint-disable-next-line`.
 
 import pluginLingui from 'eslint-plugin-lingui'
@@ -26,11 +21,9 @@ export default {
           '^(?![A-Z])\\S+$',
           // UPPERCASE constants
           '^[A-Z0-9_-]+$',
-          // Brand and product names — intentionally never translated. Keep in
-          // step with BRAND in claude/scripts/i18n_glossary.py, which is the
-          // canonical list check-i18n-glossary.py enforces; the extras here are
-          // third-party products Mochi names in provider and browser tables
-          // (connected accounts, push registration, restore banner).
+          // Brand and product names - never translated. Keep in step with BRAND
+          // in claude/scripts/i18n_glossary.py; the extras here are third-party
+          // products Mochi names in provider and browser tables.
           '^(?:Mochi|Mochi OS|GitHub|Stripe|Pushbullet|ntfy|libp2p|JWT|OAuth|OIDC|PKCE|SAML)$',
           // Browser names, returned by user-agent sniffing as an identifier.
           '^Browser$',
@@ -51,12 +44,9 @@ export default {
           // `[!important]`) used in `cn()`/className helpers and the
           // typography-class arrays in document-page renderers.
           '^\\[[&!]',
-          // CSS color / dimension values: `oklch(…)`, `rgb(…)`, `hsl(…)`,
-          // `var(…)`, hex colors (`#fff`, `#1e3a5f`), and pure numeric
-          // values with units (`1rem`, `0.75rem`, `2.25rem`). These appear
-          // in theme-preview-card.tsx and similar style-only literals.
-          // Gradient and color-mix functions belong here too: the theme
-          // resolver builds a `--background-image` from them.
+          // CSS colour and dimension values: oklch(), rgb(), hsl(), var(), hex
+          // colours, numbers with units, and the gradient and color-mix
+          // functions the theme resolver builds `--background-image` from.
           '^(?:oklch|rgb|rgba|hsl|hsla|var|calc|url|color-mix|(?:repeating-)?(?:linear|radial|conic)-gradient)\\(',
           '^#[0-9a-fA-F]{3,8}$',
           '^[0-9]+(?:\\.[0-9]+)?(?:rem|em|px|vh|vw|%)$',
@@ -72,11 +62,9 @@ export default {
           // React directives. `'use client'` is a directive prologue, not a
           // string the user ever sees.
           '^use (?:client|server|strict)$',
-          // Tailwind utility strings that aren't in a className prop — object
-          // values and early returns in class-picking helpers
-          // (`row: 'md:pointer-events-none md:opacity-0 …'`). Recognised by
-          // carrying a Tailwind variant colon or a known utility prefix, which
-          // ordinary prose never does.
+          // Tailwind utility strings outside a className prop - object values
+          // and early returns in class-picking helpers. Recognised by a variant
+          // colon or a known utility prefix, which prose never carries.
           '^(?:[a-z0-9-]+[:/])?(?:md|sm|lg|xl|dark|group|hover|focus|peer|data|rtl|ltr|max|min|w|h|p|m|bg|text|border|flex|grid|gap|space|shrink|grow|opacity|rounded|font|items|justify|absolute|relative|fixed|sticky|pointer|transition|overflow|cursor|select|whitespace|truncate|z|top|bottom|left|right|inset|size|aspect|leading|tracking|shadow|ring|animate|duration|delay|ease|scale|translate|rotate)[-:[]',
           // Cookie serialisations built inline: `name=value; path=/; max-age=…`.
           '(?:;\\s*(?:path|max-age|domain|samesite|secure|expires)=)',
@@ -102,12 +90,9 @@ export default {
         ignoreNames: [
           { regex: { pattern: 'className', flags: 'i' } },
           { regex: { pattern: '^[A-Z0-9_-]+$' } },
-          // Variables holding a class string rather than prose:
-          // `const toggleClass = isSent ? 'text-primary' : '…'`, and the
-          // `*Classes` / `*ClassName` variants. The rule already exempts
-          // the className *prop* and cn()/cva() arguments, but not the
-          // intermediate variable, which is how conditional styling is
-          // usually expressed.
+          // Variables holding a class string rather than prose (`toggleClass`,
+          // `*Classes`, `*ClassName`). The rule exempts the className prop and
+          // cn()/cva() arguments, but not the intermediate variable.
           { regex: { pattern: 'class(es|name|names)?$', flags: 'i' } },
           'styleName',
           'src',
@@ -188,11 +173,9 @@ export default {
           'mochi.log.warn',
           'mochi.log.error',
         ],
-        // useTsTypes leverages TS type info to suppress false positives
-        // (e.g. string args to Map/Set/Headers/URLSearchParams methods).
-        // Apps whose eslint.config.js doesn't set parserOptions.project
-        // for typed linting (login, possibly others) need to add it; the
-        // rule errors loudly if the config doesn't support typed linting.
+        // Uses TS type info to suppress false positives (string arguments to
+        // Map/Set/Headers methods). An app's eslint.config.js must set
+        // parserOptions.project for typed linting or the rule errors loudly.
         useTsTypes: true,
         ignoreMethodsOnTypes: [
           'Map.get',

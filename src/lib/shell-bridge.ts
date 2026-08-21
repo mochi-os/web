@@ -22,12 +22,9 @@ export type ColorTheme = {
   overrides?: Record<string, string>
 }
 
-// What a theme is allowed to install. A color theme arrives over postMessage
-// from an app we don't trust — the shell relays whatever an app sends to every
-// other app's iframe — so these three rules decide what survives. They are
-// duplicated in apps/menu/web/public/shell.js (plain script, can't import) and
-// in the server's themes_validate (Go, manifest ingestion); the parity test in
-// shell-bridge.test.ts fails if the copies drift.
+// What a theme is allowed to install. A theme arrives over postMessage from an
+// app we do not trust, so these three rules decide what survives; the server's
+// themes_validate applies the same ones at manifest ingestion.
 
 /** A CSS custom property name — the only key shape a theme may set. */
 export function isThemeProperty(name: string): boolean {
@@ -36,19 +33,17 @@ export function isThemeProperty(name: string): boolean {
 
 /**
  * A theme value that would make the browser fetch. Custom properties are
- * consumed in image contexts, so a URL-bearing value beacons every page view
- * to whoever supplied the theme. Backslash and comment syntax count: they let
- * a function name be written so it doesn't read as itself (`\75rl(` is `url(`).
+ * consumed in image contexts, so a URL-bearing value beacons every page view.
+ * Backslash and comment syntax count: `\75rl(` is `url(`.
  */
 export function isFetchingValue(value: string): boolean {
   return /url|image|src|element|cross-fade|paint|\\|\/\*/i.test(value)
 }
 
 /**
- * font-size is the one standard property a theme state carries, set by the
- * settings font size preference. It is bounded rather than passed through:
- * any app can post a theme, and 0.01% hides every app's content as effectively
- * as display:none would.
+ * font-size, the one standard property a theme carries. Bounded rather than
+ * passed through: any app can post a theme, and 0.01% hides every app's
+ * content.
  */
 export function isThemeFontSize(value: string): boolean {
   if (!/^\d{2,3}(\.\d+)?%$/.test(value)) return false
@@ -75,22 +70,19 @@ type ShellInitData = {
   domain?: DomainRouteInfo | null
   locale?: LocalePreferences | null
   /**
-   * BCP 47 language tag for the active i18n catalog. Sourced from the user's
-   * `language` preference if logged in, else the request's Accept-Language,
-   * else "en". Wave 2 of the i18n plan; the I18nProvider in lib/web reads it.
+   * BCP 47 language tag for the active catalog: the user's `language`
+   * preference, else the request's Accept-Language, else "en".
    */
   language?: string | null
   /**
-   * Source server URL when this account arrived here via a server-move
-   * restore, with the list of third-party services to re-link. Drives the
-   * post-restore RestoreBanner. Absent for normally-created accounts.
+   * Source server URL when this account arrived by a server-move restore, with
+   * the third-party services to re-link. Absent for normally-created accounts.
    */
   restoreSource?: string | null
   relinks?: { service: string; identifier: string }[] | null
   /**
-   * True when the restored account had passkeys on the source server.
-   * Passkeys are bound to their origin and don't travel in a backup, so the
-   * banner prompts the user to re-register them here.
+   * True when the restored account had passkeys on the source server. Passkeys
+   * are bound to their origin and do not travel in a backup.
    */
   restorePasskeys?: boolean | null
 }
@@ -134,11 +126,9 @@ export function initShellBridge(): Promise<ShellInitData> {
   }
 
   shellInitPromise = new Promise((resolve) => {
-    // Resolve after 5s so nothing hangs waiting for a shell that will not
-    // answer — but the listener STAYS. The shell's own ready watchdog is
-    // 10s, twice this, so init legitimately arrives after we have given up;
-    // removing the listener here discarded it permanently and left the app
-    // running tokenless until the ten-minute token refresh.
+    // Resolve after 5s so nothing hangs on a shell that will not answer, but
+    // keep the listener: the shell's own ready watchdog is 10s, so init
+    // legitimately arrives after we have given up.
     const timeoutId = window.setTimeout(() => {
       shellInitData = { token: '', inShell: true }
       resolve(shellInitData)
@@ -155,11 +145,9 @@ export function initShellBridge(): Promise<ShellInitData> {
 
       window.clearTimeout(timeoutId)
       if (shellInitData) {
-        // Late arrival: the promise already resolved with the placeholder
-        // above, and callers hold THAT object. Fill it in place rather than
-        // replacing the reference — the same in-place update token-refresh
-        // relies on, and the only way an already-resolved caller sees the
-        // token without a second notification channel.
+        // Late arrival: callers hold the placeholder object resolved above, so
+        // fill it in place rather than replacing the reference. Token refresh
+        // relies on the same in-place update.
         Object.assign(shellInitData, data)
       } else {
         shellInitData = data as ShellInitData
@@ -184,12 +172,9 @@ export function getShellInitData(): ShellInitData | null {
 
 
 /**
- * Ask the shell to navigate back. Inside the sandboxed iframe the browser
- * silently no-ops history.back() because the iframe has an opaque origin and
- * no real history entries (every push was relayed to the top window via
- * installShellNavigationSync). The shell calls history.back() on the top
- * window, which pops the real entry and the popstate handler re-renders the
- * iframe at the previous path.
+ * Ask the shell to navigate back. history.back() silently no-ops in the
+ * sandboxed iframe, which has no real history entries - every push was relayed
+ * to the top window, and the shell pops it there.
  */
 export function shellNavigateBack(): void {
   if (!isInShell()) {
@@ -209,24 +194,18 @@ export function shellNavigateExternal(url: string): void {
 }
 
 /**
- * Open a genuinely off-origin URL (an externally hosted asset, a seller's own
- * download link) in a new tab.
- *
- * Not shellNavigateExternal: despite the name, that one is for crossing
- * between Mochi apps, and the shell drops anything whose origin isn't its own
- * — so an external URL sent there is silently discarded and the click appears
- * to do nothing. The app iframe is sandboxed with allow-popups and
- * allow-popups-to-escape-sandbox, so window.open works here and the opened tab
- * is not itself sandboxed.
+ * Open a genuinely off-origin URL in a new tab. Not shellNavigateExternal: that
+ * one crosses between Mochi apps, and the shell silently drops anything off its
+ * own origin.
  */
 export function shellOpenExternal(url: string): boolean {
   return window.open(url, '_blank', 'noopener,noreferrer') !== null
 }
 
 /**
- * Navigate the top-level window to an arbitrary URL (e.g. an OAuth consent
- * page on another origin). Required when the iframe can't navigate itself
- * because the destination refuses to load in frames (X-Frame-Options).
+ * Navigate the top-level window to an arbitrary URL. Needed when the
+ * destination refuses to load in a frame (X-Frame-Options), such as an OAuth
+ * consent page.
  */
 export function shellNavigateTop(url: string): void {
   if (!isInShell()) {
@@ -260,11 +239,10 @@ export function shellSetSidebarPresent(present: boolean): void {
   }
 }
 
-/** Ask the shell to hide its chrome for an immersive view (e.g. a fullscreen
- * game). The shell treats repeated `on: true` messages as a heartbeat and
- * auto-restores its chrome if they stop, so a crashed or closed app can never
- * leave the menu permanently hidden. Prefer the `useShellImmersive` hook, which
- * sends the heartbeat and always restores on unmount. */
+/** Ask the shell to hide its chrome for an immersive view. Repeated `on: true`
+ * messages are a heartbeat the shell watchdogs, so a crashed app cannot leave
+ * the
+ * menu hidden. Prefer the `useShellImmersive` hook. */
 export function shellSetImmersive(on: boolean): void {
   if (isInShell()) {
     window.parent.postMessage({ type: 'immersive', on }, '*')
@@ -279,9 +257,8 @@ export function shellSetLocale(locale: LocalePreferences): void {
 }
 
 /**
- * Broadcast a language change to the shell, which forwards a 'language-change'
- * message to all open iframes. Each app's I18nProvider listens for it and
- * activates the matching Lingui catalog without a full page reload.
+ * Broadcast a language change; the shell forwards 'language-change' to every
+ * iframe and each I18nProvider activates the catalog without a reload.
  */
 export function shellSetLanguage(language: string): void {
   if (isInShell()) {
@@ -290,12 +267,9 @@ export function shellSetLanguage(language: string): void {
 }
 
 /**
- * Announce that a person's avatar image changed. The menus render the avatar
- * from a URL that never changes and is served with a five-minute cache
- * lifetime, so without a fresh version token the browser keeps showing the
- * old image. Posted even outside the shell: in the top window window.parent
- * is the window itself, which is how a MochiMenu in the same page hears it
- * (via onShellMessage); inside the shell it reaches the shell menu instead.
+ * Announce that a person's avatar changed. The avatar URL never changes and is
+ * cached for five minutes, so the menus need a fresh version token. Posted
+ * outside the shell too, where window.parent is the window itself.
  */
 export function shellSetAvatar(person: string, version: string): void {
   window.parent.postMessage({ type: 'avatar-set', person, version }, '*')
@@ -322,11 +296,9 @@ function fallbackExecCommandCopy(text: string): boolean {
   textArea.style.position = 'fixed'
   textArea.style.left = '-999999px'
   textArea.style.top = '-999999px'
-  // Append inside the open modal dialog (if any) rather than document.body. A
-  // Radix Dialog traps focus in its content scope, so a textarea outside it
-  // gets focus yanked straight back — leaving execCommand('copy') with nothing
-  // selected (it returns true but copies the old clipboard). Inside the scope,
-  // the textarea keeps focus and the copy works. Falls back to body elsewhere.
+  // Append inside the open modal dialog rather than document.body: a Radix
+  // Dialog traps focus in its content scope, and a textarea outside it loses
+  // focus, so execCommand('copy') returns true having copied nothing.
   const dialog =
     (activeElement &&
       activeElement.closest('[role="dialog"], [role="alertdialog"]')) ||
@@ -366,12 +338,9 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
     return Promise.resolve(fallbackExecCommandCopy(text))
   }
 
-  // In shell (sandboxed iframe, opaque origin): the Clipboard API is blocked,
-  // and routing through the parent via postMessage loses the click's transient
-  // user activation by the time the parent calls navigator.clipboard.writeText
-  // — Chromium 122+ rejects the write. document.execCommand('copy') still
-  // works in sandboxed iframes (no origin / permission policy gate) and runs
-  // synchronously inside the click handler where activation is still live.
+  // In the shell the Clipboard API is blocked, and a postMessage round trip
+  // loses the click's transient activation, which Chromium 122+ rejects.
+  // execCommand('copy') is not origin-gated and runs inside the click handler.
   if (fallbackExecCommandCopy(text)) return Promise.resolve(true)
 
   // execCommand failed (rare — usually means no document.body or a browser
@@ -416,11 +385,9 @@ function directBlobDownload(url: string, name: string): Promise<boolean> {
 }
 
 /**
- * Trigger a real file download. Inside the shell's sandboxed (opaque-origin)
- * iframe the browser silently refuses to save — a bare <a download> is ignored
- * cross-origin and a blob click is blocked — so hand the job to the parent
- * shell, which is same-origin and unsandboxed. In the top window we can save
- * directly. Resolves false if the download couldn't be started.
+ * Trigger a file download. The sandboxed iframe silently refuses to save, so
+ * the parent shell does it. Resolves false if the download could not be
+ * started.
  */
 let downloadIdCounter = 0
 const downloadCallbacks = new Map<number, (ok: boolean) => void>()
@@ -451,12 +418,10 @@ export function shellDownload(url: string, name: string): Promise<boolean> {
 }
 
 /**
- * Save an in-memory Blob to disk as `name`. In the top window a plain anchor
- * click works; inside the shell's sandboxed iframe the browser silently
- * ignores it, so post the Blob to the parent shell (structured cloning
- * carries it across the sandbox boundary) and let the unsandboxed top window
- * save it. Resolves false if the save couldn't be started — including a
- * stale shell page that predates the download.content channel (timeout).
+ * Save an in-memory Blob as `name`. Inside the shell the anchor click is
+ * silently ignored, so the Blob is structured-cloned to the parent and saved
+ * there. Resolves false if the save could not be started, a stale shell
+ * included.
  */
 export function shellSaveBlob(blob: Blob, name: string): Promise<boolean> {
   if (!isInShell()) {
@@ -480,9 +445,8 @@ export function shellSaveBlob(blob: Blob, name: string): Promise<boolean> {
 }
 
 /**
- * Monkey-patch navigator.clipboard.writeText to route through the shell proxy.
- * This makes all existing navigator.clipboard.writeText() calls work automatically
- * in the sandboxed iframe without changing any app code.
+ * Route navigator.clipboard.writeText through the shell proxy, so existing
+ * calls work in the sandboxed iframe unchanged.
  */
 let clipboardProxyInstalled = false
 export function installShellClipboardProxy(): void {
@@ -506,13 +470,9 @@ export function installShellClipboardProxy(): void {
 }
 
 /**
- * Run a WebAuthn create/get ceremony via the parent shell. The sandboxed
- * iframe has an opaque origin so navigator.credentials.create/.get
- * throws NotAllowedError immediately. The shell runs in the top window
- * with a real origin and forwards the result back over postMessage.
- *
- * Outside the shell, calls navigator.credentials directly using the
- * native JSON parsers — same result shape so callers don't branch.
+ * Run a WebAuthn ceremony through the parent shell: the iframe's opaque origin
+ * makes navigator.credentials throw NotAllowedError. Outside the shell it calls
+ * navigator.credentials directly, with the same result shape.
  */
 let webauthnIdCounter = 0
 const webauthnCallbacks = new Map<
@@ -574,11 +534,9 @@ export function shellWebauthnGet(optionsJSON: unknown): Promise<unknown> {
 }
 
 /**
- * Microphone recording via the top-level Mochi shell.
- * Sandboxed opaque-origin iframes cannot use getUserMedia; the shell records
- * and returns a structured-cloneable Blob over postMessage.
- *
- * Outside the shell, callers should use createMicSessionHost locally instead.
+ * Microphone recording via the top-level shell: opaque-origin iframes cannot
+ * use getUserMedia, so the shell records and returns a Blob. Outside the shell,
+ * use createMicSessionHost.
  */
 
 export type ShellMicResult = {
@@ -771,9 +729,8 @@ export function safeCookieSet(value: string): void {
 }
 
 /**
- * Install a global click handler that intercepts cross-app <a> clicks
- * and routes them through shellNavigateExternal() instead of letting
- * the iframe navigate directly (which would fail — no cookies).
+ * Intercept cross-app <a> clicks and route them through shellNavigateExternal:
+ * the iframe cannot navigate cross-app itself, as it sends no cookies.
  */
 let linkInterceptorInstalled = false
 export function installShellLinkInterceptor(): void {
@@ -813,9 +770,8 @@ export function installShellLinkInterceptor(): void {
 }
 
 /**
- * Monkey-patch history.pushState and history.replaceState so that
- * client-side navigation inside the iframe (e.g. TanStack Router)
- * is relayed to the shell to keep the URL bar in sync.
+ * Relay history.pushState and replaceState to the shell, so the top-window URL
+ * follows client-side navigation inside the iframe.
  */
 let navigationSyncInstalled = false
 export function installShellNavigationSync(): void {
@@ -824,20 +780,13 @@ export function installShellNavigationSync(): void {
 
   const origReplaceState = history.replaceState.bind(history)
 
-  // Relay to the shell, distinguishing a push (new history entry) from a
-  // replace (in-place URL update, no new entry). The shell owns the real
-  // top-window history; if it can't tell the two apart it pushes for both, so
-  // every router URL-canonicalization, filter replaceState, and the
-  // replaceState TanStack fires when the iframe reloads on back injects a
-  // spurious back-stack entry. Those bury the app-home entry and make
-  // browser-back skip it (e.g. listing -> back lands on the Home app, not the
-  // app's own home).
+  // Distinguish push from replace: the shell owns the real top-window history,
+  // and pushing for both turns every URL canonicalization and filter
+  // replaceState into a back-stack entry that buries the app's own home.
   const notifyShell = (replace: boolean) => {
-    // The iframe's own URL carries the shell's private _shell marker. The
-    // relayed path is the app's logical URL and must shed it: from the top
-    // history it re-enters the iframe src, where a second tagging plus the
-    // router's search serialization snowballs duplicate keys into
-    // ever-nesting JSON (?_shell=%5B%22%5B1%2C1%5D%22%2C1%5D).
+    // Shed the shell's private _shell marker: the relayed path re-enters the
+    // iframe src from the top history, where re-tagging plus the router's
+    // search serialization nests duplicate keys.
     const params = new URLSearchParams(window.location.search)
     params.delete('_shell')
     const query = params.toString()
@@ -846,13 +795,10 @@ export function installShellNavigationSync(): void {
     window.parent.postMessage({ type: 'navigate', path, replace }, '*')
   }
 
-  // In-shell, the top window owns the real back-stack; the iframe must NOT grow
-  // its own (opaque-origin) session history or those phantom entries interleave
-  // with the shell's and make browser-back skip/repeat. So mirror BOTH push and
-  // replace locally with origReplaceState (update the current entry in place,
-  // never add one) — TanStack drives rendering from its own internal location,
-  // not the iframe URL — and let only the relayed flag tell the shell whether
-  // to push or replace the one authoritative entry.
+  // Mirror both push and replace locally with origReplaceState: the iframe must
+  // not grow its own session history, or those entries interleave with the
+  // shell's and make browser-back skip. Only the relayed flag decides push or
+  // replace.
   history.pushState = function (...args: Parameters<typeof history.pushState>) {
     origReplaceState(...args)
     notifyShell(false)
@@ -869,19 +815,16 @@ export function installShellNavigationSync(): void {
 }
 
 /**
- * Add auth token to a URL for resource requests (images, downloads) in sandboxed iframes.
- * In shell mode, <img src> and <a href> can't send Bearer headers or cookies,
- * so the token is added as a query parameter.
- * Outside the shell, returns the URL unchanged.
+ * Add the auth token to a resource URL as a query parameter: <img src> and <a
+ * href> in a sandboxed iframe send neither headers nor cookies. Unchanged
+ * outside the shell.
  */
 export function authenticatedUrl(url: string): string {
   if (!isInShell() || !shellInitData || !url) return url
 
-  // Only add the token to same-origin http(s) URLs. Resolve first rather than
-  // pattern-matching the string: a protocol-relative URL ("//host/path") names
-  // another origin without ever spelling out a scheme, so a "starts with
-  // http(s)://" test reads it as local and would append the token to a URL the
-  // browser then sends to that host.
+  // Resolve before deciding rather than pattern-matching the string: a
+  // protocol-relative URL ("//host/path") names another origin without a
+  // scheme, and a "starts with http(s)://" test would hand it the token.
   if (!isSameOriginResource(url)) return url
 
   const token = shellInitData.token

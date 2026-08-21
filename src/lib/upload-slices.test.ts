@@ -99,11 +99,9 @@ describe('uploadSlices', () => {
     expect(states(slices)).toEqual(['sent', 'sent', 'uploading'])
   })
 
-  // The cases above pin down specific counters. These assert the properties
-  // that have to hold for every counter, over randomised shapes — a bar that
-  // slides backwards or two tiles filling at once are the failures a fixed
-  // input set is least likely to catch. The generator is seeded so a failure
-  // is reproducible rather than a flake.
+  // Properties that hold for every counter, over randomised shapes: a bar
+  // sliding backwards, or two tiles filling at once. Seeded, so a failure
+  // reproduces.
   describe('invariants', () => {
     function makeRandom(seed: number) {
       let state = seed

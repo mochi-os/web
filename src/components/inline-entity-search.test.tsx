@@ -1,11 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Six apps carried this panel privately and only two of them guarded against
-// out-of-order search responses, so that guard is what these tests pin: a slow
-// earlier response must not overwrite a fast later one. The rest cover the
-// branches the copies disagreed on — the pasted-link probe, and what a failed
-// search shows.
+// Pins the out-of-order guard: a slow earlier search response must not
+// overwrite a fast later one.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'

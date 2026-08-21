@@ -23,10 +23,8 @@ interface KeyboardShortcutsOptions {
 }
 
 /**
- * Board and tree keyboard shortcuts, shared by the crm and projects apps.
- *
- * Every handler is optional, so a view wires up only the keys it answers and
- * the rest stay inert rather than swallowing the keystroke.
+ * Board and tree keyboard shortcuts, shared by crm and projects. Every handler
+ * is optional; an unwired key stays inert rather than swallowing the keystroke.
  */
 export function useKeyboardShortcuts({
   onCreateNew,

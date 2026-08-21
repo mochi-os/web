@@ -9,12 +9,10 @@
 import { isInShell } from './shell-bridge'
 import { getAppPath } from './app-path'
 
-// The shell namespaces every key as `app:<name>:` before touching its own
-// localStorage (see shell.js storagePrefix). The direct path below must use
-// the SAME namespace, or a value written while running in the shell is
-// invisible to the same app loaded as the top window, and two top-window apps
-// collide on a bare key. Applied only when NOT in the shell: in the shell the
-// parent adds it, and doing it here too would prefix twice.
+// The shell namespaces every key as `app:<name>:` (shell.js storagePrefix), so
+// the direct path must use the same namespace or a value written in the shell
+// is invisible to the top window. Not applied in the shell, or it prefixes
+// twice.
 function namespaced(key: string): string {
   const app = getAppPath().replace(/^\//, '')
   return `app:${app}:${key}`
@@ -26,11 +24,8 @@ const pendingRequests = new Map<number, (value: string | null) => void>()
 // Listen for storage results from shell
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (event: MessageEvent) => {
-    // Only the shell (our direct parent) may answer a storage read. The
-    // iframe's own origin is opaque so event.origin can't be pinned, but
-    // pinning the source window blocks a reply forged by a sibling frame or a
-    // popup — request ids are a plain counter, so they are trivial to guess.
-    // Matches the guard the main bridge applies to every inbound message.
+    // Only the shell (our direct parent) may answer: request ids are a plain
+    // counter, and the iframe's opaque origin rules out pinning event.origin.
     if (event.source !== window.parent) return
     const data = event.data
     if (!data || data.type !== 'storage.result') return

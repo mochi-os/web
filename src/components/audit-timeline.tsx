@@ -22,8 +22,8 @@ interface AuditTimelineProps {
   kind: string
   object: string | number
   /**
-   * Loads one object's audit trail. Held in a ref, so passing an inline
-   * arrow does not refetch on every render.
+   * Loads one object's audit trail. Held in a ref, so an inline arrow does not
+   * refetch.
    */
   fetchAudit: (params: {
     kind: string
@@ -44,11 +44,8 @@ interface AuditTimelineProps {
 
 /**
  * An object's audit trail, in a card. Renders nothing while loading, when
- * the trail is empty, and when the fetch fails — history is supplementary,
- * so it never takes space it cannot fill.
- *
- * The audit vocabulary is app domain, not platform: the caller supplies the
- * action labels and the detail formatter.
+ * empty, or when the fetch fails. The vocabulary is app domain: the caller
+ * supplies the action labels and the detail formatter.
  */
 export function AuditTimeline({
   kind,
@@ -66,9 +63,8 @@ export function AuditTimeline({
   const [error, setError] = useState<string | null>(null)
 
   const fetchRef = useRef(fetchAudit)
-  // The macro has to see a literal `t` tag, so the message is built during
-  // render and read from a ref. That keeps `t` out of the fetch deps below,
-  // so switching locale no longer refetches every trail on screen.
+  // The macro needs a literal `t` tag, so the message is built during render
+  // and read from a ref - that keeps `t` out of the fetch deps below.
   const failureMessage = t`Failed to load history`
   const messageRef = useRef(failureMessage)
   useEffect(() => {

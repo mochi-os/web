@@ -24,15 +24,8 @@ type DataTableBulkActionsProps<TData> = {
 }
 
 /**
- * A modular toolbar for displaying bulk actions when table rows are selected.
- *
- * @template TData The type of data in the table.
- * @param {object} props The component props.
- * @param {Table<TData>} props.table The react-table instance.
- * @param {string} props.entityName Localized singular noun for the row type (e.g. t`task`).
- * @param {string} [props.entityNamePlural] Localized plural noun. Defaults to entityName.
- * @param {React.ReactNode} props.children The action buttons to be rendered inside the toolbar.
- * @returns {React.ReactNode | null} The rendered component or null if no rows are selected.
+ * Toolbar for bulk actions on selected table rows; renders nothing when none
+ * are selected.
  */
 export function DataTableBulkActions<TData>({
   table,

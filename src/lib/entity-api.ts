@@ -1,15 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// Client for the object/class/field server API, shared by crm and projects.
-// Both apps talk to the same routes with the same payloads; what differs is the
-// noun in a handful of response envelopes, which is why the shapes arrive as a
-// type bundle rather than as a pile of type parameters.
-//
-//   interface CrmApiShapes extends EntityApiShapes { summary: Crm; ... }
-//   const crmsApi = createEntityApi<CrmApiShapes>({ request, endpoints, resourceKey: 'crm' })
-//
-// An app that has routes of its own spreads its extra methods over the result.
+// Client for the object/class/field server API, shared by crm and projects. The
+// per-app response shapes arrive as one type bundle:
+// createEntityApi<CrmApiShapes>({ request, endpoints, resourceKey: 'crm' })
 
 import type { AxiosProgressEvent } from 'axios'
 import type { AppClient } from './create-app-client'

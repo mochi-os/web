@@ -12,13 +12,9 @@ interface DataChipProps {
   copyable?: boolean
   copyButtonMode?: 'hover' | 'always'
   /**
-   * How to handle values wider than the chip:
-   *   - 'end'    (default): CSS ellipsis at the end; chip fills available width
-   *     when the parent forces width, hides overflow inside the chip
-   *   - 'middle': insert "..." between first/last 10 chars when value > 24 chars
-   *   - 'none':   show full value; wraps with `break-all` on narrow widths so
-   *     long monospace strings (peer IDs, entity IDs) stay fully readable
-   *     instead of being cut off
+   * Overflow behaviour: 'end' (default) CSS-ellipsis; 'middle' inserts "..."
+   * between the first and last 10 characters over 24; 'none' wraps with
+   * `break-all` so long ids stay readable.
    */
   truncate?: 'end' | 'middle' | 'none'
   className?: string

@@ -75,11 +75,9 @@ describe('relative-time units are translatable', () => {
 
   it('resolves each unit through the catalogue, not a bare literal', () => {
     load('en')
-    // Asserted on the lookup rather than on a loaded translation: Lingui wants
-    // compiled catalogues at runtime, so hand-loading ICU source here silently
-    // falls back to the msgid and would pass whether or not the string was
-    // ever wrapped. Spying on i18n._ shows the wrapping directly - under the
-    // old code the units were bare template literals and never reached it.
+    // Spying on i18n._ rather than asserting on output: hand-loaded ICU source
+    // falls back to the msgid, so the assertion would pass unwrapped either
+    // way.
     const seen: string[] = []
     const real = i18n._.bind(i18n)
     i18n._ = ((id: unknown, ...rest: unknown[]) => {
@@ -98,12 +96,9 @@ describe('relative-time units are translatable', () => {
       i18n._ = real
     }
 
-    // Four lookups, one per unit, all distinct. Under the old code the units
-    // were bare template literals and there would be none. The id form itself
-    // is not asserted: this config hashes ids while the app builds use the ICU
-    // source, and pinning either would make the test a build-config detector.
-    // That the app catalogues carry the four ICU msgids is verified by
-    // extraction, not here.
+    // Four lookups, one per unit, all distinct. The id form is not asserted:
+    // this config hashes ids while the app builds use the ICU source, so
+    // pinning either would make the test a build-config detector.
     expect(seen).toHaveLength(4)
     expect(new Set(seen).size).toBe(4)
   })
