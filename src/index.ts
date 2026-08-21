@@ -1,27 +1,11 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// This file is the public API of @mochi/web, and it is curated rather than
-// exhaustive. `pnpm exec knip` from the workspace root measures what the 23
-// app frontends actually import; run it before adding or removing anything
-// here.
-//
-// It reports roughly forty entries in this file as unused, and that is
-// deliberate on two counts:
-//
-//   - The shell helpers (initShellBridge, safeCookieGet/Set, shellDownload,
-//     shellNavigateBack, shellSetImmersive, the mic session group) are the
-//     documented answer to the browser APIs that silently no-op inside the
-//     sandboxed iframe. CLAUDE.md tells app authors to use them. Unused today
-//     means nobody has hit those cases yet, not that they are dead.
-//   - Type exports (the Nav* data model, PhotonPlace, TravellingData,
-//     LastGameStorage, the Icon* set) describe shapes apps construct
-//     structurally, so an app can conform without ever naming the type.
-//
-// Components this library only uses internally are NOT re-exported, even
-// though they are perfectly good: AppSidebar, LayoutProvider, the RightPanel
-// family and the notification row/section were advertised here and imported by
-// nobody. They still exist; they are simply not part of the contract.
+// Curated public API of @mochi/web; `pnpm exec knip` from the workspace root
+// measures what the app frontends import. It reports around forty entries here
+// as unused - shell helpers and structural type exports are exported
+// regardless, and components this library only uses internally are not
+// re-exported.
 
 // UI Components
 export * from './components/ui/alert-dialog'
@@ -159,6 +143,7 @@ export * from './components/activity-timeline'
 export * from './components/audit-timeline'
 export * from './components/options-menu'
 export * from './components/attachment-gallery'
+export * from './components/attachment-image'
 export * from './components/tree-row'
 export * from './components/tree-table-header'
 export * from './components/list-section-header'

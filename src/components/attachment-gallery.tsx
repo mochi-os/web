@@ -15,6 +15,7 @@ import {
 } from './ui/attachment'
 import { useLightboxHash } from '../hooks/use-lightbox-hash'
 import { formatVideoDuration, useVideoThumbnailCached } from '../hooks/use-video-thumbnail'
+import { AttachmentImage } from './attachment-image'
 import { getFileIcon, isMedia, isVideo } from '../lib/attachment-utils'
 import { useFormat } from '../hooks/use-format'
 import { cn } from '../lib/utils'
@@ -235,7 +236,7 @@ export function AttachmentGallery({
               onAspect={(r) => setAspect(attachment.id, r)}
             />
           ) : (
-            <img
+            <AttachmentImage
               src={resolveTile(attachment)}
               alt={attachment.caption || attachment.name}
               onLoad={(e: SyntheticEvent<HTMLImageElement>) => {
@@ -275,11 +276,9 @@ export function AttachmentGallery({
     )
   })
 
-  // Wrapped rather than stacked: the chips already size to their own content,
-  // so several documents pack across the line instead of spending a row each.
-  // Not square tiles — a document has no thumbnail to recognise it by, and a
-  // tile narrow enough to grid neatly cuts the name off long before the part
-  // that tells one audit from another.
+  // Chips wrap rather than stack: they size to their own content, so several
+  // documents pack across a line. Not tiles - a document has no thumbnail, and
+  // a tile narrow enough to grid cuts the name off.
   const fileLinks = !hideFiles && files.length > 0 ? (
     <div className="flex flex-wrap gap-1">
       {files.map((attachment) => {

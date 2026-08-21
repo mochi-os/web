@@ -23,12 +23,6 @@ export function isVideo(type: string): boolean {
   return type.startsWith('video/')
 }
 
-/**
- * Images and video: the attachments that render as a preview rather than as a
- * named row. One predicate rather than the pair spelled out at each site, so
- * the composer and the gallery cannot come to disagree about which block an
- * attachment belongs in.
- */
 export function isMedia(type: string): boolean {
   return isImage(type) || isVideo(type)
 }
@@ -40,13 +34,9 @@ const pendingKeys = new WeakMap<globalThis.File, string>()
 let pendingKeyCount = 0
 
 /**
- * Stable React key for a pending File before upload.
- *
- * Identity, not metadata: the pickers reset the input so the same file can be
- * chosen twice, and two picks are two File objects with the same name, size and
- * timestamp. Keyed on those three they collided, which React answers by
- * duplicating or omitting a tile — and a colliding key also gave the drag two
- * tiles it could not tell apart.
+ * Stable React key for a pending File, keyed on object identity rather than
+ * name, size and timestamp: the pickers allow the same file twice, and
+ * colliding keys duplicate or omit a tile.
  */
 export function pendingFileKey(file: globalThis.File): string {
   const known = pendingKeys.get(file)
@@ -59,19 +49,17 @@ export function pendingFileKey(file: globalThis.File): string {
 }
 
 /**
- * What makes two picks the same file to a person: the name, the size and the
- * timestamp. This is the question `mergePendingFiles` asks, and it is the one
- * `pendingFileKey` deliberately does not answer.
+ * What makes two picks the same file to a person. `pendingFileKey` deliberately
+ * does not answer this.
  */
 export function pendingFileSignature(file: globalThis.File): string {
   return `${file.name}:${file.size}:${file.lastModified}`
 }
 
 /**
- * Remove one pending file without relying on array index.
- *
- * By identity: removing the second of two identical picks has to take the
- * second, and matching on metadata always took the first.
+ * Remove one pending file by object identity: removing the second of two
+ * identical picks has to take the second, and matching on metadata took the
+ * first.
  */
 export function removePendingFile(
   files: globalThis.File[],
@@ -85,4 +73,29 @@ export function removePendingFile(
     }
     return true
   })
+}
+
+/**
+ * Why an attachment's bytes failed to load, judged by asking the server —
+ * an <img>'s error event carries no status, so 404 and 503 look identical
+ * until something fetches the same URL and reads the answer.
+ *
+ * 'unavailable' means the bytes may exist but cannot be served right now:
+ * the server said 502/503/504 (its source host is unreachable — it retries
+ * after a backoff), or the probe itself could not reach the server. A retry
+ * later may simply work. Everything else — 404 above all — is 'missing':
+ * the server answered, and the bytes are not to be had.
+ */
+export async function classifyAttachmentFailure(
+  url: string
+): Promise<'unavailable' | 'missing'> {
+  try {
+    const response = await fetch(url, { credentials: 'same-origin' })
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      return 'unavailable'
+    }
+    return 'missing'
+  } catch {
+    return 'unavailable'
+  }
 }
