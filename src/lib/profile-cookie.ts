@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { getCookie, removeCookie, setCookie } from './cookies'
-
-export type IdentityPrivacy = 'public' | 'private'
-
 export interface ProfileCookieData {
   email?: string
   name?: string

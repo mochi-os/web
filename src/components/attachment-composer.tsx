@@ -35,7 +35,7 @@ import { cn } from '../lib/utils'
  * Longest caption the composer stages. Matches the bound the attachment library
  * holds peer captions to, so a local caption is not truncated on federation.
  */
-export const attachmentCaptionMaximum = 1000
+const attachmentCaptionMaximum = 1000
 
 /**
  * Lifecycle of a composer's files. On `error` they stay staged so the user can

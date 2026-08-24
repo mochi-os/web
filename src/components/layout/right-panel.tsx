@@ -9,7 +9,7 @@ import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet'
-import { PanelRightIcon, XIcon } from 'lucide-react'
+import { XIcon } from 'lucide-react'
 
 // Cookie for persisting right panel state
 const RIGHT_PANEL_COOKIE_NAME = 'right_panel_state'
@@ -207,37 +207,6 @@ function RightPanelFooter({ className, ...props }: React.ComponentProps<'div'>) 
   )
 }
 
-function RightPanelTrigger({
-  className,
-  onClick,
-  ...props
-}: React.ComponentProps<typeof Button>) {
-  const { togglePanel, open, openMobile, isLargeScreen } = useRightPanel()
-  const isOpen = isLargeScreen ? open : openMobile
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          data-slot="right-panel-trigger"
-          variant="ghost"
-          size="icon"
-          className={cn('size-8', className)}
-          onClick={(event) => {
-            onClick?.(event)
-            togglePanel()
-          }}
-          {...props}
-        >
-          {isOpen ? <XIcon className="size-5" /> : <PanelRightIcon className="size-5" />}
-          <span className="sr-only"><Trans>Toggle right panel</Trans></span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent><Trans>Toggle right panel</Trans></TooltipContent>
-    </Tooltip>
-  )
-}
-
 function RightPanelCloseButton({
   className,
   ...props
@@ -276,7 +245,5 @@ export {
   RightPanelHeader,
   RightPanelContent,
   RightPanelFooter,
-  RightPanelTrigger,
   RightPanelCloseButton,
-  useRightPanel,
 }

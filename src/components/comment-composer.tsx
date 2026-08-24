@@ -55,7 +55,7 @@ function useHasKeyboard(): boolean {
  * Send shortcut chip. Decorative only - the Send button carries the accessible
  * name, so this stays out of the accessibility tree and the message catalogs.
  */
-export function SendShortcutHint({ className }: { className?: string }) {
+function SendShortcutHint({ className }: { className?: string }) {
   const hasKeyboard = useHasKeyboard()
   if (!hasKeyboard) return null
 
@@ -82,7 +82,7 @@ export function SendShortcutHint({ className }: { className?: string }) {
  * uploads carry no timeout, so the request would otherwise spin. True when the
  * send was blocked and already reported.
  */
-export function offlineBlocked(): boolean {
+function offlineBlocked(): boolean {
   if (typeof navigator === 'undefined' || navigator.onLine !== false) {
     return false
   }

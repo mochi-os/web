@@ -10,5 +10,3 @@ export const authEndpoints = {
   identity: '/_/identity',
   logout: '/_/logout',
 } as const
-
-export type AuthEndpoints = typeof authEndpoints

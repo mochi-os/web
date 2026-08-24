@@ -8,7 +8,7 @@ import { t } from '@lingui/core/macro'
 // a const with t`` in it is evaluated when this module is first imported, before
 // the shell has sent the user's language, so it would pin whatever locale was
 // active then and never update on a language change.
-export function providerLabels(): Record<string, string> {
+function providerLabels(): Record<string, string> {
   return {
     browser: t`Browser notifications`,
     claude: 'Claude',

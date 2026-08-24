@@ -16,7 +16,7 @@ import { FacelessAvatar } from './faceless-avatar'
 //   lg  — dense feature list rows (friends list, add-friend results)
 //   xl  — page header
 //   2xl — profile hero
-export const AVATAR_SIZES = {
+const AVATAR_SIZES = {
   xs: 20,
   sm: 28,
   md: 32,

@@ -183,7 +183,6 @@ export * from './components/action-pill'
 export * from './components/view-tabs'
 
 // Context Providers
-export * from './context/direction-provider'
 export * from './context/theme-provider'
 export * from './context/locale-provider'
 export * from './context/i18n-provider'
@@ -310,11 +309,9 @@ export {
   micFilenameForMime,
   pickMicMimeType,
   startShellMicGuarded,
-  MIC_PREFERRED_MIME_TYPES,
 } from './lib/shell-mic-session'
 export type {
   GuardedShellMicStart,
-  MicSessionHost,
   MicSessionResult,
   MicSessionError,
   MicSessionState,
@@ -381,13 +378,3 @@ export * from './features/subscriptions'
 export * from './features/document/document-page'
 
 // Custom icons
-export { IconDir } from './assets/custom/icon-dir'
-export { IconLayoutCompact } from './assets/custom/icon-layout-compact'
-export { IconLayoutDefault } from './assets/custom/icon-layout-default'
-export { IconLayoutFull } from './assets/custom/icon-layout-full'
-export { IconSidebarFloating } from './assets/custom/icon-sidebar-floating'
-export { IconSidebarInset } from './assets/custom/icon-sidebar-inset'
-export { IconSidebarSidebar } from './assets/custom/icon-sidebar-sidebar'
-export { IconThemeDark } from './assets/custom/icon-theme-dark'
-export { IconThemeLight } from './assets/custom/icon-theme-light'
-export { IconThemeSystem } from './assets/custom/icon-theme-system'

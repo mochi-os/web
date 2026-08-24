@@ -17,12 +17,6 @@ export interface AccessRule {
   name?: string // Resolved name for display
   isOwner?: boolean // True if this rule is for the resource owner (non-editable)
 }
-
-export interface AccessOwner {
-  id: string
-  name?: string
-}
-
 export interface UserSearchResult {
   id: string
   name: string

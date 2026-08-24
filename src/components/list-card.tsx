@@ -4,7 +4,7 @@
 import { type ReactNode } from 'react'
 import { cn } from '../lib/utils'
 
-export const LIST_CARD_LINK_CLASS =
+const LIST_CARD_LINK_CLASS =
   'absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 
 export interface ListCardProps {

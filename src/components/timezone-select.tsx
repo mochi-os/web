@@ -10,7 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { t } from '@lingui/core/macro'
 
-export function getTimezones(): string[] {
+function getTimezones(): string[] {
   try {
     return (
       (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? []
@@ -20,7 +20,7 @@ export function getTimezones(): string[] {
   }
 }
 
-export function getBrowserTimezone(): string {
+function getBrowserTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone
   } catch {

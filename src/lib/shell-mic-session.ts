@@ -28,7 +28,7 @@ export type MicSessionResult =
       error?: MicSessionError
     }
 
-export const MIC_PREFERRED_MIME_TYPES = [
+const MIC_PREFERRED_MIME_TYPES = [
   'audio/webm;codecs=opus',
   'audio/webm',
   'audio/mp4',
@@ -606,9 +606,6 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
     getActiveRequestId,
   }
 }
-
-export type MicSessionHost = ReturnType<typeof createMicSessionHost>
-
 export type GuardedShellMicStart =
   | { status: 'started'; requestId: number }
   | { status: 'unsupported' }

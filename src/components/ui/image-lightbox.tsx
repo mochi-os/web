@@ -24,8 +24,6 @@ export type LightboxMedia = {
 }
 
 // Legacy type alias for backwards compatibility
-export type LightboxImage = LightboxMedia
-
 type ImageLightboxProps = {
   images: LightboxMedia[]
   currentIndex: number
