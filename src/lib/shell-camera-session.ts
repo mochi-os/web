@@ -8,7 +8,7 @@
  * getUserMedia. Every delivered frame is the receiver's to close().
  */
 
-import { isInShell } from './shell-bridge'
+import { fromShell, isInShell, shellOrigin } from './shell-bridge'
 
 export type CameraError = { name: string; message: string }
 
@@ -48,9 +48,24 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
   let live = true
 
   return new Promise((resolve) => {
+    let settled = false
     const finish = (opened: CameraOpen) => {
+      if (settled) return
+      settled = true
+      clearTimeout(deadline)
       resolve({ session: { stop }, opened })
     }
+    // Only camera.result settles this. A shell mid-navigation returns from
+    // handleCameraStart without answering, an older shell has no camera bridge
+    // at all, and the consent prompt waits on a person indefinitely - so
+    // without a deadline the sole caller (air's head.ts) awaits forever.
+    // Matches shellMicStart's 30s, which fronts the same consent dialog.
+    const deadline = setTimeout(() => {
+      live = false
+      retire()
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- CameraError mirrors DOMException: name and message are diagnostics the caller branches on, as at the secure-context refusal below
+      finish({ ok: false, error: { name: 'TimeoutError', message: 'The shell did not answer the camera request' } })
+    }, 30000)
     // The listener outlives the session by a moment: a frame already in
     // flight when the session ends still needs its close() (the !live branch
     // below), or the bitmap lingers until GC.
@@ -61,12 +76,12 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       if (!live) return
       live = false
       retire()
-      window.parent.postMessage({ type: 'camera.stop', requestId }, '*')
+      window.parent.postMessage({ type: 'camera.stop', requestId }, shellOrigin())
     }
     function onMessage(event: MessageEvent) {
       // Only the shell (our direct parent) may drive the session — the same
       // source pin every shell bridge listener applies.
-      if (event.source !== window.parent) return
+      if (!fromShell(event)) return
       const data = event.data as { type?: string; requestId?: number } | null
       if (!data || data.requestId !== requestId) return
       if (data.type === 'camera.result') {
@@ -98,7 +113,7 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       }
     }
     window.addEventListener('message', onMessage)
-    window.parent.postMessage({ type: 'camera.start', requestId, device: options.device ?? '' }, '*')
+    window.parent.postMessage({ type: 'camera.start', requestId, device: options.device ?? '' }, shellOrigin())
   })
 }
 

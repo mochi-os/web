@@ -36,8 +36,8 @@ afterEach(() => {
   vi.resetModules()
 })
 
-function dispatchFrom(source: unknown, data: unknown) {
-  const event = new MessageEvent('message', { data })
+function dispatchFrom(source: unknown, data: unknown, origin: string = window.location.origin) {
+  const event = new MessageEvent('message', { data, origin })
   Object.defineProperty(event, 'source', { value: source, configurable: true })
   window.dispatchEvent(event)
 }

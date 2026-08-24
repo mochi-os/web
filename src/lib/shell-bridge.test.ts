@@ -44,25 +44,59 @@ afterEach(() => {
 // Dispatch a message as the shell would: stamped with source === window.parent.
 // jsdom's MessageEvent constructor won't accept a non-Window source, so we
 // override the property after construction.
-function dispatchFromParent(data: unknown) {
-  const event = new MessageEvent('message', { data })
+function dispatchFromParent(data: unknown, origin: string = window.location.origin) {
+  const event = new MessageEvent('message', { data, origin })
   Object.defineProperty(event, 'source', { value: window.parent, configurable: true })
   window.dispatchEvent(event)
 }
+
+describe('shell origin pinning', () => {
+  it('accepts a message from the parent at the shell origin', async () => {
+    const { shellRequestPermission } = await import('./shell-bridge')
+    const promise = shellRequestPermission('accounts/read')
+    const id = parentPostMessage.mock.calls[0][0].id
+    dispatchFromParent({ type: 'permission-result', id, result: 'granted' })
+    expect(await promise).toBe('granted')
+  })
+
+  it('ignores a message whose origin is not the shell origin', async () => {
+    const { shellRequestPermission } = await import('./shell-bridge')
+    const promise = shellRequestPermission('accounts/read')
+    const id = parentPostMessage.mock.calls[0][0].id
+
+    // Same source window, wrong origin. Measured in a sandboxed iframe without
+    // allow-same-origin: event.origin on a parent-to-child message reads the
+    // real origin, so this IS pinnable - the code used to accept any origin.
+    dispatchFromParent({ type: 'permission-result', id, result: 'granted' }, 'https://evil.example')
+
+    let settled = false
+    void promise.then(() => { settled = true })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    // and the genuine reply still lands
+    dispatchFromParent({ type: 'permission-result', id, result: 'denied' })
+    expect(await promise).toBe('denied')
+  })
+})
 
 describe('shellRequestPermission', () => {
   it('sends correct postMessage to parent', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'accounts/read', false)
+    const promise = shellRequestPermission('accounts/read')
 
     expect(parentPostMessage).toHaveBeenCalledTimes(1)
     const msg = parentPostMessage.mock.calls[0][0]
     expect(msg.type).toBe('request-permission')
-    expect(msg.app).toBe('feeds')
     expect(msg.permission).toBe('accounts/read')
-    expect(msg.restricted).toBe(false)
     expect(typeof msg.id).toBe('number')
+    // Neither is sent: the shell resolves the app itself and looks `restricted`
+    // up on the server. A caller must never be able to name the app.
+    expect(msg.app).toBeUndefined()
+    expect(msg.restricted).toBeUndefined()
+    // Pinned target origin, not '*'
+    expect(parentPostMessage.mock.calls[0][1]).toBe(window.location.origin)
 
     // Simulate shell responding
     dispatchFromParent({ type: 'permission-result', id: msg.id, result: 'granted' })
@@ -73,7 +107,7 @@ describe('shellRequestPermission', () => {
   it('resolves with denied when shell denies', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'accounts/read', false)
+    const promise = shellRequestPermission('accounts/read')
     const id = parentPostMessage.mock.calls[0][0].id
 
     dispatchFromParent({ type: 'permission-result', id, result: 'denied' })
@@ -81,20 +115,20 @@ describe('shellRequestPermission', () => {
     expect(await promise).toBe('denied')
   })
 
-  it('sends restricted flag correctly', async () => {
+  it('does not send a restricted flag at all', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    shellRequestPermission('feeds', 'user/read', true)
+    shellRequestPermission('user/read')
 
     const msg = parentPostMessage.mock.calls[0][0]
-    expect(msg.restricted).toBe(true)
+    expect(msg.restricted).toBeUndefined()
   })
 
   it('assigns unique IDs to concurrent requests', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    shellRequestPermission('feeds', 'accounts/read', false)
-    shellRequestPermission('people', 'groups/write', false)
+    shellRequestPermission('accounts/read')
+    shellRequestPermission('groups/write')
 
     expect(parentPostMessage).toHaveBeenCalledTimes(2)
     const id1 = parentPostMessage.mock.calls[0][0].id
@@ -105,8 +139,8 @@ describe('shellRequestPermission', () => {
   it('resolves correct promise when multiple requests are pending', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise1 = shellRequestPermission('feeds', 'accounts/read', false)
-    const promise2 = shellRequestPermission('people', 'groups/write', false)
+    const promise1 = shellRequestPermission('accounts/read')
+    const promise2 = shellRequestPermission('groups/write')
 
     const id1 = parentPostMessage.mock.calls[0][0].id
     const id2 = parentPostMessage.mock.calls[1][0].id
@@ -123,7 +157,7 @@ describe('shellRequestPermission', () => {
   it('ignores messages with non-matching type', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'accounts/read', false)
+    const promise = shellRequestPermission('accounts/read')
     const id = parentPostMessage.mock.calls[0][0].id
 
     // Send unrelated message
@@ -138,7 +172,7 @@ describe('shellRequestPermission', () => {
   it('ignores messages whose source is not the parent window', async () => {
     const { shellRequestPermission } = await import('./shell-bridge')
 
-    const promise = shellRequestPermission('feeds', 'accounts/read', false)
+    const promise = shellRequestPermission('accounts/read')
     const id = parentPostMessage.mock.calls[0][0].id
 
     // A message from some other window (sibling iframe, popup, embedded frame)

@@ -88,20 +88,6 @@ export function isAuthError(error: unknown): boolean {
   )
 }
 
-export function isForbiddenError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    'response' in error &&
-    (error as AxiosError).response?.status === 403
-  )
-}
 
-export function isNetworkError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    'response' in error &&
-    !(error as AxiosError).response
-  )
-}
 
 export default apiClient

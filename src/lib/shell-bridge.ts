@@ -114,15 +114,53 @@ export function isInShell(): boolean {
   }
 }
 
+/**
+ * The origin to pin on every message to and from the shell.
+ *
+ * The iframe is sandboxed WITHOUT allow-same-origin, but that does not make its
+ * own URL opaque: measured inside such a frame, `new URL(location.href).origin`
+ * and `event.origin` on a parent-to-child message both read the real origin,
+ * and a child-to-parent post with that origin as targetOrigin is delivered.
+ * (What IS opaque is the child's origin as the PARENT sees it - `event.origin`
+ * reads "null" there - which is why shell.js pins event.source instead.)
+ *
+ * Falls back to '*' only where there is no parseable URL at all, so a context
+ * this cannot resolve degrades to the previous behaviour rather than going deaf.
+ */
+export function shellOrigin(): string {
+  if (typeof window === 'undefined') return '*'
+  try {
+    const origin = new URL(window.location.href).origin
+    return origin && origin !== 'null' ? origin : '*'
+  } catch {
+    return '*'
+  }
+}
+
+/**
+ * Whether a message really came from the shell: our direct parent window AND
+ * the shell's origin. The source pin alone rests entirely on
+ * X-Frame-Options: SAMEORIGIN, with no frame-ancestors CSP behind it, and this
+ * channel carries the session token inbound and Blob bytes outbound.
+ */
+export function fromShell(event: MessageEvent): boolean {
+  if (typeof window === 'undefined' || event.source !== window.parent) return false
+  const origin = shellOrigin()
+  return origin === '*' || event.origin === origin
+}
+
 /** Initialize the shell bridge. Sends 'ready' and waits for 'init' from shell. */
 export function initShellBridge(): Promise<ShellInitData> {
   if (shellInitPromise) return shellInitPromise
 
   if (!isInShell()) {
-    return Promise.resolve({
+    // Cached like the shell branch: this is the one path that skipped it, so
+    // every top-window caller re-ran isInShell() and allocated a new promise.
+    shellInitPromise = Promise.resolve({
       token: '',
       inShell: false,
     })
+    return shellInitPromise
   }
 
   shellInitPromise = new Promise((resolve) => {
@@ -135,10 +173,9 @@ export function initShellBridge(): Promise<ShellInitData> {
     }, 5000)
 
     function onMessage(event: MessageEvent) {
-      // Only the shell (our direct parent) may drive the bridge. The iframe's
-      // own origin is opaque so we can't pin event.origin; pinning the source
-      // window blocks injection from siblings, popups, or embedded frames.
-      if (event.source !== window.parent) return
+      // Only the shell may drive the bridge: fromShell pins both the source
+      // window (blocking siblings, popups and embedded frames) and the origin.
+      if (!fromShell(event)) return
       const data = event.data
       if (!data || typeof data !== 'object') return
       if (data.type !== 'init') return
@@ -159,7 +196,7 @@ export function initShellBridge(): Promise<ShellInitData> {
     window.addEventListener('message', onMessage)
 
     // Tell the shell we're ready
-    window.parent.postMessage({ type: 'ready' }, '*')
+    window.parent.postMessage({ type: 'ready' }, shellOrigin())
   })
 
   return shellInitPromise
@@ -181,7 +218,7 @@ export function shellNavigateBack(): void {
     window.history.back()
     return
   }
-  window.parent.postMessage({ type: 'navigate-back' }, '*')
+  window.parent.postMessage({ type: 'navigate-back' }, shellOrigin())
 }
 
 /** Send a cross-app navigation event to the shell */
@@ -190,7 +227,7 @@ export function shellNavigateExternal(url: string): void {
     window.location.href = url
     return
   }
-  window.parent.postMessage({ type: 'navigate-external', url }, '*')
+  window.parent.postMessage({ type: 'navigate-external', url }, shellOrigin())
 }
 
 /**
@@ -212,21 +249,21 @@ export function shellNavigateTop(url: string): void {
     window.location.href = url
     return
   }
-  window.parent.postMessage({ type: 'navigate-top', url }, '*')
+  window.parent.postMessage({ type: 'navigate-top', url }, shellOrigin())
 }
 
 /** Update the document title (syncs to shell) */
 export function shellSetTitle(title: string): void {
   document.title = title
   if (isInShell()) {
-    window.parent.postMessage({ type: 'title', title }, '*')
+    window.parent.postMessage({ type: 'title', title }, shellOrigin())
   }
 }
 
 /** Notify the shell of sidebar state changes */
 export function shellSetSidebarState(open: boolean): void {
   if (isInShell()) {
-    window.parent.postMessage({ type: 'sidebar-state', open }, '*')
+    window.parent.postMessage({ type: 'sidebar-state', open }, shellOrigin())
   }
 }
 
@@ -235,7 +272,7 @@ export function shellSetSidebarState(open: boolean): void {
  * persisted collapse state. */
 export function shellSetSidebarPresent(present: boolean): void {
   if (isInShell()) {
-    window.parent.postMessage({ type: 'sidebar-present', present }, '*')
+    window.parent.postMessage({ type: 'sidebar-present', present }, shellOrigin())
   }
 }
 
@@ -245,14 +282,14 @@ export function shellSetSidebarPresent(present: boolean): void {
  * menu hidden. Prefer the `useShellImmersive` hook. */
 export function shellSetImmersive(on: boolean): void {
   if (isInShell()) {
-    window.parent.postMessage({ type: 'immersive', on }, '*')
+    window.parent.postMessage({ type: 'immersive', on }, shellOrigin())
   }
 }
 
 /** Broadcast locale preference changes to the shell (which forwards to all iframes) */
 export function shellSetLocale(locale: LocalePreferences): void {
   if (isInShell()) {
-    window.parent.postMessage({ type: 'locale-set', locale }, '*')
+    window.parent.postMessage({ type: 'locale-set', locale }, shellOrigin())
   }
 }
 
@@ -262,7 +299,7 @@ export function shellSetLocale(locale: LocalePreferences): void {
  */
 export function shellSetLanguage(language: string): void {
   if (isInShell()) {
-    window.parent.postMessage({ type: 'language-set', language }, '*')
+    window.parent.postMessage({ type: 'language-set', language }, shellOrigin())
   }
 }
 
@@ -272,7 +309,7 @@ export function shellSetLanguage(language: string): void {
  * outside the shell too, where window.parent is the window itself.
  */
 export function shellSetAvatar(person: string, version: string): void {
-  window.parent.postMessage({ type: 'avatar-set', person, version }, '*')
+  window.parent.postMessage({ type: 'avatar-set', person, version }, shellOrigin())
 }
 
 /** Write text to the clipboard. Uses the shell proxy when sandboxed. */
@@ -348,7 +385,7 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
   const id = ++clipboardIdCounter
   return new Promise((resolve) => {
     clipboardCallbacks.set(id, resolve)
-    window.parent.postMessage({ type: 'clipboard.write', text, id }, '*')
+    window.parent.postMessage({ type: 'clipboard.write', text, id }, shellOrigin())
   })
 }
 
@@ -413,7 +450,7 @@ export function shellDownload(url: string, name: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage({ type: 'download', url: absolute, name, id }, '*')
+    window.parent.postMessage({ type: 'download', url: absolute, name, id }, shellOrigin())
   })
 }
 
@@ -440,7 +477,7 @@ export function shellSaveBlob(blob: Blob, name: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage({ type: 'download.content', blob, name, id }, '*')
+    window.parent.postMessage({ type: 'download.content', blob, name, id }, shellOrigin())
   })
 }
 
@@ -520,7 +557,7 @@ function webauthnThroughShell(create: boolean, optionsJSON: unknown): Promise<un
     })
     window.parent.postMessage(
       { type: create ? 'webauthn.create' : 'webauthn.get', requestId: id, optionsJSON },
-      '*'
+      shellOrigin()
     )
   })
 }
@@ -617,7 +654,7 @@ export function shellMicProbe(): Promise<boolean> {
     }, SHELL_MIC_PROBE_TIMEOUT_MS)
 
     micProbeCallbacks.set(requestId, { resolve, timer })
-    window.parent.postMessage({ type: 'mic.probe', requestId }, '*')
+    window.parent.postMessage({ type: 'mic.probe', requestId }, shellOrigin())
   })
 }
 
@@ -638,12 +675,12 @@ export function shellMicStart(): Promise<number> {
       micStartCallbacks.delete(requestId)
       // Best-effort cancel so the shell discards a still-pending permission
       // request. Do not await shellMicCancel() — that adds another timeout.
-      window.parent.postMessage({ type: 'mic.cancel', requestId }, '*')
+      window.parent.postMessage({ type: 'mic.cancel', requestId }, shellOrigin())
       reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
     }, SHELL_MIC_START_TIMEOUT_MS)
 
     micStartCallbacks.set(requestId, { resolve, reject, timer })
-    window.parent.postMessage({ type: 'mic.start', requestId }, '*')
+    window.parent.postMessage({ type: 'mic.start', requestId }, shellOrigin())
   })
 }
 
@@ -665,7 +702,7 @@ export function shellMicStop(requestId: number): Promise<ShellMicResult> {
     }, SHELL_MIC_STOP_TIMEOUT_MS)
 
     micStopCallbacks.set(requestId, { resolve, reject, timer })
-    window.parent.postMessage({ type: 'mic.stop', requestId }, '*')
+    window.parent.postMessage({ type: 'mic.stop', requestId }, shellOrigin())
   })
 }
 
@@ -685,7 +722,7 @@ export function shellMicCancel(requestId?: number): Promise<void> {
     micCancelCallbacks.set(id, { resolve, reject, timer })
     window.parent.postMessage(
       { type: 'mic.cancel', requestId: requestId ?? null },
-      '*'
+      shellOrigin()
     )
   })
 }
@@ -792,7 +829,7 @@ export function installShellNavigationSync(): void {
     const query = params.toString()
     const path =
       window.location.pathname + (query ? `?${query}` : '') + window.location.hash
-    window.parent.postMessage({ type: 'navigate', path, replace }, '*')
+    window.parent.postMessage({ type: 'navigate', path, replace }, shellOrigin())
   }
 
   // Mirror both push and replace locally with origReplaceState: the iframe must
@@ -839,11 +876,7 @@ export function authenticatedUrl(url: string): string {
 let permissionIdCounter = 0
 const permissionCallbacks = new Map<number, (result: string) => void>()
 
-export function shellRequestPermission(
-  app: string,
-  permission: string,
-  restricted: boolean
-): Promise<'granted' | 'denied'> {
+export function shellRequestPermission(permission: string): Promise<'granted' | 'denied'> {
   // Only the shell can show this dialog. In the top window window.parent is
   // window itself, so the message would be posted to a document with no
   // handler and the promise would never settle - denied is both the honest
@@ -863,7 +896,11 @@ export function shellRequestPermission(
       clearTimeout(timer)
       resolve(result as 'granted' | 'denied')
     }) as (r: string) => void)
-    window.parent.postMessage({ type: 'request-permission', id, app, permission, restricted }, '*')
+    // Neither the app nor a `restricted` flag is sent: the shell resolves the
+    // app from __mochi_shell.appId and looks `restricted` up on the server. It
+    // must never be the caller that names which app is being granted, and a
+    // parameter the receiver discards implies otherwise.
+    window.parent.postMessage({ type: 'request-permission', id, permission }, shellOrigin())
   })
 }
 
@@ -873,7 +910,7 @@ if (typeof window !== 'undefined') {
     // Only accept messages from the shell (our direct parent). In top-window
     // contexts window.parent === window, so self-posted messages still pass;
     // this blocks injection from siblings, popups, or embedded frames.
-    if (event.source !== window.parent) return
+    if (!fromShell(event)) return
     const data = event.data
     if (!data || typeof data !== 'object' || !data.type) return
 

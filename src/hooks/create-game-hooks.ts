@@ -53,7 +53,7 @@ export interface GameDrawApi {
   drawDecline: (gameId: string) => Promise<unknown>
 }
 
-export const gameQueryKeys = {
+const gameQueryKeys = {
   all: () => ['games'] as const,
   detail: (gameId: string) => ['games', gameId] as const,
   messages: (gameId: string) => ['games', gameId, 'messages'] as const,

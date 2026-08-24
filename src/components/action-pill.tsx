@@ -158,5 +158,4 @@ export { ActionPill, ActionPillSticky, ActionPillActions }
 export {
   EXPAND_MAX_W as actionPillExpandMaxWidthMap,
   EXPAND_OPACITY as actionPillExpandOpacityMap,
-  STICKY_SHELL as actionPillStickyShellClass,
 }

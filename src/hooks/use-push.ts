@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import * as push from '../lib/push'
+import { shellOrigin, fromShell } from '../lib/shell-bridge'
 
 // Push registration is shell-only. Apps run in sandboxed iframes with opaque
 // origins where the Notification/PushManager APIs don't work, so we proxy
@@ -16,57 +17,70 @@ interface PushState {
   subscribed: boolean
 }
 
-// Every listener pins the source window: only the shell, our direct parent, may
-// answer. Ids are a plain counter, and the iframe's opaque origin rules out
-// pinning event.origin instead.
+// Every listener goes through fromShell, which pins the source window and the
+// origin: only the shell, our direct parent, may answer. Ids are a plain counter.
 let shellPushIdCounter = 0
 
-function shellPushSubscribe(): Promise<void> {
+// The responder is the menu React app, not shell.js, so a shell whose menu has
+// not rendered - or an older shell, or a top-window render - never answers at
+// all. Without a deadline that left one listener and one pending promise per
+// mount, and usePush() asks for status on EVERY mount.
+const PUSH_TIMEOUT = 10000
+
+function shellPushRequest<T>(
+  request: string,
+  reply: string,
+  read: (data: Record<string, unknown>) => T,
+  failure: string
+): Promise<T> {
   const id = ++shellPushIdCounter
   return new Promise((resolve, reject) => {
-    function onMessage(event: MessageEvent) {
-      if (event.source !== window.parent) return
-      const data = event.data
-      if (!data || data.type !== 'push-result' || data.id !== id) return
+    const timer = setTimeout(() => {
       window.removeEventListener('message', onMessage)
-      if (data.ok) resolve()
-      else reject(new Error(data.reason || 'Push registration failed'))
+      reject(new Error(failure))
+    }, PUSH_TIMEOUT)
+    function settle() {
+      clearTimeout(timer)
+      window.removeEventListener('message', onMessage)
+    }
+    function onMessage(event: MessageEvent) {
+      if (!fromShell(event)) return
+      const data = event.data
+      if (!data || data.type !== reply || data.id !== id) return
+      settle()
+      if (data.ok) resolve(read(data))
+      else reject(new Error(data.reason || failure))
     }
     window.addEventListener('message', onMessage)
-    window.parent.postMessage({ type: 'push-subscribe', id }, '*')
+    window.parent.postMessage({ type: request, id }, shellOrigin())
   })
+}
+
+// The failure strings are Error messages for the caller's own logging, never
+// rendered: usePush catches every rejection and sets its own translated state.
+// They were inline `new Error(...)` literals before the shared helper; moving
+// them into argument position is what brought them under the rule.
+function shellPushSubscribe(): Promise<void> {
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI (see above)
+  return shellPushRequest('push-subscribe', 'push-result', () => undefined, 'Push registration failed')
 }
 
 function shellPushStatus(): Promise<{ subscribed: boolean; permission: NotificationPermission }> {
-  const id = ++shellPushIdCounter
-  return new Promise((resolve, reject) => {
-    function onMessage(event: MessageEvent) {
-      if (event.source !== window.parent) return
-      const data = event.data
-      if (!data || data.type !== 'push-status-result' || data.id !== id) return
-      window.removeEventListener('message', onMessage)
-      if (data.ok) resolve({ subscribed: !!data.subscribed, permission: data.permission || 'default' })
-      else reject(new Error(data.reason || 'Push status failed'))
-    }
-    window.addEventListener('message', onMessage)
-    window.parent.postMessage({ type: 'push-status', id }, '*')
-  })
+  return shellPushRequest(
+    'push-status',
+    'push-status-result',
+    (data) => ({
+      subscribed: !!data.subscribed,
+      permission: (data.permission as NotificationPermission) || 'default',
+    }),
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI
+    'Push status failed'
+  )
 }
 
 function shellPushUnsubscribe(): Promise<void> {
-  const id = ++shellPushIdCounter
-  return new Promise((resolve, reject) => {
-    function onMessage(event: MessageEvent) {
-      if (event.source !== window.parent) return
-      const data = event.data
-      if (!data || data.type !== 'push-unsubscribe-result' || data.id !== id) return
-      window.removeEventListener('message', onMessage)
-      if (data.ok) resolve()
-      else reject(new Error(data.reason || 'Push unsubscribe failed'))
-    }
-    window.addEventListener('message', onMessage)
-    window.parent.postMessage({ type: 'push-unsubscribe', id }, '*')
-  })
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI
+  return shellPushRequest('push-unsubscribe', 'push-unsubscribe-result', () => undefined, 'Push unsubscribe failed')
 }
 
 export function usePush() {

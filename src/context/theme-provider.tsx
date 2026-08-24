@@ -17,6 +17,7 @@ import {
   isThemeFontSize,
   isThemeProperty,
   onShellMessage,
+  shellOrigin,
 } from '../lib/shell-bridge'
 
 type Theme = 'dark' | 'light' | 'system'
@@ -229,7 +230,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   const setTheme = useCallback((theme: Theme) => {
     _setTheme(theme)
     if (isInShell()) {
-      window.parent.postMessage({ type: 'theme-set', theme }, '*')
+      window.parent.postMessage({ type: 'theme-set', theme }, shellOrigin())
     }
   }, [])
 
@@ -238,7 +239,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     if (isInShell()) {
       window.parent.postMessage(
         { type: 'color-theme-set', colorTheme: ct },
-        '*'
+        shellOrigin()
       )
     }
   }, [])

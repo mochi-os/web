@@ -154,7 +154,7 @@ describe('handlePermissionError', () => {
       })
 
       expect(result).toBe(true)
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'accounts/read', false)
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('accounts/read')
     })
 
     it('calls shellRequestPermission for restricted permissions too', () => {
@@ -166,16 +166,15 @@ describe('handlePermissionError', () => {
       })
 
       expect(result).toBe(true)
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'user/read', true)
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('user/read')
     })
 
-    it('uses provided appId when error has no app', () => {
-      handlePermissionError(
-        { error: 'permission_required', permission: 'accounts/read' },
-        'my-app'
-      )
+    it('never names an app: only the permission is sent', () => {
+      handlePermissionError({ error: 'permission_required', app: 'feeds', permission: 'accounts/read' })
 
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('my-app', 'accounts/read', false)
+      // The shell resolves the app from __mochi_shell.appId. A caller-chosen
+      // app would let one app request a grant against another.
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('accounts/read')
     })
 
     it('falls back to URL app ID when no app provided', () => {
@@ -185,7 +184,7 @@ describe('handlePermissionError', () => {
       })
 
       // getCurrentAppId() returns 'feeds' from our mock pathname
-      expect(mockShellRequestPermission).toHaveBeenCalledWith('feeds', 'accounts/read', false)
+      expect(mockShellRequestPermission).toHaveBeenCalledWith('accounts/read')
     })
 
     it('reloads the page when permission is granted', async () => {
@@ -257,7 +256,6 @@ describe('handlePermissionError', () => {
           permission: 'user/read',
           restricted: true,
         },
-        undefined,
         { onRestricted }
       )
 

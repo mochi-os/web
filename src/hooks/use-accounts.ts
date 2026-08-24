@@ -22,18 +22,13 @@ const formPost = () =>
     ...NO_TOAST,
   }) as const
 
-// Extract app ID from appBase path (e.g., "/notifications" -> "notifications")
-function getAppIdFromBase(appBase: string): string {
-  return appBase.replace(/^\//, '').split('/')[0] || ''
-}
-
 // Check if error is a permission error and handle it
-function checkPermissionError(error: unknown, appId: string): void {
+function checkPermissionError(error: unknown): void {
   if (error && typeof error === 'object' && 'data' in error) {
     // ApiError structure: error.data contains the response data
     const apiError = error as { data?: unknown }
     if (apiError.data) {
-      handlePermissionError(apiError.data, appId)
+      handlePermissionError(apiError.data)
     }
   }
 }
@@ -44,12 +39,10 @@ export function useAccounts(
 ): AccountsHookResult {
   const queryClient = useQueryClient()
   const queryParams = capability ? `?capability=${capability}` : ''
-  const appId = getAppIdFromBase(appBase)
 
   // The two hooks below silence query/exhaustive-deps: queryParams is derived
-  // from capability and appId from appBase, and both capability and appBase are
-  // already in the key, so it varies with everything the request varies with.
-  // The rule cannot follow a derived value.
+  // from capability, which is already in the key, so it varies with everything
+  // the request varies with. The rule cannot follow a derived value.
   const {
     data: providersData,
     isLoading: isProvidersLoading,
@@ -63,7 +56,7 @@ export function useAccounts(
         )
         return res || []
       } catch (error) {
-        checkPermissionError(error, appId)
+        checkPermissionError(error)
         throw error
       }
     },
@@ -84,7 +77,7 @@ export function useAccounts(
         )
         return res || []
       } catch (error) {
-        checkPermissionError(error, appId)
+        checkPermissionError(error)
         throw error
       }
     },

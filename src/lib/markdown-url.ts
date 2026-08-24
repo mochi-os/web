@@ -12,9 +12,11 @@ function foreign(url: string): boolean {
   // data: renders inline and issues no request, so it discloses nothing.
   if (/^data:/i.test(value)) return false
   try {
-    // Both origins come from location.href, not location.origin: inside the
-    // shell's sandboxed iframe that reads "null", which would classify every
-    // relative URL as foreign.
+    // location.href rather than location.origin, purely because a URL object
+    // is wanted as the resolution base anyway. Both read the real origin inside
+    // the shell's sandboxed iframe - safe-navigation.ts compares against
+    // location.origin to gate the Authorization header on every request, and
+    // that works, which is the standing proof.
     const base = new URL(window.location.href)
     return new URL(value, base).origin !== base.origin
   } catch {

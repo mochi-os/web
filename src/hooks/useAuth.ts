@@ -49,10 +49,4 @@ export function useAuth() {
   }
 }
 
-export function useIsAuthenticated(): boolean {
-  return useAuthStore((state) => state.isAuthenticated)
-}
 
-export function useIsAuthLoading(): boolean {
-  return useAuthStore((state) => state.isLoading)
-}

@@ -116,7 +116,7 @@ const logRequestError = (
 }
 
 // Raw request that returns the full response without unwrapping the data envelope
-export async function requestRaw<TResponse>(
+async function requestRaw<TResponse>(
   config: AxiosRequestConfig
 ): Promise<TResponse> {
   const requestConfig: AxiosRequestConfig = {

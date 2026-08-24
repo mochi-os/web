@@ -3,13 +3,13 @@
 
 import { useEffect } from 'react'
 
-import { isInShell } from '../lib/shell-bridge'
+import { isInShell, shellOrigin } from '../lib/shell-bridge'
 
 let shellOverlayCount = 0
 
 function setShellOverlay(open: boolean) {
   if (typeof window === 'undefined' || !isInShell()) return
-  window.parent.postMessage({ type: 'overlay', open }, '*')
+  window.parent.postMessage({ type: 'overlay', open }, shellOrigin())
 }
 
 export function useShellOverlay(open = true) {

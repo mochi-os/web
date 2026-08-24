@@ -8,6 +8,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
+  initShellBridge,
   isInShell,
   onShellMessage,
   safeCookieSet,
@@ -124,6 +125,25 @@ function SidebarProvider({
       }
     })
   }, [toggleSidebar])
+
+  // The shell's init arrives after the first render, so the defaultOpen this
+  // provider was constructed with is always the fallback rather than the
+  // user's saved state - and the useState initializer never re-runs, because
+  // the anonymous and authenticated layouts return the identical provider
+  // chain and React reconciles instead of remounting. Apply the real value
+  // when it lands, without persisting it back: this is the shell telling us
+  // what it already stored.
+  React.useEffect(() => {
+    if (!isInShell()) return
+    let cancelled = false
+    initShellBridge().then((init) => {
+      if (cancelled || init.sidebarOpen === undefined) return
+      _setOpen(init.sidebarOpen)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {

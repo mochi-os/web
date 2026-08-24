@@ -191,15 +191,6 @@ function makeHandleApiResponseSuccess(
   }
 }
 
-// Legacy export kept for tests that reference the standalone function.
-export function handleApiResponseSuccess<T>(
-  response: AxiosResponse<T>
-): AxiosResponse<T> {
-  return makeHandleApiResponseSuccess({
-    defaultShowGlobalErrorToast: true,
-    suppress401Handling: false,
-  })(response)
-}
 
 function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
   return async function handleApiResponseError(
@@ -211,10 +202,10 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
       case 401: {
         logDevError('[API] 401 Unauthorized', error)
 
-        const isAuthEndpoint =
-          error.config?.url?.includes('/login') ||
-          error.config?.url?.includes('/auth') ||
-          error.config?.url?.includes('/verify')
+        // Path segments, not substrings: '/author/…', '/authorize/…' and
+        // '/login-methods' all contain these and would silently suppress the
+        // expired-session logout on a 401.
+        const isAuthEndpoint = /(^|\/)(login|auth|verify)(\/|$|\?)/.test(error.config?.url ?? '')
 
         // Only redirect if user had a session that expired
         // Don't redirect if user was never authenticated (anonymous access)
@@ -335,14 +326,6 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
 }
 
 // Legacy export kept for tests that reference the standalone function.
-export async function handleApiResponseError(
-  error: AxiosError
-): Promise<never> {
-  return makeHandleApiResponseError({
-    defaultShowGlobalErrorToast: true,
-    suppress401Handling: false,
-  })(error)
-}
 
 export function attachApiResponseInterceptors(
   client: AxiosInstance,
@@ -358,8 +341,3 @@ export function attachApiResponseInterceptors(
   )
 }
 
-/** @internal Test helper — clears dedupe state between tests. */
-export function resetApiResponseInterceptorStateForTests(): void {
-  toastDedupeMap.clear()
-  logoutHandler = null
-}

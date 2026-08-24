@@ -114,8 +114,8 @@ export function OptionsMenu({
       const token = await createRssToken(rssEntity, mode)
       const url =
         rssEntity === '*'
-          ? `${window.location.origin}${getAppPath()}/-/rss?token=${token}`
-          : `${window.location.origin}${getAppPath()}/${rssEntity}/-/rss?token=${token}`
+          ? `${window.location.origin}${getAppPath()}/-/rss?token=${encodeURIComponent(token)}`
+          : `${window.location.origin}${getAppPath()}/${rssEntity}/-/rss?token=${encodeURIComponent(token)}`
       const ok = await shellClipboardWrite(url)
       if (ok) toast.success(t`RSS URL copied to clipboard`)
     } catch (error) {

@@ -3,7 +3,7 @@
 
 // Who answered. A push reply is matched on a fixed type and a counter id, so
 // the only thing separating the shell's reply from a forged one is
-// event.source; the iframe's opaque origin rules out pinning event.origin.
+// event.source and event.origin, both pinned by fromShell.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
@@ -19,9 +19,10 @@ function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client }, children)
 }
 
-// A reply carrying the shell's identity, as the real parent's would.
-function replyFromParent(data: unknown) {
-  const event = new MessageEvent('message', { data })
+// A reply carrying the shell's identity, as the real parent's would: both the
+// source window and the origin, which fromShell pins.
+function replyFromParent(data: unknown, origin: string = window.location.origin) {
+  const event = new MessageEvent('message', { data, origin })
   Object.defineProperty(event, 'source', { value: parentStub, configurable: true })
   window.dispatchEvent(event)
 }
@@ -29,7 +30,7 @@ function replyFromParent(data: unknown) {
 // The forgery: same type, same id, different window — a sibling iframe, a popup,
 // or a frame the app itself embedded.
 function replyFromImposter(data: unknown) {
-  const event = new MessageEvent('message', { data })
+  const event = new MessageEvent('message', { data, origin: window.location.origin })
   Object.defineProperty(event, 'source', { value: { notTheParent: true }, configurable: true })
   window.dispatchEvent(event)
 }
@@ -107,7 +108,7 @@ describe('usePush', () => {
     })
     await waitFor(() => expect(parentPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'push-subscribe' }),
-      '*'
+      window.location.origin
     ))
     const id = requestId('push-subscribe')
 
@@ -140,7 +141,7 @@ describe('usePush', () => {
     })
     await waitFor(() => expect(parentPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'push-unsubscribe' }),
-      '*'
+      window.location.origin
     ))
     const id = requestId('push-unsubscribe')
 

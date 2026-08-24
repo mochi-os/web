@@ -36,8 +36,8 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-function fromParent(data: unknown) {
-  const event = new MessageEvent('message', { data })
+function fromParent(data: unknown, origin: string = window.location.origin) {
+  const event = new MessageEvent('message', { data, origin })
   Object.defineProperty(event, 'source', { value: parentStub, configurable: true })
   window.dispatchEvent(event)
 }
@@ -101,6 +101,7 @@ describe('cameraOpen in the shell', () => {
     // A sibling forging the parent's answer must not resolve the open.
     const event = new MessageEvent('message', {
       data: { type: 'camera.result', requestId: start.requestId, ok: true, devices: [] },
+      origin: window.location.origin,
     })
     Object.defineProperty(event, 'source', { value: window, configurable: true })
     window.dispatchEvent(event)

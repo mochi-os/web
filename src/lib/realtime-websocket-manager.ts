@@ -256,7 +256,11 @@ export class ChatWebsocketManager {
       return
     }
 
-    if (!this.hasListeners(entry)) {
+    // dispose() as well as the listener count: dispose clears the map but not
+    // each entry's listener sets, so a call already past ensureSocket's guard
+    // when dispose ran would otherwise open a socket for an entry nothing
+    // holds a reference to, and nothing would ever close it.
+    if (this.disposed || !this.hasListeners(entry)) {
       return
     }
 

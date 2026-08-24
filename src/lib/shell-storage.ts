@@ -6,7 +6,7 @@
 // via postMessage to the shell which namespaces keys by app ID.
 // When not in shell, uses real localStorage directly.
 
-import { isInShell } from './shell-bridge'
+import { fromShell, isInShell, shellOrigin } from './shell-bridge'
 import { getAppPath } from './app-path'
 
 // The shell namespaces every key as `app:<name>:` (shell.js storagePrefix), so
@@ -25,8 +25,8 @@ const pendingRequests = new Map<number, (value: string | null) => void>()
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (event: MessageEvent) => {
     // Only the shell (our direct parent) may answer: request ids are a plain
-    // counter, and the iframe's opaque origin rules out pinning event.origin.
-    if (event.source !== window.parent) return
+    // counter; fromShell pins the source window and the origin.
+    if (!fromShell(event)) return
     const data = event.data
     if (!data || data.type !== 'storage.result') return
 
@@ -51,7 +51,7 @@ export async function getItem(key: string): Promise<string | null> {
   return new Promise((resolve) => {
     const id = ++requestId
     pendingRequests.set(id, resolve)
-    window.parent.postMessage({ type: 'storage.get', id, key }, '*')
+    window.parent.postMessage({ type: 'storage.get', id, key }, shellOrigin())
 
     // Timeout after 2 seconds
     setTimeout(() => {
@@ -73,7 +73,7 @@ export function setItem(key: string, value: string): void {
     }
     return
   }
-  window.parent.postMessage({ type: 'storage.set', key, value }, '*')
+  window.parent.postMessage({ type: 'storage.set', key, value }, shellOrigin())
 }
 
 /** Remove an item from storage */
@@ -86,5 +86,5 @@ export function removeItem(key: string): void {
     }
     return
   }
-  window.parent.postMessage({ type: 'storage.remove', key }, '*')
+  window.parent.postMessage({ type: 'storage.remove', key }, shellOrigin())
 }

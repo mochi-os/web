@@ -38,12 +38,6 @@ export function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
   return a.every((value, index) => value === b[index])
 }
 
-export function unorderedArraysEqual(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) return false
-  const sortedA = [...a].sort()
-  const sortedB = [...b].sort()
-  return arraysEqual(sortedA, sortedB)
-}
 
 export function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   if (a.size !== b.size) return false

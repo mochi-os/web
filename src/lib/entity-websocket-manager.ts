@@ -28,7 +28,9 @@ function getWebSocketUrl(key: string): string {
   const raw = useAuthStore.getState().token
   const token = raw?.startsWith('Bearer ') ? raw.slice(7) : raw
   const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
-  return `${protocol}//${window.location.host}/_/websocket?key=${key}${tokenParam}`
+  // key is a route parameter: a '#' in it truncates the URL and drops the
+  // token entirely, so the socket would connect unauthenticated.
+  return `${protocol}//${window.location.host}/_/websocket?key=${encodeURIComponent(key)}${tokenParam}`
 }
 
 class EntityWebsocketManager {

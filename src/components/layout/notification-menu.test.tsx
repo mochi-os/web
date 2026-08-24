@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
-import type { Notification } from '../notifications-dropdown'
+import type { Notification } from './notification-menu'
 
 const navigateExternal = vi.fn()
 const toastError = vi.fn()

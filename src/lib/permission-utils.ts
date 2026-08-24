@@ -42,7 +42,6 @@ export function getCurrentAppId(): string {
 // Returns true if the error was handled, false otherwise
 export function handlePermissionError(
   responseData: unknown,
-  appId?: string,
   options?: {
     onRestricted?: (permission: string) => void
   }
@@ -52,11 +51,8 @@ export function handlePermissionError(
     return false
   }
 
-  // Use app ID from error response, fall back to provided appId, then URL path
-  const resolvedAppId = permError.app || appId || getCurrentAppId()
-
   if (isInShell()) {
-    shellRequestPermission(resolvedAppId, permError.permission, permError.restricted)
+    shellRequestPermission(permError.permission)
       .then((result) => {
         if (result === 'granted') {
           window.location.reload()

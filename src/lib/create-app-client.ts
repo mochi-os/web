@@ -66,6 +66,16 @@ export function createAppClient({
       clearContentTypeHeader(config.headers)
     }
 
+    // Same rule, and the same position, as api-client: a root-relative url is
+    // already absolute, so the app baseURL must not be prepended. Without it
+    // client.get('/_/identity') on an app client resolved to /<app>/_/identity,
+    // and callers worked around it per-request with { baseURL: '/' }. It has to
+    // sit here rather than earlier: the FormData, shell-cookie and
+    // Authorization rules below apply to absolute urls too.
+    if (config.url?.startsWith('/')) {
+      config.baseURL = ''
+    }
+
     // In sandboxed iframe, cookies are unavailable — always use Bearer auth only
     if (isInShell()) {
       config.withCredentials = false

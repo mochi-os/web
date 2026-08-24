@@ -88,16 +88,6 @@ function extractErrorFromPayloadWithSource(payload: unknown): {
   return {}
 }
 
-export function extractErrorMessageFromPayload(payload: unknown): {
-  message?: string
-  code?: string
-} {
-  const extracted = extractErrorFromPayloadWithSource(payload)
-  return {
-    ...(extracted.message ? { message: extracted.message } : {}),
-    ...(extracted.code ? { code: extracted.code } : {}),
-  }
-}
 
 /**
  * Detect an HTML document served where data was expected: a path with no

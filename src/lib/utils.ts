@@ -8,9 +8,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function sleep(ms: number = 1000) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
 
 // naturalCompare - case- and accent-insensitive, numeric-aware ("Sprint 2"
 // before "Sprint 10"), locale-undefined. Use it for any user-facing list sorted

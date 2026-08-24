@@ -113,13 +113,6 @@ export function useCardLabels(): Record<string, string> {
   }
 }
 
-export function useBackgroundLabels(): Record<string, string> {
-  const { t } = useLingui()
-  return {
-    theme: t`From theme`,
-    off: t`None`,
-  }
-}
 
 export function useFontSizeLabels(): Record<string, string> {
   const { t } = useLingui()

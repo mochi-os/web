@@ -7,7 +7,23 @@ import { shellNavigateExternal } from '../../lib/shell-bridge'
 import { getSafeNavigationTarget } from '../../lib/safe-navigation'
 import { toast } from '../../lib/toast-utils'
 import { useFormat } from '../../hooks/use-format'
-import type { Notification } from '../notifications-dropdown'
+/**
+ * A notification as the server sends it. Declared here because this menu is its
+ * only consumer: it previously lived in notifications-dropdown.tsx, whose 269-line
+ * component nothing rendered - the interface was the only thing keeping the file alive.
+ */
+export interface Notification {
+  id: string
+  app: string
+  topic: string
+  object: string
+  content: string
+  link: string
+  sender?: string
+  count: number
+  created: number
+  read: number
+}
 import { ScrollArea } from '../ui/scroll-area'
 import { ListSkeleton } from '../ui/list-skeleton'
 import { NotificationSourceIcon } from '../notification-source-icon'
@@ -15,7 +31,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { t } from '@lingui/core/macro'
 import { Trans } from '@lingui/react/macro'
 
-export { type Notification }
 
 /**
  * One notification row, rendered by the shell menu and by an app's own menu.

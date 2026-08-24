@@ -181,10 +181,15 @@ export function EntityFieldEditor({
           </div>
         )
       case 'checklist': {
+        // Array.isArray, not just the try: JSON.parse("5") returns 5, whose
+        // .length is undefined, so the === 0 guard below passes it through and
+        // .filter throws during render. Field values reach crm and projects
+        // from remote peers over values/update.
         const items: EntityChecklistItem[] = (() => {
           if (!value) return []
           try {
-            return JSON.parse(value)
+            const parsed = JSON.parse(value)
+            return Array.isArray(parsed) ? parsed : []
           } catch {
             return []
           }
@@ -560,11 +565,14 @@ function ChecklistEditor({ value, onChange, disabled }: ChecklistEditorProps) {
   const [newItemText, setNewItemText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Parse checklist items from JSON string
+  // Parse checklist items from JSON string. Array.isArray for the same reason
+  // as the read-only branch above: a non-array parse survives the length check
+  // and throws on .filter.
   const items: EntityChecklistItem[] = (() => {
     if (!value) return []
     try {
-      return JSON.parse(value)
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
     } catch {
       return []
     }
