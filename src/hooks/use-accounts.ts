@@ -138,6 +138,9 @@ export function useAccounts(
     },
   })
 
+  // JSON rather than a form body: clearing a field sends "", and an empty form
+  // value is indistinguishable from an absent one by the time it reaches
+  // a.input(), so the clear was silently dropped. Only a JSON body preserves it.
   const updateMutation = useMutation({
     mutationFn: async ({
       id,
@@ -146,16 +149,10 @@ export function useAccounts(
       id: string
       fields: Record<string, string>
     }) => {
-      const formData = new URLSearchParams()
-      formData.append('id', id)
-      for (const [key, value] of Object.entries(fields)) {
-        formData.append(key, value)
-      }
-
       const res = await requestHelpers.post<boolean>(
         `${appBase}/-/accounts/update`,
-        formData.toString(),
-        formPost()
+        { id, ...fields },
+        NO_TOAST
       )
       return res === true
     },
