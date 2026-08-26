@@ -98,8 +98,18 @@ function readStoredLanguage(): string | null {
 
 /**
  * Write the language preference to localStorage and a `mochi_language` cookie
- * (path=/); in-shell apps use shellSetLanguage instead. The cookie is what
- * makes the server-side resolver honour a pre-login choice after sign-in.
+ * (path=/). The cookie is what makes the server-side resolver honour a
+ * pre-login choice after sign-in.
+ *
+ * This is the only client-side writer of that cookie, and it is reached only
+ * from the top window: the picker on the login page has no session and so no
+ * preference to save. Inside the shell iframe `document.cookie` is the
+ * in-memory shim and this writes nothing — there the server sets the cookie
+ * from /_/shell, which is why `language-set` no longer carries a cookie write.
+ *
+ * The one-year max-age is what we ask for, not what we get: Chrome caps cookie
+ * lifetime at 400 days, and Safari's ITP caps script-written cookies at 7. An
+ * anonymous language choice therefore lasts a week on Safari.
  */
 export function setStoredLanguage(language: string): void {
   try {
