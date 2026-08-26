@@ -65,7 +65,9 @@ export * from './components/theme-gradient-background'
 export * from './components/layout/main'
 export * from './components/layout/header'
 export * from './components/layout/top-bar'
-export { NotificationList } from './components/layout/notification-menu'
+// NotificationList's props are Notification[], so the type has to leave the
+// barrel with it - apps/menu imports both.
+export { NotificationList, type Notification } from './components/layout/notification-menu'
 export * from './components/layout/authenticated-layout'
 export * from './components/layout/page-header'
 export * from './components/layout/page-utility-bar'

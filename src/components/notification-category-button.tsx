@@ -16,7 +16,9 @@ import { t } from '@lingui/core/macro'
  * makes no request: the consumer supplies both.
  */
 export interface NotificationCategory {
-  id: number
+  // mochi.uid() text - 32 hex characters. The seeded "No notifications" and
+  // default rows are '0' and '1'; nothing here is ever a number.
+  id: string
   label: string
   // Read-time translated label for the seeded categories; label is the
   // stored value. Render display, edit label.
@@ -29,7 +31,7 @@ export interface NotificationTopic {
   topic: string
   object: string
   label: string
-  category: number | null
+  category: string | null
 }
 
 interface Props {
@@ -57,8 +59,8 @@ export function NotificationCategoryButton({
   // presentation, so it stays here: default category last, the rest by name.
   const ordered = categories
     ? [...categories].sort((a, b) => {
-        if (a.id === 0) return 1
-        if (b.id === 0) return -1
+        if (a.id === '0') return 1
+        if (b.id === '0') return -1
         return naturalCompare(a.display ?? a.label, b.display ?? b.label)
       })
     : null

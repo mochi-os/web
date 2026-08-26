@@ -47,6 +47,11 @@ global.IntersectionObserver = class IntersectionObserver {
   thresholds: number[] = [];
 } as unknown as typeof globalThis.IntersectionObserver;
 
+// Radix Select scrolls the active item into view when the listbox opens and
+// again on selection. Without this, a test that only reads the option labels
+// passes while one that actually picks an option throws.
+Element.prototype.scrollIntoView = vi.fn();
+
 // @formkit/auto-animate calls el.animate() from a MutationObserver, so a missing
 // Web Animations API throws outside any test's stack: every test still reports
 // as passed and only the exit code says otherwise.

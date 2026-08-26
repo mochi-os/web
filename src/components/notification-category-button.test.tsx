@@ -11,10 +11,13 @@ import {
   type NotificationTopic,
 } from './notification-category-button'
 
+// Ids are mochi.uid() text; only the two seeds are '0' and '1'. A numeric
+// fixture would hide both halves of what these tests pin.
+const QUIET = '019f4cd679b07874b79c9f946f575490'
 const CATEGORIES: NotificationCategory[] = [
-  { id: 0, label: 'No notifications', default: 0 },
-  { id: 2, label: 'Quiet', default: 0 },
-  { id: 1, label: 'Normal', default: 1 },
+  { id: '0', label: 'No notifications', default: 0 },
+  { id: QUIET, label: 'Quiet', default: 0 },
+  { id: '1', label: 'Normal', default: 1 },
 ]
 
 const TOPIC: NotificationTopic = {
@@ -22,7 +25,7 @@ const TOPIC: NotificationTopic = {
   topic: 'post',
   object: 'abc',
   label: 'New posts',
-  category: 1,
+  category: '1',
 }
 
 function renderButton(props: Partial<React.ComponentProps<typeof NotificationCategoryButton>> = {}) {
@@ -85,6 +88,24 @@ describe('NotificationCategoryButton', () => {
     // which topic so the confirmation toast makes sense afterwards.
     renderButton({ open: true })
     expect(screen.getByText('New posts')).toBeInTheDocument()
+  })
+
+  it('sorts the no-notifications category last', async () => {
+    // The id is the string '0', so the default-last rule has to compare it as
+    // one: against the number 0 it never matched and the row sorted by name.
+    renderButton({ open: true })
+    fireEvent.click(await screen.findByRole('combobox'))
+    const labels = (await screen.findAllByRole('option')).map((o) => o.textContent)
+    expect(labels[labels.length - 1]).toBe('No notifications')
+  })
+
+  it('hands the consumer the category id verbatim', async () => {
+    // A uid is 32 hex characters. Anything that treats it as a number keeps
+    // only the leading digit run, so the id must survive the round trip whole.
+    const { onCategoryChange } = renderButton({ open: true })
+    fireEvent.click(await screen.findByRole('combobox'))
+    fireEvent.click(await screen.findByRole('option', { name: 'Quiet' }))
+    expect(onCategoryChange).toHaveBeenCalledWith(TOPIC, QUIET)
   })
 
   it('links to the category editor in settings', () => {
