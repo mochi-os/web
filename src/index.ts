@@ -183,6 +183,7 @@ export * from './components/icon-button'
 export * from './components/post-tags'
 export * from './components/action-pill'
 export * from './components/view-tabs'
+export * from './components/lazy-boundary'
 
 // Context Providers
 export * from './context/theme-provider'
