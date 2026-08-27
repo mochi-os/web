@@ -39,6 +39,8 @@ export interface Account {
   verified: number
   enabled: number
   default: string
+  // The device a push account was registered from, or "" for none.
+  device?: string
 }
 
 export interface ProviderField {
