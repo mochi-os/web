@@ -18,7 +18,7 @@ describe('nativeName', () => {
   it.each(NO_CLDR_DATA)('gives %s its autonym where Intl gives the English exonym', (tag, autonym) => {
     expect(nativeName(tag)).toBe(autonym)
     // The reason the table exists: Intl alone would answer in English here.
-    expect(new Intl.DisplayNames([tag], { type: 'language' }).of(tag)).not.toBe(autonym)
+    expect(new Intl.DisplayNames([tag], { type: 'language' }).of(tag)).not.toBe(autonym) // i18n-format-ok: the assertion IS that bare Intl is wrong here
   })
 
   it('keeps Mochi wording where it differs from CLDR', () => {
