@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect } from 'vitest'
-import { nativeName, describeLanguages } from './language-picker'
+import { nativeName, describeLanguages, resolveInstalled } from './language-picker'
 
 // Measured with node's full-icu build: these three resolve their display
 // locale to en-GB, so Intl answers with the English exonym. Browsers ship
@@ -65,5 +65,47 @@ describe('describeLanguages', () => {
   it('carries the autonym, not the exonym, for the no-CLDR locales', () => {
     const entry = describeLanguages(['ay']).find((e) => e.tag === 'ay')
     expect(entry?.native).toBe('Aymar aru')
+  })
+})
+
+// The parent-chain walk apps/settings used to carry its own copy of. It is
+// exported so there is one walk rather than two that can drift; the fallback
+// argument is what the two call sites actually disagreed about.
+describe('resolveInstalled', () => {
+  const installed = new Set(['en', 'pt', 'zh-hant', 'es-419'])
+
+  it('answers an exact match', () => {
+    expect(resolveInstalled('pt', installed)).toBe('pt')
+  })
+
+  it('walks up to the nearest installed parent', () => {
+    expect(resolveInstalled('pt-BR', installed)).toBe('pt')
+    expect(resolveInstalled('zh-Hant-TW', installed)).toBe('zh-hant')
+  })
+
+  it('prefers the longest match over its parent', () => {
+    // es-419 and es are both plausible; the walk must not skip past the
+    // more specific one it was given.
+    expect(resolveInstalled('es-419', installed)).toBe('es-419')
+  })
+
+  it('is case-insensitive, because catalogue names are lowercase', () => {
+    expect(resolveInstalled('PT-br', installed)).toBe('pt')
+  })
+
+  it('returns the tag unchanged when nothing matches and no fallback is given', () => {
+    // The picker's own use: it labels the Auto row with the tag it was
+    // handed, whether or not a catalogue exists for it.
+    expect(resolveInstalled('cy-GB', installed)).toBe('cy-GB')
+  })
+
+  it('returns the fallback when one is given', () => {
+    // apps/settings names the catalogue that will actually load, and an
+    // unmatched tag loads English.
+    expect(resolveInstalled('cy-GB', installed, 'en')).toBe('en')
+  })
+
+  it('does not use the fallback when the walk succeeds', () => {
+    expect(resolveInstalled('pt-BR', installed, 'en')).toBe('pt')
   })
 })

@@ -154,9 +154,12 @@ const nativeNames: Record<string, string> = {
 }
 
 // Walks the parent chain of `tag` for the closest match in `installed`,
-// mirroring the server-side resolver's fallback chain. Returns the tag
-// unchanged if nothing matches.
-function resolveInstalled(tag: string, installed: Set<string>): string {
+// mirroring the server-side resolver's fallback chain. `fallback` is what to
+// answer when nothing matches, and callers disagree on it: the picker below
+// shows the tag it was given, while a caller naming the catalogue that will
+// actually load wants 'en'. Passing it keeps that difference at the call site
+// instead of forking the walk.
+export function resolveInstalled(tag: string, installed: Set<string>, fallback?: string): string {
   let t = tag.toLowerCase()
   while (t !== '') {
     if (installed.has(t)) return t
@@ -164,7 +167,7 @@ function resolveInstalled(tag: string, installed: Set<string>): string {
     if (i < 0) break
     t = t.slice(0, i)
   }
-  return tag
+  return fallback ?? tag
 }
 
 // Each installed language renders as its native exonym so users recognise
