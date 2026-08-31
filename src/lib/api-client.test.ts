@@ -94,6 +94,54 @@ describe('createAppClient interceptor', () => {
   })
 })
 
+// Where a request actually lands, not just what it carries. Every test above
+// reads headers, so nothing pinned the resolved URL, and a change that sent
+// class-level calls to the origin root passed the whole file. getUri is
+// axios's own public resolver, so these assert the real combination rather
+// than a restatement of it.
+describe('app client URL resolution', () => {
+  const uriOf = async (appName: string, url: string) => {
+    const { createAppClient } = await import('./create-app-client')
+    const client = createAppClient({ appName })
+    const { seen, adapter } = captureAdapter()
+    await client.get(url, { adapter })
+    return client.instance.getUri(seen[0])
+  }
+
+  // The regression: a leading slash is app-relative here, not origin-root.
+  // Sending these to the root matched core's SPA catch-all, which answers 200
+  // with HTML, so the failure surfaced as an empty list rather than an error.
+  it('resolves a class-level path under the app', async () => {
+    expect(await uriOf('chat', '/-/list')).toBe('/chat/-/list')
+  })
+
+  it('resolves an entity-scoped path under the app', async () => {
+    expect(await uriOf('chess', '/abc123/-/view')).toBe('/chess/abc123/-/view')
+  })
+
+  it('resolves a path written without the leading slash under the app', async () => {
+    expect(await uriOf('feeds', 'abc123/-/info')).toBe('/feeds/abc123/-/info')
+  })
+
+  it('leaves an absolute URL alone', async () => {
+    expect(await uriOf('feeds', 'https://example.test/x')).toBe(
+      'https://example.test/x'
+    )
+  })
+})
+
+// The /_/ rule lives on apiClient, which is what login and settings reach core
+// through. createAppClient deliberately has no copy: no app client calls /_/,
+// and the copy it briefly had is what broke the four apps above.
+describe('apiClient URL resolution', () => {
+  it('sends a core endpoint to the origin root', async () => {
+    const { apiClient } = await import('./api-client')
+    const { seen, adapter } = captureAdapter()
+    await apiClient.get('/_/identity', { adapter })
+    expect(apiClient.getUri(seen[0])).toBe('/_/identity')
+  })
+})
+
 // repositories hand-rolls its interceptor and its package has no test runner,
 // so it is guarded by asserting on its source: restoring it to a bare `if
 // (token)` fails here. Skipped when the app repository is not checked out.
