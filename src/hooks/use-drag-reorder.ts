@@ -129,6 +129,28 @@ export function useDragReorder({
   }, [])
 
   /**
+   * The pointerup that drops a drag is followed by a browser-synthesized click
+   * on the common ancestor of the gesture's two ends. Any clickable ancestor -
+   * a card that navigates, a row that selects - would take the drop for a
+   * click, so swallow the one click that follows a drop. Only a drop arms
+   * this: the other endings see no pointerup (pointercancel, unmount) or one
+   * far later (Escape, then release), where the next click is the user's own.
+   * The listener also dies on a timer, for the environments and edge cases
+   * where the browser elects not to synthesize the click at all.
+   */
+  const suppressClick = useCallback(() => {
+    const swallow = (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    window.addEventListener('click', swallow, { capture: true, once: true })
+    setTimeout(
+      () => window.removeEventListener('click', swallow, { capture: true }),
+      0
+    )
+  }, [])
+
+  /**
    * `drop` keeps the new order and commits, `cancel` puts the item back,
    * `discard` abandons a gesture that never became a drag.
    */
@@ -153,10 +175,11 @@ export function useDragReorder({
       if (moved && outcome === 'drop') {
         onCommitRef.current?.()
       }
+      if (outcome === 'drop' && gesture?.active) suppressClick()
       setDraggingIndex(null)
       setGestureLive(false)
     },
-    [preventScroll]
+    [preventScroll, suppressClick]
   )
 
   /** Slot under the pointer right now, in the coordinates the snapshot uses. */

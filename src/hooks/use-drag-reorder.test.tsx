@@ -269,6 +269,87 @@ describe('useDragReorder', () => {
     })
   })
 
+  // The pointerup ending a drag is followed by a browser-synthesized click on
+  // the common ancestor of the gesture's two ends. A clickable ancestor - a
+  // card that navigates, a row that selects - must not take the drop for a
+  // click, but a genuine click must still reach it.
+  describe('the click that follows the gesture', () => {
+    it('swallows the click the browser synthesizes after a drag', () => {
+      const ancestor = vi.fn()
+      render(
+        <div onClick={ancestor}>
+          <List initial={['a', 'b', 'c']} onOrder={() => {}} />
+        </div>
+      )
+
+      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerMove(window, pointer('mouse', 70, 50))
+      fireEvent.pointerUp(window, pointer('mouse', 70, 50))
+
+      fireEvent.click(screen.getByTestId('tile-a'))
+      expect(ancestor).not.toHaveBeenCalled()
+
+      // The swallow is one-shot: the next click is the user's own.
+      fireEvent.click(screen.getByTestId('tile-a'))
+      expect(ancestor).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves the click of a press that never became a drag alone', () => {
+      const ancestor = vi.fn()
+      render(
+        <div onClick={ancestor}>
+          <List initial={['a', 'b', 'c']} onOrder={() => {}} />
+        </div>
+      )
+
+      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerUp(window, pointer('mouse', 50, 50))
+
+      fireEvent.click(screen.getByTestId('tile-a'))
+      expect(ancestor).toHaveBeenCalledTimes(1)
+    })
+
+    it('lets the swallow die on its timer when no click ever comes', () => {
+      useHoldTimers()
+      const ancestor = vi.fn()
+      render(
+        <div onClick={ancestor}>
+          <List initial={['a', 'b', 'c']} onOrder={() => {}} />
+        </div>
+      )
+
+      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerMove(window, pointer('mouse', 70, 50))
+      fireEvent.pointerUp(window, pointer('mouse', 70, 50))
+      // When the browser elects not to synthesize the drop's click, only the
+      // timer stands between the stale swallow and the user's next real click.
+      act(() => {
+        vi.advanceTimersByTime(0)
+      })
+
+      fireEvent.click(screen.getByTestId('tile-a'))
+      expect(ancestor).toHaveBeenCalledTimes(1)
+      vi.useRealTimers()
+    })
+
+    it('arms nothing for a cancelled drag, which no click follows', () => {
+      const ancestor = vi.fn()
+      render(
+        <div onClick={ancestor}>
+          <List initial={['a', 'b', 'c']} onOrder={() => {}} />
+        </div>
+      )
+
+      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerMove(window, pointer('mouse', 70, 50))
+      fireEvent.pointerCancel(window, pointer('mouse', 70, 50))
+
+      // No timer has run: were a swallow armed here it would eat this click.
+      fireEvent.click(screen.getByTestId('tile-a'))
+      expect(ancestor).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('ignores a press that lands on a control inside the tile', () => {
     const orders: string[][] = []
     render(<List initial={['a', 'b', 'c']} onOrder={(o) => orders.push(o)} />)
