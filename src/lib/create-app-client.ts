@@ -66,16 +66,12 @@ export function createAppClient({
       clearContentTypeHeader(config.headers)
     }
 
-    // Same rule, and the same position, as api-client: a root-relative url is
-    // already absolute, so the app baseURL must not be prepended. Without it
-    // client.get('/_/identity') on an app client resolved to /<app>/_/identity,
-    // and callers worked around it per-request with { baseURL: '/' }. It has to
-    // sit here rather than earlier: the FormData, shell-cookie and
-    // Authorization rules below apply to absolute urls too.
-    if (config.url?.startsWith('/')) {
-      config.baseURL = ''
-    }
-
+    // A leading slash does NOT mean "origin root" here. App endpoint tables
+    // write entity paths as `/${id}/-/action`, and axios combines those onto
+    // the app baseURL, which is what they need. Resetting baseURL for them sent
+    // every class-level call (`/-/list`) to the origin root, where it matched
+    // the SPA catch-all and returned HTML with a 200. Apps reaching core's
+    // /_/... endpoints go through apiClient, which applies that rule itself.
     // In sandboxed iframe, cookies are unavailable — always use Bearer auth only
     if (isInShell()) {
       config.withCredentials = false
