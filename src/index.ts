@@ -137,6 +137,7 @@ export * from './components/travelling-picker'
 // Shared Components
 export * from './components/activity-timeline'
 export * from './components/ai-prompts-editor'
+export * from './components/banner-section'
 export * from './components/audit-timeline'
 export * from './components/options-menu'
 export * from './components/attachment-gallery'
