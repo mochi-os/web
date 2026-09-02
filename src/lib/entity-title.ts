@@ -13,6 +13,7 @@ import type { EntityClass } from '../types/entity-object'
 export interface EntityTitleObject {
   class: string
   number?: number
+  readable?: string
   values: Record<string, string>
 }
 
@@ -30,6 +31,9 @@ export function entityObjectTitle(
   const cls = classes.find((c) => c.id === obj.class)
   const title = (cls?.title ? obj.values[cls.title] : '') || ''
   if (title) return title
+  // The server's own readable id wins over one rebuilt from the prefix, so a
+  // server that ever numbers differently is still displayed as it numbered.
+  if (obj.readable) return obj.readable
   if (prefix !== undefined && typeof obj.number === 'number') {
     return `${prefix}-${obj.number}`
   }

@@ -175,8 +175,16 @@ export function EntityObjectDetailPanel<
     if (!cached || !objectId) return undefined;
     const obj = cached.objects.find((o) => o.id === objectId);
     if (!obj) return undefined;
+    // The cached list carries no readable id, so rebuild it from the prefix
+    // for the placeholder frame. Without this the header's readable line and
+    // anything an extra tab reads off it blink empty until the fetch lands.
+    const readable =
+      obj.readable ??
+      (prefix !== undefined && typeof obj.number === "number"
+        ? `${prefix}-${obj.number}`
+        : undefined);
     return {
-      object: obj,
+      object: readable ? { ...obj, readable } : obj,
       values: obj.values,
       outgoing: [],
       incoming: [],
