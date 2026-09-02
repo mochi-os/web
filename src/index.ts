@@ -136,6 +136,7 @@ export * from './components/travelling-picker'
 
 // Shared Components
 export * from './components/activity-timeline'
+export * from './components/ai-prompts-editor'
 export * from './components/audit-timeline'
 export * from './components/options-menu'
 export * from './components/attachment-gallery'
@@ -238,6 +239,7 @@ export * from './hooks/use-accounts'
 export * from './hooks/use-debounce'
 export * from './hooks/use-keyboard-shortcuts'
 export * from './hooks/use-entity-websocket'
+export * from './hooks/use-entity-invalidation-websocket'
 export {
   entityWebsocketManager,
   type EntityWebsocketEvent,
