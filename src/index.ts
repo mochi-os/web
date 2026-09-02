@@ -240,6 +240,7 @@ export * from './hooks/use-accounts'
 export * from './hooks/use-debounce'
 export * from './hooks/use-keyboard-shortcuts'
 export * from './hooks/use-entity-websocket'
+export * from './hooks/use-entity-invalidation-websocket'
 export {
   entityWebsocketManager,
   type EntityWebsocketEvent,
