@@ -111,6 +111,7 @@ export * from './components/entity/keyboard-shortcuts-help'
 // The draw offer banner is chess and go only; words has no draw.
 export * from './components/game/game-chat-input'
 export * from './components/game/game-chat-message-list'
+export * from './components/game/game-chat-panel'
 export * from './components/game/game-draw-offer-banner'
 export * from './components/game/game-empty-state'
 export * from './components/layout/back-button'
