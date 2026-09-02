@@ -105,6 +105,7 @@ export * from './lib/create-entity-list-store'
 export * from './lib/entity-sort'
 export * from './lib/entity-endpoints'
 export * from './lib/entity-api'
+export * from './lib/entity-title'
 export * from './components/entity/keyboard-shortcuts-help'
 
 // Game Components - shared by the chess, go and words apps.
