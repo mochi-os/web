@@ -66,9 +66,8 @@ export function GameChatSidebar({
   ...body
 }: GameChatSidebarProps) {
   return (
-    // No display class in the base: chess and go pass `hidden
-    // min-[900px]:flex`, words passes `hidden md:flex`, and the column is laid
-    // out by whichever the caller gives.
+    // No display class in the base: the caller passes `hidden lg:flex` plus
+    // its width, and the column is laid out by whatever it gives.
     <div className={cn('flex-col border-s', className)}>
       <div className='border-b px-3 py-2'>
         <h3 className='text-sm font-medium'>{title}</h3>
