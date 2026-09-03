@@ -175,13 +175,15 @@ export interface AiPromptsEditorProps {
 
 /**
  * Loads the entity's prompt overrides and defaults, then renders one editor per
- * type. Renders nothing until the load settles, and nothing if it fails: the
- * defaults are what the editors need in order to show anything useful.
+ * type. Renders nothing until the load settles, and the error if it fails: an
+ * editor over empty defaults would show the failure as a blank prompt.
  */
 export function AiPromptsEditor({ entityId, types, api }: AiPromptsEditorProps) {
+  const { t } = useLingui()
   const [prompts, setPrompts] = useState<Record<string, string>>({})
   const [defaults, setDefaults] = useState<Record<string, string>>({})
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState<unknown>(null)
 
   useEffect(() => {
     let active = true
@@ -191,10 +193,13 @@ export function AiPromptsEditor({ entityId, types, api }: AiPromptsEditorProps) 
         if (!active) return
         setPrompts(data.prompts || {})
         setDefaults(data.defaults || {})
+        setError(null)
         setLoaded(true)
       })
-      .catch(() => {
-        if (active) setLoaded(true)
+      .catch((error) => {
+        if (!active) return
+        setError(error)
+        setLoaded(true)
       })
     return () => {
       active = false
@@ -202,6 +207,13 @@ export function AiPromptsEditor({ entityId, types, api }: AiPromptsEditorProps) 
   }, [entityId, api])
 
   if (!loaded) return null
+  if (error) {
+    return (
+      <p className='text-destructive text-sm'>
+        {getErrorMessage(error, t`Failed to load prompts`)}
+      </p>
+    )
+  }
 
   return (
     <>
