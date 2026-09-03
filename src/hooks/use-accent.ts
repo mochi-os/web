@@ -6,11 +6,12 @@ import { requestHelpers } from '../lib/request'
 
 export type Style = { accent?: string }
 
-// Fetches and parses the entity's style. `styleUrl` is used directly, for a
-// remote entity proxied through another app; otherwise `fingerprint` resolves
-// to /<fingerprint>/-/style on the people app.
-export function useAccent(fingerprint?: string | null, styleUrl?: string | null): Style {
-  const url = styleUrl ?? (fingerprint ? `/${fingerprint}/-/style` : null)
+// Fetches and parses the entity's style from `url`, an action on the CALLING
+// app that proxies the person's style. There is no fallback to the people
+// app: a cross-app request from the shell's sandboxed iframe carries no
+// cookies and answers 403, and outside the shell it is a request this app
+// has no business making.
+export function useAccent(url?: string | null): Style {
   const { data } = useQuery<Style>({
     queryKey: ['accent', url],
     queryFn: async () => {

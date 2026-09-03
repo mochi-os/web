@@ -24,6 +24,7 @@ import type { AccessLevel, AccessRule } from '../../features/access/types'
 import { GeneralError } from '../../features/errors/general-error'
 import { usePageTitle } from '../../hooks/use-page-title'
 import { coerceObjectArray } from '../../lib/coerce'
+import { ENTITY_LIMIT } from '../../lib/entity-api'
 import { extractStatus } from '../../lib/error-normalizer'
 import { getErrorMessage } from '../../lib/handle-server-error'
 import { toastAction } from '../../lib/toast-action'
@@ -283,6 +284,9 @@ export function EntitySettingsPage<
     )
   }
 
+  // Only the owner has an access tab; anyone else lands on the general one
+  // whatever the URL says.
+  const tab = isOwner ? activeTab : 'general'
   return (
     <>
       <PageHeader
@@ -313,7 +317,7 @@ export function EntitySettingsPage<
 
         {/* Tab content */}
         <div className="pt-2">
-          {activeTab === 'general' && (
+          {tab === 'general' && (
             <div className="space-y-6">
               <Section title={labels.identity}>
                 <div className="divide-y-0">
@@ -332,6 +336,7 @@ export function EntitySettingsPage<
                     canEdit={!!isOwner}
                     onSave={(value) => handleUpdate({ description: value })}
                     multiline
+                    maxLength={ENTITY_LIMIT.description}
                   />
 
                   {renderIdentityExtras?.({
@@ -387,7 +392,7 @@ export function EntitySettingsPage<
               />
             </div>
           )}
-          {activeTab === 'access' && isOwner && (
+          {tab === 'access' && (
             <EntityAccessTab
               containerId={container.id}
               accessRulesKey={accessRulesKey}

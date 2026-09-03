@@ -7,6 +7,7 @@
 // happens via postMessage.
 
 import { isSameOriginResource } from './safe-navigation'
+import { getAppPath, isDomainEntityRouting } from './app-path'
 
 type DomainRouteInfo = {
   method: string
@@ -315,6 +316,7 @@ export function shellSetAvatar(person: string, version: string): void {
 /** Write text to the clipboard. Uses the shell proxy when sandboxed. */
 let clipboardIdCounter = 0
 const clipboardCallbacks = new Map<number, (ok: boolean) => void>()
+const SHELL_CLIPBOARD_TIMEOUT_MS = 5_000
 
 function fallbackExecCommandCopy(text: string): boolean {
   if (typeof document === 'undefined' || !document.body) return false
@@ -384,7 +386,15 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
   // that disabled it). Fall back to the parent proxy as a best effort.
   const id = ++clipboardIdCounter
   return new Promise((resolve) => {
-    clipboardCallbacks.set(id, resolve)
+    // A shell mid-navigation drops the request without answering, and a
+    // promise that never settles leaves the copy button pending for good.
+    const timer = setTimeout(() => {
+      if (clipboardCallbacks.delete(id)) resolve(false)
+    }, SHELL_CLIPBOARD_TIMEOUT_MS)
+    clipboardCallbacks.set(id, (ok) => {
+      clearTimeout(timer)
+      resolve(ok)
+    })
     window.parent.postMessage({ type: 'clipboard.write', text, id }, shellOrigin())
   })
 }
@@ -519,6 +529,9 @@ const webauthnCallbacks = new Map<
 
 type WebauthnError = Error & { name: string }
 
+const SHELL_WEBAUTHN_TIMEOUT_MS = 60_000
+const SHELL_WEBAUTHN_GRACE_MS = 5_000
+
 function webauthnFailure(name: string, message: string): WebauthnError {
   const err = new Error(message) as WebauthnError
   err.name = name
@@ -545,10 +558,28 @@ async function webauthnLocal(create: boolean, optionsJSON: unknown): Promise<unk
   return withToJSON.toJSON()
 }
 
+// The ceremony's own timeout when the server set one, plus a grace period for
+// the relay. A shell that navigated away mid-ceremony, or one too old to carry
+// the webauthn bridge, never answers, and the step-up dialog awaits this.
+function webauthnDeadline(optionsJSON: unknown): number {
+  const timeout = (optionsJSON as { timeout?: unknown } | null)?.timeout
+  const base =
+    typeof timeout === 'number' && Number.isFinite(timeout) && timeout > 0
+      ? timeout
+      : SHELL_WEBAUTHN_TIMEOUT_MS
+  return base + SHELL_WEBAUTHN_GRACE_MS
+}
+
 function webauthnThroughShell(create: boolean, optionsJSON: unknown): Promise<unknown> {
   const id = ++webauthnIdCounter
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (webauthnCallbacks.delete(id)) {
+        reject(webauthnFailure('TimeoutError', 'The shell did not answer the passkey request'))
+      }
+    }, webauthnDeadline(optionsJSON))
     webauthnCallbacks.set(id, (result) => {
+      clearTimeout(timer)
       if (result.error) {
         reject(webauthnFailure(result.error.name, result.error.message))
         return
@@ -622,14 +653,31 @@ const micStopCallbacks = new Map<
     timer: ReturnType<typeof setTimeout>
   }
 >()
-const micCancelCallbacks = new Map<
-  number,
-  {
-    resolve: () => void
-    reject: (err: ShellMicError) => void
-    timer: ReturnType<typeof setTimeout>
+type MicCancelEntry = {
+  resolve: () => void
+  reject: (err: ShellMicError) => void
+  timer: ReturnType<typeof setTimeout>
+}
+// Keyed by the recording being cancelled. A cancel with no recording named
+// ("cancel whatever is pending") is keyed by its own minted id and answered
+// together with every other such cancel, since one answer settles them all.
+const micCancelCallbacks = new Map<number, MicCancelEntry>()
+const micCancelAnonymous = new Map<number, MicCancelEntry>()
+
+function micCancelSettle(requestId: number | undefined) {
+  const named = requestId ? micCancelCallbacks.get(requestId) : undefined
+  if (named) {
+    micCancelCallbacks.delete(requestId as number)
+    clearMicTimer(named)
+    named.resolve()
+    return
   }
->()
+  for (const [id, entry] of micCancelAnonymous) {
+    micCancelAnonymous.delete(id)
+    clearMicTimer(entry)
+    entry.resolve()
+  }
+}
 
 function clearMicTimer(
   entry: { timer: ReturnType<typeof setTimeout> } | undefined
@@ -712,14 +760,15 @@ export function shellMicCancel(requestId?: number): Promise<void> {
     return Promise.resolve()
   }
 
-  const id = requestId ?? 0
+  const callbacks = requestId ? micCancelCallbacks : micCancelAnonymous
+  const id = requestId ?? ++micIdCounter
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      micCancelCallbacks.delete(id)
+      callbacks.delete(id)
       reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
     }, SHELL_MIC_CANCEL_TIMEOUT_MS)
 
-    micCancelCallbacks.set(id, { resolve, reject, timer })
+    callbacks.set(id, { resolve, reject, timer })
     window.parent.postMessage(
       { type: 'mic.cancel', requestId: requestId ?? null },
       shellOrigin()
@@ -864,12 +913,28 @@ export function authenticatedUrl(url: string): string {
   // scheme, and a "starts with http(s)://" test would hand it the token.
   if (!isSameOriginResource(url)) return url
 
+  // Same origin is not the same app. The shell mounts every app on one
+  // origin, so an author-controlled URL naming another app's action - a
+  // markdown image source, say - would otherwise carry this reader's token
+  // to it. Only this app's own route gets the token.
+  const prefix = ownResourcePrefix()
+  if (!prefix || !new URL(url, document.baseURI).pathname.startsWith(prefix)) return url
+
   const token = shellInitData.token
   if (!token) return url
 
   const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}token=${encodeURIComponent(rawToken)}`
+}
+
+// The path prefix this document's own resources live under: the whole
+// origin on a domain route (the host names the entity), else the app segment
+// the page was served from.
+function ownResourcePrefix(): string {
+  if (isDomainEntityRouting()) return '/'
+  const app = getAppPath()
+  return app ? app + '/' : ''
 }
 
 /** Request the shell to show the permission request dialog */
@@ -1032,32 +1097,11 @@ if (typeof window !== 'undefined') {
         }
       }
 
-      const cancelCb =
-        micCancelCallbacks.get(requestId) || micCancelCallbacks.get(0)
-      if (cancelCb) {
-        if (micCancelCallbacks.get(requestId)) {
-          micCancelCallbacks.delete(requestId)
-        } else {
-          micCancelCallbacks.delete(0)
-        }
-        clearMicTimer(cancelCb)
-        cancelCb.resolve()
-      }
+      micCancelSettle(requestId)
     }
 
     if (data.type === 'mic.cancelled') {
-      const requestId = (data.requestId as number) || 0
-      const cancelCb =
-        micCancelCallbacks.get(requestId) || micCancelCallbacks.get(0)
-      if (cancelCb) {
-        if (micCancelCallbacks.get(requestId)) {
-          micCancelCallbacks.delete(requestId)
-        } else {
-          micCancelCallbacks.delete(0)
-        }
-        clearMicTimer(cancelCb)
-        cancelCb.resolve()
-      }
+      micCancelSettle((data.requestId as number) || undefined)
     }
 
     // Route to all registered listeners

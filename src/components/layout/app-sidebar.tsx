@@ -198,9 +198,9 @@ export function AppSidebar({
               )
             })()}
 
-            {data.navGroups.map((group) => (
+            {data.navGroups.map((group, index) => (
               <NavGroup
-                key={group.title}
+                key={group.id ?? `${index}`}
                 {...group}
                 items={group.items.filter((i) => i.variant !== 'primary')}
               />

@@ -8,25 +8,11 @@ import { getShellInitData, initShellBridge } from '../lib/shell-bridge'
 import { requestHelpers } from '../lib/request'
 import { Button } from './ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import { providerName } from '../lib/provider-name'
 
 interface RestoreRelink {
   service: string
   identifier: string
-}
-
-// Brand names stay verbatim in Latin script (glossary rule); never show
-// the raw service slug.
-const serviceNames: Record<string, string> = {
-  github: 'GitHub',
-  google: 'Google',
-  microsoft: 'Microsoft',
-  facebook: 'Facebook',
-  x: 'X',
-  'stripe-customer': 'Stripe',
-}
-
-function serviceName(service: string): string {
-  return serviceNames[service] ?? service.charAt(0).toUpperCase() + service.slice(1)
 }
 
 // The claimed source server comes from the restore bundle, which a crafted
@@ -125,8 +111,8 @@ export function RestoreBanner() {
                   className='text-primary underline-offset-4 hover:underline'
                 >
                   {relink.identifier
-                    ? `${serviceName(relink.service)} (${relink.identifier})`
-                    : serviceName(relink.service)}
+                    ? `${providerName(relink.service)} (${relink.identifier})`
+                    : providerName(relink.service)}
                 </a>
               </li>
             ))}

@@ -100,7 +100,7 @@ export function AuditTimeline({
         <h3 className='mb-4 font-semibold'>{resolvedTitle}</h3>
         <ActivityTimeline
           items={entries.map((entry) => {
-            const label = actionLabels[entry.action] ?? entry.action
+            const label = actionLabels[entry.action] ?? t`Unknown`
             const detail = formatDetail?.(parseData(entry.data), entry.action)
             const actor =
               entry.actor === 'system'

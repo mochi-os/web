@@ -63,6 +63,9 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
     const deadline = setTimeout(() => {
       live = false
       retire()
+      // Tell the shell too: a consent prompt answered after this point would
+      // otherwise start a camera that nothing owns or ever stops.
+      window.parent.postMessage({ type: 'camera.stop', requestId }, shellOrigin())
       // eslint-disable-next-line lingui/no-unlocalized-strings -- CameraError mirrors DOMException: name and message are diagnostics the caller branches on, as at the secure-context refusal below
       finish({ ok: false, error: { name: 'TimeoutError', message: 'The shell did not answer the camera request' } })
     }, 30000)

@@ -32,7 +32,7 @@ import { SortDirectionButton } from "../ui/sort-direction-button";
 import { Switch } from "../ui/switch";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { naturalCompare } from "../../lib/utils";
-import { Check, GripVertical, Minus, MoreHorizontal, X } from "lucide-react";
+import { Check, GripVertical, Minus, MoreHorizontal, Plus, X } from "lucide-react";
 import type {
   EntityClass,
   EntityField,
@@ -49,6 +49,8 @@ interface ViewSheetProps {
   mode?: "create" | "edit";
   fields: EntityField[];
   classes: EntityClass[];
+  /** True where the app numbers its objects, which is what a Number sort orders. */
+  numbered?: boolean;
   // Edit mode props
   view?: EntityView | null;
   onUpdate?: (updates: Partial<EntityView>) => void;
@@ -74,6 +76,7 @@ export function ViewSheet({
   mode = "edit",
   fields,
   classes,
+  numbered,
   view,
   onUpdate,
   onUpdateClasses,
@@ -490,7 +493,9 @@ export function ViewSheet({
                 <SelectContent>
                   <SelectItem value={NONE_SELECT_VALUE}><Trans>None</Trans></SelectItem>
                   <SelectItem value="created"><Trans>Created</Trans></SelectItem>
-                  <SelectItem value="number"><Trans>Number</Trans></SelectItem>
+                  {(numbered || sort === "number") && (
+                    <SelectItem value="number"><Trans>Number</Trans></SelectItem>
+                  )}
                   <SelectItem value="updated"><Trans>Updated</Trans></SelectItem>
                   {[...fields].sort((a, b) => naturalCompare(a.name, b.name)).map((field) => (
                     <SelectItem key={field.id} value={field.id}>
@@ -509,7 +514,7 @@ export function ViewSheet({
         <SheetFooter className="px-6 py-4 border-t">
           {mode === "create" ? (
             <Button type="button" onClick={handleCreate} disabled={!canSubmit}>
-              <Check className="size-4" />
+              <Plus className="size-4" />
               <Trans>Add view</Trans>
             </Button>
           ) : (

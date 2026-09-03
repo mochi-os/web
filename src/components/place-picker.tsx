@@ -6,7 +6,8 @@
 import { t } from '@lingui/core/macro'
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { MapPin, Mountain, Building2, Loader2, Check } from 'lucide-react'
+import { Loader2, Check } from 'lucide-react'
+import { PlaceIcon } from './place-icon'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
 import { Button } from './ui/button'
@@ -26,20 +27,6 @@ export interface PlacePickerProps {
   onSelect: (place: PlaceData) => void
   title?: string
   placeholder?: string
-}
-
-// Get icon based on place category
-function PlaceIcon({ category }: { category?: string }) {
-  switch (category) {
-    case 'natural':
-      return <Mountain className="h-4 w-4 text-green-600" />
-    case 'amenity':
-    case 'shop':
-    case 'tourism':
-      return <Building2 className="h-4 w-4 text-blue-600" />
-    default:
-      return <MapPin className="h-4 w-4 text-red-600" />
-  }
 }
 
 export function PlacePicker({
@@ -141,7 +128,6 @@ export function PlacePicker({
                 lat={selected.lat}
                 lon={selected.lon}
                 name={selected.name}
-                height={180}
               />
               <div className="flex items-center gap-2">
                 <PlaceIcon category={selected.category} />

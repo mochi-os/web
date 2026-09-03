@@ -16,6 +16,7 @@ import {
   ResponsiveDialogTitle,
 } from './ui/responsive-dialog'
 import { shellWebauthnGet } from '../lib/shell-bridge'
+import { providerName } from '../lib/provider-name'
 
 // Result of a single factor verification: a proof token once every
 // required factor is satisfied, otherwise the factors still outstanding.
@@ -38,19 +39,6 @@ export interface StepUpClient {
   // the popup verification that returns a proof for the oauth factor.
   oauthProviders: () => Promise<string[]>
   oauthVerify: (provider: string) => Promise<StepUpResult>
-}
-
-// Display label for an OAuth provider key. Brand names stay verbatim.
-const OAUTH_LABELS: Record<string, string> = {
-  google: 'Google',
-  github: 'GitHub',
-  microsoft: 'Microsoft',
-  facebook: 'Facebook',
-  x: 'X',
-}
-
-function oauthLabel(key: string): string {
-  return OAUTH_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1)
 }
 
 // Re-verifies the user with their login factors and hands the caller a
@@ -343,7 +331,7 @@ export function StepUpDialog({
                 </div>
               )}
               {providers.map((p) => {
-                const label = oauthLabel(p)
+                const label = providerName(p)
                 return (
                   <Button
                     key={p}

@@ -171,6 +171,49 @@ describe('ImageLightbox comments slot', () => {
 
   // The chrome auto-hides after a delay; a viewer reading or writing in the
   // panel must not have it vanish under them.
+  it('leaves the arrow keys to a composer inside the panel', () => {
+    const { onIndexChange } = show({
+      renderComments: () => <textarea aria-label='composer' />,
+      commentsInitiallyOpen: true,
+    })
+    fireEvent.keyDown(screen.getByLabelText('composer'), { key: 'ArrowRight' })
+    expect(onIndexChange).not.toHaveBeenCalled()
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+    expect(onIndexChange).toHaveBeenCalledWith(1)
+  })
+
+  it('formats the position counter for the locale', () => {
+    const many: LightboxMedia[] = Array.from({ length: 1000 }, (_, i) => ({
+      id: `m${i}`,
+      name: `m${i}.png`,
+      url: `blob:m${i}`,
+      type: 'image',
+    }))
+    show({ images: many })
+    expect(screen.getByText(/1\/1,000/)).toBeInTheDocument()
+  })
+
+  it('reloads when the file at the same position changes', () => {
+    const { rerender } = show()
+    const spinner = () => document.querySelector('svg.animate-spin')
+    expect(spinner()).not.toBeNull()
+    fireEvent.load(screen.getByRole('img'))
+    expect(spinner()).toBeNull()
+
+    rerender(
+      <I18nProvider i18n={i18n}>
+        <ImageLightbox
+          images={[{ ...media[0], url: 'blob:a-edited' }, media[1]]}
+          currentIndex={0}
+          open
+          onOpenChange={() => {}}
+          onIndexChange={() => {}}
+        />
+      </I18nProvider>
+    )
+    expect(spinner()).not.toBeNull()
+  })
+
   it('holds the chrome while the panel is open', () => {
     vi.useFakeTimers()
     show({ renderComments: () => <div>thread</div> })

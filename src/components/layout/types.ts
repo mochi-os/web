@@ -78,6 +78,8 @@ type NavCollapsible = BaseNavItem & {
 type NavItem = NavCollapsible | NavLink | NavAction
 
 type NavGroup = {
+  /** Stable key when several groups share a title, or have none. */
+  id?: string
   title: string
   items: NavItem[]
   separator?: boolean // Show a separator line above this group

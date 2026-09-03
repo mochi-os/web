@@ -9,7 +9,7 @@
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Check, Paperclip, Upload, X } from "lucide-react";
+import { Loader2, Paperclip, Plus, Upload, X } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import type { AxiosProgressEvent } from "axios";
 import { Button } from "../ui/button";
@@ -39,6 +39,7 @@ import { UploadProgress } from "../ui/upload-progress";
 import { cn, naturalCompare } from "../../lib/utils";
 import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
+import { useFormat } from "../../hooks/use-format";
 import { useAttachmentError } from "../../hooks/use-attachment-error";
 import { removePendingFile } from "../../lib/attachment-utils";
 import { mergePendingFiles } from "../../lib/composer-files";
@@ -123,6 +124,19 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const pendingFilePreviewUrls = useImageObjectUrls(pendingFiles);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The object the current attempt created. A retry after a failed value
+  // write or upload resumes on it instead of creating a second one.
+  const createdRef = useRef<{
+    id: string;
+    number?: number;
+    readable?: string;
+    parent?: string;
+  } | null>(null);
+  const { formatList } = useFormat();
+
+  useEffect(() => {
+    if (!open) createdRef.current = null;
+  }, [open]);
 
   // One staging path for the picker and for a drop, so the two cannot come to
   // disagree about what counts as a file already staged.
@@ -295,11 +309,13 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
 
   // Human-readable names for required parent classes (used in "no parents" message)
   const parentClassNames = useMemo(() => {
-    return allowedParentClasses
-      .filter((t) => t !== "")
-      .map((id) => design.classes.find((c) => c.id === id)?.name || id)
-      .join(t` or `);
-  }, [allowedParentClasses, design.classes]);
+    return formatList(
+      allowedParentClasses
+        .filter((t) => t !== "")
+        .map((id) => design.classes.find((c) => c.id === id)?.name || id),
+      "disjunction",
+    );
+  }, [allowedParentClasses, design.classes, formatList]);
 
   const validParentOptions = useMemo(() => {
     if (!objectsData || !selectedClass) return [];
@@ -324,15 +340,20 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
       const selectedCls = design.classes.find((c) => c.id === selectedClass);
       const titleFieldId = selectedCls?.title;
 
-      // Create the object
-      const response = await createObject(recordId, {
-        class: selectedClass,
-        title: titleFieldId ? fieldValues[titleFieldId] || undefined : undefined,
-        parent: parent || undefined,
-      });
+      // Create the object, unless a failed earlier attempt already did
+      const created =
+        createdRef.current ??
+        (
+          await createObject(recordId, {
+            class: selectedClass,
+            title: titleFieldId ? fieldValues[titleFieldId] || undefined : undefined,
+            parent: parent || undefined,
+          })
+        ).data;
+      createdRef.current = created;
 
       // Set all field values (skip title — already sent in create call)
-      const objectId = response.data.id;
+      const objectId = created.id;
       const validFields = new Set((design.fields[selectedClass] || []).map((f) => f.id));
       for (const [fieldId, value] of Object.entries(fieldValues)) {
         if (fieldId !== titleFieldId && value && validFields.has(fieldId)) {
@@ -350,12 +371,13 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
       }
 
       return {
-        ...response.data,
+        ...created,
         fieldValues,
         parent,
       };
     },
     onSuccess: (data) => {
+      createdRef.current = null;
       // Add new object to cache immediately for instant UI update
       queryClient.setQueryData(
         ["objects", containerId],
@@ -652,7 +674,11 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
           <UploadProgress progress={uploadProgress} className="px-6 pb-2" />
           <SheetFooter className="px-6 py-4 border-t">
             <Button type="submit" disabled={createMutation.isPending || (parentRequired && !parent) || missingRequired || creatableClasses.length === 0}>
-              <Check className="size-4" />
+              {createMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Plus className="size-4" />
+              )}
               {createMutation.isPending ? t`Creating...` : t`Create`}
             </Button>
           </SheetFooter>

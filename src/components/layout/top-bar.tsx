@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
+import { themeColor } from '../../lib/theme-color'
 import { useAuthStore } from '../../stores/auth-store'
 import { useTheme } from '../../context/theme-provider'
 import { useScreenSize } from '../../hooks/use-screen-size'
@@ -34,9 +35,23 @@ export function TopBar({
   const { toggleSidebar, open: sidebarOpen } = useSidebar()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
+  // The theme provider is an ancestor, so its class swap lands after this
+  // effect: read the token on the next frame, and again whenever the root
+  // element's theme attributes change.
   useEffect(() => {
     const meta = document.querySelector("meta[name='theme-color']")
-    meta?.setAttribute('content', resolvedTheme === 'dark' ? '#1a1a1a' : '#fff')
+    if (!meta) return
+    const apply = () => meta.setAttribute('content', themeColor(resolvedTheme))
+    const frame = requestAnimationFrame(apply)
+    const observer = new MutationObserver(apply)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-theme'],
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [resolvedTheme])
 
   if (!isAuthenticated) {

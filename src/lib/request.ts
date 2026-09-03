@@ -201,6 +201,9 @@ export async function request<TResponse>(
 
     return unwrappedData as TResponse
   } catch (unknownError) {
+    // An envelope error was built and logged above; only a transport or
+    // HTTP failure still needs both.
+    if (unknownError instanceof ApiError) throw unknownError
     const apiError = buildApiError(
       unknownError,
       t`Unexpected API error`,

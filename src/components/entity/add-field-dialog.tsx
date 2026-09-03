@@ -18,6 +18,9 @@ import {
 } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { useFieldTypeLabels } from "../../hooks/use-field-type-labels";
+import { ENTITY_LIMIT } from "../../lib/entity-api";
+import { naturalCompare } from "../../lib/utils";
 import { Label } from "../ui/label";
 import {
   Select,
@@ -28,7 +31,7 @@ import {
 } from "../ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { PRESET_COLOURS } from "../colour-picker";
-import { Check, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 /** A field option built in the dialog, before the field itself exists. */
 export interface PendingOption {
@@ -50,6 +53,7 @@ export function AddFieldDialog({
 }: AddFieldDialogProps) {
   const [name, setName] = useState("");
   const [fieldtype, setFieldtype] = useState("text");
+  const fieldTypeLabels = useFieldTypeLabels();
   const [rows, setRows] = useState(1);
   const [options, setOptions] = useState<PendingOption[]>([]);
   const [newOptionName, setNewOptionName] = useState("");
@@ -121,7 +125,7 @@ export function AddFieldDialog({
                 id="field-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-
+                maxLength={ENTITY_LIMIT.name}
                 autoFocus
               />
             </div>
@@ -134,13 +138,11 @@ export function AddFieldDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="checkbox"><Trans>Checkbox</Trans></SelectItem>
-                  <SelectItem value="checklist"><Trans>Checklist</Trans></SelectItem>
-                  <SelectItem value="date"><Trans>Date</Trans></SelectItem>
-                  <SelectItem value="number"><Trans>Number</Trans></SelectItem>
-                  <SelectItem value="enumerated"><Trans>Select</Trans></SelectItem>
-                  <SelectItem value="text"><Trans>Text</Trans></SelectItem>
-                  <SelectItem value="user"><Trans>User</Trans></SelectItem>
+                  {Object.entries(fieldTypeLabels)
+                    .sort(([, a], [, b]) => naturalCompare(a, b))
+                    .map(([id, label]) => (
+                      <SelectItem key={id} value={id}>{label}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -229,7 +231,7 @@ export function AddFieldDialog({
             onClick={handleSubmit}
             disabled={!name.trim() || (fieldtype === "enumerated" && options.length === 0)}
           >
-            <Check className="size-4" />
+            <Plus className="size-4" />
             <Trans>Add field</Trans>
           </Button>
         </SheetFooter>

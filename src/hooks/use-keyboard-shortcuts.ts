@@ -53,12 +53,8 @@ export function useKeyboardShortcuts({
         return
       }
 
-      // Handle Cmd+K even in inputs
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        onFocusSearch?.()
-        return
-      }
+      // Ctrl/Cmd+K is taken in the capture phase by handleCtrlK below, which
+      // stops propagation, so it never reaches this handler.
 
       // Don't handle other shortcuts in inputs
       if (isInput) return

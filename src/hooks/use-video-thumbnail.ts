@@ -24,8 +24,22 @@ type ThumbnailState = {
 
 // Captures a thumbnail frame from a video URL using the browser's video decoder
 
-// Cache for storing generated thumbnails to avoid re-generating
+// Generated thumbnails, keyed by video URL. Each entry is a JPEG data URL of
+// tens of kilobytes, and a long session scrolls past thousands of videos, so
+// the map is bounded: the oldest entry goes when a new one would exceed the
+// cap. Insertion order is the eviction order.
+const THUMBNAIL_CACHE_MAXIMUM = 200
 const thumbnailCache = new Map<string, { url: string; duration: number }>()
+
+function thumbnailCacheSet(key: string, value: { url: string; duration: number }) {
+  thumbnailCache.delete(key)
+  thumbnailCache.set(key, value)
+  while (thumbnailCache.size > THUMBNAIL_CACHE_MAXIMUM) {
+    const oldest = thumbnailCache.keys().next().value
+    if (oldest === undefined) break
+    thumbnailCache.delete(oldest)
+  }
+}
 
 // Generates a video thumbnail with caching
 export function useVideoThumbnailCached(
@@ -92,8 +106,7 @@ export function useVideoThumbnailCached(
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
         const duration = video.duration
 
-        // Cache the result
-        thumbnailCache.set(videoUrl, { url: dataUrl, duration })
+        thumbnailCacheSet(videoUrl, { url: dataUrl, duration })
 
         setState({ url: dataUrl, loading: false, error: false, duration })
       } catch {

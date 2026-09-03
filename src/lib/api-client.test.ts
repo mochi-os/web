@@ -85,6 +85,38 @@ describe('createAppClient interceptor', () => {
     expect(authorizationOf(seen[0])).toBeUndefined()
   })
 
+  it('drops cookies inside the shell, where the token is the only credential', async () => {
+    // The sandboxed iframe has an opaque origin: cookies never travel, and a
+    // cross-site request with credentials would be refused outright.
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => ({
+        postMessage: () => {},
+        get document(): never {
+          throw new DOMException('Blocked', 'SecurityError')
+        },
+      }),
+    })
+    try {
+      const { createAppClient } = await import('./create-app-client')
+      const client = createAppClient({ appName: 'chat' })
+      const { seen, adapter } = captureAdapter()
+      await client.get('-/list', { adapter })
+      expect(seen[0].withCredentials).toBe(false)
+      expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
+    } finally {
+      Object.defineProperty(window, 'parent', { configurable: true, get: () => window })
+    }
+  })
+
+  it('keeps cookies outside the shell', async () => {
+    const { createAppClient } = await import('./create-app-client')
+    const client = createAppClient({ appName: 'chat' })
+    const { seen, adapter } = captureAdapter()
+    await client.get('-/list', { adapter })
+    expect(seen[0].withCredentials).toBe(true)
+  })
+
   it('withholds the token from an absolute foreign URL', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'feeds' })
@@ -223,10 +255,11 @@ describe('app endpoint tables resolve under their own app', async () => {
   }
 })
 
-// repositories hand-rolls its interceptor and its package has no test runner,
-// so it is guarded by asserting on its source: restoring it to a bare `if
-// (token)` fails here. Skipped when the app repository is not checked out.
-describe('app-local interceptor call sites', async () => {
+// The apps with their own request module all build on the shared client, so
+// its tests above cover them. Reintroducing a private interceptor would
+// silently reopen the gap those tests exist to close. Skipped when the app
+// repository is not checked out.
+describe('app-local request modules', async () => {
   const { existsSync, readFileSync } = await import('node:fs')
   const { resolve } = await import('node:path')
 
@@ -234,28 +267,13 @@ describe('app-local interceptor call sites', async () => {
   const appFile = (app: string) =>
     resolve(process.cwd(), `../../apps/${app}/web/src/api/request.ts`)
 
-  const own = 'repositories'
-  const shared = ['crm', 'projects']
-
-  it.skipIf(!existsSync(appFile(own)))(
-    `${own} gates the token on the request origin`,
-    () => {
-      const source = readFileSync(appFile(own), 'utf8')
-      // Positive control: this really is a token-attaching interceptor.
-      expect(source).toContain('Authorization')
-      expect(source).toContain('isSameOriginRequest(config.baseURL, config.url)')
-      expect(source).not.toMatch(/if \(token\) \{/)
-    }
-  )
+  const shared = ['crm', 'projects', 'repositories']
 
   for (const app of shared) {
     it.skipIf(!existsSync(appFile(app)))(
       `${app} attaches no interceptor of its own`,
       () => {
         const source = readFileSync(appFile(app), 'utf8')
-        // Reintroducing a private interceptor would silently reopen the gap
-        // these tests exist to close, so assert the app stays on the shared
-        // client rather than merely that any copy is currently correct.
         expect(source).toContain('createAppClient')
         expect(source).not.toContain('interceptors.request.use')
         expect(source).not.toContain('Authorization')

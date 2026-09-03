@@ -5,8 +5,9 @@
 // wins for display, the code survives for callers that switch on it. Handlers
 // that send only one field must keep working.
 
-import { describe, it, expect, vi } from 'vitest'
-import { normalizeError, detectHtmlResponse } from './error-normalizer'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { i18n } from '@lingui/core'
+import { normalizeError, detectHtmlResponse, GENERIC_ERROR_MESSAGE } from './error-normalizer'
 
 function axios(status: number, data: unknown) {
   return { response: { status, data } }
@@ -199,5 +200,28 @@ describe('detectHtmlResponse', () => {
   it('passes over binary bodies, so downloads are unaffected', () => {
     expect(detectHtmlResponse(new Blob([indexHtml], { type: 'text/html' }))).toBeNull()
     expect(detectHtmlResponse(new ArrayBuffer(8))).toBeNull()
+  })
+})
+
+// The generic fallback is what every caller that passes no fallback shows,
+// GeneralError's fullscreen mode included. It used to be an English constant.
+describe('the generic fallback is translated', () => {
+  afterEach(() => {
+    i18n.loadAndActivate({ locale: 'en', messages: {} })
+  })
+
+  it('resolves the fallback through the active catalogue at call time', () => {
+    // Keyed on the descriptor's id: this config hashes ids while the app
+    // builds use the source text, and the lookup must work under either.
+    i18n.loadAndActivate({
+      locale: 'xx',
+      messages: { [GENERIC_ERROR_MESSAGE.id]: 'Boom in another language' },
+    })
+    expect(normalizeError({}).message).toBe('Boom in another language')
+    expect(normalizeError(new Error('')).message).toBe('Boom in another language')
+  })
+
+  it('still reads as English under the empty catalogue', () => {
+    expect(normalizeError({}).message).toBe('An unexpected error occurred')
   })
 })

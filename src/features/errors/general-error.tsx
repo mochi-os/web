@@ -3,7 +3,7 @@
 
 import { cn } from '../../lib/utils'
 import { Trans } from '@lingui/react/macro'
-import { normalizeError } from '../../lib/error-normalizer'
+import { genericErrorMessage, normalizeError } from '../../lib/error-normalizer'
 import { Button } from '../../components/ui/button'
 import { CircleAlert, RotateCcw } from 'lucide-react'
 
@@ -13,8 +13,6 @@ type GeneralErrorProps = React.HTMLAttributes<HTMLDivElement> & {
   reset?: () => void
   mode?: 'fullscreen' | 'inline'
 }
-
-const GENERIC_ERROR_MESSAGE = 'An unexpected error occurred'
 
 function toReadableMessage(value: string): string {
   return value
@@ -30,7 +28,7 @@ function isIdentifierMessage(value: string): boolean {
 
 function formatErrorMessage(message: string): string | undefined {
   const trimmed = message.trim()
-  if (!trimmed || trimmed === GENERIC_ERROR_MESSAGE) {
+  if (!trimmed || trimmed === genericErrorMessage()) {
     return undefined
   }
 

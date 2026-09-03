@@ -325,8 +325,6 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
   }
 }
 
-// Legacy export kept for tests that reference the standalone function.
-
 export function attachApiResponseInterceptors(
   client: AxiosInstance,
   options?: AttachInterceptorOptions

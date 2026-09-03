@@ -19,6 +19,7 @@ import { AttachmentImage } from './attachment-image'
 import { getFileIcon, isMedia, isVideo } from '../lib/attachment-utils'
 import { useFormat } from '../hooks/use-format'
 import { cn } from '../lib/utils'
+import { shellDownload } from '../lib/shell-bridge'
 
 export interface GalleryAttachment {
   id: string
@@ -293,12 +294,18 @@ export function AttachmentGallery({
             className="max-w-[min(100%,20rem)]"
           >
             <AttachmentTrigger asChild>
-              <a
-                href={resolveUrl(attachment)}
-                onClick={(e) => e.stopPropagation()}
+              {/* A button, not an <a href>: the resolved URL carries the app
+                  token, which must not sit in the DOM or the status bar, and
+                  a download link is inert inside the shell anyway. */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void shellDownload(resolveUrl(attachment), attachment.name)
+                }}
               >
                 <span className="sr-only">{attachment.name}</span>
-              </a>
+              </button>
             </AttachmentTrigger>
             <AttachmentMedia>
               <FileIcon />

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Curated public API of @mochi/web; `pnpm exec knip` from the workspace root
-// measures what the app frontends import. It reports around forty entries here
+// measures what the app frontends import. It reports around thirty entries here
 // as unused - shell helpers and structural type exports are exported
 // regardless, and components this library only uses internally are not
 // re-exported.
@@ -115,10 +115,8 @@ export * from './components/game/game-draw-offer-banner'
 export * from './components/game/game-empty-state'
 export * from './components/layout/back-button'
 export * from './components/layout/section'
-export { NavGroup } from './components/layout/nav-group'
 export type {
   SidebarData,
-  NavGroup as NavGroupType,
   NavItem,
   NavCollapsible,
   NavSubItem,
@@ -199,7 +197,6 @@ export * from './context/entity-sidebar-context'
 export * from './context/game-sidebar-context'
 export * from './context/game-websocket-context'
 export * from './context/game-websocket-provider'
-export { useGameWebsocketManager } from './hooks/use-game-websocket-manager'
 export * from './hooks/use-game-websocket'
 export * from './hooks/create-game-hooks'
 export {
@@ -251,6 +248,7 @@ export * from './hooks/use-list-auto-animate'
 export * from './hooks/use-drag-reorder'
 export * from './hooks/use-persisted-reorder'
 export * from './hooks/use-format'
+export * from './hooks/use-field-type-labels'
 export * from './hooks/use-upload-progress'
 export * from './hooks/use-load-more'
 export * from './hooks/use-accent'
@@ -312,7 +310,6 @@ export {
   createMicSessionHost,
   micDurationSecs,
   micFilenameForMime,
-  pickMicMimeType,
   startShellMicGuarded,
 } from './lib/shell-mic-session'
 export type {
@@ -355,7 +352,6 @@ export * as push from './lib/push'
 export type {
   PlaceData,
   PostData,
-  TravellingData,
   PhotonPlace,
 } from './types/places'
 export * from './types/settings'
@@ -369,7 +365,7 @@ export * from './hooks/settings/use-system-settings'
 // Error pages
 export * from './features/errors/general-error'
 export * from './features/errors/not-found-error'
-export * from './features/errors/unauthorized-error'
+export * from './features/errors/access-denied-error'
 
 // Access control components
 export * from './features/access'

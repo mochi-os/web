@@ -4,16 +4,17 @@
 import * as React from 'react'
 import { Trans } from '@lingui/react/macro'
 import { cn } from '../../lib/utils'
-import { safeCookieGet, safeCookieSet } from '../../lib/shell-bridge'
+import { getItem, setItem } from '../../lib/shell-storage'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet'
 import { XIcon } from 'lucide-react'
 
-// Cookie for persisting right panel state
-const RIGHT_PANEL_COOKIE_NAME = 'right_panel_state'
-const RIGHT_PANEL_COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
+// Shell storage key for the persisted open state. Cookies are no-ops inside
+// the shell's sandboxed iframe; shell storage round-trips through the shell
+// and falls back to localStorage outside it.
+const RIGHT_PANEL_STORAGE_KEY = 'right_panel_state'
 const RIGHT_PANEL_WIDTH = '20rem'
 const RIGHT_PANEL_WIDTH_MOBILE = '20rem'
 
@@ -55,18 +56,18 @@ function RightPanelProvider({
   const isLargeScreen = width >= 1280
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  // Internal state
-  const [_open, _setOpen] = React.useState(() => {
-    if (typeof document !== 'undefined') {
-      const cookie = safeCookieGet()
-        .split('; ')
-        .find((row) => row.startsWith(`${RIGHT_PANEL_COOKIE_NAME}=`))
-      if (cookie) {
-        return cookie.split('=')[1] !== 'false'
-      }
+  // Internal state: the default until the stored value (an async read through
+  // the shell) arrives.
+  const [_open, _setOpen] = React.useState(defaultOpen)
+  React.useEffect(() => {
+    let mounted = true
+    getItem(RIGHT_PANEL_STORAGE_KEY).then((stored) => {
+      if (mounted && stored !== null) _setOpen(stored !== 'false')
+    })
+    return () => {
+      mounted = false
     }
-    return defaultOpen
-  })
+  }, [])
 
   const open = openProp ?? _open
   const setOpen = React.useCallback(
@@ -77,8 +78,7 @@ function RightPanelProvider({
       } else {
         _setOpen(openState)
       }
-      // Persist to cookie
-      safeCookieSet(`${RIGHT_PANEL_COOKIE_NAME}=${openState}; path=/; max-age=${RIGHT_PANEL_COOKIE_MAX_AGE}`)
+      setItem(RIGHT_PANEL_STORAGE_KEY, String(openState))
     },
     [setOpenProp, open]
   )

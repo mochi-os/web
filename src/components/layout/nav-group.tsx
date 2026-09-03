@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { type ReactNode } from 'react'
+import { forwardRef, type ReactNode } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { useLingui } from '@lingui/react/macro'
 import { ChevronRight, Circle, MoreHorizontal } from 'lucide-react'
@@ -32,6 +32,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
@@ -58,6 +61,31 @@ function isNavLink(item: NavItem): item is NavLink {
 function isNavSubCollapsible(item: unknown): item is NavSubCollapsible {
   return typeof item === 'object' && item !== null && 'items' in item && Array.isArray((item as NavSubCollapsible).items)
 }
+
+// A sub-item's link. An external destination (another app) gets a plain
+// anchor: the router cannot resolve it and would render this app's 404.
+// Forwards its ref so a Slot parent (DropdownMenuItem asChild) can focus it.
+const SubItemLink = forwardRef<
+  HTMLAnchorElement,
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+    url: NavLink['url']
+    external?: boolean
+    children: ReactNode
+  }
+>(function SubItemLink({ url, external, children, ...rest }, ref) {
+  if (external) {
+    return (
+      <a ref={ref} href={url as string} {...rest}>
+        {children}
+      </a>
+    )
+  }
+  return (
+    <Link ref={ref} preload={false} to={url} {...rest}>
+      {children}
+    </Link>
+  )
+})
 
 // Shows the item's icon, or a generic circle visible only in icon-collapsed mode.
 // Aggregate ("All <items>") entries reuse the same glyph as their members,
@@ -429,11 +457,15 @@ function SidebarMenuCollapsible({
                     asChild
                     isActive={'url' in subItem ? checkIsActive(pathname, subItem) : false}
                   >
-                    <Link preload={false} to={'url' in subItem ? subItem.url : '#'} onClick={() => setOpenMobile(false)}>
+                    <SubItemLink
+                      url={'url' in subItem ? subItem.url : '#'}
+                      external={'external' in subItem ? subItem.external : false}
+                      onClick={() => setOpenMobile(false)}
+                    >
                       {subItem.icon && <subItem.icon />}
                       <span className='group-data-[collapsible=icon]:hidden'>{subItem.title}</span>
                       {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
-                    </Link>
+                    </SubItemLink>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               )
@@ -539,11 +571,15 @@ function SidebarMenuSubCollapsible({
                     asChild
                     isActive={'url' in subSubItem ? checkIsActive(pathname, subSubItem) : false}
                   >
-                    <Link preload={false} to={'url' in subSubItem ? subSubItem.url : '#'} onClick={() => setOpenMobile(false)}>
+                    <SubItemLink
+                      url={'url' in subSubItem ? subSubItem.url : '#'}
+                      external={'external' in subSubItem ? subSubItem.external : false}
+                      onClick={() => setOpenMobile(false)}
+                    >
                       {subSubItem.icon && <subSubItem.icon />}
                       <span className='group-data-[collapsible=icon]:hidden'>{subSubItem.title}</span>
                       {subSubItem.badge && <NavBadge>{subSubItem.badge}</NavBadge>}
-                    </Link>
+                    </SubItemLink>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               )
@@ -582,8 +618,47 @@ function SidebarMenuCollapsedDropdown({
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {item.items.map((sub) => {
-            if (isNavSubCollapsible(sub)) return null
             const key = getNavItemKey(sub)
+            if (isNavSubCollapsible(sub)) {
+              // A nested section keeps its children reachable while the
+              // sidebar is collapsed: a flyout, not a silent omission.
+              return (
+                <DropdownMenuSub key={key}>
+                  <DropdownMenuSubTrigger>
+                    {sub.icon && <sub.icon />}
+                    <span className='max-w-52 text-wrap'>{sub.title}</span>
+                    {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {sub.items.map((leaf) => {
+                      const leafKey = getNavItemKey(leaf)
+                      if (isNavAction(leaf)) {
+                        return (
+                          <DropdownMenuItem key={leafKey} onClick={leaf.onClick}>
+                            {leaf.icon && <leaf.icon />}
+                            <span className='max-w-52 text-wrap'>{leaf.title}</span>
+                            {leaf.badge && <span className='ms-auto text-xs'>{leaf.badge}</span>}
+                          </DropdownMenuItem>
+                        )
+                      }
+                      return (
+                        <DropdownMenuItem key={leafKey} asChild>
+                          <SubItemLink
+                            url={leaf.url}
+                            external={leaf.external}
+                            className={`${checkIsActive(pathname, leaf) ? 'bg-secondary' : ''}`}
+                          >
+                            {leaf.icon && <leaf.icon />}
+                            <span className='max-w-52 text-wrap'>{leaf.title}</span>
+                            {leaf.badge && <span className='ms-auto text-xs'>{leaf.badge}</span>}
+                          </SubItemLink>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )
+            }
             if (isNavAction(sub)) {
               return (
                 <DropdownMenuItem key={key} onClick={sub.onClick}>
@@ -595,14 +670,15 @@ function SidebarMenuCollapsedDropdown({
             }
             return (
               <DropdownMenuItem key={key} asChild>
-                <Link preload={false}
-                  to={sub.url}
+                <SubItemLink
+                  url={sub.url}
+                  external={sub.external}
                   className={`${checkIsActive(pathname, sub) ? 'bg-secondary' : ''}`}
                 >
                   {sub.icon && <sub.icon />}
                   <span className='max-w-52 text-wrap'>{sub.title}</span>
                   {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
-                </Link>
+                </SubItemLink>
               </DropdownMenuItem>
             )
           })}
@@ -643,7 +719,7 @@ function checkIsActive(pathname: string, item: NavItem | NavSubItem, mainNav = f
 
   // Check if any child nav item is active (Recursive)
   if ('items' in item && item.items && Array.isArray(item.items)) {
-    const hasActiveChild = item.items.some((i: any) => checkIsActive(pathname, i))
+    const hasActiveChild = item.items.some((child: NavItem | NavSubItem) => checkIsActive(pathname, child))
     if (hasActiveChild) {
       return true
     }

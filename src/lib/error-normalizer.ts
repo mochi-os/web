@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { i18n } from '@lingui/core'
+import { msg } from '@lingui/core/macro'
 
 type JsonRecord = Record<string, unknown>
 
-const DEFAULT_ERROR_MESSAGE = 'An unexpected error occurred'
+// Resolved at call time, not module load: the catalogue is activated after
+// this module is evaluated, and the language can change underneath it.
+export const GENERIC_ERROR_MESSAGE = msg`An unexpected error occurred`
+export const genericErrorMessage = (): string => i18n._(GENERIC_ERROR_MESSAGE)
 
 function isRecord(value: unknown): value is JsonRecord {
   return value !== null && typeof value === 'object'
@@ -142,7 +146,7 @@ export interface NormalizedError {
 
 export function normalizeError(
   error: unknown,
-  fallback: string = DEFAULT_ERROR_MESSAGE
+  fallback?: string
 ): NormalizedError {
   if (typeof error === 'string') {
     const direct = asNonEmptyString(error)
@@ -222,7 +226,7 @@ export function normalizeError(
   }
 
   const fallbackMessage =
-    asNonEmptyString(fallback) ?? DEFAULT_ERROR_MESSAGE
+    asNonEmptyString(fallback) ?? genericErrorMessage()
 
   return {
     message: message ?? fallbackMessage,

@@ -5,7 +5,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { MapPin, Mountain, Building2, Loader2, Plane, X, Check } from 'lucide-react'
+import { Loader2, Plane, X, Check } from 'lucide-react'
+import { PlaceIcon } from './place-icon'
 import { usePlaceSearch } from '../hooks/use-place-search'
 import { MapView } from './map-view'
 import { Button } from './ui/button'
@@ -26,24 +27,6 @@ export interface TravellingPickerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelect: (origin: PlaceData, destination: PlaceData) => void
-  /** Initial origin value */
-  initialOrigin?: PlaceData | null
-  /** Initial destination value */
-  initialDestination?: PlaceData | null
-}
-
-// Get icon based on place category
-function PlaceIcon({ category }: { category?: string }) {
-  switch (category) {
-    case 'natural':
-      return <Mountain className="h-4 w-4 text-green-600" />
-    case 'amenity':
-    case 'shop':
-    case 'tourism':
-      return <Building2 className="h-4 w-4 text-blue-600" />
-    default:
-      return <MapPin className="h-4 w-4 text-red-600" />
-  }
 }
 
 type ActiveField = 'origin' | 'destination' | null
@@ -52,8 +35,6 @@ export function TravellingPicker({
   open,
   onOpenChange,
   onSelect,
-  initialOrigin: _initialOrigin,
-  initialDestination: _initialDestination,
 }: TravellingPickerProps) {
   const [originQuery, setOriginQuery] = useState('')
   const [destinationQuery, setDestinationQuery] = useState('')
@@ -293,7 +274,6 @@ export function TravellingPicker({
                   lon: origin.lon,
                   name: origin.name,
                 }}
-                height={180}
               />
             </div>
           )}

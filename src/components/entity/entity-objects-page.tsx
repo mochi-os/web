@@ -19,7 +19,6 @@ import { useRouter } from '@tanstack/react-router'
 import {
   Check,
   Columns3,
-  Copy,
   Download,
   Ellipsis,
   FileDown,
@@ -69,7 +68,8 @@ import { arraysEqual } from '../../lib/change-detection'
 import { canCreate, canDesign, canWrite } from '../../lib/entity-access'
 import { getErrorMessage } from '../../lib/handle-server-error'
 import { rankBetween, rankCompare } from '../../lib/rank'
-import { shellClipboardWrite, shellSaveBlob } from '../../lib/shell-bridge'
+import { shellSaveBlob } from '../../lib/shell-bridge'
+import { CopyButton } from '../ui/copy-button'
 import { toastAction } from '../../lib/toast-action'
 import { toast } from '../../lib/toast-utils'
 import type {
@@ -221,6 +221,12 @@ export interface EntityObjectsPageLabels {
   shareAction: string
   shareTitle: string
   shareFailed: string
+  /** Toasts for the writes the board and tree make without a dialog. */
+  moveFailed: string
+  columnCreateFailed: string
+  columnRenameFailed: string
+  columnDeleteFailed: string
+  columnReorderFailed: string
   unsubscribe: string
   unsubscribeTitle: string
   /** Already carries the container name. */
@@ -289,9 +295,6 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   refreshSidebar: () => void | Promise<unknown>
   /** Where an unsubscribe leaves the reader. */
   onLeave: () => void
-  /** Passed to PageHeader, where it is deprecated and does nothing; carried
-   *  because projects sets it. */
-  showSidebarTrigger?: boolean
   /** The view to fall back to while the container holds no objects, named by the
    *  class it shows. */
   emptyViewClass?: string
@@ -324,7 +327,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   backupSlug,
   refreshSidebar,
   onLeave,
-  showSidebarTrigger,
   emptyViewClass,
   csvExport,
   designMenuItem,
@@ -341,7 +343,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const [unsubscribeOpen, setUnsubscribeOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [shareLink, setShareLink] = useState('')
-  const [linkCopied, setLinkCopied] = useState(false)
 
   // Destructured so a callback's dependency list compares strings by value
   // rather than the labels object, which an app builds inline every render.
@@ -349,7 +350,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
   const openLinkDialog = useCallback(async () => {
     setShareLink('')
-    setLinkCopied(false)
     setLinkOpen(true)
     try {
       const response = await api.share(container.id)
@@ -359,15 +359,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       toast.error(getErrorMessage(error, shareFailed))
     }
   }, [api, container.id, shareFailed])
-
-  const copyShareLink = useCallback(async () => {
-    if (!shareLink) return
-    const ok = await shellClipboardWrite(shareLink)
-    if (ok) {
-      setLinkCopied(true)
-      setTimeout(() => setLinkCopied(false), 2000)
-    }
-  }, [shareLink])
 
   const handleDataExport = useCallback(async () => {
     // Remote containers fetch attachment bytes over P2P in bounded server-side
@@ -700,11 +691,12 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
       return { previousData }
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['objects', containerId], context.previousData)
       }
+      toast.error(getErrorMessage(err, labels.moveFailed))
     },
     onSettled: () => {
       queryClient.invalidateQueries({
@@ -765,10 +757,11 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
       return { previousData }
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(['objects', containerId], context.previousData)
       }
+      toast.error(getErrorMessage(err, labels.moveFailed))
     },
     onSettled: () => {
       queryClient.invalidateQueries({
@@ -793,6 +786,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     onSuccess: () => {
       router.invalidate()
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, labels.columnDeleteFailed))
+    },
   })
 
   // Rename column (option) mutation
@@ -812,6 +808,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     },
     onSuccess: () => {
       router.invalidate()
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, labels.columnRenameFailed))
     },
   })
 
@@ -833,6 +832,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     onSuccess: () => {
       router.invalidate()
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, labels.columnCreateFailed))
+    },
   })
 
   // Reorder columns (options) mutation
@@ -852,6 +854,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       router.invalidate()
       setIsReorderingColumns(false)
       setPendingColumnOrder(null)
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, labels.columnReorderFailed))
     },
   })
 
@@ -1254,7 +1259,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       <PageHeader
         title={container.name}
         icon={<Icon className="size-4 md:size-5" />}
-        showSidebarTrigger={showSidebarTrigger}
         primaryAction={
           canCreate(access) ? (
             <Button
@@ -1485,19 +1489,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           </ResponsiveDialogHeader>
           <div className="bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm">
             <code className="flex-1 break-all">{shareLink || '…'}</code>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => void copyShareLink()}
-              disabled={!shareLink}
-              className="shrink-0"
-            >
-              {linkCopied ? (
-                <Check className="size-4" />
-              ) : (
-                <Copy className="size-4" />
-              )}
-            </Button>
+            <CopyButton value={shareLink} disabled={!shareLink} />
           </div>
         </ResponsiveDialogContent>
       </ResponsiveDialog>

@@ -39,7 +39,7 @@ import {
 } from "../../lib/attachment-utils";
 import { getErrorMessage } from "../../lib/handle-server-error";
 import { useAttachmentError } from "../../hooks/use-attachment-error";
-import { authenticatedUrl } from "../../lib/shell-bridge";
+import { authenticatedUrl, shellDownload } from "../../lib/shell-bridge";
 import { toast } from "../../lib/toast-utils";
 import { useUploadProgress } from "../../hooks/use-upload-progress";
 import type { EntityAttachment as AttachmentData } from "../../types/entity-object";
@@ -143,6 +143,11 @@ export function EntityObjectAttachments({
 
   const basePath = `${getAppPath()}/${containerId}/-/attachments/`;
   const attUrl = (id: string, suffix = "") => authenticatedUrl(`${basePath}${id}${suffix}`);
+  // The shell sandbox ignores <a download>; the parent window saves it instead.
+  const download = async (file: AttachmentData) => {
+    const ok = await shellDownload(attUrl(file.id), file.name);
+    if (!ok) toast.error(t`Download failed`);
+  };
   const attachments: AttachmentData[] = data || [];
   const images = attachments.filter((a) => isImage(a.type) || isVideo(a.type));
   const files = attachments.filter((a) => !isImage(a.type) && !isVideo(a.type));
@@ -190,7 +195,7 @@ export function EntityObjectAttachments({
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="absolute -top-1.5 -right-1.5 hidden group-hover/item:flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm"
+                          className="absolute -top-1.5 -right-1.5 hidden group-hover/item:flex [@media(hover:none)]:flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm"
                           onClick={(e) => {
                             e.stopPropagation()
                             setDeleteTarget(att as AttachmentData)
@@ -213,9 +218,9 @@ export function EntityObjectAttachments({
               return (
                 <Attachment key={file.id} size="sm">
                   <AttachmentTrigger asChild>
-                    <a href={attUrl(file.id)} download={file.name}>
+                    <button type="button" onClick={() => void download(file)}>
                       <span className="sr-only">{file.name}</span>
-                    </a>
+                    </button>
                   </AttachmentTrigger>
                   <AttachmentMedia>
                     <FileIcon />
@@ -228,17 +233,15 @@ export function EntityObjectAttachments({
                   </AttachmentContent>
                   <AttachmentActions>
                     <AttachmentAction
-                      asChild
                       variant="ghost"
                       size="icon"
-                      className="opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-foreground"
+                      className="opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-foreground"
+                      onClick={() => void download(file)}
                     >
-                      <a href={attUrl(file.id)} download={file.name}>
-                        <Download className="size-3" />
-                        <span className="sr-only">
-                          <Trans>Download</Trans>
-                        </span>
-                      </a>
+                      <Download className="size-3" />
+                      <span className="sr-only">
+                        <Trans>Download</Trans>
+                      </span>
                     </AttachmentAction>
                     {!readOnly && (
                       <AttachmentAction

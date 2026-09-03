@@ -83,9 +83,14 @@ describe('RecommendedEntities', () => {
     expect(load).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to errorMessage when the thrown value is not an Error', async () => {
-    renderBlock({ load: vi.fn().mockRejectedValue('boom') })
+  it('falls back to errorMessage when the thrown value carries no message', async () => {
+    renderBlock({ load: vi.fn().mockRejectedValue({}) })
     expect(await screen.findByText(/Failed to load/)).toBeInTheDocument()
+  })
+
+  it('shows a thrown string as the message, like every other error path', async () => {
+    renderBlock({ load: vi.fn().mockRejectedValue('boom') })
+    expect(await screen.findByText(/boom/)).toBeInTheDocument()
   })
 
   it('drops the row it just subscribed to and keeps the rest', async () => {

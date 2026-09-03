@@ -2,14 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useState } from 'react'
+import { Bell } from 'lucide-react'
 import { EntityAvatar } from './entity-avatar'
 
 export function NotificationSourceIcon({
   app,
+  name,
   sender,
   isUnread,
 }: {
+  /** The app id, which locates its icon. */
   app: string
+  /** The app's display name. Without one the icon is decorative: the row's
+   *  own text names the source, and an id is not a name. */
+  name?: string
   sender?: string
   isUnread: boolean
 }) {
@@ -26,13 +32,17 @@ export function NotificationSourceIcon({
             className='shrink-0'
           />
         ) : iconFailed ? (
-          <div className='text-hover-foreground flex size-6 items-center justify-center text-[10px] font-semibold uppercase'>
-            {app.slice(0, 1)}
-          </div>
+          name ? (
+            <div className='text-hover-foreground flex size-6 items-center justify-center text-[10px] font-semibold uppercase'>
+              {name.slice(0, 1)}
+            </div>
+          ) : (
+            <Bell aria-hidden='true' className='text-hover-foreground size-4' />
+          )
         ) : (
           <img
             src={`/${app}/images/icon.svg`}
-            alt={app}
+            alt={name ?? ''}
             width={18}
             height={18}
             onError={() => setIconFailed(true)}

@@ -62,7 +62,7 @@ describe('ChatWebsocketManager close races', () => {
     vi.useFakeTimers()
     MockWebSocket.instances = []
     vi.stubGlobal('WebSocket', MockWebSocket)
-    manager = new ChatWebsocketManager({ baseUrl: 'http://localhost' })
+    manager = new ChatWebsocketManager({ base: 'http://localhost' })
   })
 
   afterEach(() => {
@@ -125,6 +125,37 @@ describe('ChatWebsocketManager close races', () => {
     expect(MockWebSocket.instances).toHaveLength(2)
   })
 
+  it('a server-initiated clean close reconnects while subscribers remain', async () => {
+    // A restart or deploy closes with code 1000/1001. That close reaches
+    // handleClose only when the server sent it (client closes detach the
+    // handler first), and the subscriber still wants the stream.
+    manager.subscribe('c4', { chatKey: 'k4', onMessage: () => {} })
+    await flush()
+    const [first] = MockWebSocket.instances
+    first.open()
+
+    first.finishClose(true)
+    await vi.advanceTimersByTimeAsync(0)
+    await flush()
+
+    expect(MockWebSocket.instances).toHaveLength(2)
+  })
+
+  it('a server-initiated clean close with no subscribers left stays closed', async () => {
+    const unsubscribe = manager.subscribe('c5', { chatKey: 'k5', onMessage: () => {} })
+    await flush()
+    const [first] = MockWebSocket.instances
+    first.open()
+    // Detach the listener without the client-side close, so the server's
+    // clean close is the only close this entry sees.
+    unsubscribe()
+    first.finishClose(true)
+    await vi.advanceTimersByTimeAsync(0)
+    await flush()
+
+    expect(MockWebSocket.instances).toHaveLength(1)
+  })
+
   it('a server-initiated unclean close still reconnects', async () => {
     const statuses: string[] = []
     manager.subscribe('c3', {
@@ -158,10 +189,10 @@ describe('ChatWebsocketManager token scoping', () => {
     vi.useRealTimers()
   })
 
-  async function connect(baseUrl: string) {
+  async function connect(base: string) {
     const manager = new ChatWebsocketManager({
-      baseUrl,
-      getToken: () => 'Bearer secret-jwt',
+      base,
+      token: () => 'Bearer secret-jwt',
     })
     manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
     await vi.advanceTimersByTimeAsync(0)
@@ -169,6 +200,18 @@ describe('ChatWebsocketManager token scoping', () => {
     manager.dispose()
     return url
   }
+
+  it('defaults to the socket route core serves', async () => {
+    // Every app used to carry VITE_WEBSOCKET_URL=./_/ because the default
+    // derived /websocket, which core does not serve.
+    const manager = new ChatWebsocketManager({ token: () => 'Bearer secret-jwt' })
+    manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    const url = new URL(MockWebSocket.instances[0]?.url ?? 'ws://unset/')
+    manager.dispose()
+    expect(url.pathname).toBe('/_/websocket')
+    expect(url.searchParams.get('token')).toBe('secret-jwt')
+  })
 
   it('sends the token to this origin', async () => {
     // Companion to the refusals below: without it, "no token in the URL"

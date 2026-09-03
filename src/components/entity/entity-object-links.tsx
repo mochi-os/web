@@ -273,14 +273,14 @@ export function EntityObjectLinks<TObject extends EntityObject>({
   }
 
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-4 items-start">
+    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
       <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
         <Link2 className="size-3.5" />
         <Trans>Links</Trans>
       </label>
       <div className="space-y-1.5 pt-1">
         {displayLinks.map((link) => (
-          <div key={link.id} className="group flex items-center gap-1.5 text-xs">
+          <div key={link.id} className="group flex min-w-0 items-center gap-1.5 text-xs">
             <Badge
               variant="secondary"
               className="text-[10px] px-1.5 py-0 h-4 font-normal"
@@ -293,7 +293,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="hidden group-hover:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0"
+                    className="hidden group-hover:inline-flex [@media(hover:none)]:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0"
                     onClick={() =>
                       deleteLinkMutation.mutate({
                         source: link.source,

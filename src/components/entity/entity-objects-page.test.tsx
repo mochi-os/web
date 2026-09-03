@@ -22,6 +22,7 @@ import {
 import type { EntityObject } from '../../types/entity-object'
 import { FileText } from 'lucide-react'
 import { SearchProvider } from '../../context/search-provider'
+import { toast } from '../../lib/toast-utils'
 
 const invalidate = vi.fn()
 
@@ -124,6 +125,45 @@ describe('EntityObjectsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+  })
+
+  it('reports a column delete the server refused', async () => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => 'toast')
+    const api = makeApi(createMockEntityObjects(1))
+    ;(api.deleteOption as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('column in use'))
+    renderPage({
+      api,
+      renderBoard: (slot) => (
+        <button onClick={() => void slot.onDeleteColumn?.('task', 'status', 'todo')?.catch(() => {})}>drop column</button>
+      ),
+    })
+    fireEvent.click(await screen.findByText('drop column'))
+    await waitFor(() => expect(error).toHaveBeenCalledWith('column in use'))
+    error.mockRestore()
+  })
+
+  it('reports a move the server refused, after rolling it back', async () => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => 'toast')
+    const api = makeApi(createMockEntityObjects(2))
+    ;(api.moveObject as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('cannot move'))
+    renderPage({
+      api,
+      renderBoard: (slot) => (
+        <button onClick={() => slot.onMoveObject?.('obj-2', 'done', 1)}>reorder</button>
+      ),
+    })
+    fireEvent.click(await screen.findByText('reorder'))
+    await waitFor(() => expect(error).toHaveBeenCalledWith('cannot move'))
+    error.mockRestore()
+  })
+
+  it('offers the share link through a named copy control', async () => {
+    const api = makeApi(createMockEntityObjects(1))
+    ;(api.share as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { link: 'https://x.test/l' } })
+    renderPage({ api })
+    await openPageMenu()
+    fireEvent.click(await screen.findByText('shareAction'))
+    expect(await screen.findByRole('button', { name: 'Copy' })).toBeInTheDocument()
   })
 
   it('titles the page with the container name', async () => {

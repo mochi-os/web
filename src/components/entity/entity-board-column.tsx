@@ -20,6 +20,7 @@ import {
 } from "../ui/responsive-dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { ENTITY_LIMIT } from "../../lib/entity-api";
 import { Label } from "../ui/label";
 import {
   DropdownMenu,
@@ -602,6 +603,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
                 id="column-name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
+                maxLength={ENTITY_LIMIT.name}
                 autoFocus
               />
             </div>

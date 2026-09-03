@@ -21,6 +21,7 @@ export interface EditableFieldRowProps {
   emphasize?: boolean
   description?: string
   className?: string
+  maxLength?: number
 }
 
 export function EditableFieldRow({
@@ -34,6 +35,7 @@ export function EditableFieldRow({
   emphasize,
   description,
   className,
+  maxLength,
 }: EditableFieldRowProps) {
   const { t } = useLingui()
   const [isEditing, setIsEditing] = React.useState(false)
@@ -85,6 +87,7 @@ export function EditableFieldRow({
           <div className={cn('flex w-full gap-2', multiline ? 'items-start' : 'items-center')}>
             {multiline ? (
               <Textarea
+                maxLength={maxLength}
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value)
@@ -99,6 +102,7 @@ export function EditableFieldRow({
               />
             ) : (
               <Input
+                maxLength={maxLength}
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value)

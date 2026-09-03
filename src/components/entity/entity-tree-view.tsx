@@ -106,7 +106,6 @@ interface FlatNode<TObject extends EntityObject> {
   node: EntityTreeNode<TObject>;
   hasChildren: boolean;
   isExpanded: boolean;
-  siblings: TObject[];
   anySiblingHasChildren: boolean;
 }
 
@@ -115,12 +114,11 @@ function flattenTree<TObject extends EntityObject>(nodes: EntityTreeNode<TObject
   const result: FlatNode<TObject>[] = [];
 
   function traverse(nodeList: EntityTreeNode<TObject>[]) {
-    const siblings = nodeList.map((n) => n.object);
     const anySiblingHasChildren = nodeList.some((n) => n.children.length > 0);
     for (const node of nodeList) {
       const hasChildren = node.children.length > 0;
       const isExpanded = expanded.has(node.object.id);
-      result.push({ node, hasChildren, isExpanded, siblings, anySiblingHasChildren });
+      result.push({ node, hasChildren, isExpanded, anySiblingHasChildren });
 
       if (hasChildren && isExpanded) {
         traverse(node.children);
@@ -139,7 +137,6 @@ function buildGroupedFlatNodes<TObject extends EntityObject>(objects: TObject[],
     node: { object: obj, children: [], depth: 0, parent: obj.parent },
     hasChildren: false,
     isExpanded: false,
-    siblings: sorted,
     anySiblingHasChildren: false,
   }));
 }
@@ -295,7 +292,7 @@ export function EntityTreeView<TObject extends EntityObject>({
   // Use the view's class filter to pick the right fields/options
   const effectiveClass = viewClasses && viewClasses.length > 0
     ? viewClasses[0]
-    : design.classes[0]?.id || "task";
+    : design.classes[0]?.id || "";
   const fields = design.fields[effectiveClass] || [];
   const options = design.options[effectiveClass] || {};
 
@@ -591,19 +588,18 @@ export function EntityTreeView<TObject extends EntityObject>({
         const targetObj = objectMap[over];
         const draggedObj = objectMap[dragged];
         if (targetObj && draggedObj && targetObj.parent === draggedObj.parent) {
-          // Find siblings and calculate new rank
-          const flatNode = flatNodes.find((fn) => fn.node.object.id === over);
-          if (flatNode) {
-            const { siblings } = flatNode;
-            // Filter out the dragged item from siblings to find the drop slot
-            const siblingsWithoutDragged = siblings.filter((s) => s.id !== dragged);
-            // Find where target is in the filtered list
-            const targetIndex = siblingsWithoutDragged.findIndex((s) => s.id === over);
-            // 1-based position within the parent's children. onReorder renumbers
-            // the siblings around this position (not a midpoint rank value).
-            const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
-            onReorder(dragged, insertIndex + 1);
-          }
+          // The siblings come from the object list, not the rendered rows: a
+          // grouped list flattens every section into one row list, so a row's
+          // rendered neighbours are not its parent's children.
+          const siblings = sortEntityObjects(
+            objects.filter((o) => o.parent === targetObj.parent && o.id !== dragged),
+            sort,
+          );
+          const targetIndex = siblings.findIndex((s) => s.id === over);
+          // 1-based position within the parent's children. onReorder renumbers
+          // the siblings around this position (not a midpoint rank value).
+          const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
+          onReorder(dragged, insertIndex + 1);
         }
       }
     }
@@ -616,7 +612,8 @@ export function EntityTreeView<TObject extends EntityObject>({
     isReparentAllowed,
     canReorder,
     objectMap,
-    flatNodes,
+    objects,
+    sort,
     expanded,
     expandedList,
     setExpandedList,

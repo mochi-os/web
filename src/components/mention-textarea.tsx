@@ -45,12 +45,41 @@ export function renderMentions(content: string): ReactNode {
   )
 }
 
-/** Convert @[name] tokens in sanitized HTML to styled spans. Run AFTER sanitizeHtml. */
-export const highlightMentions = (html: string): string =>
-  html.replace(/@\[([^\]]+)\]/g, (_, name: string) => {
-    const safe = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-    return `<span class="text-primary font-medium">@${safe}</span>`
-  })
+const mentionTokenPattern = /@\[([^\]]+)\]/g
+
+/**
+ * Convert @[name] tokens in sanitized HTML to styled spans. Run AFTER
+ * sanitizeHtml. Only text nodes are rewritten: a token inside an attribute (an
+ * href, a title) is left as it is, so no markup is ever spliced into an
+ * attribute value.
+ */
+export const highlightMentions = (html: string): string => {
+  if (!html.includes('@[')) return html
+  const template = document.createElement('template')
+  template.innerHTML = html
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT)
+  const nodes: Text[] = []
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.nodeValue?.includes('@[')) nodes.push(node as Text)
+  }
+  for (const node of nodes) {
+    const text = node.nodeValue ?? ''
+    const fragment = document.createDocumentFragment()
+    let last = 0
+    for (const match of text.matchAll(mentionTokenPattern)) {
+      const index = match.index ?? 0
+      if (index > last) fragment.appendChild(document.createTextNode(text.slice(last, index)))
+      const span = document.createElement('span')
+      span.className = 'text-primary font-medium'
+      span.textContent = `@${match[1]}`
+      fragment.appendChild(span)
+      last = index + match[0].length
+    }
+    if (last < text.length) fragment.appendChild(document.createTextNode(text.slice(last)))
+    node.replaceWith(fragment)
+  }
+  return template.innerHTML
+}
 
 export {
   classifyUnresolvedMentions,
@@ -246,7 +275,9 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
         setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length)
         return
       }
-      if (e.key === 'Enter') {
+      // Ctrl/Cmd+Enter is the composer's submit chord; the dropdown only
+      // claims a bare Enter.
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault()
         insertMention(filtered[activeIndex])
         return

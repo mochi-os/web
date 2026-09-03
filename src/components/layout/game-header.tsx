@@ -17,14 +17,13 @@ interface GameHeaderProps {
   statusLive?: 'off' | 'polite' | 'assertive'
   variant?: 'card' | 'strip'
   className?: string
-  // Opponent entity fingerprint — renders their avatar next to the title and
-  // tints the header border with their accent colour (if set).
-  opponentFingerprint?: string | null
   // Fallback name for the avatar initials when the opponent has no avatar set.
   opponentName?: string
-  // Avatar and style URLs on the CALLING app, for a game that proxies its
-  // players' assets through its own action: a cross-app fetch from the
-  // sandboxed iframe carries Origin: null and no cookies.
+  // Avatar and style URLs on the CALLING app, which proxies its players'
+  // assets through its own game-bound action: a cross-app fetch from the
+  // sandboxed iframe carries Origin: null and no cookies, and a remote
+  // opponent has no entity on this server for the people app to answer for.
+  // The avatar renders, and the border takes the accent, only when given.
   opponentAvatarUrl?: string | null
   opponentStyleUrl?: string | null
 }
@@ -40,17 +39,13 @@ export function GameHeader({
   statusLive = 'polite',
   variant = 'card',
   className,
-  opponentFingerprint,
   opponentName,
   opponentAvatarUrl,
   opponentStyleUrl,
 }: GameHeaderProps) {
-  // The opponent's avatar/style live on the people app and need to be proxied
-  // (direct entity URLs only resolve locally; remote opponents 404 there).
-  const proxyBase = opponentFingerprint ? `/people/${opponentFingerprint}` : null
-  const avatarUrl = opponentAvatarUrl ?? (proxyBase ? `${proxyBase}/-/avatar` : null)
-  const styleUrl = opponentStyleUrl ?? (proxyBase ? `${proxyBase}/-/style` : null)
-  const { accent } = useAccent(undefined, styleUrl ?? undefined)
+  const avatarUrl = opponentAvatarUrl ?? null
+  const styleUrl = opponentStyleUrl ?? null
+  const { accent } = useAccent(styleUrl ?? undefined)
   const accentStyle: CSSProperties | undefined = accent
     ? { borderColor: accent }
     : undefined

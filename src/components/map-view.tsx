@@ -4,9 +4,43 @@
 // Map display component using Leaflet
 
 import { t } from '@lingui/core/macro'
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+
+/** A raster tile source: a URL template with {z}/{x}/{y}, and the credit it requires. */
+export interface MapTiles {
+  url: string
+  attribution: string
+}
+
+// OpenStreetMap's own tiles, so a server that has configured nothing still
+// renders a map and credits its source. Operators point this at a provider
+// of their own through the map tile system settings.
+export const MAP_TILES_DEFAULT: MapTiles = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: '© OpenStreetMap contributors',
+}
+
+const MapTilesContext = createContext<MapTiles>(MAP_TILES_DEFAULT)
+
+/** Supplies every MapView below it with the server's tile source. */
+export function MapTilesProvider({ tiles, children }: { tiles?: MapTiles | null; children: ReactNode }) {
+  return (
+    <MapTilesContext.Provider value={tiles?.url ? tiles : MAP_TILES_DEFAULT}>
+      {children}
+    </MapTilesContext.Provider>
+  )
+}
+
+export function useMapTiles(): MapTiles {
+  return useContext(MapTilesContext)
+}
+
+// Leaflet assigns the attribution with innerHTML; the credit is shown as text.
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 // Blue marker icon as inline SVG (origin/checkin)
 const blueMarkerSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="24" height="36">
@@ -158,8 +192,6 @@ export interface MapViewProps {
   origin?: { lat: number; lon: number; name?: string }
   /** Show user's current location as origin (uses geolocation API) */
   showCurrentLocation?: boolean
-  /** @deprecated Use aspectRatio instead */
-  height?: number
   /** Aspect ratio as "width/height", e.g. "2/1" for 2:1. Defaults to "2/1" */
   aspectRatio?: string
   interactive?: boolean
@@ -183,13 +215,13 @@ export function MapView({
   category,
   origin,
   showCurrentLocation = false,
-  height,
   aspectRatio = '2/1',
   interactive = false,
   className = '',
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const tiles = useMapTiles()
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lon: number } | null>(null)
 
   // Get current location if requested
@@ -238,11 +270,9 @@ export function MapView({
     // Add custom attribution control without Leaflet prefix
     L.control.attribution({ prefix: false }).addTo(map)
 
-    // Add tile layer (CARTO Voyager)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
+    L.tileLayer(tiles.url, {
+      attribution: escapeHtml(tiles.attribution),
+      maxZoom: 19,
     }).addTo(map)
 
     // Style the attribution to be more subtle
@@ -294,7 +324,7 @@ export function MapView({
       map.remove()
       mapRef.current = null
     }
-  }, [lat, lon, effectiveZoom, name, interactive, hasOrigin, originLat, originLon, originName])
+  }, [lat, lon, effectiveZoom, name, interactive, hasOrigin, originLat, originLon, originName, tiles.url, tiles.attribution])
 
   // Update map when position changes (single point mode only)
   useEffect(() => {
@@ -307,7 +337,7 @@ export function MapView({
     <div
       ref={containerRef}
       className={`isolate rounded-[8px] overflow-hidden ${className}`}
-      style={height ? { height, aspectRatio } : { aspectRatio, maxHeight: 150 }}
+      style={{ aspectRatio, maxHeight: 150 }}
     />
   )
 }

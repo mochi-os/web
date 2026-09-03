@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Trans, useLingui } from '@lingui/react/macro'
+import { useFormat } from '../../hooks/use-format'
 import { Button } from './button'
 
 interface LoadMoreProps {
@@ -17,12 +18,15 @@ export function LoadMore({
   hasMore,
   isLoading,
   onLoadMore,
-  totalShown,
-  total,
+  totalShown: shownCount,
+  total: totalCount,
   label,
 }: LoadMoreProps) {
   const { t } = useLingui()
-  if (!hasMore && totalShown === 0) return null
+  const { formatNumber } = useFormat()
+  const totalShown = formatNumber(shownCount)
+  const total = formatNumber(totalCount)
+  if (!hasMore && shownCount === 0) return null
   return (
     <div className='mt-4 flex flex-col items-center gap-2'>
       {hasMore ? (

@@ -168,7 +168,7 @@ export function EntityViewOptionsBar({
         >
           <SheetHeader>
             <SheetTitle><Trans>View controls</Trans></SheetTitle>
-            <SheetDescription><Trans>Search, watch, and sort this view.</Trans></SheetDescription>
+            <SheetDescription className="sr-only"><Trans>Search, watch, and sort this view.</Trans></SheetDescription>
           </SheetHeader>
           <div className="space-y-5 overflow-y-auto p-4 pt-0">
             <div className="space-y-2">

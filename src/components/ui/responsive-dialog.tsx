@@ -141,10 +141,10 @@ function ResponsiveDialogContent({
           bodyPadding &&
           "data-[vaul-drawer-direction=bottom]:[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4 data-[vaul-drawer-direction=bottom]:[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4"
       )}
-      {...(props as any)}
+      {...props}
       {...(!isMobile && {
         showCloseButton,
-        onInteractOutside: (e: any) => {
+        onInteractOutside: (e: Parameters<NonNullable<typeof onInteractOutside>>[0]) => {
           if (!shouldCloseOnInteractOutside) {
             e.preventDefault()
           }

@@ -14,8 +14,7 @@ import { Input } from './ui/input'
 import { Checkbox } from './ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { cn } from '../lib/utils'
-import { requestHelpers } from '../lib/request'
-import { t } from '@lingui/core/macro'
+import { plural, t } from '@lingui/core/macro'
 
 export interface Person {
   id: string
@@ -26,14 +25,6 @@ export interface Person {
 // Module-level cache for selected people's info (persists across component remounts)
 const selectedPeopleGlobalCache = new Map<string, Person>()
 
-interface FriendsResponse {
-  friends: Person[]
-}
-
-interface DirectorySearchResponse {
-  results?: Person[]
-}
-
 export interface PersonPickerProps {
   /** Selection mode - single or multiple */
   mode: 'single' | 'multiple'
@@ -41,21 +32,18 @@ export interface PersonPickerProps {
   value: string | string[]
   /** Callback when selection changes */
   onChange: (value: string | string[]) => void
-  /** Pre-loaded list of people (e.g., project subscribers) */
+  /** People the caller already knows: friends, members, participants. */
   local?: Person[]
-  /** Whether to include friends in search */
-  friends?: boolean
-  /** Whether to include directory search */
-  directory?: boolean
-  /** API base path for friends/directory calls */
-  apiBasePath?: string
-  /** Custom directory search function. Overrides the default
-   *  `${apiBasePath}/people/-/users/search` URL. Useful for apps whose JWT
-   *  is scoped to themselves and so cannot call the people app directly. */
+  /** Group heading for `local` when it is shown beside fetched people. */
+  localLabel?: string
+  /** Searches the directory through the caller's own app. Omit to search
+   *  only `local`. */
   directoryFn?: (query: string) => Promise<Person[]>
-  /** Custom friends fetch function. Overrides the default
-   *  `${apiBasePath}/people/-/friends` URL. */
+  /** Loads friends through the caller's own app. Omit to show only `local`. */
   friendsFn?: () => Promise<Person[]>
+  /** A person's avatar or accent style, served by the caller's own app. Omit
+   *  to show initials: the people app cannot be fetched from inside the shell. */
+  assetUrl?: (person: Person, asset: 'avatar' | 'style') => string
   /** Placeholder text */
   placeholder?: string
   /** Empty state message */
@@ -75,11 +63,10 @@ export function PersonPicker({
   value,
   onChange,
   local = [],
-  friends = false,
-  directory = false,
-  apiBasePath = '',
+  localLabel,
   directoryFn,
   friendsFn,
+  assetUrl,
   placeholder = t`Select person...`,
   emptyMessage = t`No people found`,
   disabled = false,
@@ -117,31 +104,23 @@ export function PersonPicker({
     }
   }, [open])
 
-  // Fetch friends when searching
+  // Both fetchers go through the caller's own app: a request to the people
+  // app from inside the shell's sandboxed iframe carries no cookies and is
+  // refused, so there is no default to fall back to. The loaders are the
+  // app's fixed functions, not query inputs.
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const { data: friendsData, isLoading: isLoadingFriends } = useQuery({
-    queryKey: ['person-picker', 'friends', apiBasePath, !!friendsFn],
-    queryFn: async () => {
-      if (friendsFn) return friendsFn()
-      const response = await requestHelpers.get<FriendsResponse>(
-        `${apiBasePath}/people/-/friends`
-      )
-      return response.friends || []
-    },
-    enabled: friends && open,
+    queryKey: ['person-picker', 'friends'],
+    queryFn: () => (friendsFn ? friendsFn() : Promise.resolve([])),
+    enabled: !!friendsFn && open,
     staleTime: 60000, // Cache for 1 minute
   })
 
-  // Search directory when query is long enough
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const { data: directoryData, isLoading: isLoadingDirectory } = useQuery({
-    queryKey: ['person-picker', 'directory', apiBasePath, !!directoryFn, debouncedSearch],
-    queryFn: async () => {
-      if (directoryFn) return directoryFn(debouncedSearch)
-      const response = await requestHelpers.get<DirectorySearchResponse | Person[]>(
-        `${apiBasePath}/people/-/users/search?search=${encodeURIComponent(debouncedSearch)}`
-      )
-      return Array.isArray(response) ? response : (response.results || [])
-    },
-    enabled: directory && debouncedSearch.length >= 2 && open,
+    queryKey: ['person-picker', 'directory', debouncedSearch],
+    queryFn: () => (directoryFn ? directoryFn(debouncedSearch) : Promise.resolve([])),
+    enabled: !!directoryFn && debouncedSearch.length >= 2 && open,
   })
 
   // Combine and deduplicate all people sources
@@ -197,7 +176,7 @@ export function PersonPicker({
 
     const localPeople = filteredPeople.filter((p) => localIds.has(p.id))
     if (localPeople.length > 0) {
-      groups.push({ label: t`Project members`, people: localPeople })
+      groups.push({ label: localLabel ?? t`People`, people: localPeople })
     }
 
     const friendPeople = filteredPeople.filter(
@@ -215,7 +194,7 @@ export function PersonPicker({
     }
 
     return groups
-  }, [filteredPeople, local, friendsData])
+  }, [filteredPeople, local, localLabel, friendsData])
 
   const isLoading = isLoadingFriends || isLoadingDirectory
 
@@ -278,7 +257,7 @@ export function PersonPicker({
               <span className="truncate">
                 {displayInfo.names.length > 0
                   ? displayInfo.names.slice(0, 2).join(', ')
-                  : `${displayInfo.count} selected`}
+                  : plural(displayInfo.count, { one: '# selected', other: '# selected' })}
               </span>
               {displayInfo.count > 2 && (
                 <span className="shrink-0 text-xs text-muted-foreground">
@@ -395,8 +374,9 @@ export function PersonPicker({
                       </div>
                     )}
                     <EntityAvatar
-                      src={`/people/${person.id}/-/avatar`}
-                      styleUrl={`/people/${person.id}/-/style`}
+                      src={assetUrl ? assetUrl(person, 'avatar') : undefined}
+                      styleUrl={assetUrl ? assetUrl(person, 'style') : undefined}
+                      seed={person.id}
                       name={person.name}
                       size="sm"
                     />

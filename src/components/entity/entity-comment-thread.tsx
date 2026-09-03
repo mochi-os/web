@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Trans } from '@lingui/react/macro'
-import { t } from '@lingui/core/macro'
+import { t, plural } from '@lingui/core/macro'
 import { Check, MoreHorizontal, Pencil, Reply, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { CommentTreeLayout } from "../comment-tree-layout";
@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useFormat } from "../../hooks/use-format";
 import { getAppPath } from "../../lib/app-path";
 import { MentionTextarea, renderMentions } from "../mention-textarea";
+import { ENTITY_LIMIT } from "../../lib/entity-api";
 import { textUnchanged } from "../../lib/change-detection";
 import {
   CommentBox,
@@ -166,9 +167,7 @@ export function EntityCommentThread({
       >
         {totalDescendants > 0 ? (
           <span>
-            {totalDescendants === 1
-              ? t`1 reply`
-              : t`+${totalDescendants} more replies`}
+            {plural(totalDescendants, { one: '# reply', other: '+# more replies' })}
           </span>
         ) : (
           <span className="text-muted-foreground italic"><Trans>(expand)</Trans></span>
@@ -197,6 +196,7 @@ export function EntityCommentThread({
               className="placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
               value={editBody}
               onValueChange={setEditBody}
+              maxLength={ENTITY_LIMIT.comment}
               rows={3}
               autoFocus
               people={people}

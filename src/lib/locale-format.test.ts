@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
-import { formatDate, formatTime, formatDateTime, formatRelativeTime } from './locale-format'
+import { formatDate, formatTime, formatDateTime, formatRelativeTime, formatUserTimestamp } from './locale-format'
 
 // A date whose month abbreviation differs visibly between languages.
 const MARCH = new Date(2026, 2, 14, 15, 30, 0)
@@ -160,5 +160,34 @@ describe('the timezone preference reaches the rendered value', () => {
     // A zone Intl rejects must degrade rather than throw inside a render.
     expect(formatTime(local, '24h', 'Not/AZone')).toBe('15:30:00')
     expect(formatDate(local, 'YYYY-MM-DD', 'Not/AZone')).toBe('2026-03-14')
+  })
+})
+
+// The preference object carries the zone, but two of the three display modes
+// dropped it on the floor: an absolute timestamp, and the date a relative
+// timestamp falls back to after a month, both rendered in the machine's zone.
+describe('the timezone preference reaches every timestamp display', () => {
+  beforeEach(() => load('en'))
+
+  // 2026-03-14T15:30:00Z as a Unix timestamp.
+  const INSTANT = Date.UTC(2026, 2, 14, 15, 30, 0) / 1000
+  const preferences = (timestampDisplay: 'absolute' | 'relative' | 'auto', timezone: string) => ({
+    dateFormat: 'YYYY-MM-DD' as const,
+    timeFormat: '24h' as const,
+    timestampDisplay,
+    timezone,
+  })
+
+  it('renders an absolute timestamp in the preferred zone', () => {
+    expect(formatUserTimestamp(INSTANT, preferences('absolute', 'UTC'))).toBe('2026-03-14 15:30:00')
+    expect(formatUserTimestamp(INSTANT, preferences('absolute', 'Asia/Tokyo'))).toBe('2026-03-15 00:30:00')
+  })
+
+  it('renders the date a relative timestamp falls back to in the preferred zone', () => {
+    // Older than the thirty-day relative window in every zone, so the branch
+    // under test is the absolute-date fallback.
+    expect(formatRelativeTime(INSTANT, 'YYYY-MM-DD', 'UTC')).toBe('2026-03-14')
+    expect(formatRelativeTime(INSTANT, 'YYYY-MM-DD', 'Asia/Tokyo')).toBe('2026-03-15')
+    expect(formatUserTimestamp(INSTANT, preferences('relative', 'Asia/Tokyo'))).toBe('2026-03-15')
   })
 })

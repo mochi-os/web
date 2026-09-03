@@ -13,7 +13,7 @@ export type WebsocketConnectionStatus =
   | 'error'
 
 export interface WebsocketConnectionSnapshot {
-  chatId: string
+  chat: string
   status: WebsocketConnectionStatus
   retries: number
   lastError?: string
@@ -30,7 +30,7 @@ export interface ChatWebsocketMessagePayload {
 }
 
 export interface ChatWebsocketEvent {
-  chatId: string
+  chat: string
   payload: ChatWebsocketMessagePayload
 }
 
@@ -40,17 +40,20 @@ export type ChatWebsocketStatusListener = (
 ) => void
 
 export interface ChatWebsocketManagerOptions {
-  baseUrl?: string
-  idleDisconnectMs?: number
-  baseDelayMs?: number
-  maxDelayMs?: number
-  maxRetries?: number
-  getChatKey?: (chatId: string) => Promise<string | undefined>
-  getToken?: () => string | undefined
+  /** Base URL the socket path is resolved against. Defaults to core's /_/ route on this origin. */
+  base?: string
+  /** Milliseconds a connection with no listeners stays open before it is closed. */
+  idle?: number
+  /** Reconnect backoff in milliseconds: the first delay, and the ceiling it grows to. */
+  delay?: { base?: number; maximum?: number }
+  /** Reconnect attempts before a connection is given up as failed. */
+  retries?: number
+  key?: (chat: string) => Promise<string | undefined>
+  token?: () => string | undefined
 }
 
 interface ConnectionEntry {
-  chatId: string
+  chat: string
   key?: string
   status: WebsocketConnectionStatus
   retries: number
@@ -70,12 +73,19 @@ const DEFAULT_MAX_DELAY = 30_000
 const DEFAULT_MAX_RETRIES = 10
 const DEFAULT_IDLE_DISCONNECT = 10_000
 
+// Core serves the socket at /_/websocket, so the default base is /_/ on this
+// origin; an app's VITE_WEBSOCKET_URL is an override, not a requirement.
+const defaultBase = (): string =>
+  typeof window !== 'undefined'
+    ? new URL('/_/', window.location.origin).href
+    : 'http://localhost/_/'
+
 const toWssUrl = (rawUrl: string): string => {
   if (typeof window === 'undefined') {
     throw new Error('window is not defined')
   }
   const origin = window.location.origin
-  const url = new URL(rawUrl || origin, origin)
+  const url = new URL(rawUrl || defaultBase(), origin)
   if (url.protocol === 'http:') url.protocol = 'ws:'
   else if (url.protocol === 'https:') url.protocol = 'wss:'
   url.pathname = url.pathname.replace(/\/+$/, '') + '/websocket'
@@ -83,30 +93,26 @@ const toWssUrl = (rawUrl: string): string => {
 }
 
 export class ChatWebsocketManager {
-  private readonly baseUrl: string
-  private readonly idleDisconnectMs: number
-  private readonly baseDelayMs: number
-  private readonly maxDelayMs: number
-  private readonly maxRetries: number
-  private readonly getChatKey?: (chatId: string) => Promise<string | undefined>
-  private readonly getToken?: () => string | undefined
+  private readonly base: string
+  private readonly idle: number
+  private readonly delay: { base: number; maximum: number }
+  private readonly retries: number
+  private readonly key?: (chat: string) => Promise<string | undefined>
+  private readonly token?: () => string | undefined
   private readonly connections = new Map<string, ConnectionEntry>()
   private disposed = false
   private online: boolean
 
   constructor(options: ChatWebsocketManagerOptions = {}) {
-    const fallbackUrl =
-      typeof window !== 'undefined'
-        ? window.location.origin
-        : 'http://localhost'
-    this.baseUrl =
-      options.baseUrl ?? import.meta.env.VITE_WEBSOCKET_URL ?? fallbackUrl
-    this.idleDisconnectMs = options.idleDisconnectMs ?? DEFAULT_IDLE_DISCONNECT
-    this.baseDelayMs = options.baseDelayMs ?? DEFAULT_BASE_DELAY
-    this.maxDelayMs = options.maxDelayMs ?? DEFAULT_MAX_DELAY
-    this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES
-    this.getChatKey = options.getChatKey
-    this.getToken = options.getToken
+    this.base = options.base ?? import.meta.env.VITE_WEBSOCKET_URL ?? defaultBase()
+    this.idle = options.idle ?? DEFAULT_IDLE_DISCONNECT
+    this.delay = {
+      base: options.delay?.base ?? DEFAULT_BASE_DELAY,
+      maximum: options.delay?.maximum ?? DEFAULT_MAX_DELAY,
+    }
+    this.retries = options.retries ?? DEFAULT_MAX_RETRIES
+    this.key = options.key
+    this.token = options.token
     this.online = typeof navigator === 'undefined' ? true : navigator.onLine
 
     if (typeof window !== 'undefined') {
@@ -116,14 +122,14 @@ export class ChatWebsocketManager {
   }
 
   subscribe(
-    chatId: string,
+    chat: string,
     options: {
       chatKey?: string
       onMessage?: ChatWebsocketListener
       onStatusChange?: ChatWebsocketStatusListener
     }
   ): () => void {
-    const entry = this.getOrCreateEntry(chatId)
+    const entry = this.getOrCreateEntry(chat)
 
     if (options.chatKey && options.chatKey !== entry.key) {
       entry.key = options.chatKey
@@ -164,8 +170,8 @@ export class ChatWebsocketManager {
     }
   }
 
-  forceReconnect(chatId: string) {
-    const entry = this.connections.get(chatId)
+  forceReconnect(chat: string) {
+    const entry = this.connections.get(chat)
     if (!entry) return
     entry.retries = 0
     entry.pendingReconnect = false
@@ -188,12 +194,12 @@ export class ChatWebsocketManager {
     }
   }
 
-  /** Whether baseUrl resolves to the page's own origin. */
+  /** Whether base resolves to the page's own origin. */
   private sameOrigin(): boolean {
     if (typeof window === 'undefined') return false
     try {
       return (
-        new URL(this.baseUrl || window.location.origin, window.location.origin)
+        new URL(this.base || window.location.origin, window.location.origin)
           .origin === window.location.origin
       )
     } catch {
@@ -201,21 +207,21 @@ export class ChatWebsocketManager {
     }
   }
 
-  private getOrCreateEntry(chatId: string): ConnectionEntry {
-    const existing = this.connections.get(chatId)
+  private getOrCreateEntry(chat: string): ConnectionEntry {
+    const existing = this.connections.get(chat)
     if (existing) {
       return existing
     }
 
     const entry: ConnectionEntry = {
-      chatId,
+      chat,
       status: 'idle',
       retries: 0,
       messageListeners: new Set(),
       statusListeners: new Set(),
     }
 
-    this.connections.set(chatId, entry)
+    this.connections.set(chat, entry)
     return entry
   }
 
@@ -225,7 +231,7 @@ export class ChatWebsocketManager {
 
   private snapshot(entry: ConnectionEntry): WebsocketConnectionSnapshot {
     return {
-      chatId: entry.chatId,
+      chat: entry.chat,
       status: entry.status,
       retries: entry.retries,
       lastError: entry.lastError,
@@ -264,15 +270,15 @@ export class ChatWebsocketManager {
       return
     }
 
-    const websocketUrl = toWssUrl(this.baseUrl)
+    const websocketUrl = toWssUrl(this.base)
     const socketUrl = new URL(websocketUrl)
     socketUrl.searchParams.set('key', chatKey)
 
     // Same-origin only, as api-client.ts gates the Authorization header:
-    // baseUrl need not be this origin and the token travels in the query
+    // base need not be this origin and the token travels in the query
     // string. Tested
     // against the http(s) base - wss://host never equals https://host.
-    const token = this.sameOrigin() ? this.getToken?.() : undefined
+    const token = this.sameOrigin() ? this.token?.() : undefined
     if (token) {
       const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
       socketUrl.searchParams.set('token', rawToken)
@@ -292,7 +298,7 @@ export class ChatWebsocketManager {
       }
       socket.onerror = (event) => {
         if (import.meta.env.DEV) {
-          devConsole?.warn?.(`[WebSocket] ${entry.chatId} error`, event)
+          devConsole?.warn?.(`[WebSocket] ${entry.chat} error`, event)
         }
         this.updateStatus(entry, 'error', 'socket-error')
       }
@@ -302,7 +308,7 @@ export class ChatWebsocketManager {
     } catch (error) {
       if (import.meta.env.DEV) {
         devConsole?.error?.(
-          `[WebSocket] Failed to connect for ${entry.chatId}`,
+          `[WebSocket] Failed to connect for ${entry.chat}`,
           error
         )
       }
@@ -318,12 +324,12 @@ export class ChatWebsocketManager {
       return entry.key
     }
 
-    if (!this.getChatKey) {
+    if (!this.key) {
       return undefined
     }
 
     if (!entry.keyPromise) {
-      entry.keyPromise = this.getChatKey(entry.chatId).finally(() => {
+      entry.keyPromise = this.key(entry.chat).finally(() => {
         entry.keyPromise = undefined
       })
     }
@@ -339,7 +345,7 @@ export class ChatWebsocketManager {
       }
 
       const chatEvent: ChatWebsocketEvent = {
-        chatId: entry.chatId,
+        chat: entry.chat,
         payload,
       }
 
@@ -349,7 +355,7 @@ export class ChatWebsocketManager {
         } catch (error) {
           if (import.meta.env.DEV) {
             devConsole?.error?.(
-              `[WebSocket] listener error for ${entry.chatId}`,
+              `[WebSocket] listener error for ${entry.chat}`,
               error
             )
           }
@@ -373,7 +379,7 @@ export class ChatWebsocketManager {
         .catch((error) => {
           if (import.meta.env.DEV) {
             devConsole?.error?.(
-              `[WebSocket] Failed to parse blob message for ${entry.chatId}`,
+              `[WebSocket] Failed to parse blob message for ${entry.chat}`,
               error
             )
           }
@@ -415,6 +421,10 @@ export class ChatWebsocketManager {
 
     if (event.wasClean) {
       this.updateStatus(entry, 'idle')
+      // A clean close that reaches here came from the server - a restart, a
+      // deploy - since client-initiated closes detach onclose first. With
+      // subscribers still listening it is a reconnect, not a terminal state.
+      if (this.hasListeners(entry)) this.scheduleReconnect(entry)
       return
     }
 
@@ -427,7 +437,7 @@ export class ChatWebsocketManager {
       return
     }
 
-    if (entry.retries >= this.maxRetries) {
+    if (entry.retries >= this.retries) {
       entry.lastError = 'max-retries'
       this.updateStatus(entry, 'error', 'max-retries')
       return
@@ -439,8 +449,8 @@ export class ChatWebsocketManager {
 
     const attempt = entry.retries + 1
     const rawDelay = Math.min(
-      this.maxDelayMs,
-      this.baseDelayMs * 2 ** (attempt - 1)
+      this.delay.maximum,
+      this.delay.base * 2 ** (attempt - 1)
     )
     const jitterFactor = 0.85 + Math.random() * 0.3
     const delay = attempt === 1 ? 0 : Math.round(rawDelay * jitterFactor)
@@ -485,7 +495,7 @@ export class ChatWebsocketManager {
     } catch (error) {
       if (import.meta.env.DEV) {
         devConsole?.error?.(
-          `[WebSocket] Failed to close socket for ${entry.chatId}`,
+          `[WebSocket] Failed to close socket for ${entry.chat}`,
           error
         )
       }
@@ -517,7 +527,7 @@ export class ChatWebsocketManager {
         return
       }
       this.closeSocket(entry, 'idle')
-    }, this.idleDisconnectMs)
+    }, this.idle)
   }
 
   private clearReconnectTimer(entry: ConnectionEntry) {
@@ -548,7 +558,7 @@ export class ChatWebsocketManager {
       } catch (error) {
         if (import.meta.env.DEV) {
           devConsole?.error?.(
-            `[WebSocket] status listener error for ${entry.chatId}`,
+            `[WebSocket] status listener error for ${entry.chat}`,
             error
           )
         }

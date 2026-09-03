@@ -13,6 +13,7 @@ import type { AxiosProgressEvent } from "axios";
 import { EmptyState } from "../ui/empty-state";
 import { ListSkeleton } from "../ui/list-skeleton";
 import { toast } from "../../lib/toast-utils";
+import { ENTITY_LIMIT } from "../../lib/entity-api";
 import { getErrorMessage } from "../../lib/handle-server-error";
 import { useAttachmentError } from "../../hooks/use-attachment-error";
 import { useAuthStore } from "../../stores/auth-store";
@@ -304,6 +305,7 @@ export function EntityCommentList({
             value={newComment}
             onValueChange={setNewComment}
             onSubmit={handleCreate}
+            maxLength={ENTITY_LIMIT.comment}
             // Cancel only once there is something to discard.
             onClose={hasDraft ? requestClose : undefined}
             onFilesChange={setNewFileCount}

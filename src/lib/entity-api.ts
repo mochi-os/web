@@ -1056,3 +1056,10 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
     },
   };
 }
+
+/** The length caps the entity apps' servers enforce, so an input stops where a 400 would start. */
+export const ENTITY_LIMIT = {
+  name: 100,
+  description: 10000,
+  comment: 50000,
+} as const

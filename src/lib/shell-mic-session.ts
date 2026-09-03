@@ -50,7 +50,7 @@ export function micFilenameForMime(mimeType: string): string {
   return 'Voice Note.webm'
 }
 
-export function pickMicMimeType(
+function pickMicMimeType(
   isTypeSupported: (type: string) => boolean
 ): string {
   for (const type of MIC_PREFERRED_MIME_TYPES) {

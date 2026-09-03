@@ -34,7 +34,10 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
       ...options,
     });
-    window.dispatchEvent(event);
+    // A real keypress targets the focused element and bubbles through
+    // document to window, which is what lets the capture-phase Ctrl+K handler
+    // on document run first.
+    document.body.dispatchEvent(event);
   };
 
   it("should call onCreateNew when 'c' is pressed", () => {
