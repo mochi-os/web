@@ -84,6 +84,7 @@ export * from './components/entity/entity-board-column'
 export * from './components/entity/entity-board-container'
 export * from './components/entity/entity-field-dialog'
 export * from './components/entity/entity-view-sheet'
+export * from './components/entity/entity-object-detail-panel'
 export * from './components/entity/entity-option-dialog'
 export * from './components/entity/entity-tree-view'
 export * from './components/entity/entity-design-preview'
@@ -106,6 +107,7 @@ export * from './lib/create-entity-list-store'
 export * from './lib/entity-sort'
 export * from './lib/entity-endpoints'
 export * from './lib/entity-api'
+export * from './lib/entity-title'
 export * from './components/entity/keyboard-shortcuts-help'
 
 // Game Components - shared by the chess, go and words apps.
@@ -139,6 +141,8 @@ export * from './components/travelling-picker'
 
 // Shared Components
 export * from './components/activity-timeline'
+export * from './components/ai-prompts-editor'
+export * from './components/banner-section'
 export * from './components/audit-timeline'
 export * from './components/options-menu'
 export * from './components/attachment-gallery'
@@ -241,6 +245,7 @@ export * from './hooks/use-accounts'
 export * from './hooks/use-debounce'
 export * from './hooks/use-keyboard-shortcuts'
 export * from './hooks/use-entity-websocket'
+export * from './hooks/use-entity-invalidation-websocket'
 export {
   entityWebsocketManager,
   type EntityWebsocketEvent,

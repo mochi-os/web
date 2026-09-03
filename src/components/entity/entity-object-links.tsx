@@ -28,6 +28,10 @@ import type {
   EntityObject,
   EntityObjectLink,
 } from '../../types/entity-object'
+import {
+  entityObjectTitle,
+  type EntityTitleObject,
+} from '../../lib/entity-title'
 
 export interface EntityObjectLinksProps<TObject extends EntityObject> {
   containerId: string
@@ -91,18 +95,8 @@ export function EntityObjectLinks<TObject extends EntityObject>({
   const queryClient = useQueryClient()
 
   const objectTitle = useCallback(
-    (obj: { class: string; number?: number; values: Record<string, string> }) => {
-      const cls = classes.find((c) => c.id === obj.class)
-      const title = (cls?.title ? obj.values[cls.title] : '') || ''
-      if (title) return title
-      // `number` is optional on the shared object, so guard it the same way
-      // linkDisplayName below does — formatting it blind prints "PREFIX-undefined".
-      if (prefix !== undefined && typeof obj.number === 'number') {
-        return `${prefix}-${obj.number}`
-      }
-      return t`Untitled`
-    },
-    [classes, prefix, t],
+    (obj: EntityTitleObject) => entityObjectTitle(obj, classes, prefix),
+    [classes, prefix],
   )
 
   const { data: objectListData } = useQuery({
