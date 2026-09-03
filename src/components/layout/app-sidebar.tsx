@@ -119,9 +119,16 @@ export function AppSidebar({
         <SidebarHeader
           className={
             hideMenu
-              ? state === 'collapsed'
-                ? 'min-h-20'
-                : 'min-h-10'
+              ? cn(
+                  // Below 1024 the shell drops its menu into a full-width top
+                  // bar and moves the iframe underneath it (shell.html's
+                  // max-width: 1023.98px block), so nothing overlays the
+                  // sidebar and this clearance reads as an empty gap. From
+                  // 1024 the menu is a fixed rail painted over the app, and
+                  // the space is what keeps it off the first entry.
+                  'min-h-0 p-0',
+                  state === 'collapsed' ? 'lg:min-h-20' : 'lg:min-h-10'
+                )
               : undefined
           }
         >
