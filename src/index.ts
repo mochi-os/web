@@ -259,6 +259,7 @@ export * from './hooks/use-persisted-reorder'
 export * from './hooks/use-format'
 export * from './hooks/use-upload-progress'
 export * from './hooks/use-load-more'
+export * from './hooks/use-game-chat-messages'
 export * from './hooks/use-accent'
 export * from './components/ui/load-more'
 // Lib utilities
