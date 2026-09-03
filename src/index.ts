@@ -74,6 +74,7 @@ export * from './components/layout/page-utility-bar'
 export * from './components/layout/game-header'
 export * from './components/layout/game-header-stats'
 export * from './components/layout/game-layout'
+export * from './components/layout/game-route-layout'
 
 // Entity object model Components - shared by the crm and projects apps
 export * from './components/entity/entity-board-card'
