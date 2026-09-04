@@ -151,7 +151,8 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     vi.mocked(api.updateObject).mockRejectedValue({ response: { status: 409 } })
     renderPanel()
 
-    fireEvent.click(await screen.findByRole('combobox'))
+    // By name: the enumerated fields render comboboxes of their own.
+    fireEvent.click(await screen.findByRole('combobox', { name: 'Parent' }))
     fireEvent.click(await screen.findByRole('option', { name: 'Sibling' }))
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Failed to move'))

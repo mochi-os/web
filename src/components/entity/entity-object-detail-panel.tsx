@@ -49,6 +49,8 @@ import {
   type EntityObjectAttachmentsProps,
 } from "./entity-object-attachments";
 import { EntityObjectLinks, type EntityObjectLinksProps } from "./entity-object-links";
+import { getAppPath } from "../../lib/app-path";
+import type { Person } from "../person-picker";
 import type {
   EntityAccess,
   EntityDesign,
@@ -422,6 +424,12 @@ export function EntityObjectDetailPanel<
   const searchUsers = async (query: string) =>
     (await api.searchUsers(query)).data.results;
 
+  // A member's avatar and accent through the app's own user-asset route: the
+  // picker cannot fetch the people app from inside the shell. Both apps mount
+  // the route at the same path under the container.
+  const personAsset = (person: Person, asset: "avatar" | "style") =>
+    `${getAppPath()}/${containerId}/-/user/${person.id}/asset/${asset}`;
+
   return (
     <Sheet open={true} onOpenChange={handleClose}>
       <SheetContent
@@ -534,6 +542,7 @@ export function EntityObjectDetailPanel<
                       hideLabel
                       localPeople={peopleData}
                       searchUsers={searchUsers}
+                      personAsset={personAsset}
                     />
                   </div>
                 )}
@@ -557,7 +566,7 @@ export function EntityObjectDetailPanel<
                         }}
                         disabled={updateParentMutation.isPending}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" aria-label={t`Parent`}>
                           <SelectValue placeholder={t`None`}>
                             {currentParent ? objectTitle(currentParent) : t`None`}
                           </SelectValue>
@@ -594,6 +603,7 @@ export function EntityObjectDetailPanel<
                         hideLabel
                         localPeople={peopleData}
                         searchUsers={searchUsers}
+                        personAsset={personAsset}
                       />
                     </div>
                   ))}
@@ -645,6 +655,7 @@ export function EntityObjectDetailPanel<
                   <EntityActivityList
                     containerId={containerId}
                     objectId={objectId}
+                    fields={classFields}
                     listActivity={api.listActivity}
                   />
                 </div>
