@@ -20,7 +20,8 @@ export type MicSessionResult =
       blob: Blob
       mimeType: string
       filename: string
-      durationSecs: number
+      /** Recording length in seconds. */
+      duration: number
     }
   | {
       ok: false
@@ -363,7 +364,7 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
       }
 
       const elapsedMs = deps.now() - active.startedAt
-      const durationSecs = micDurationSecs(elapsedMs)
+      const duration = micDurationSecs(elapsedMs)
       const type = active.mimeType || 'audio/webm'
       const blob = new Blob(active.chunks, { type })
 
@@ -382,7 +383,7 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
           blob,
           mimeType: type,
           filename: micFilenameForMime(type),
-          durationSecs,
+          duration,
         },
       })
     }

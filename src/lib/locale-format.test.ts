@@ -160,6 +160,10 @@ describe('the timezone preference reaches the rendered value', () => {
     // A zone Intl rejects must degrade rather than throw inside a render.
     expect(formatTime(local, '24h', 'Not/AZone')).toBe('15:30:00')
     expect(formatDate(local, 'YYYY-MM-DD', 'Not/AZone')).toBe('2026-03-14')
+    // The month-name and meridiem forms build their own Intl formatters,
+    // which used to throw where the numeric forms already degraded.
+    expect(formatDate(local, 'D MMM YYYY', 'Not/AZone')).toBe('14 Mar 2026')
+    expect(formatTime(local, '12h', 'Not/AZone')).toBe('3:30:00 PM')
   })
 })
 

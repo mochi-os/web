@@ -9,8 +9,15 @@
  */
 
 import { fromShell, isInShell, shellOrigin } from './shell-bridge'
+import { shellErrorMessage } from './shell-errors'
 
+// name is DOMException-style for callers that branch on it; message is the
+// translated text a caller may show (air's head tracker does).
 export type CameraError = { name: string; message: string }
+
+function cameraFailure(name: string): CameraError {
+  return { name, message: shellErrorMessage('camera', name) }
+}
 
 export type CameraDevice = { id: string; label: string }
 
@@ -66,8 +73,7 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       // Tell the shell too: a consent prompt answered after this point would
       // otherwise start a camera that nothing owns or ever stops.
       window.parent.postMessage({ type: 'camera.stop', requestId }, shellOrigin())
-      // eslint-disable-next-line lingui/no-unlocalized-strings -- CameraError mirrors DOMException: name and message are diagnostics the caller branches on, as at the secure-context refusal below
-      finish({ ok: false, error: { name: 'TimeoutError', message: 'The shell did not answer the camera request' } })
+      finish({ ok: false, error: cameraFailure('TimeoutError') })
     }, 30000)
     // The listener outlives the session by a moment: a frame already in
     // flight when the session ends still needs its close() (the !live branch
@@ -94,7 +100,12 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
         } else {
           live = false
           retire()
-          finish({ ok: false, cancelled: result.cancelled, error: result.error })
+          // The shell sends the name only; the message is resolved here.
+          finish({
+            ok: false,
+            cancelled: result.cancelled,
+            error: result.error ? cameraFailure(result.error.name) : undefined,
+          })
         }
         return
       }
@@ -145,8 +156,7 @@ function directOpen(options: CameraOptions): Promise<{ session: CameraSession; o
   if (!media?.getUserMedia || typeof createImageBitmap === 'undefined') {
     return Promise.resolve({
       session,
-      // eslint-disable-next-line lingui/no-unlocalized-strings -- CameraError mirrors DOMException: name and message are diagnostics the caller branches on, and every other failure path carries the browser's own untranslated message
-      opened: { ok: false, error: { name: 'NotSupportedError', message: 'Camera access requires a secure context' } },
+      opened: { ok: false, error: cameraFailure('NotSupportedError') },
     })
   }
 

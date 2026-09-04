@@ -24,12 +24,30 @@ function language(): string {
 const monthFormatters = new Map<string, Intl.DateTimeFormat>()
 const meridiemFormatters = new Map<string, Intl.DateTimeFormat>()
 
+// A formatter for the zone when Intl accepts it, else for the browser's own:
+// an unusable stored preference degrades to local time rather than throwing
+// inside a render, as zonedParts does.
+function dateFormatter(
+  lang: string,
+  timezone: string | undefined,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  if (timezone) {
+    try {
+      return new Intl.DateTimeFormat(lang, { ...options, timeZone: timezone })
+    } catch {
+      // Fall through to the browser's zone.
+    }
+  }
+  return new Intl.DateTimeFormat(lang, options)
+}
+
 function monthShort(date: Date, timezone?: string): string {
   const lang = language()
   const key = timezone ? lang + '|' + timezone : lang
   let formatter = monthFormatters.get(key)
   if (!formatter) {
-    formatter = new Intl.DateTimeFormat(lang, timezone ? { month: 'short', timeZone: timezone } : { month: 'short' })
+    formatter = dateFormatter(lang, timezone, { month: 'short' })
     monthFormatters.set(key, formatter)
   }
   return formatter.format(date)
@@ -40,10 +58,7 @@ function meridiem(date: Date, timezone?: string): string {
   const key = timezone ? lang + '|' + timezone : lang
   let formatter = meridiemFormatters.get(key)
   if (!formatter) {
-    formatter = new Intl.DateTimeFormat(
-      lang,
-      timezone ? { hour: 'numeric', hour12: true, timeZone: timezone } : { hour: 'numeric', hour12: true }
-    )
+    formatter = dateFormatter(lang, timezone, { hour: 'numeric', hour12: true })
     meridiemFormatters.set(key, formatter)
   }
   // formatToParts rather than a string match: the marker's position and

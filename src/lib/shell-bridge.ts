@@ -8,6 +8,7 @@
 
 import { isSameOriginResource } from './safe-navigation'
 import { getAppPath, isDomainEntityRouting } from './app-path'
+import { shellErrorMessage } from './shell-errors'
 
 type DomainRouteInfo = {
   method: string
@@ -19,8 +20,34 @@ type DomainRouteInfo = {
 export type ColorTheme = {
   hue: string
   chroma: string
-  hueBg: string
+  background: string
   overrides?: Record<string, string>
+}
+
+/**
+ * A colour theme as it arrived over postMessage, from the shell or another
+ * app. Builds older than 2026-09 send the background hue as `hueBg`; read
+ * either for one release.
+ */
+export function colorThemeFromMessage(value: unknown): ColorTheme | null {
+  if (!value || typeof value !== 'object') return null
+  const raw = value as {
+    hue?: unknown
+    chroma?: unknown
+    background?: unknown
+    hueBg?: unknown
+    overrides?: unknown
+  }
+  const text = (v: unknown) => (typeof v === 'string' ? v : '')
+  const theme: ColorTheme = {
+    hue: text(raw.hue),
+    chroma: text(raw.chroma),
+    background: text(raw.background !== undefined ? raw.background : raw.hueBg),
+  }
+  if (raw.overrides && typeof raw.overrides === 'object') {
+    theme.overrides = raw.overrides as Record<string, string>
+  }
+  return theme
 }
 
 // What a theme is allowed to install. A theme arrives over postMessage from an
@@ -75,17 +102,6 @@ type ShellInitData = {
    * preference, else the request's Accept-Language, else "en".
    */
   language?: string | null
-  /**
-   * Source server URL when this account arrived by a server-move restore, with
-   * the third-party services to re-link. Absent for normally-created accounts.
-   */
-  restoreSource?: string | null
-  relinks?: { service: string; identifier: string }[] | null
-  /**
-   * True when the restored account had passkeys on the source server. Passkeys
-   * are bound to their origin and do not travel in a backup.
-   */
-  restorePasskeys?: boolean | null
 }
 
 type ShellMessage = {
@@ -524,7 +540,7 @@ export function installShellClipboardProxy(): void {
 let webauthnIdCounter = 0
 const webauthnCallbacks = new Map<
   number,
-  (result: { credential?: unknown; error?: { name: string; message: string } }) => void
+  (result: { credential?: unknown; error?: { name: string } }) => void
 >()
 
 type WebauthnError = Error & { name: string }
@@ -532,8 +548,8 @@ type WebauthnError = Error & { name: string }
 const SHELL_WEBAUTHN_TIMEOUT_MS = 60_000
 const SHELL_WEBAUTHN_GRACE_MS = 5_000
 
-function webauthnFailure(name: string, message: string): WebauthnError {
-  const err = new Error(message) as WebauthnError
+function webauthnFailure(name: string): WebauthnError {
+  const err = new Error(shellErrorMessage('webauthn', name)) as WebauthnError
   err.name = name
   return err
 }
@@ -543,17 +559,17 @@ async function webauthnLocal(create: boolean, optionsJSON: unknown): Promise<unk
     parseCreationOptionsFromJSON?: (opts: unknown) => PublicKeyCredentialCreationOptions
     parseRequestOptionsFromJSON?: (opts: unknown) => PublicKeyCredentialRequestOptions
   } | undefined
-  if (!pk) throw webauthnFailure('NotSupportedError', 'WebAuthn unavailable in this browser')
+  if (!pk) throw webauthnFailure('NotSupportedError')
   const publicKey = create
     ? pk.parseCreationOptionsFromJSON?.(optionsJSON)
     : pk.parseRequestOptionsFromJSON?.(optionsJSON)
-  if (!publicKey) throw webauthnFailure('NotSupportedError', 'WebAuthn JSON parsers unavailable')
+  if (!publicKey) throw webauthnFailure('NotSupportedError')
   const cred = create
     ? await navigator.credentials.create({ publicKey: publicKey as PublicKeyCredentialCreationOptions })
     : await navigator.credentials.get({ publicKey: publicKey as PublicKeyCredentialRequestOptions })
   const withToJSON = cred as unknown as { toJSON?: () => unknown }
   if (!cred || typeof withToJSON.toJSON !== 'function') {
-    throw webauthnFailure('NotSupportedError', 'Credential JSON serialisation unavailable')
+    throw webauthnFailure('NotSupportedError')
   }
   return withToJSON.toJSON()
 }
@@ -575,13 +591,13 @@ function webauthnThroughShell(create: boolean, optionsJSON: unknown): Promise<un
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       if (webauthnCallbacks.delete(id)) {
-        reject(webauthnFailure('TimeoutError', 'The shell did not answer the passkey request'))
+        reject(webauthnFailure('TimeoutError'))
       }
     }, webauthnDeadline(optionsJSON))
     webauthnCallbacks.set(id, (result) => {
       clearTimeout(timer)
       if (result.error) {
-        reject(webauthnFailure(result.error.name, result.error.message))
+        reject(webauthnFailure(result.error.name))
         return
       }
       resolve(result.credential)
@@ -611,7 +627,8 @@ export type ShellMicResult = {
   blob: Blob
   mimeType: string
   filename: string
-  durationSecs: number
+  /** Recording length in seconds. */
+  duration: number
 }
 
 export type ShellMicError = Error & { name: string }
@@ -620,11 +637,8 @@ const SHELL_MIC_START_TIMEOUT_MS = 30_000
 const SHELL_MIC_STOP_TIMEOUT_MS = 120_000
 const SHELL_MIC_CANCEL_TIMEOUT_MS = 30_000
 const SHELL_MIC_PROBE_TIMEOUT_MS = 800
-const SHELL_MIC_UNSUPPORTED =
-  'Installed Mochi shell may not support voice recording'
-
-function shellMicFailure(name: string, message: string): ShellMicError {
-  const err = new Error(message) as ShellMicError
+function shellMicFailure(name: string): ShellMicError {
+  const err = new Error(shellErrorMessage('microphone', name)) as ShellMicError
   err.name = name
   return err
 }
@@ -710,10 +724,7 @@ export function shellMicProbe(): Promise<boolean> {
 export function shellMicStart(): Promise<number> {
   if (!isInShell()) {
     return Promise.reject(
-      shellMicFailure(
-        'InvalidStateError',
-        'shellMicStart is only available inside the Mochi shell'
-      )
+      shellMicFailure('InvalidStateError')
     )
   }
 
@@ -724,7 +735,7 @@ export function shellMicStart(): Promise<number> {
       // Best-effort cancel so the shell discards a still-pending permission
       // request. Do not await shellMicCancel() — that adds another timeout.
       window.parent.postMessage({ type: 'mic.cancel', requestId }, shellOrigin())
-      reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
+      reject(shellMicFailure('TimeoutError'))
     }, SHELL_MIC_START_TIMEOUT_MS)
 
     micStartCallbacks.set(requestId, { resolve, reject, timer })
@@ -736,17 +747,14 @@ export function shellMicStart(): Promise<number> {
 export function shellMicStop(requestId: number): Promise<ShellMicResult> {
   if (!isInShell()) {
     return Promise.reject(
-      shellMicFailure(
-        'InvalidStateError',
-        'shellMicStop is only available inside the Mochi shell'
-      )
+      shellMicFailure('InvalidStateError')
     )
   }
 
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       micStopCallbacks.delete(requestId)
-      reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
+      reject(shellMicFailure('TimeoutError'))
     }, SHELL_MIC_STOP_TIMEOUT_MS)
 
     micStopCallbacks.set(requestId, { resolve, reject, timer })
@@ -765,7 +773,7 @@ export function shellMicCancel(requestId?: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       callbacks.delete(id)
-      reject(shellMicFailure('TimeoutError', SHELL_MIC_UNSUPPORTED))
+      reject(shellMicFailure('TimeoutError'))
     }, SHELL_MIC_CANCEL_TIMEOUT_MS)
 
     callbacks.set(id, { resolve, reject, timer })
@@ -1062,13 +1070,7 @@ if (typeof window !== 'undefined') {
         clearMicTimer(startCb)
         const err = data.error as { name?: string; message?: string } | undefined
         startCb.reject(
-          shellMicFailure(
-            err?.name || (data.cancelled ? 'AbortError' : 'Error'),
-            err?.message ||
-              (data.cancelled
-                ? 'Microphone request cancelled'
-                : 'Microphone recording failed')
-          )
+          shellMicFailure(err?.name || (data.cancelled ? 'AbortError' : 'Error'))
         )
       }
 
@@ -1081,18 +1083,13 @@ if (typeof window !== 'undefined') {
             blob: data.blob,
             mimeType: String(data.mimeType || 'audio/webm'),
             filename: String(data.filename || 'Voice Note.webm'),
-            durationSecs: Number(data.durationSecs) || 1,
+            // Shells older than 2026-09 send durationSecs; drop after one release.
+            duration: Number(data.duration !== undefined ? data.duration : data.durationSecs) || 1,
           })
         } else {
           const err = data.error as { name?: string; message?: string } | undefined
           stopCb.reject(
-            shellMicFailure(
-              err?.name || (data.cancelled ? 'AbortError' : 'Error'),
-              err?.message ||
-                (data.cancelled
-                  ? 'Microphone recording cancelled'
-                  : 'Microphone recording failed')
-            )
+            shellMicFailure(err?.name || (data.cancelled ? 'AbortError' : 'Error'))
           )
         }
       }

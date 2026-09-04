@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { ExternalLink, X } from 'lucide-react'
-import { getShellInitData, initShellBridge } from '../lib/shell-bridge'
 import { requestHelpers } from '../lib/request'
 import { Button } from './ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
@@ -13,6 +12,13 @@ import { providerName } from '../lib/provider-name'
 interface RestoreRelink {
   service: string
   identifier: string
+}
+
+// What a.user.restore() answers, as the host app's -/restore action relays it.
+interface RestoreState {
+  source: string
+  relinks: RestoreRelink[]
+  passkeys: boolean
 }
 
 // The claimed source server comes from the restore bundle, which a crafted
@@ -28,33 +34,33 @@ function sourceOrigin(source: string): string | null {
 
 /**
  * Shown after an account is restored onto this server from another: nudges the
- * user to delete the old account and lists services to re-link. Source and
- * re-link list arrive in the shell init payload; dismissal sets restore.show.
+ * user to delete the old account and lists services to re-link. The host app
+ * answers -/restore from a.user.restore(), which its own grant covers - the
+ * shell does not hand this to every app frame, since the re-link list names the
+ * e-mail address used at each provider. Dismissal sets restore.show.
  */
 export function RestoreBanner() {
   const { t } = useLingui()
-  const init = getShellInitData()
-  const [source, setSource] = useState<string | null>(init?.restoreSource ?? null)
-  const [relinks, setRelinks] = useState<RestoreRelink[]>(init?.relinks ?? [])
-  const [passkeys, setPasskeys] = useState<boolean>(init?.restorePasskeys ?? false)
+  const [state, setState] = useState<RestoreState | null>(null)
   const [dismissed, setDismissed] = useState(false)
 
-  // Init data arrives asynchronously via postMessage after the tree
-  // mounts, so a synchronous read can miss it.
   useEffect(() => {
     let cancelled = false
-    void initShellBridge().then((data) => {
-      if (cancelled) return
-      setSource(data.restoreSource ?? null)
-      setRelinks(data.relinks ?? [])
-      setPasskeys(!!data.restorePasskeys)
-    })
+    void requestHelpers
+      .get<RestoreState | null>('-/restore')
+      .then((data) => {
+        if (!cancelled) setState(data && data.source ? data : null)
+      })
+      .catch(() => {
+        // No banner is the right answer to a host that cannot say.
+      })
     return () => {
       cancelled = true
     }
   }, [])
 
-  if (dismissed || !source) return null
+  if (dismissed || !state) return null
+  const { source, relinks, passkeys } = state
 
   const origin = sourceOrigin(source)
 
