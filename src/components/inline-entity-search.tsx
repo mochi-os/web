@@ -6,7 +6,7 @@
 // `search`, `probe` and `onSubscribe` are the app's own calls.
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { t } from '@lingui/core/macro'
+import { plural, t } from '@lingui/core/macro'
 import { Loader2, Search, type LucideIcon } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -170,9 +170,23 @@ export function InlineEntitySearch<T extends InlineEntitySearchItem>({
         />
       </div>
 
+      {/* Results swap in below the field without moving focus, so someone who
+          typed hears nothing back unless the change is announced. This carries
+          the outcome; aria-busy stands in for the spinner while the search is
+          still running, which keeps the announcement to one short line rather
+          than reading every row. */}
+      <div role='status' aria-busy={showLoading} className='sr-only'>
+        {showResults && !showLoading && !searchError && visible.length > 0
+          ? plural(visible.length, { one: '# result', other: '# results' })
+          : ''}
+      </div>
+
       {showLoading && (
         <div className='flex items-center justify-center py-8'>
-          <Loader2 className='text-muted-foreground h-6 w-6 animate-spin' />
+          <Loader2
+            aria-hidden
+            className='text-muted-foreground h-6 w-6 animate-spin'
+          />
         </div>
       )}
 
@@ -185,8 +199,14 @@ export function InlineEntitySearch<T extends InlineEntitySearchItem>({
         />
       )}
 
+      {/* The visible message is the live region for the empty case, rather than
+          repeating it in the region above, which would announce it and then
+          leave it to be read a second time on the way past. */}
       {!isLoading && showResults && !searchError && visible.length === 0 && (
-        <p className='text-muted-foreground py-4 text-center text-sm'>
+        <p
+          role='status'
+          className='text-muted-foreground py-4 text-center text-sm'
+        >
           {emptyMessage}
         </p>
       )}
