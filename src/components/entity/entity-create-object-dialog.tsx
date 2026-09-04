@@ -47,6 +47,10 @@ import { moveItem } from "../../lib/reorder";
 import { rankBetween, rankCompare } from "../../lib/rank";
 import { EntityFieldEditor } from "./entity-field-editor";
 import type { EntityDesign, EntityObject } from "../../types/entity-object";
+import {
+  entityObjectTitle,
+  type EntityTitleObject,
+} from "../../lib/entity-title";
 
 export interface EntityCreateObjectDialogProps<TObject extends EntityObject> {
   open: boolean;
@@ -286,18 +290,8 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   );
 
   // Get display title for any object using its class's title field
-  const objectTitle = (obj: {
-    class: string;
-    number?: number;
-    values: Record<string, string>;
-  }) => {
-    const cls = design.classes.find((c) => c.id === obj.class);
-    const title = (cls?.title ? obj.values[cls.title] : "") || "";
-    if (title) return title;
-    return prefix !== undefined && typeof obj.number === "number"
-      ? `${prefix}-${obj.number}`
-      : t`Untitled`;
-  };
+  const objectTitle = (obj: EntityTitleObject) =>
+    entityObjectTitle(obj, design.classes, prefix);
 
   // Filter objects to only show valid parents based on hierarchy rules
   const allowedParentClasses = useMemo(() => {
