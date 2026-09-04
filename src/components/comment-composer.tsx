@@ -276,11 +276,18 @@ export function useDiscardGuard({
   hasFiles,
   onDiscard,
   locked = false,
+  desc: descOverride,
 }: {
   hasText: boolean
   hasFiles: boolean
   onDiscard: () => void
   locked?: boolean
+  /**
+   * Replaces the sentence naming what is lost. An editor guards a change to
+   * something that already exists, where "your text will be lost" reads as if
+   * the post itself goes, so it supplies its own wording.
+   */
+  desc?: string
 }) {
   const [confirming, setConfirming] = useState(false)
   const hasContent = hasText || hasFiles
@@ -296,11 +303,12 @@ export function useDiscardGuard({
 
   // Name only what is actually about to go, so the warning matches the form.
   const desc =
-    hasText && hasFiles
+    descOverride ??
+    (hasText && hasFiles
       ? t`Your text and attachments will be lost.`
       : hasFiles
         ? t`Your attachments will be lost.`
-        : t`Your text will be lost.`
+        : t`Your text will be lost.`)
 
   const discardDialog = (
     <ConfirmDialog
