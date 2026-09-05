@@ -34,6 +34,7 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [error, setError] = useState<unknown>(null)
   const savedRef = useRef('')
 
   useEffect(() => {
@@ -50,10 +51,13 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
         const text = res.data?.banner ?? ''
         setBannerText(text)
         savedRef.current = text
+        setError(null)
         setLoaded(true)
       })
-      .catch(() => {
-        if (active) setLoaded(true)
+      .catch((error) => {
+        if (!active) return
+        setError(error)
+        setLoaded(true)
       })
     return () => {
       active = false
@@ -75,6 +79,13 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
   }
 
   if (!loaded) return null
+  if (error) {
+    return (
+      <p className='text-destructive text-sm'>
+        {getErrorMessage(error, t`Failed to load banner`)}
+      </p>
+    )
+  }
 
   return (
     <Section title={t`Banner`}>
@@ -87,6 +98,7 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
           }}
           placeholder={t`Enter banner text (markdown supported)...`}
           rows={3}
+          maxLength={10000}
           className='font-mono text-sm'
         />
         <div className='flex items-center gap-2'>
