@@ -40,7 +40,7 @@ const container = {
   name: 'Acme Holdings',
   description: 'a container',
   server: 'node-a',
-  owner: 1,
+  owner: { local: true, name: 'Owner' },
 }
 
 function makeApi(over: Record<string, unknown> = {}) {
@@ -136,7 +136,7 @@ describe('EntitySettingsPage', () => {
   it('withholds the delete section from everyone else', async () => {
     renderPage({
       api: makeApi({
-        get: vi.fn(async () => ({ data: { crm: { ...container, owner: 2 } } })),
+        get: vi.fn(async () => ({ data: { crm: { ...container, owner: { local: false, name: 'Someone else' } } } })),
       }),
     })
     await screen.findByText('Acme Holdings')
@@ -181,7 +181,7 @@ describe('EntitySettingsPage', () => {
     renderPage({
       activeTab: 'access',
       api: makeApi({
-        get: vi.fn(async () => ({ data: { crm: { ...container, owner: 2 } } })),
+        get: vi.fn(async () => ({ data: { crm: { ...container, owner: { local: false, name: 'Someone else' } } } })),
       }),
     })
     await screen.findByText('pageTitle:Acme Holdings')

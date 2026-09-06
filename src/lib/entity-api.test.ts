@@ -142,7 +142,7 @@ describe('createEntityApi', () => {
 
       const result = await api.get('proj123')
 
-      expect(request.get).toHaveBeenCalledWith('proj123/-/info')
+      expect(request.get).toHaveBeenCalledWith('proj123/-/information')
       expect(result).toEqual(mockResponse)
     })
   })

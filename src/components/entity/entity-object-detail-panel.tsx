@@ -65,7 +65,7 @@ export interface EntityObjectDetail<TObject extends EntityObject> {
   outgoing: EntityObjectLink[];
   incoming: EntityObjectLink[];
   watching: boolean;
-  comment_count: number;
+  comments: { count: number };
 }
 
 /** A tab an app adds between Comments and Activity. */
@@ -191,7 +191,7 @@ export function EntityObjectDetailPanel<
       outgoing: [],
       incoming: [],
       watching: cached.watched?.includes(objectId) ?? false,
-      comment_count: 0,
+      comments: { count: 0 },
     } as unknown as TDetail;
   };
 
@@ -237,7 +237,7 @@ export function EntityObjectDetailPanel<
   useEffect(() => {
     if (objectId !== tabInitializedFor.current && data && !isPlaceholderData) {
       tabInitializedFor.current = objectId;
-      setActiveTab(data.comment_count > 0 ? "comments" : "properties");
+      setActiveTab(data.comments.count > 0 ? "comments" : "properties");
     }
   }, [objectId, data, isPlaceholderData]);
 
@@ -327,16 +327,24 @@ export function EntityObjectDetailPanel<
     const parentClassIds = (design.hierarchy[object.class] || []).filter((c) => c !== "");
     if (parentClassIds.length === 0) return [];
 
+    // One pass to index children by parent, then a walk over that index:
+    // rescanning the whole list per node made this quadratic in the object
+    // count, and the memo re-runs on every objects refetch.
+    const children = new Map<string, string[]>();
+    for (const obj of objectsData) {
+      if (!obj.parent) continue;
+      const siblings = children.get(obj.parent);
+      if (siblings) siblings.push(obj.id);
+      else children.set(obj.parent, [obj.id]);
+    }
     const descendants = new Set<string>();
-    const findDescendants = (id: string) => {
+    const pending = [object.id];
+    while (pending.length > 0) {
+      const id = pending.pop() as string;
+      if (descendants.has(id)) continue;
       descendants.add(id);
-      for (const obj of objectsData) {
-        if (obj.parent === id && !descendants.has(obj.id)) {
-          findDescendants(obj.id);
-        }
-      }
-    };
-    findDescendants(object.id);
+      pending.push(...(children.get(id) ?? []));
+    }
 
     return objectsData
       .filter((obj) => parentClassIds.includes(obj.class) && !descendants.has(obj.id))
@@ -408,7 +416,7 @@ export function EntityObjectDetailPanel<
     { id: "properties", label: t`Properties`, icon: <Settings2 className="size-4" /> },
     {
       id: "comments",
-      label: t`Comments (${data.comment_count || 0})`,
+      label: t`Comments (${data.comments.count || 0})`,
       icon: <MessageSquare className="size-4" />,
     },
     ...appTabs.map((tab) => ({ id: tab.id, label: tab.label, icon: tab.icon })),

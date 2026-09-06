@@ -64,7 +64,7 @@ const container: EntityObjectsPageContainer = {
   id: 'c1',
   fingerprint: 'abc123',
   name: 'Acme Holdings',
-  owner: 1,
+  owner: { local: true, name: 'Owner' },
   access: 'owner',
   populated: 1,
 }

@@ -20,7 +20,7 @@ describe('entityEndpoints', () => {
   })
   describe('container-level endpoints', () => {
     it('should generate info endpoint with container ID', () => {
-      expect(entityEndpoints.info('abc123')).toBe('abc123/-/info')
+      expect(entityEndpoints.information('abc123')).toBe('abc123/-/information')
     })
     it('should generate update endpoint with container ID', () => {
       expect(entityEndpoints.update('abc123')).toBe('abc123/-/update')

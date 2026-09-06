@@ -111,7 +111,7 @@ export interface EntityObjectsPageContainer {
   id: string
   fingerprint: string
   name: string
-  owner: number
+  owner: { local: boolean; name: string }
   access: EntityAccess
   /** 0 while a freshly-subscribed container is still filling over P2P. */
   populated: number
@@ -139,9 +139,8 @@ export interface EntityObjectsPageApi<TObject extends EntityObject> {
       field: string
       value: string
       rank?: number
-      row_field?: string
-      row_value?: string
-      scope_parent?: string
+      row?: { field: string; value?: string }
+      scope?: string
       promote?: string
     },
   ) => Promise<unknown>
@@ -339,7 +338,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 }: EntityObjectsPageProps<TObject>) {
   const router = useRouter()
   const access = container.access
-  const isOwner = container.owner === 1
+  const isOwner = container.owner.local
   const [unsubscribeOpen, setUnsubscribeOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [shareLink, setShareLink] = useState('')
@@ -599,9 +598,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         field,
         value,
         rank,
-        row_field: rf,
-        row_value: rowValue,
-        scope_parent: scopeParent,
+        row: rf ? { field: rf, value: rowValue } : undefined,
+        scope: scopeParent,
         promote: promote ? 'true' : undefined,
       })
     },

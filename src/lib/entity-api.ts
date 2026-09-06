@@ -129,12 +129,10 @@ export interface EntityMoveObjectRequest {
   /** New column value */
   value?: string
   rank?: number
-  /** Row field name (for swimlane moves) */
-  row_field?: string
-  /** New row value */
-  row_value?: string
+  /** Swimlane move: the row field and the value the card lands in */
+  row?: { field: string; value?: string }
   /** Scope rank renumbering to siblings of this parent */
-  scope_parent?: string
+  scope?: string
   /** "true" to clear parent (promote child to top-level) */
   promote?: string
 }
@@ -303,7 +301,7 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
 
     // Get entity details
     get: async (entityId: string): Promise<{ data: TShapes['details'] }> => {
-      return request.get(endpoints.info(entityId));
+      return request.get(endpoints.information(entityId));
     },
 
     // Update entity
@@ -627,7 +625,7 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
     ): Promise<EntitySuccessResponse> => {
       const payload: Record<string, string> = {
         template: template || "",
-        template_version: String(templateVersion || 0),
+        version: String(templateVersion || 0),
       };
       // Only send data if it has content (for file imports)
       // For built-in templates, the backend loads the template file by template ID

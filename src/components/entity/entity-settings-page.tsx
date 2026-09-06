@@ -38,7 +38,7 @@ export interface EntitySettingsContainer {
   name: string
   description: string
   server: string
-  owner: number
+  owner: { local: boolean; name: string }
 }
 
 export interface EntitySettingsUpdate {
@@ -176,7 +176,7 @@ export function EntitySettingsPage<
   })
 
   const container = details ? selectContainer(details) : undefined
-  const isOwner = container?.owner === 1
+  const isOwner = container?.owner.local === true
   const status = extractStatus(error)
   const lookupError = error && status !== 403 && status !== 404 ? error : null
   const notFound =

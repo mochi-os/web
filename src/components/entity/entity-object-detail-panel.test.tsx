@@ -41,7 +41,7 @@ function detailFor(overrides?: Partial<Detail>): Detail {
     outgoing: [],
     incoming: [],
     watching: false,
-    comment_count: 0,
+    comments: { count: 0 },
     ...overrides,
   }
 }
@@ -221,7 +221,7 @@ describe('EntityObjectDetailPanel tabs', () => {
 
   it('opens on comments when the object already has some', async () => {
     vi.mocked(api.getObject).mockResolvedValue({
-      data: detailFor({ comment_count: 3 }),
+      data: detailFor({ comments: { count: 3 } }),
     })
 
     renderPanel()

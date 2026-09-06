@@ -33,7 +33,7 @@ export interface EntityListRow {
   fingerprint: string
   name: string
   description: string
-  owner: number
+  owner: { local: boolean; name: string }
 }
 
 /**
@@ -153,7 +153,7 @@ export function EntityListPage<Row extends EntityListRow>({
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {rows.map((row) => {
-              const isSubscribed = row.owner !== 1
+              const isSubscribed = !row.owner.local
               return (
                 <ListCard
                   key={row.id}

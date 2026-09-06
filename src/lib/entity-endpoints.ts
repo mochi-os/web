@@ -18,7 +18,7 @@ export const entityEndpoints = {
   unsubscribe: '-/unsubscribe',
 
   // Entity-level endpoints (use /-/ separator)
-  info: (entityId: string) => `${entityId}/-/info`,
+  information: (entityId: string) => `${entityId}/-/information`,
   update: (entityId: string) => `${entityId}/-/update`,
   delete: (entityId: string) => `${entityId}/-/delete`,
   people: (entityId: string) => `${entityId}/-/people`,
