@@ -25,4 +25,30 @@ describe('AuditTimeline', () => {
     expect(await screen.findByText('Unknown')).toBeInTheDocument()
     expect(screen.queryByText('weird.key')).not.toBeInTheDocument()
   })
+
+  it('names an unnamed actor by the server fingerprint, never the id', async () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <AuditTimeline
+          kind='listing'
+          object='l1'
+          fetchAudit={async () => ({
+            audit: [{
+              id: 'a1',
+              action: 'listing.created',
+              data: '{}',
+              actor: 'ENTITYID000000000000',
+              actor_name: '',
+              actor_fingerprint: 'abc123def',
+              timestamp: 1700000000,
+            }],
+          })}
+          actionLabels={{ 'listing.created': 'Created' }}
+          formatFingerprint={(fingerprint) => `fp:${fingerprint}`}
+        />
+      </I18nProvider>
+    )
+    expect(await screen.findByText(/fp:abc123def/)).toBeInTheDocument()
+    expect(screen.queryByText(/ENTITYID/)).not.toBeInTheDocument()
+  })
 })

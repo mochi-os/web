@@ -15,6 +15,8 @@ export interface AuditTimelineEntry {
   data: string
   actor: string
   actor_name: string
+  /** Server-derived: a fingerprint is a hash of the id, never a slice of it. */
+  actor_fingerprint?: string | null
   timestamp: number
 }
 
@@ -37,8 +39,8 @@ interface AuditTimelineProps {
     data: Record<string, unknown> | null,
     action: string
   ) => string | null
-  /** Renders an actor id when the entry carries no actor name. */
-  formatFingerprint: (actor: string) => string
+  /** Renders the actor's fingerprint when the entry carries no actor name. */
+  formatFingerprint: (fingerprint: string) => string
   title?: string
 }
 
@@ -105,7 +107,7 @@ export function AuditTimeline({
             const actor =
               entry.actor === 'system'
                 ? t`System`
-                : entry.actor_name || formatFingerprint(entry.actor)
+                : entry.actor_name || formatFingerprint(entry.actor_fingerprint ?? '')
             return {
               id: entry.id,
               primary: (
