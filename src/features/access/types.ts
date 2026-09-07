@@ -15,7 +15,7 @@ export interface AccessRule {
   operation: string
   grant: number
   name?: string // Resolved name for display
-  isOwner?: boolean // True if this rule is for the resource owner (non-editable)
+  owner?: boolean // True if this rule is for the resource owner (non-editable)
 }
 export interface UserSearchResult {
   id: string

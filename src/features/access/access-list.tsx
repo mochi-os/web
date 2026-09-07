@@ -91,8 +91,8 @@ function getSubjectIcon(subject: string) {
 }
 
 // Sort subjects: owners first, then users, then groups, then +, then *
-function subjectPriority(subject: string, isOwner?: boolean): number {
-  if (isOwner) return -1
+function subjectPriority(subject: string, owner?: boolean): number {
+  if (owner) return -1
   if (subject === '*') return 3
   if (subject === '+') return 2
   if (subject.startsWith('@') || subject.startsWith('#')) return 1
@@ -170,7 +170,7 @@ export function AccessList({
   // Group rules by subject
   // For hierarchical model, there's one rule per subject
   // For permission model, there might be multiple rules per subject
-  const subjectData = new Map<string, { rules: AccessRule[]; name?: string; isOwner?: boolean }>()
+  const subjectData = new Map<string, { rules: AccessRule[]; name?: string; owner?: boolean }>()
   for (const rule of rules) {
     const existing = subjectData.get(rule.subject)
     if (existing) {
@@ -179,14 +179,14 @@ export function AccessList({
       subjectData.set(rule.subject, {
         rules: [rule],
         name: rule.name,
-        isOwner: rule.isOwner,
+        owner: rule.owner,
       })
     }
   }
 
   // Sort by priority (owners first, then users, then groups, +, *)
   const sortedSubjects = [...subjectData.entries()].sort(
-    ([a, aData], [b, bData]) => subjectPriority(a, aData.isOwner) - subjectPriority(b, bData.isOwner)
+    ([a, aData], [b, bData]) => subjectPriority(a, aData.owner) - subjectPriority(b, bData.owner)
   )
 
   return (
@@ -205,7 +205,7 @@ export function AccessList({
           const rule = data.rules[0]
           const currentLevel = getRuleLevel(rule)
           const isUpdating = updatingSubject === subject
-          const isOwner = data.isOwner
+          const isOwner = data.owner
 
           return (
             <TableRow key={subject}>
