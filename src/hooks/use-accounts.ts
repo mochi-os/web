@@ -104,7 +104,7 @@ export function useAccounts(
       for (const [key, value] of Object.entries(fields)) {
         formData.append(key, value)
       }
-      formData.append('add_to_existing', addToExisting ? '1' : '0')
+      formData.append('existing', addToExisting ? '1' : '0')
 
       const res = await requestHelpers.post<Account>(
         `${appBase}/-/accounts/add`,

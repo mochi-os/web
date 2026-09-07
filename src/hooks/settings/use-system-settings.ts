@@ -20,7 +20,7 @@ export function useSystemSettingsData(endpoint: string) {
 export function useSetSystemSetting(endpoint: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (data: { name: string; value: string }) => {
+    mutationFn: async (data: { name: string; value: string; token?: string }) => {
       const response = await apiClient.post(endpoint, data, NO_TOAST)
       return response.data
     },
