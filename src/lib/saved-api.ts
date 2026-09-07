@@ -5,15 +5,12 @@
 // and forums carried byte-identical copies of all four; only the snapshot they
 // persist differs, because their post shapes do.
 
+/* eslint-disable lingui/no-unlocalized-strings -- the context labels below
+   name a call in a log line; they are never shown to anyone. */
 import { createAppClient } from './create-app-client'
 
 /** Actions answer either with the payload or with it inside `data`. */
-type Wrapped<T> = T | { data: T }
-
-const unwrap = <T>(payload: Wrapped<T>): T =>
-  payload && typeof payload === 'object' && 'data' in payload
-    ? (payload as { data: T }).data
-    : (payload as T)
+export type Wrapped<T> = T | { data: T }
 
 export interface SavedEndpoints {
   list: string
@@ -39,6 +36,14 @@ export interface CreateSavedApiOptions<TPost> {
    * read-only and links back to the live post for anything heavier.
    */
   toSnapshot: (post: TPost) => unknown
+  /**
+   * Pulls the payload out of the action's envelope. The apps differ in how
+   * much they check - feeds routes it through `toDataResponse`, which logs an
+   * unexpected shape against the call it came from, while forums unwraps
+   * plainly - so the policy stays with the app rather than being decided here.
+   * `context` names the call for whichever of those the app does.
+   */
+  unwrap: <T>(payload: Wrapped<T>, context: string) => T
 }
 
 /**
@@ -49,6 +54,7 @@ export function createSavedApi<TPost extends { id: string }, TSaved>({
   appName,
   endpoints,
   toSnapshot,
+  unwrap,
 }: CreateSavedApiOptions<TPost>): SavedApi<TPost, TSaved> {
   const client = createAppClient({ appName })
 
@@ -58,7 +64,7 @@ export function createSavedApi<TPost extends { id: string }, TSaved>({
         Wrapped<{ saved: TSaved[]; total: number }>,
         Record<string, never>
       >(endpoints.list, {})
-      const data = unwrap(response)
+      const data = unwrap(response, 'saved list')
       return { saved: data?.saved ?? [], total: data?.total ?? 0 }
     },
 
@@ -70,7 +76,7 @@ export function createSavedApi<TPost extends { id: string }, TSaved>({
         post: post.id,
         data: JSON.stringify(toSnapshot(post)),
       })
-      return unwrap(response)
+      return unwrap(response, 'saved add')
     },
 
     remove: async (id: string) => {
@@ -78,7 +84,7 @@ export function createSavedApi<TPost extends { id: string }, TSaved>({
         Wrapped<{ saved: boolean }>,
         { post: string }
       >(endpoints.remove, { post: id })
-      return unwrap(response)
+      return unwrap(response, 'saved remove')
     },
 
     clear: async () => {
@@ -86,7 +92,7 @@ export function createSavedApi<TPost extends { id: string }, TSaved>({
         Wrapped<{ saved: boolean }>,
         Record<string, never>
       >(endpoints.clear, {})
-      return unwrap(response)
+      return unwrap(response, 'saved clear')
     },
   }
 }
