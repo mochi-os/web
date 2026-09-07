@@ -34,7 +34,8 @@ export interface GameChatMessage {
   type: string
   /**
    * For type 'system': the event kind (resign / draw_offer / draw_accept /
-   * draw_decline). Empty or absent on legacy rows, which fall back to `body`.
+   * draw_decline / score_accept / score_agreed / score_resume). Empty or
+   * absent on legacy rows, which fall back to `body`.
    */
   event?: string
   created: number
@@ -49,6 +50,9 @@ export interface GameChatSystemLabels {
   drawOffered?: (name: string) => ReactNode
   drawAgreed?: ReactNode
   drawDeclined?: (name: string) => ReactNode
+  scoreAccepted?: (name: string) => ReactNode
+  scoreAgreed?: ReactNode
+  scoreResumed?: (name: string) => ReactNode
 }
 
 interface GameChatMessageListProps<M extends GameChatMessage> {
@@ -218,6 +222,12 @@ export function GameChatMessageList<M extends GameChatMessage>({
                 label = systemLabels.drawAgreed
               } else if (message.event === 'draw_decline') {
                 label = systemLabels.drawDeclined?.(name)
+              } else if (message.event === 'score_accept') {
+                label = systemLabels.scoreAccepted?.(name)
+              } else if (message.event === 'score_agreed') {
+                label = systemLabels.scoreAgreed
+              } else if (message.event === 'score_resume') {
+                label = systemLabels.scoreResumed?.(name)
               }
               const text = label ?? message.body
               return (

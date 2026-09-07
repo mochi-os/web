@@ -21,8 +21,8 @@ import {
 
 /** One page of chat messages. Both apps' message endpoint answers this shape. */
 export interface GameMessagesPage {
-  hasMore?: boolean
-  nextCursor?: string
+  more?: boolean
+  cursor?: string
 }
 
 /**
@@ -162,16 +162,16 @@ export function createGameHooks<A extends GameApiShape>(
         }) as Promise<MessagesResponse>
       },
       getNextPageParam: (lastPage, _allPages, _lastPageParam, allPageParams) => {
-        if (!lastPage.hasMore) {
+        if (!lastPage.more) {
           return undefined
         }
-        if (lastPage.nextCursor === undefined) {
+        if (lastPage.cursor === undefined) {
           return undefined
         }
-        if (allPageParams.includes(lastPage.nextCursor)) {
+        if (allPageParams.includes(lastPage.cursor)) {
           return undefined
         }
-        return lastPage.nextCursor
+        return lastPage.cursor
       },
     })
 
