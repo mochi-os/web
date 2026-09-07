@@ -18,9 +18,8 @@ export interface SystemSetting {
 
 export interface SystemSettingsData {
   settings: SystemSetting[]
-  /** Local libp2p peer ID and its fingerprint — shown on the System
-   * Status page so the operator can copy them when configuring a
-   * paired/replica server. */
+  /** Local libp2p peer ID and its fingerprint, shown on the System Status
+   * page so the operator can copy them. */
   server?: { id: string; fingerprint?: string }
 }
 
@@ -45,7 +44,7 @@ export interface ThemeInfo {
 export interface PreferencesData {
   preferences: Record<string, string>
   themes?: ThemeInfo[]
-  // Per-density CSS-var bundles emitted by mochi.app.theme_presets().
+  // Per-density CSS-var bundles emitted by mochi.app.presets().
   // Keyed by "compact" / "comfortable" / "spacious"; each value maps
   // every CSS custom property the preset defines to its computed value.
   presets?: Record<string, Record<string, string>>

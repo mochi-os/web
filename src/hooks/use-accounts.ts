@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useMemo } from 'react'
+import { t } from '@lingui/core/macro'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requestHelpers } from '../lib/request'
 import { handlePermissionError } from '../lib/permission-utils'
@@ -209,7 +210,7 @@ export function useAccounts(
     accountsError,
     add: async (type: string, fields: Record<string, string>, addToExisting = true) => {
       const result = await addMutation.mutateAsync({ type, fields, addToExisting })
-      if (!result) throw new Error("Failed to add account")
+      if (!result) throw new Error(t`Failed to add account`)
       return result
     },
     remove: async (id: string) => {

@@ -5,7 +5,7 @@ import { t } from '@lingui/core/macro'
 import { useState, useMemo } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { z } from 'zod'
-import { useForm } from 'react-hook-form'
+import { useForm, type FieldPath } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, Loader2, type LucideIcon } from 'lucide-react'
 import { Button } from './button'
@@ -30,8 +30,9 @@ import {
   FormMessage,
 } from './form'
 
-// Characters disallowed in entity names (matches backend validation)
-const DISALLOWED_NAME_CHARS = /[<>\r\n\\;"'`]/
+// Characters the server refuses in an entity name (`^[^<>\r\n]{1,1000}$`).
+// Every app's settings page checks the same set.
+export const DISALLOWED_NAME_CHARS = /[<>\r\n]/
 
 export interface CreateEntityToggle {
   name: string
@@ -50,7 +51,8 @@ export interface CreateEntityDialogProps {
   // Dialog content
   icon?: LucideIcon
   title: string
-  entityLabel: string // e.g., "Wiki" -> "Wiki name" label
+  /** The noun as it reads mid-sentence ("wiki"); it is never re-cased here. */
+  entityLabel: string
   // Optional fields
   showDescription?: boolean
   descriptionLabel?: string
@@ -82,7 +84,7 @@ export function CreateEntityDialog({
   showDescription,
   descriptionLabel = t`Description`,
   showPrivacyToggle,
-  privacyLabel = t`Allow anyone to search for ${entityLabel.toLowerCase()}`,
+  privacyLabel = t`Allow anyone to search for ${entityLabel}`,
   extraToggles = [],
   onSubmit,
   isPending = false,
@@ -96,17 +98,17 @@ export function CreateEntityDialog({
   const schema = useMemo(() => z.object({
     name: z
       .string()
-      .min(1, t`${entityLabel} name is required`)
+      .min(1, t`Name is required`)
       .max(1000, t`Name must be 1000 characters or less`)
       .refine((val: string) => !DISALLOWED_NAME_CHARS.test(val), {
-        message: t`Name cannot contain angle brackets, backslash, semicolon, quotes or backticks`,
+        message: t`Name cannot contain < or > characters`,
       }),
     description: z.string().optional(),
     allowSearch: z.boolean(),
     ...Object.fromEntries(
       extraToggles.map((toggle) => [toggle.name, z.boolean()])
     ),
-  }), [entityLabel, extraToggles])
+  }), [extraToggles])
 
   type FormValues = z.infer<typeof schema>
 
@@ -141,7 +143,7 @@ export function CreateEntityDialog({
     }
   }
 
-  const defaultSubmitLabel = t`Create ${entityLabel.toLowerCase()}`
+  const defaultSubmitLabel = t`Create ${entityLabel}`
 
   return (
     <ResponsiveDialog
@@ -223,7 +225,7 @@ export function CreateEntityDialog({
                   <FormField
                     key={toggle.name}
                     control={form.control}
-                    name={toggle.name as any}
+                    name={toggle.name as FieldPath<FormValues>}
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between rounded-lg border px-4 py-3">
                         <FormLabel className="text-sm font-medium">
@@ -231,7 +233,7 @@ export function CreateEntityDialog({
                         </FormLabel>
                         <FormControl>
                           <Switch
-                            checked={field.value}
+                            checked={field.value === true}
                             onCheckedChange={field.onChange}
                             disabled={isPending}
                           />

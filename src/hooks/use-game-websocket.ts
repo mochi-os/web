@@ -313,7 +313,7 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
       chatKey: gameKey,
       onMessage: (event) => {
         handleWebsocketPayload(
-          event.chatId,
+          event.chat,
           event.payload,
           queryClient,
           unknownSenderLabel,

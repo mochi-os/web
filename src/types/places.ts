@@ -11,28 +11,11 @@ export interface PlaceData {
   category?: string
 }
 
-export interface TravellingData {
-  origin: PlaceData
-  destination: PlaceData
-}
-
-export interface MemoryData {
-  year: number
-  years_ago: number
-}
-
-export interface RssData {
-  title: string
-  link: string
-  html: string
-  image?: string
-}
-
 export interface PostData {
   checkin?: PlaceData
-  travelling?: TravellingData
-  memory?: MemoryData
-  rss?: RssData
+  travelling?: { origin: PlaceData; destination: PlaceData }
+  memory?: { year: number; years_ago: number }
+  rss?: { title: string; link: string; html: string; image?: string }
 }
 
 // Photon API response types

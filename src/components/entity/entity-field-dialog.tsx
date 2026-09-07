@@ -17,6 +17,8 @@ import {
 } from "../ui/responsive-dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { useFieldTypeLabels } from "../../hooks/use-field-type-labels";
+import { ENTITY_LIMIT } from "../../lib/entity-api";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
@@ -51,6 +53,7 @@ export function EditFieldDialog({
   onEditOption,
   onDeleteOption,
 }: EditFieldDialogProps) {
+  const fieldTypeLabels = useFieldTypeLabels();
   const [name, setName] = useState("");
   const [fieldId, setFieldId] = useState("");
   const [rows, setRows] = useState(1);
@@ -145,6 +148,7 @@ export function EditFieldDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={handleNameBlur}
+              maxLength={ENTITY_LIMIT.name}
             />
           </div>
 
@@ -160,7 +164,7 @@ export function EditFieldDialog({
 
           <div className="space-y-2">
             <Label><Trans>Type</Trans></Label>
-            <p className="text-sm text-muted-foreground capitalize">{field.fieldtype}</p>
+            <p className="text-sm text-muted-foreground">{fieldTypeLabels[field.fieldtype] ?? t`Unknown`}</p>
           </div>
 
           {field.fieldtype === "text" && (

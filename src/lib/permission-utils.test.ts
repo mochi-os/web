@@ -235,7 +235,9 @@ describe('handlePermissionError', () => {
       expect(mockShellRequestPermission).not.toHaveBeenCalled()
     })
 
-    it('returns true for standard permissions', () => {
+    // Outside the shell there is no permission prompt to open, so nothing
+    // was shown and the caller still owns the error.
+    it('returns false for standard permissions, which nothing here can handle', () => {
       const result = handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
@@ -243,7 +245,7 @@ describe('handlePermissionError', () => {
         restricted: false,
       })
 
-      expect(result).toBe(true)
+      expect(result).toBe(false)
     })
 
     it('calls onRestricted callback for restricted permissions', () => {
@@ -262,7 +264,7 @@ describe('handlePermissionError', () => {
       expect(onRestricted).toHaveBeenCalledWith('user/read')
     })
 
-    it('returns true for restricted permissions even without callback', () => {
+    it('returns false for restricted permissions without a callback', () => {
       const result = handlePermissionError({
         error: 'permission_required',
         app: 'feeds',
@@ -270,7 +272,7 @@ describe('handlePermissionError', () => {
         restricted: true,
       })
 
-      expect(result).toBe(true)
+      expect(result).toBe(false)
     })
   })
 })

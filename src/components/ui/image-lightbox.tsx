@@ -12,6 +12,7 @@ import { cn } from '../../lib/utils'
 import { shellDownload } from '../../lib/shell-bridge'
 import { toast } from '../../lib/toast-utils'
 import { useShellStorage } from '../../hooks/use-shell-storage'
+import { useFormat } from '../../hooks/use-format'
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip'
 import { t } from '@lingui/core/macro'
 
@@ -54,6 +55,7 @@ export function ImageLightbox({
 }: ImageLightboxProps) {
   const hasMultiple = images.length > 1
   const currentMedia = images[currentIndex]
+  const { formatNumber } = useFormat()
   const isVideo = currentMedia?.type === 'video'
 
   // Whether the panel STARTS open is the reader's remembered preference;
@@ -138,7 +140,9 @@ export function ImageLightbox({
     if (videoRef.current) {
       videoRef.current.pause()
     }
-  }, [currentIndex])
+    // Keyed on the media, not its index: an edit that swaps the file at the
+    // same position must reload too.
+  }, [currentMedia?.url])
 
   // Handle double-click to toggle between fit-to-screen and 1:1 pixel scale
   const handleDoubleClick = useCallback(() => {
@@ -195,9 +199,17 @@ export function ImageLightbox({
     if (!open) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // The arrows move the caret inside the comment composer; only the
+      // Escape belongs to the lightbox there.
+      const editing =
+        e.target instanceof Element &&
+        // eslint-disable-next-line lingui/no-unlocalized-strings
+        e.target.closest('input, textarea, [contenteditable="true"]')
       if (e.key === 'Escape') {
         e.stopImmediatePropagation()
         onOpenChange(false)
+      } else if (editing) {
+        return
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         goToPrevious()
@@ -417,7 +429,7 @@ export function ImageLightbox({
           >
             <div className='flex max-w-full items-center gap-4'>
             <span className='min-w-0 truncate text-sm text-white/70'>
-              {hasMultiple && <>{currentIndex + 1}/{images.length} · </>}
+              {hasMultiple && <>{formatNumber(currentIndex + 1)}/{formatNumber(images.length)} · </>}
               {currentMedia.name}
             </span>
             <div className='flex shrink-0 items-center gap-1 text-white/70'>

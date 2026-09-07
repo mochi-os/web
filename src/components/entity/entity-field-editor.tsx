@@ -19,6 +19,7 @@ import {
 } from '../ui/select'
 import { PersonPicker, type Person } from '../person-picker'
 import { useFormat } from '../../hooks/use-format'
+import { decimalPlaces } from '../../lib/locale-format'
 import { textUnchanged } from '../../lib/change-detection'
 import type {
   EntityField,
@@ -42,6 +43,8 @@ interface EntityFieldEditorProps {
    * own endpoint (crm's searchUsers, projects' searchUsers).
    */
   searchUsers: (query: string) => Promise<Person[]>
+  /** A person's avatar or accent style through the app's own asset route. */
+  personAsset?: (person: Person, asset: 'avatar' | 'style') => string
 }
 
 export function EntityFieldEditor({
@@ -57,9 +60,11 @@ export function EntityFieldEditor({
   localPeople = [],
   onValidationError,
   searchUsers,
+  personAsset,
 }: EntityFieldEditorProps & { hideLabel?: boolean }) {
-  const { formatDate } = useFormat()
+  const { formatDate, formatNumber } = useFormat()
   const [localValue, setLocalValue] = useState(value)
+  const [patternError, setPatternError] = useState(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const focusedRef = useRef(false)
   const localValueRef = useRef(value)
@@ -80,10 +85,31 @@ export function EntityFieldEditor({
   }
 
   const commitChange = (newValue: string) => {
+    // The server does not check a text field's `pattern` (Starlark has no
+    // regex), so this editor is where the design's promise is kept. A pattern
+    // that does not compile constrains nothing.
+    if (field.fieldtype === 'text' && field.pattern && newValue) {
+      let matches = true
+      try {
+        matches = new RegExp(field.pattern).test(newValue)
+      } catch {
+        matches = true
+      }
+      setPatternError(!matches)
+      onValidationError?.(!matches)
+      if (!matches) return
+    } else if (patternError) {
+      setPatternError(false)
+      onValidationError?.(false)
+    }
     if (!textUnchanged(newValue, value)) {
       onChangeRef.current(newValue)
     }
   }
+
+  const patternMessage = patternError ? (
+    <p className='text-xs text-destructive mt-1'>{t`Does not match the required pattern`}</p>
+  ) : null
 
   const handleBlur = () => {
     focusedRef.current = false
@@ -141,14 +167,20 @@ export function EntityFieldEditor({
         if (field.rows > 1)
           return <p className='text-sm whitespace-pre-wrap pt-2'>{value}</p>
         return <span className='text-sm h-9 flex items-center'>{value}</span>
-      case 'number':
+      case 'number': {
         if (!value)
           return (
             <span className='text-sm text-muted-foreground h-9 flex items-center'>
               —
             </span>
           )
-        return <span className='text-sm h-9 flex items-center'>{value}</span>
+        const numeric = Number(value)
+        return (
+          <span className='text-sm h-9 flex items-center'>
+            {Number.isFinite(numeric) ? formatNumber(numeric, decimalPlaces(value)) : value}
+          </span>
+        )
+      }
       case 'date':
         if (!value)
           return (
@@ -278,26 +310,34 @@ export function EntityFieldEditor({
         // If rows is 1, render single-line input; otherwise render textarea
         if (field.rows === 1) {
           return (
-            <Input
+            <>
+              <Input
+                value={localValue}
+                onChange={(e) => handleTextChange(e.target.value)}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                disabled={disabled}
+                autoFocus={autoFocus}
+                aria-invalid={patternError || undefined}
+                className='h-9'
+              />
+              {patternMessage}
+            </>
+          )
+        }
+        return (
+          <>
+            <Textarea
               value={localValue}
               onChange={(e) => handleTextChange(e.target.value)}
               onFocus={handleFocus}
               onBlur={handleBlur}
               disabled={disabled}
               autoFocus={autoFocus}
-              className='h-9'
+              aria-invalid={patternError || undefined}
             />
-          )
-        }
-        return (
-          <Textarea
-            value={localValue}
-            onChange={(e) => handleTextChange(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            disabled={disabled}
-            autoFocus={autoFocus}
-          />
+            {patternMessage}
+          </>
         )
 
       case 'number':
@@ -334,8 +374,9 @@ export function EntityFieldEditor({
             value={value}
             onChange={(v) => onChange(v as string)}
             local={localPeople}
-            directory
+            localLabel={t`Members`}
             directoryFn={searchUsers}
+            assetUrl={personAsset}
             disabled={disabled}
             placeholder={t`Select...`}
             emptyMessage={t`No people found`}
@@ -659,21 +700,18 @@ function ChecklistEditor({ value, onChange, disabled }: ChecklistEditorProps) {
               onCheckedChange={() => toggleItem(item.id)}
               disabled={disabled}
             />
-            <input
-              type='text'
-              value={item.text}
-              onChange={(e) => updateItemText(item.id, e.target.value)}
+            <ChecklistItemText
+              text={item.text}
+              done={item.done}
               disabled={disabled}
-              className={`flex-1 rounded-sm border-none bg-transparent text-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none ${
-                item.done ? 'line-through text-muted-foreground' : ''
-              }`}
+              onCommit={(text) => updateItemText(item.id, text)}
             />
             {!disabled && (
               <IconButton
                 variant='ghost'
                 label={t`Remove item`}
                 onClick={() => removeItem(item.id)}
-                className='size-6 shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity'
+                className='size-6 shrink-0 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-destructive transition-opacity'
               >
                 <Trash2 className='h-3.5 w-3.5' />
               </IconButton>
@@ -723,5 +761,53 @@ function ChecklistEditor({ value, onChange, disabled }: ChecklistEditorProps) {
         </div>
       )}
     </div>
+  )
+}
+
+// One checklist item's text. The value lives here while it is being typed and
+// reaches the parent - and so the server - on blur or Enter, not per keystroke.
+function ChecklistItemText({
+  text,
+  done,
+  disabled,
+  onCommit,
+}: {
+  text: string
+  done: boolean
+  disabled?: boolean
+  onCommit: (text: string) => void
+}) {
+  const [draft, setDraft] = useState(text)
+  const editingRef = useRef(false)
+
+  useEffect(() => {
+    if (!editingRef.current) setDraft(text)
+  }, [text])
+
+  const commit = () => {
+    editingRef.current = false
+    if (draft !== text) onCommit(draft)
+  }
+
+  return (
+    <input
+      type='text'
+      value={draft}
+      onChange={(e) => {
+        editingRef.current = true
+        setDraft(e.target.value)
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          e.currentTarget.blur()
+        }
+      }}
+      disabled={disabled}
+      className={`flex-1 rounded-sm border-none bg-transparent text-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none ${
+        done ? 'line-through text-muted-foreground' : ''
+      }`}
+    />
   )
 }

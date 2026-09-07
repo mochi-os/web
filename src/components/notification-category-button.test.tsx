@@ -83,6 +83,13 @@ describe('NotificationCategoryButton', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
+  it('shows no name at all when the topic row carries no label', () => {
+    // The topic key is an identifier the app chose, not a name; a row that
+    // has not been labelled yet is simply unnamed.
+    renderButton({ open: true, topic: { ...TOPIC, label: '' } })
+    expect(screen.queryByText('post')).not.toBeInTheDocument()
+  })
+
   it('names the topic the category applies to', () => {
     // The assignment is topic-wide, not per-notification; the popover says
     // which topic so the confirmation toast makes sense afterwards.

@@ -61,13 +61,14 @@ export function handlePermissionError(
     return true
   }
 
-  // Restricted permission - call the callback if provided
-  if (permError.restricted) {
-    if (options?.onRestricted) {
-      options.onRestricted(permError.permission)
-    }
+  // Outside the shell nothing here can ask for the permission. The caller's
+  // restricted-permission callback is the only handling on offer, so the
+  // answer is "handled" exactly when that callback ran; otherwise the caller
+  // still owns the error and must show it.
+  if (permError.restricted && options?.onRestricted) {
+    options.onRestricted(permError.permission)
     return true
   }
 
-  return true
+  return false
 }

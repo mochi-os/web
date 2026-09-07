@@ -348,6 +348,8 @@ export interface CommentBoxProps {
   autoFocus?: boolean
   className?: string
   textareaClassName?: string
+  /** Longest body the server accepts, when the caller knows it. */
+  maxLength?: number
 }
 
 /**
@@ -356,6 +358,7 @@ export interface CommentBoxProps {
  * row. It owns its files and sending state; the draft is the caller's.
  */
 export function CommentBox({
+  maxLength,
   value,
   onValueChange,
   onSubmit,
@@ -440,6 +443,7 @@ export function CommentBox({
         placeholder={placeholder}
         value={value}
         onValueChange={handleValueChange}
+        maxLength={maxLength}
         people={people}
         onSearchPeople={onSearchPeople}
         onKeyDown={(event) => {

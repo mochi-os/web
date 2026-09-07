@@ -15,6 +15,7 @@ import {
 } from '../ui/responsive-dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { ENTITY_LIMIT } from '../../lib/entity-api'
 import { Label } from '../ui/label'
 import {
   DropdownMenu,
@@ -128,6 +129,7 @@ export function EntityOptionDialog({
               id='option-name'
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={ENTITY_LIMIT.name}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && name.trim()) {
@@ -165,7 +167,7 @@ export function EntityOptionDialog({
               >
                 <Trans>Cancel</Trans>
               </Button>
-              <Button type='button' onClick={handleSave}>
+              <Button type='button' onClick={handleSave} disabled={!name.trim()}>
                 <Check className='size-4' />
                 <Trans>Save</Trans>
               </Button>

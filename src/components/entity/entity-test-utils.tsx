@@ -177,17 +177,18 @@ export function createMockEntityDesign(
         createMockEntityField({
           id: 'status',
           name: 'Status',
-          fieldtype: 'select',
+          fieldtype: 'enumerated',
         }),
         createMockEntityField({
           id: 'priority',
           name: 'Priority',
-          fieldtype: 'select',
+          fieldtype: 'enumerated',
         }),
         createMockEntityField({
           id: 'description',
           name: 'Description',
-          fieldtype: 'textarea',
+          fieldtype: 'text',
+          rows: 3,
         }),
       ],
     },

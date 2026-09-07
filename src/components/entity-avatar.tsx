@@ -72,7 +72,6 @@ export function EntityAvatar({
   const rawSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
   const resolvedSrc = rawSrc ? authenticatedUrl(normalizeEntityUrl(rawSrc)) : null
   const { accent: fetched } = useAccent(
-    !accent && !styleUrl && fingerprint ? fingerprint : undefined,
     !accent && styleUrl ? normalizeEntityUrl(styleUrl) : undefined
   )
   const ring = accent ?? fetched

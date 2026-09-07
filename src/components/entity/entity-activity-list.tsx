@@ -6,7 +6,7 @@
 // because the module is per-app even though the route behind it is not.
 
 import { useQuery } from '@tanstack/react-query'
-import { t } from '@lingui/core/macro'
+import { useLingui } from '@lingui/react/macro'
 import { Activity } from 'lucide-react'
 import { ActivityTimeline } from '../activity-timeline'
 import { EmptyState } from '../ui/empty-state'
@@ -14,7 +14,7 @@ import { EntityAvatar } from '../entity-avatar'
 import { ListSkeleton } from '../ui/list-skeleton'
 import { useFormat } from '../../hooks/use-format'
 import { getAppPath } from '../../lib/app-path'
-import type { EntityActivity } from '../../types/entity-object'
+import type { EntityActivity, EntityField } from '../../types/entity-object'
 
 export interface EntityActivityListProps {
   containerId: string
@@ -23,13 +23,17 @@ export interface EntityActivityListProps {
     containerId: string,
     objectId: string,
   ) => Promise<{ data: { activities: EntityActivity[] } }>
+  /** The object's class fields, which name the field an entry changed. */
+  fields?: EntityField[]
 }
 
 export function EntityActivityList({
   containerId,
   objectId,
   listActivity,
+  fields,
 }: EntityActivityListProps) {
+  const { t } = useLingui()
   const { formatTimestamp } = useFormat()
   const { data, isLoading } = useQuery({
     queryKey: ['activity', containerId, objectId],
@@ -39,18 +43,23 @@ export function EntityActivityList({
     },
   })
 
-  const formatAction = (action: string) => {
-    switch (action) {
+  // A field the design no longer has is left unnamed rather than shown as
+  // its id.
+  const describe = (activity: EntityActivity) => {
+    const field = activity.field
+      ? fields?.find((f) => f.id === activity.field)?.name
+      : undefined
+    switch (activity.action) {
       case 'create':
-        return 'created'
+        return field ? t`Created ${field}` : t`Created`
       case 'update':
-        return 'updated'
+        return field ? t`Updated ${field}` : t`Updated`
       case 'delete':
-        return 'deleted'
+        return field ? t`Deleted ${field}` : t`Deleted`
       case 'move':
-        return 'moved'
+        return field ? t`Moved ${field}` : t`Moved`
       default:
-        return action
+        return field ? t`Changed ${field}` : t`Changed`
     }
   }
 
@@ -72,8 +81,7 @@ export function EntityActivityList({
         id: activity.id,
         primary: (
           <p className="text-sm font-medium">
-            {formatAction(activity.action)}
-            {activity.field && ` ${activity.field}`}
+            {describe(activity)}
             {activity.oldvalue && activity.newvalue && (
               <>
                 {': '}

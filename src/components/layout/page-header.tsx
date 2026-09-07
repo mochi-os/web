@@ -14,8 +14,6 @@ interface PageHeaderProps {
   primaryAction?: ReactNode
   menuAction?: ReactNode
   back?: HeaderBackConfig
-  /** @deprecated The sidebar trigger is rendered by the top bar — this prop is now a no-op */
-  showSidebarTrigger?: boolean
 }
 
 export function PageHeader({
