@@ -72,6 +72,40 @@ describe('InlineEntitySearch', () => {
     expect(search).toHaveBeenCalledExactlyOnceWith('al')
   })
 
+  // Results arrive below the field without moving focus, so the count is the
+  // only thing a screen reader gets back from typing.
+  it('announces how many results arrived', async () => {
+    const search = vi
+      .fn()
+      .mockResolvedValue([row('a', 'Alpha'), row('b', 'Beta')])
+    const { input } = renderPanel({ search })
+
+    type(input, 'al')
+
+    expect(await screen.findByText('Alpha')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('2 results')
+  })
+
+  it('marks the results region busy while the search runs', async () => {
+    let release: (rows: ReturnType<typeof row>[]) => void = () => {}
+    const search = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve as (rows: ReturnType<typeof row>[]) => void
+      })
+    )
+    const { input } = renderPanel({ search })
+
+    type(input, 'al')
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true')
+    )
+
+    release([row('a', 'Alpha')])
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'false')
+    )
+  })
+
   it('ignores a slow earlier response that lands after a later one', async () => {
     const slow = deferred<Row[]>()
     const fast = deferred<Row[]>()
