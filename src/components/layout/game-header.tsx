@@ -17,14 +17,13 @@ interface GameHeaderProps {
   statusLive?: 'off' | 'polite' | 'assertive'
   variant?: 'card' | 'strip'
   className?: string
-  // Opponent entity fingerprint — renders their avatar next to the title and
-  // tints the header border with their accent colour (if set).
-  opponentFingerprint?: string | null
   // Fallback name for the avatar initials when the opponent has no avatar set.
   opponentName?: string
-  // Avatar and style URLs on the CALLING app, for a game that proxies its
-  // players' assets through its own action: a cross-app fetch from the
-  // sandboxed iframe carries Origin: null and no cookies.
+  // Avatar and style URLs on the CALLING app, which proxies its players'
+  // assets through its own game-bound action: a cross-app fetch from the
+  // sandboxed iframe carries Origin: null and no cookies, and a remote
+  // opponent has no entity on this server for the people app to answer for.
+  // The avatar renders, and the border takes the accent, only when given.
   opponentAvatarUrl?: string | null
   opponentStyleUrl?: string | null
 }
@@ -40,93 +39,95 @@ export function GameHeader({
   statusLive = 'polite',
   variant = 'card',
   className,
-  opponentFingerprint,
   opponentName,
   opponentAvatarUrl,
   opponentStyleUrl,
 }: GameHeaderProps) {
-  // The opponent's avatar/style live on the people app and need to be proxied
-  // (direct entity URLs only resolve locally; remote opponents 404 there).
-  const proxyBase = opponentFingerprint ? `/people/${opponentFingerprint}` : null
-  const avatarUrl = opponentAvatarUrl ?? (proxyBase ? `${proxyBase}/-/avatar` : null)
-  const styleUrl = opponentStyleUrl ?? (proxyBase ? `${proxyBase}/-/style` : null)
-  const { accent } = useAccent(undefined, styleUrl ?? undefined)
+  const avatarUrl = opponentAvatarUrl ?? null
+  const styleUrl = opponentStyleUrl ?? null
+  const { accent } = useAccent(styleUrl ?? undefined)
   const accentStyle: CSSProperties | undefined = accent
     ? { borderColor: accent }
     : undefined
 
   return (
-    <section
-      className={cn(
-        'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2',
-        'transition-[background-color,border-color,color,box-shadow] duration-150 ease-out motion-reduce:transition-none',
-        'min-[900px]:grid-cols-[minmax(0,1fr)_auto_auto] min-[900px]:items-center',
-        variant === 'card'
-          ? 'rounded-xl border border-border/70 bg-surface-1/80 px-3 py-3 shadow-sm'
-          : 'border-b border-border/50 px-3 py-2.5',
-        className
-      )}
-      style={accentStyle}
-    >
-      <div className='flex min-w-0 items-center gap-3'>
-        {avatarUrl ? (
-          <EntityAvatar
-            src={avatarUrl}
-            styleUrl={styleUrl}
-            name={opponentName}
-            size="md"
-            className='shrink-0'
-          />
-        ) : null}
-        <div className='min-w-0 space-y-1'>
-          <h1 className='min-w-0 line-clamp-2 text-base leading-tight font-semibold min-[600px]:line-clamp-1 min-[900px]:text-lg'>
-            {title}
-          </h1>
-          <p
-            aria-live={statusLive}
-            className='text-sm leading-tight font-medium min-[900px]:text-[0.9375rem]'
-          >
-            {myTurn != null && (
-              <span
-                aria-hidden='true'
-                className={cn(
-                  'me-1.5 inline-block size-2 rounded-full align-middle',
-                  myTurn ? 'bg-success' : 'bg-muted-foreground/30'
-                )}
-              />
-            )}
-            {status}
-          </p>
-          {meta ? (
-            <p className='text-sm leading-tight text-muted-foreground'>{meta}</p>
+    // The header sizes against its own box, not the viewport. The chat column
+    // takes 320px out of the row, so a wide window can still leave the header
+    // under 600px, and the viewport-width version overlapped its own title
+    // with the stats there.
+    <div className='@container/game-header'>
+      <section
+        className={cn(
+          'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2',
+          'transition-[background-color,border-color,color,box-shadow] duration-150 ease-out motion-reduce:transition-none',
+          '@[640px]/game-header:grid-cols-[minmax(0,1fr)_auto_auto] @[640px]/game-header:items-center',
+          variant === 'card'
+            ? 'rounded-xl border border-border/70 bg-surface-1/80 px-3 py-3 shadow-sm'
+            : 'border-b border-border/50 px-3 py-2.5',
+          className
+        )}
+        style={accentStyle}
+      >
+        <div className='flex min-w-0 items-center gap-3'>
+          {avatarUrl ? (
+            <EntityAvatar
+              src={avatarUrl}
+              styleUrl={styleUrl}
+              name={opponentName}
+              size="md"
+              className='shrink-0'
+            />
           ) : null}
+          <div className='min-w-0 space-y-1'>
+            <h1 className='min-w-0 line-clamp-2 text-base leading-tight font-semibold @[600px]/game-header:line-clamp-1 @[640px]/game-header:text-lg'>
+              {title}
+            </h1>
+            <p
+              aria-live={statusLive}
+              className='text-sm leading-tight font-medium @[640px]/game-header:text-[0.9375rem]'
+            >
+              {myTurn != null && (
+                <span
+                  aria-hidden='true'
+                  className={cn(
+                    'me-1.5 inline-block size-2 rounded-full align-middle',
+                    myTurn ? 'bg-success' : 'bg-muted-foreground/30'
+                  )}
+                />
+              )}
+              {status}
+            </p>
+            {meta ? (
+              <p className='text-sm leading-tight text-muted-foreground'>{meta}</p>
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      {actions ? (
-        <div className='col-start-2 row-start-1 flex shrink-0 items-center gap-1 self-start justify-self-end min-[900px]:col-start-3'>
-          {actions}
-        </div>
-      ) : null}
+        {actions ? (
+          <div className='col-start-2 row-start-1 flex shrink-0 items-center gap-1 self-start justify-self-end @[640px]/game-header:col-start-3'>
+            {actions}
+          </div>
+        ) : null}
 
-      {stats ? (
-        <div
-          className={cn(
-            'col-span-2 flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-            'min-[600px]:flex-wrap min-[600px]:overflow-visible min-[600px]:pb-0',
-            'min-[900px]:col-span-1 min-[900px]:col-start-2 min-[900px]:row-start-1 min-[900px]:self-center',
-            '[&>*]:inline-flex [&>*]:shrink-0 [&>*]:items-center [&>*]:gap-1.5 [&>*]:rounded-full [&>*]:border [&>*]:border-border/70 [&>*]:bg-surface-2',
-            '[&>*]:px-2.5 [&>*]:py-1 [&>*]:text-sm [&>*]:font-medium [&>*]:tabular-nums [&>*]:shadow-xs',
-            '[&>*]:transition-[background-color,border-color,color,box-shadow] [&>*]:duration-150 [&>*]:ease-out motion-reduce:[&>*]:transition-none'
-          )}
-        >
-          {stats}
-        </div>
-      ) : null}
+        {stats ? (
+          <div
+            className={cn(
+              'col-span-2 flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+              '@[600px]/game-header:flex-wrap @[600px]/game-header:overflow-visible @[600px]/game-header:pb-0',
+              '@[640px]/game-header:col-span-1 @[640px]/game-header:col-start-2 @[640px]/game-header:row-start-1 @[640px]/game-header:self-center',
+              '[&>*]:inline-flex [&>*]:shrink-0 [&>*]:items-center [&>*]:gap-1.5 [&>*]:rounded-full [&>*]:border [&>*]:border-border/70 [&>*]:bg-surface-2',
+              '[&>*]:px-2.5 [&>*]:py-1 [&>*]:text-sm [&>*]:font-medium [&>*]:tabular-nums [&>*]:shadow-xs',
+              '[&>*]:transition-[background-color,border-color,color,box-shadow] [&>*]:duration-150 [&>*]:ease-out motion-reduce:[&>*]:transition-none'
+            )}
+          >
+            {stats}
+          </div>
+        ) : null}
 
-      {banner ? (
-        <div className='col-span-2 min-[900px]:col-span-3'>{banner}</div>
-      ) : null}
-    </section>
+        {banner ? (
+          <div className='col-span-2 @[640px]/game-header:col-span-3'>{banner}</div>
+        ) : null}
+      </section>
+    </div>
   )
 }

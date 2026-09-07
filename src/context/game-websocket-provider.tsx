@@ -26,9 +26,8 @@ const buildManager = (
   }
 
   const baseOptions: ChatWebsocketManagerOptions = {
-    baseUrl: import.meta.env.VITE_WEBSOCKET_URL ?? window.location.origin,
-    getToken: () => useAuthStore.getState().token,
-    getChatKey: async (gameId: string) => {
+    token: () => useAuthStore.getState().token,
+    key: async (gameId: string) => {
       try {
         return await getGameKey(gameId)
       } catch (error) {

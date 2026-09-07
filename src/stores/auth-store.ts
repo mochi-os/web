@@ -3,7 +3,7 @@
 
 import { create } from 'zustand'
 import { clearProfileCookie } from '../lib/profile-cookie'
-import { initShellBridge, onShellMessage } from '../lib/shell-bridge'
+import { initShellBridge, isInShell, onShellMessage } from '../lib/shell-bridge'
 import { getAppPath } from '../lib/app-path'
 
 type TokenResponse = { token?: unknown }
@@ -79,6 +79,9 @@ interface AuthState {
   loadIdentity: (force?: boolean) => Promise<void>
 }
 
+// One shell listener per page, however many times initialize() runs.
+let listening = false
+
 export const useAuthStore = create<AuthState>()((set, get) => {
   return {
     token: '',
@@ -141,6 +144,19 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     },
 
     initialize: async () => {
+      // Listen before waiting: the bridge gives up after 5 s and resolves
+      // with an empty token, but keeps listening, and the shell's init can
+      // land after that. Without this the store never learns that token
+      // and the app runs anonymous until the next refresh.
+      if (isInShell() && !listening) {
+        listening = true
+        onShellMessage((msg) => {
+          if (msg.type !== 'token-refresh' && msg.type !== 'init') return
+          if (typeof msg.token !== 'string') return
+          set({ token: msg.token, isAuthenticated: Boolean(msg.token) })
+        })
+      }
+
       // initShellBridge() handles shell mode (waits for init message)
       // and non-shell mode (returns immediately with empty token).
       const data = await initShellBridge()
@@ -159,15 +175,6 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         isInitialized: true,
         isLogoutInProgress: false,
       })
-
-      // Listen for token refreshes from shell
-      if (data.inShell) {
-        onShellMessage((msg) => {
-          if (msg.type === 'token-refresh' && typeof msg.token === 'string') {
-            set({ token: msg.token, isAuthenticated: Boolean(msg.token) })
-          }
-        })
-      }
     },
 
     // @deprecated Use authManager.loadIdentity() instead

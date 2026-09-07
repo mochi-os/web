@@ -28,6 +28,10 @@ import type {
   EntityObject,
   EntityObjectLink,
 } from '../../types/entity-object'
+import {
+  entityObjectTitle,
+  type EntityTitleObject,
+} from '../../lib/entity-title'
 
 export interface EntityObjectLinksProps<TObject extends EntityObject> {
   containerId: string
@@ -91,18 +95,8 @@ export function EntityObjectLinks<TObject extends EntityObject>({
   const queryClient = useQueryClient()
 
   const objectTitle = useCallback(
-    (obj: { class: string; number?: number; values: Record<string, string> }) => {
-      const cls = classes.find((c) => c.id === obj.class)
-      const title = (cls?.title ? obj.values[cls.title] : '') || ''
-      if (title) return title
-      // `number` is optional on the shared object, so guard it the same way
-      // linkDisplayName below does — formatting it blind prints "PREFIX-undefined".
-      if (prefix !== undefined && typeof obj.number === 'number') {
-        return `${prefix}-${obj.number}`
-      }
-      return t`Untitled`
-    },
-    [classes, prefix, t],
+    (obj: EntityTitleObject) => entityObjectTitle(obj, classes, prefix),
+    [classes, prefix],
   )
 
   const { data: objectListData } = useQuery({
@@ -273,14 +267,14 @@ export function EntityObjectLinks<TObject extends EntityObject>({
   }
 
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-4 items-start">
+    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
       <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
         <Link2 className="size-3.5" />
         <Trans>Links</Trans>
       </label>
       <div className="space-y-1.5 pt-1">
         {displayLinks.map((link) => (
-          <div key={link.id} className="group flex items-center gap-1.5 text-xs">
+          <div key={link.id} className="group flex min-w-0 items-center gap-1.5 text-xs">
             <Badge
               variant="secondary"
               className="text-[10px] px-1.5 py-0 h-4 font-normal"
@@ -293,7 +287,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="hidden group-hover:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0"
+                    className="hidden group-hover:inline-flex [@media(hover:none)]:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0"
                     onClick={() =>
                       deleteLinkMutation.mutate({
                         source: link.source,

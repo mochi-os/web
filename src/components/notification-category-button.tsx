@@ -97,8 +97,8 @@ export function NotificationCategoryButton({
       >
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground"><Trans>Category for these notifications</Trans></p>
-          {row && (row.label || row.topic) ? (
-            <p className="text-sm font-medium">{row.label || row.topic}</p>
+          {row?.label ? (
+            <p className="text-sm font-medium">{row.label}</p>
           ) : null}
           {!ordered ? (
             <Skeleton className="h-9 w-full" />

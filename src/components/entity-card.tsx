@@ -3,7 +3,7 @@
 
 /**
  * Internal shared component — not exported from lib/web index.
- * Used by search-entity-page and search-entity-dialog.
+ * Used by search-entity-page.
  */
 import { Loader2, type LucideIcon } from 'lucide-react'
 import { cn } from '../lib/utils'

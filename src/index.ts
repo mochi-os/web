@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Curated public API of @mochi/web; `pnpm exec knip` from the workspace root
-// measures what the app frontends import. It reports around forty entries here
+// measures what the app frontends import. It reports around thirty entries here
 // as unused - shell helpers and structural type exports are exported
 // regardless, and components this library only uses internally are not
 // re-exported.
@@ -61,7 +61,6 @@ export * from './components/ui/tooltip'
 export * from './components/ui/upload-progress'
 
 // Layout Components
-export * from './components/theme-gradient-background'
 export * from './components/layout/main'
 export * from './components/layout/header'
 export * from './components/layout/top-bar'
@@ -74,6 +73,7 @@ export * from './components/layout/page-utility-bar'
 export * from './components/layout/game-header'
 export * from './components/layout/game-header-stats'
 export * from './components/layout/game-layout'
+export * from './components/layout/game-route-layout'
 
 // Entity object model Components - shared by the crm and projects apps
 export * from './components/entity/entity-board-card'
@@ -83,6 +83,7 @@ export * from './components/entity/entity-board-column'
 export * from './components/entity/entity-board-container'
 export * from './components/entity/entity-field-dialog'
 export * from './components/entity/entity-view-sheet'
+export * from './components/entity/entity-object-detail-panel'
 export * from './components/entity/entity-option-dialog'
 export * from './components/entity/entity-tree-view'
 export * from './components/entity/entity-design-preview'
@@ -105,20 +106,24 @@ export * from './lib/create-entity-list-store'
 export * from './lib/entity-sort'
 export * from './lib/entity-endpoints'
 export * from './lib/entity-api'
+export * from './lib/entity-title'
 export * from './components/entity/keyboard-shortcuts-help'
 
 // Game Components - shared by the chess, go and words apps.
 // The draw offer banner is chess and go only; words has no draw.
 export * from './components/game/game-chat-input'
 export * from './components/game/game-chat-message-list'
+export * from './components/game/game-chat-panel'
+export * from './components/game/game-chat-panels'
+export * from './components/game/game-end-dialogs'
+export * from './components/game/game-placeholder-page'
 export * from './components/game/game-draw-offer-banner'
 export * from './components/game/game-empty-state'
+export * from './components/game/game-new-game-dialog'
 export * from './components/layout/back-button'
 export * from './components/layout/section'
-export { NavGroup } from './components/layout/nav-group'
 export type {
   SidebarData,
-  NavGroup as NavGroupType,
   NavItem,
   NavCollapsible,
   NavSubItem,
@@ -137,6 +142,7 @@ export * from './components/travelling-picker'
 // Shared Components
 export * from './components/activity-timeline'
 export * from './components/ai-prompts-editor'
+export * from './components/banner-section'
 export * from './components/audit-timeline'
 export * from './components/options-menu'
 export * from './components/attachment-gallery'
@@ -199,7 +205,6 @@ export * from './context/entity-sidebar-context'
 export * from './context/game-sidebar-context'
 export * from './context/game-websocket-context'
 export * from './context/game-websocket-provider'
-export { useGameWebsocketManager } from './hooks/use-game-websocket-manager'
 export * from './hooks/use-game-websocket'
 export * from './hooks/create-game-hooks'
 export {
@@ -251,8 +256,10 @@ export * from './hooks/use-list-auto-animate'
 export * from './hooks/use-drag-reorder'
 export * from './hooks/use-persisted-reorder'
 export * from './hooks/use-format'
+export * from './hooks/use-field-type-labels'
 export * from './hooks/use-upload-progress'
 export * from './hooks/use-load-more'
+export * from './hooks/use-game-chat-messages'
 export * from './hooks/use-accent'
 export * from './components/ui/load-more'
 // Lib utilities
@@ -312,7 +319,6 @@ export {
   createMicSessionHost,
   micDurationSecs,
   micFilenameForMime,
-  pickMicMimeType,
   startShellMicGuarded,
 } from './lib/shell-mic-session'
 export type {
@@ -330,6 +336,7 @@ export * from './lib/auth-manager'
 export * from './lib/cookies'
 export { extractStatus } from './lib/error-normalizer'
 export * from './lib/handle-server-error'
+export * from './lib/provider-name'
 export * from './lib/query-client'
 export * from './lib/rank'
 export * from './lib/request'
@@ -355,7 +362,6 @@ export * as push from './lib/push'
 export type {
   PlaceData,
   PostData,
-  TravellingData,
   PhotonPlace,
 } from './types/places'
 export * from './types/settings'
@@ -369,7 +375,7 @@ export * from './hooks/settings/use-system-settings'
 // Error pages
 export * from './features/errors/general-error'
 export * from './features/errors/not-found-error'
-export * from './features/errors/unauthorized-error'
+export * from './features/errors/access-denied-error'
 
 // Access control components
 export * from './features/access'

@@ -13,6 +13,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { AttachmentGallery, type GalleryAttachment } from './attachment-gallery'
+import { shellDownload } from '../lib/shell-bridge'
+
+vi.mock('../lib/shell-bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/shell-bridge')>()),
+  shellDownload: vi.fn(async () => true),
+}))
 
 i18n.load('en', {})
 i18n.activate('en')
@@ -92,5 +98,18 @@ describe('AttachmentGallery failure tiles', () => {
     expect(screen.queryByText('Unavailable')).not.toBeInTheDocument()
     expect(screen.getByAltText('photo.jpg')).toBeInTheDocument()
     expect(document.querySelector('[role=dialog]')).toBeNull()
+  })
+})
+
+describe('AttachmentGallery file chips', () => {
+  it('downloads through the shell instead of exposing a tokened href', () => {
+    const { container } = show([
+      attachment({ id: 'f1', name: 'notes.pdf', type: 'application/pdf', url: '/app/e/-/attachments/f1' }),
+    ])
+    // No anchor at all: the resolved URL carries the app token, which must
+    // not sit in the DOM, and a download link is inert inside the shell.
+    expect(container.querySelector('a[href]')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'notes.pdf' }))
+    expect(shellDownload).toHaveBeenCalledWith('/app/e/-/attachments/f1', 'notes.pdf')
   })
 })

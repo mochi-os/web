@@ -9,11 +9,6 @@ import { ApiError } from './request'
 import { toast } from './toast-utils'
 
 export interface CreateQueryClientOptions {
-  /**
-   * @deprecated No-op. 5xx errors show an inline GeneralError in the section that
-   * owns the query; /500 is reached only by explicit throws in router loaders.
-   */
-  onServerError?: () => void
   onForbidden?: () => void
 }
 

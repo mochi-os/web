@@ -186,6 +186,9 @@ describe('EntitySettingsPage', () => {
     })
     await screen.findByText('pageTitle:Acme Holdings')
     expect(screen.queryByText('accessManagement')).not.toBeInTheDocument()
+    // The URL asked for the access tab; a visitor lands on the general one
+    // rather than an empty page.
+    expect(screen.getByText('identity')).toBeInTheDocument()
   })
 
   it('refreshes the sidebar and leaves after a delete', async () => {

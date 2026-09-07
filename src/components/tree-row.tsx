@@ -216,7 +216,7 @@ export function TreeRow({
       }
 
       case 'user': {
-        const name = peopleMap[value] || value
+        const name = peopleMap[value] || t`Unknown`
         const avatarSrc = resourceId
           ? `${getAppPath()}/${resourceId}/-/user/${value}/asset/avatar`
           : undefined
@@ -370,7 +370,7 @@ export function TreeRow({
           style={firstContentCol === 'class' ? indentStyle : undefined}
         >
           <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            {classMap[object.class] || object.class}
+            {classMap[object.class] || t`Unknown`}
           </span>
         </td>
       ) : null}

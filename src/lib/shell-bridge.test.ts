@@ -268,12 +268,21 @@ describe('theme value rules', () => {
 })
 
 describe('authenticatedUrl', () => {
+  // The document is the chat app's page, as it would be inside the shell:
+  // the token belongs to chat and to nothing else on this origin.
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/chat/abc')
+  })
+  afterEach(() => {
+    window.history.replaceState(null, '', '/')
+  })
+
   // Load the bridge and drive it to the initialised in-shell state, which is
   // the only state in which authenticatedUrl adds anything.
-  async function loadInShell(token = 'test-token') {
+  async function loadInShell(token = 'test-token', init: Record<string, unknown> = {}) {
     const bridge = await import('./shell-bridge')
     const ready = bridge.initShellBridge()
-    dispatchFromParent({ type: 'init', token, inShell: true })
+    dispatchFromParent({ type: 'init', token, inShell: true, ...init })
     await ready
     return bridge
   }
@@ -289,17 +298,49 @@ describe('authenticatedUrl', () => {
 
   it('keeps an existing query string', async () => {
     const { authenticatedUrl } = await loadInShell()
-    expect(authenticatedUrl('/x?a=1')).toBe('/x?a=1&token=test-token')
+    expect(authenticatedUrl('/chat/x?a=1')).toBe('/chat/x?a=1&token=test-token')
   })
 
   it('percent-encodes the token', async () => {
     const { authenticatedUrl } = await loadInShell('a/b+c=d')
-    expect(authenticatedUrl('/x')).toBe('/x?token=a%2Fb%2Bc%3Dd')
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=a%2Fb%2Bc%3Dd')
   })
 
   it('strips a Bearer prefix', async () => {
     const { authenticatedUrl } = await loadInShell('Bearer abc123')
-    expect(authenticatedUrl('/x')).toBe('/x?token=abc123')
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=abc123')
+  })
+
+  // The shell mounts every app on one origin. A same-origin check alone
+  // would hand chat's token to a markdown image whose source names another
+  // app's action, which then runs as this reader.
+  it('does not add the token to another app on the same origin', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('/forums/-/list')).toBe('/forums/-/list')
+    expect(authenticatedUrl('/people/abc/-/avatar')).toBe('/people/abc/-/avatar')
+  })
+
+  it('does not add the token to a bare entity route', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('/9AbCdEfGh/-/style')).toBe('/9AbCdEfGh/-/style')
+  })
+
+  it('does not mistake a sibling prefix for the app', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('/chatter/-/x')).toBe('/chatter/-/x')
+  })
+
+  it('adds the token to a relative path, which resolves under the app', async () => {
+    const { authenticatedUrl } = await loadInShell()
+    expect(authenticatedUrl('attachments/1')).toBe('attachments/1?token=test-token')
+  })
+
+  it('on a domain route the origin is the entity, so its own resources qualify', async () => {
+    window.history.replaceState(null, '', '/')
+    const { authenticatedUrl } = await loadInShell('test-token', {
+      domain: { fingerprint: '9AbCdEfGh' },
+    })
+    expect(authenticatedUrl('/-/attachments/1')).toBe('/-/attachments/1?token=test-token')
   })
 
   it('does not add the token to a protocol-relative URL', async () => {
@@ -328,7 +369,91 @@ describe('authenticatedUrl', () => {
 
   it('returns the URL unchanged when the shell supplied no token', async () => {
     const { authenticatedUrl } = await loadInShell('')
-    expect(authenticatedUrl('/x')).toBe('/x')
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x')
+  })
+})
+
+// The shell answers these only when it is not mid-navigation and new enough
+// to carry the handler. Without a deadline the caller's pending state never
+// clears: a copy button that spins for good, a step-up dialog that never
+// re-enables.
+describe('bridge relays settle without an answer', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    // jsdom has no execCommand; the clipboard relay must fall through to the
+    // shell rather than copy locally for this test to exercise the relay.
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: () => false })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('clipboard.write resolves false when the shell never answers', async () => {
+    const { shellClipboardWrite } = await import('./shell-bridge')
+    const promise = shellClipboardWrite('hello')
+    expect(parentPostMessage.mock.calls.some((c) => c[0]?.type === 'clipboard.write')).toBe(true)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(await promise).toBe(false)
+  })
+
+  it('clipboard.write still takes the shell answer inside the deadline', async () => {
+    const { shellClipboardWrite } = await import('./shell-bridge')
+    const promise = shellClipboardWrite('hello')
+    const id = parentPostMessage.mock.calls.find((c) => c[0]?.type === 'clipboard.write')?.[0].id
+    dispatchFromParent({ type: 'clipboard.result', id, ok: true })
+    expect(await promise).toBe(true)
+  })
+
+  it('a passkey ceremony rejects with TimeoutError after its own timeout plus grace', async () => {
+    const { shellWebauthnGet } = await import('./shell-bridge')
+    const promise = shellWebauthnGet({ timeout: 1_000 })
+    const settled = vi.fn()
+    promise.then(settled, settled)
+    await vi.advanceTimersByTimeAsync(5_900)
+    expect(settled).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(200)
+    await expect(promise).rejects.toMatchObject({ name: 'TimeoutError' })
+  })
+
+  it('a passkey ceremony with no server timeout waits a minute, not forever', async () => {
+    const { shellWebauthnCreate } = await import('./shell-bridge')
+    const promise = shellWebauthnCreate({})
+    const rejected = expect(promise).rejects.toMatchObject({ name: 'TimeoutError' })
+    await vi.advanceTimersByTimeAsync(65_000)
+    await rejected
+  })
+})
+
+// A cancel that names no recording means "cancel whatever is pending". Two
+// such calls in flight at once used to share one callback slot: the second
+// overwrote the first, and the shell's single answer could satisfy only one.
+describe('shellMicCancel', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('answers every id-less cancel from one mic.cancelled', async () => {
+    const { shellMicCancel } = await import('./shell-bridge')
+    const first = shellMicCancel()
+    const second = shellMicCancel()
+    dispatchFromParent({ type: 'mic.cancelled', requestId: 0 })
+    await expect(first).resolves.toBeUndefined()
+    await expect(second).resolves.toBeUndefined()
+  })
+
+  it('does not let an id-less answer settle a cancel that named a recording', async () => {
+    const { shellMicCancel } = await import('./shell-bridge')
+    const named = shellMicCancel(7)
+    const settled = vi.fn()
+    named.then(settled, settled)
+    dispatchFromParent({ type: 'mic.cancelled', requestId: 0 })
+    await Promise.resolve()
+    expect(settled).not.toHaveBeenCalled()
+    dispatchFromParent({ type: 'mic.cancelled', requestId: 7 })
+    await expect(named).resolves.toBeUndefined()
   })
 })
 

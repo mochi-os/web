@@ -12,6 +12,7 @@ import { Button } from './ui/button'
 import { Skeleton } from './ui/skeleton'
 import { GeneralError } from '../features/errors/general-error'
 import { cn } from '../lib/utils'
+import { getErrorMessage } from '../lib/handle-server-error'
 
 export interface RecommendedEntityItem {
   id: string
@@ -74,11 +75,7 @@ export function RecommendedEntities<T extends RecommendedEntityItem>({
       setRecommendations(await loadRef.current())
     } catch (loadError) {
       setRecommendations([])
-      setError(
-        loadError instanceof Error
-          ? loadError
-          : new Error(errorMessageRef.current)
-      )
+      setError(new Error(getErrorMessage(loadError, errorMessageRef.current)))
     } finally {
       setIsLoading(false)
     }

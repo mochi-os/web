@@ -8,6 +8,7 @@ import { Minus, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { t } from '@lingui/core/macro'
+import { useFormat } from '../hooks/use-format'
 
 export interface PostTag {
   id: string
@@ -69,7 +70,7 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
       return
     }
     if (!TAG_PATTERN.test(cleaned)) {
-      setError(t`Letters, numbers, spaces, and hyphens only`)
+      setError(t`Letters, numbers, spaces, hyphens, and slashes only`)
       return
     }
     if (tags.some((t) => t.label === cleaned)) {
@@ -143,8 +144,11 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
   )
 }
 
-export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemove }: PostTagsProps) {
+// The tag list inside the tooltip. Not exported: PostTagsTooltip is the
+// component the apps render.
+function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemove }: PostTagsProps) {
   const [adjustments, setAdjustments] = useState<Record<string, number | null>>({})
+  const { formatNumber } = useFormat()
 
   if (!tags.length) return null
 
@@ -153,6 +157,16 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
       {tags.map((tag) => {
         const adjusted = tag.qid && tag.qid in adjustments
         const interest = adjusted ? adjustments[tag.qid!] : tag.interest
+        const relevance = tag.relevance != null ? formatNumber(tag.relevance) : null
+        const weight = interest != null ? formatNumber(interest) : null
+        const title =
+          relevance != null && weight != null
+            ? t`Relevance ${relevance}, interest ${weight}`
+            : relevance != null
+              ? t`Relevance ${relevance}`
+              : weight != null
+                ? t`Interest ${weight}`
+                : undefined
         return (
         <div
           key={tag.id}
@@ -166,7 +180,7 @@ export function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInter
               e.stopPropagation()
               onFilter?.(tag.label)
             }}
-            title={tag.relevance != null && interest != null ? `Relevance ${tag.relevance}, interest ${interest}` : tag.relevance != null ? `Relevance ${tag.relevance}` : interest != null ? `Interest ${interest}` : undefined}
+            title={title}
             style={interest != null ? { color: interestColor(interest) } : undefined}
           >
             #{tag.label}

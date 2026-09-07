@@ -95,6 +95,24 @@ describe('cameraOpen in the shell', () => {
     expect(frames).toHaveLength(0)
   })
 
+  it('tells the shell to stop when the deadline passes unanswered', async () => {
+    // A consent prompt answered after this point would otherwise start a
+    // camera that nothing owns: the session already reported TimeoutError
+    // and no one will ever call stop().
+    vi.useFakeTimers()
+    try {
+      const promise = cameraOpen({ frame: () => {} })
+      const start = parentPostMessage.mock.calls.find((c) => c[0]?.type === 'camera.start')?.[0]
+      await vi.advanceTimersByTimeAsync(30_000)
+      const { opened } = await promise
+      expect(opened).toMatchObject({ ok: false, error: { name: 'TimeoutError' } })
+      const stop = parentPostMessage.mock.calls.find((c) => c[0]?.type === 'camera.stop')?.[0]
+      expect(stop).toEqual({ type: 'camera.stop', requestId: start.requestId })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('ignores messages that are not from the parent', async () => {
     const promise = cameraOpen({ frame: () => {} })
     const start = parentPostMessage.mock.calls.find((c) => c[0]?.type === 'camera.start')?.[0]

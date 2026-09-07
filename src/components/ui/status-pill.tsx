@@ -27,7 +27,7 @@ const toneClasses: Record<StatusTone, string> = {
 }
 
 /** Resolves a tone to its class string, falling back to `neutral`. */
-export function statusToneClass(tone: StatusTone): string {
+function statusToneClass(tone: StatusTone): string {
   return toneClasses[tone] ?? toneClasses.neutral
 }
 

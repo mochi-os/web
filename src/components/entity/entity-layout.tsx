@@ -33,8 +33,6 @@ interface EntityLayoutProps<Row extends EntityListRow> {
   onCreate: () => void
   /** The app's own route for one container. */
   viewUrl: (id: string) => string
-  /** projects renders its nav through the page header on mobile; crm does not. */
-  usePageHeaderForMobileNav?: boolean
   /** The app's create dialog, rendered beside the shell. */
   children?: ReactNode
 }
@@ -48,7 +46,6 @@ export function EntityLayout<Row extends EntityListRow>({
   labels,
   onCreate,
   viewUrl,
-  usePageHeaderForMobileNav,
   children,
 }: EntityLayoutProps<Row>) {
   useEffect(() => {
@@ -118,7 +115,6 @@ export function EntityLayout<Row extends EntityListRow>({
     <>
       <AuthenticatedLayout
         sidebarData={sidebarData}
-        usePageHeaderForMobileNav={usePageHeaderForMobileNav}
         isLoadingSidebar={isLoading && rows.length === 0}
       />
       {children}

@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useRef } from 'react'
-import { Trans } from '@lingui/react/macro'
+import { Plural } from '@lingui/react/macro'
 import { Check, CheckSquare } from 'lucide-react'
 import { Card } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
 import { EntityAvatar } from '../entity-avatar'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
+import { decimalPlaces } from '../../lib/locale-format'
 import { getAppPath } from '../../lib/app-path'
 import type {
   EntityChecklistItem,
@@ -93,7 +94,7 @@ export function EntityBoardCard<TObject extends EntityObject>({
   onChildDoubleClick,
   dragPreview,
 }: EntityBoardCardProps<TObject>) {
-  const { formatDate } = useFormat()
+  const { formatDate, formatNumber } = useFormat()
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isNested = depth > 0
@@ -237,12 +238,14 @@ export function EntityBoardCard<TObject extends EntityObject>({
           </span>
         )
 
-      case 'number':
+      case 'number': {
+        const numeric = Number(value)
         return (
           <span key={field.id} className='text-[10px] text-muted-foreground'>
-            {value}
+            {Number.isFinite(numeric) ? formatNumber(numeric, decimalPlaces(value)) : value}
           </span>
         )
+      }
 
       case 'text':
       default:
@@ -415,7 +418,7 @@ export function EntityBoardCard<TObject extends EntityObject>({
         <div className='space-y-1.5 border-t pt-1.5'>
           {atDepthCap ? (
             <span className='text-[10px] text-muted-foreground'>
-              <Trans>+{countDeepChildren(object.id)} nested</Trans>
+              <Plural value={countDeepChildren(object.id)} one="+# nested" other="+# nested" />
             </span>
           ) : (
             renderChildrenWithGap()

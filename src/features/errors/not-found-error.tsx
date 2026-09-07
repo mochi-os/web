@@ -1,14 +1,14 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { Trans } from '@lingui/react/macro'
 import { ChevronLeft, Home } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { shellNavigateBack } from '../../lib/shell-bridge'
 
 export function NotFoundError() {
   const navigate = useNavigate()
-  const { history } = useRouter()
   return (
     <div className='h-svh'>
       <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
@@ -21,7 +21,7 @@ export function NotFoundError() {
           </Trans>
         </p>
         <div className='mt-6 flex gap-4'>
-          <Button variant='outline' onClick={() => history.go(-1)}>
+          <Button variant='outline' onClick={() => shellNavigateBack()}>
             <ChevronLeft className='size-4' />
             <Trans>Go back</Trans>
           </Button>

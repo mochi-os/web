@@ -7,6 +7,7 @@ import { CopyButton } from './copy-button'
 
 interface DataChipProps {
   value: string
+  /** Shown before the value; carries its own punctuation, as each locale wants it. */
   label?: string
   icon?: React.ReactNode
   copyable?: boolean
@@ -57,7 +58,7 @@ export function DataChip({
         )}
       >
         {icon}
-        {label && <span className='text-muted-foreground font-sans font-normal'>{label}:</span>}
+        {label && <span className='text-muted-foreground font-sans font-normal'>{label}</span>}
         <span
           className={cn(
             'min-w-0',

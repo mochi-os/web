@@ -12,6 +12,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { GeneralError } from '../features/errors/general-error'
 import { cn } from '../lib/utils'
+import { getErrorMessage } from '../lib/handle-server-error'
 
 export interface InlineEntitySearchItem {
   id: string
@@ -108,9 +109,7 @@ export function InlineEntitySearch<T extends InlineEntitySearchItem>({
     } catch (error) {
       if (requestSeq !== requestSeqRef.current) return
       setResults([])
-      setSearchError(
-        error instanceof Error ? error : new Error(errorMessageRef.current)
-      )
+      setSearchError(new Error(getErrorMessage(error, errorMessageRef.current)))
     } finally {
       if (requestSeq === requestSeqRef.current) {
         setIsLoading(false)

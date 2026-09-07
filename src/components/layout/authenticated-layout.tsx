@@ -50,7 +50,6 @@ type AuthenticatedLayoutProps = {
   sidebarData?: SidebarData
   sidebarFooter?: React.ReactNode
   notifications?: MochiMenuNotifications
-  usePageHeaderForMobileNav?: boolean
   title?: string
   mobileTitle?: React.ReactNode
   rightPanel?: RightPanelConfig
@@ -163,6 +162,30 @@ export function AuthenticatedLayout({
    * Authenticated layout
    * ------------------------------------------------------------------ */
 
+  // The same panel sits beside either body, so it is built once.
+  const rightPanelNode = hasRightPanel ? (
+    <RightPanel className='h-full'>
+      {(rightPanel.header || rightPanel.showCloseButton) && (
+        <RightPanelHeader className={rightPanel.headerClassName}>
+          <div className='flex-1'>{rightPanel.header}</div>
+          {rightPanel.showCloseButton && <RightPanelCloseButton />}
+        </RightPanelHeader>
+      )}
+
+      {rightPanel.content && (
+        <RightPanelContent className={rightPanel.contentClassName}>
+          {rightPanel.content}
+        </RightPanelContent>
+      )}
+
+      {rightPanel.footer && (
+        <RightPanelFooter className={rightPanel.footerClassName}>
+          {rightPanel.footer}
+        </RightPanelFooter>
+      )}
+    </RightPanel>
+  ) : null
+
   const layoutContent = (
     <div
       className={cn(
@@ -204,29 +227,7 @@ export function AuthenticatedLayout({
             {children ?? <Outlet />}
           </SidebarInset>
 
-          {/* Right panel */}
-          {hasRightPanel && (
-            <RightPanel className='h-full'>
-              {(rightPanel.header || rightPanel.showCloseButton) && (
-                <RightPanelHeader className={rightPanel.headerClassName}>
-                  <div className='flex-1'>{rightPanel.header}</div>
-                  {rightPanel.showCloseButton && <RightPanelCloseButton />}
-                </RightPanelHeader>
-              )}
-
-              {rightPanel.content && (
-                <RightPanelContent className={rightPanel.contentClassName}>
-                  {rightPanel.content}
-                </RightPanelContent>
-              )}
-
-              {rightPanel.footer && (
-                <RightPanelFooter className={rightPanel.footerClassName}>
-                  {rightPanel.footer}
-                </RightPanelFooter>
-              )}
-            </RightPanel>
-          )}
+          {rightPanelNode}
         </>
       ) : (
         <>
@@ -268,29 +269,7 @@ export function AuthenticatedLayout({
             {children ?? <Outlet />}
           </div>
 
-          {/* Right panel */}
-          {hasRightPanel && (
-            <RightPanel className='h-full'>
-              {(rightPanel.header || rightPanel.showCloseButton) && (
-                <RightPanelHeader className={rightPanel.headerClassName}>
-                  <div className='flex-1'>{rightPanel.header}</div>
-                  {rightPanel.showCloseButton && <RightPanelCloseButton />}
-                </RightPanelHeader>
-              )}
-
-              {rightPanel.content && (
-                <RightPanelContent className={rightPanel.contentClassName}>
-                  {rightPanel.content}
-                </RightPanelContent>
-              )}
-
-              {rightPanel.footer && (
-                <RightPanelFooter className={rightPanel.footerClassName}>
-                  {rightPanel.footer}
-                </RightPanelFooter>
-              )}
-            </RightPanel>
-          )}
+          {rightPanelNode}
         </>
       )}
     </div>

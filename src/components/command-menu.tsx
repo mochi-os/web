@@ -6,6 +6,7 @@ import { Trans } from '@lingui/react/macro'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronRight } from 'lucide-react'
 import { useSearch } from '../context/search-provider'
+import { shellNavigateExternal } from '../lib/shell-bridge'
 import {
   CommandDialog,
   CommandEmpty,
@@ -38,7 +39,8 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
     (url: string, external?: boolean) => {
       runCommand(() => {
         if (external) {
-          window.location.href = url
+          // Inside the shell a location assignment moves only the iframe.
+          shellNavigateExternal(url)
         } else {
           navigate({ to: url })
         }
@@ -53,8 +55,8 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty><Trans>No results found.</Trans></CommandEmpty>
-          {sidebarData.navGroups.map((group) => (
-            <CommandGroup key={group.title} heading={group.title}>
+          {sidebarData.navGroups.map((group, index) => (
+            <CommandGroup key={group.id ?? `${index}`} heading={group.title}>
               {group.items.map((navItem, i) => {
                 // Handle action items (onClick)
                 if ('onClick' in navItem && navItem.onClick) {

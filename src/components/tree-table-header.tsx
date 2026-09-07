@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { useLingui } from '@lingui/react/macro'
 import { cn } from '../lib/utils'
 
 export interface TreeTableHeaderField {
@@ -40,6 +41,7 @@ export function TreeTableHeader({
   classLabel,
   idLabel,
 }: TreeTableHeaderProps) {
+  const { t } = useLingui()
   return (
     <thead className="border-b border-border">
       <tr className="text-xs text-muted-foreground">
@@ -65,7 +67,7 @@ export function TreeTableHeader({
                 isTitle && 'w-full',
               )}
             >
-              {field.name || field.id}
+              {field.name || t`Unknown`}
             </th>
           )
         })}
