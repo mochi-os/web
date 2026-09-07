@@ -264,6 +264,7 @@ export * from './hooks/use-accent'
 export * from './components/ui/load-more'
 // Lib utilities
 export * from './lib/create-app-client'
+export * from './lib/saved-api'
 export * from './lib/api-client'
 export {
   getAppPath,
