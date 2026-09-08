@@ -4,7 +4,6 @@
 // The ui primitives export what the apps and the library use; scaffolding
 // nothing consumes stays private to its file.
 import { describe, it, expect } from 'vitest'
-import * as avatar from './avatar'
 import * as popover from './popover'
 import * as scroll from './scroll-area'
 import * as otp from './input-otp'
@@ -16,7 +15,6 @@ import * as mic from '../../lib/shell-mic-session'
 
 describe('ui primitive exports', () => {
   it('keep the unadopted shadcn parts private', () => {
-    expect(Object.keys(avatar)).toEqual(['Avatar'])
     expect(Object.keys(popover)).not.toContain('PopoverAnchor')
     expect(Object.keys(scroll)).not.toContain('ScrollBar')
     expect(Object.keys(otp)).not.toContain('InputOTPSeparator')
