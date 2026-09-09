@@ -14,7 +14,9 @@ export interface EntityTitleObject {
   class: string
   number?: number
   readable?: string
-  values: Record<string, string>
+  // The object-detail endpoint returns `values` alongside `object`, not inside
+  // it, so a caller passing `data.object` straight through has no values map.
+  values?: Record<string, string>
 }
 
 /**
@@ -29,7 +31,7 @@ export function entityObjectTitle(
   prefix?: string,
 ): string {
   const cls = classes.find((c) => c.id === obj.class)
-  const title = (cls?.title ? obj.values[cls.title] : '') || ''
+  const title = (cls?.title ? obj.values?.[cls.title] : '') || ''
   if (title) return title
   // The server's own readable id wins over one rebuilt from the prefix, so a
   // server that ever numbers differently is still displayed as it numbered.

@@ -60,7 +60,10 @@ import type {
 
 /** What `getObject` has to return. Apps may return more; the panel reads this. */
 export interface EntityObjectDetail<TObject extends EntityObject> {
-  object: TObject;
+  // `values` arrives beside the object, not inside it, so the object here is
+  // typed without it. Reading `object.values` blind is what crashed the panel;
+  // the optional member keeps an app free to send a fuller object anyway.
+  object: Omit<TObject, "values"> & { values?: Record<string, string> };
   values: Record<string, string>;
   outgoing: EntityObjectLink[];
   incoming: EntityObjectLink[];
@@ -407,7 +410,13 @@ export function EntityObjectDetailPanel<
   const classOptions = design.options[object.class] || {};
   const cls = design.classes.find((c) => c.id === object.class);
   const titleField = cls?.title ? classFields.find((f) => f.id === cls.title) : undefined;
-  const title = entityObjectTitle(object, design.classes, prefix);
+  // `data.object` carries no values map — it arrives as a sibling key — so the
+  // title field is read from `data.values`, or the header shows only the id.
+  const title = entityObjectTitle(
+    { ...object, values: data.values },
+    design.classes,
+    prefix,
+  );
   const objectTitle = (obj: EntityTitleObject) =>
     entityObjectTitle(obj, design.classes, prefix);
 

@@ -34,9 +34,14 @@ const sibling = createMockEntityObject({ id: 'obj-2', values: { title: 'Sibling'
 
 type Detail = EntityObjectDetail<EntityObject>
 
+// The detail endpoint sends `values` beside the object rather than inside it,
+// so the fixture strips it. Leaving it on made every title assertion below pass
+// off the object's own copy and hid a crash the real response caused.
+const { values: _objectValues, ...detailObject } = object
+
 function detailFor(overrides?: Partial<Detail>): Detail {
   return {
-    object,
+    object: detailObject,
     values: { title: 'Original' },
     outgoing: [],
     incoming: [],
@@ -166,8 +171,15 @@ describe('EntityObjectDetailPanel header', () => {
     expect(screen.queryByTestId('entity-readable')).toBeNull()
   })
 
+  // The title field is read from the response's own `values`. Reading it off
+  // the object, which carries none, threw and took the whole page down with it.
+  it('titles the panel from the values sent beside the object', async () => {
+    renderPanel()
+    expect(await screen.findByRole('heading', { name: 'Original' })).toBeInTheDocument()
+  })
+
   it('prints the readable id beside the title when the object carries one', async () => {
-    const numbered = createMockEntityObject({
+    const { values: _numberedValues, ...numbered } = createMockEntityObject({
       id: 'obj-1',
       number: 14,
       readable: 'PROJ-14',
