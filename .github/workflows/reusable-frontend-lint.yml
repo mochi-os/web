@@ -44,8 +44,9 @@ jobs:
       # Apps declare `"@mochi/web": "workspace:*"`, which needs a workspace
       # root; locally that is the umbrella. CI synthesises one plus a shim
       # package.json at $GITHUB_WORKSPACE, mirroring mochi/package.json's
-      # eslint-plugin-lingui and onlyBuiltDependencies - keep it in sync as the
-      # root grows.
+      # eslint-plugin-lingui, pnpm.overrides and onlyBuiltDependencies - keep it
+      # in sync as the root grows, or CI lints against a different React than
+      # every real build.
       - name: Synthesise workspace root for @mochi/web
         working-directory: ${{ github.workspace }}
         run: |
@@ -53,6 +54,9 @@ jobs:
           packages:
             - 'lib/*'
             - 'apps/*/web'
+          # Freshly published versions wait a week before CI resolves them, the
+          # nearest thing to a lockfile a synthesised root can have.
+          minimumReleaseAge: 10080
           onlyBuiltDependencies:
             - '@swc/core'
             - '@tailwindcss/oxide'
@@ -64,6 +68,14 @@ jobs:
             "private": true,
             "devDependencies": {
               "eslint-plugin-lingui": "^0.13.1"
+            },
+            "pnpm": {
+              "overrides": {
+                "react": "19.2.1",
+                "react-dom": "19.2.1",
+                "@types/node": "^25.3.5",
+                "tsx>esbuild": "^0.28.1"
+              }
             }
           }
           JSON
@@ -81,10 +93,13 @@ jobs:
       # App repositories carry no lockfile and the canonical
       # mochi/pnpm-lock.yaml lives in the umbrella, which CI cannot see, so
       # --frozen-lockfile has nothing to freeze against. Every run resolves
-      # fresh from the semver ranges in package.json.
+      # fresh from the semver ranges in package.json; --ignore-scripts keeps a
+      # freshly resolved package from running code at install (esbuild, swc and
+      # oxide ship platform binaries as optional dependencies, so lint and test
+      # need no postinstall).
       - name: Install dependencies
         working-directory: ${{ github.workspace }}
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Lint frontend
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
@@ -105,56 +120,10 @@ jobs:
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: pnpm i18n:check
 
-      - name: Check server label completeness (.conf)
-        working-directory: apps/${{ github.event.repository.name }}
-        run: |
-          # Every key in labels/en.conf must be translated in each non-overlay
-          # <lang>.conf; a value identical to English is allowed only when every
-          # alphabetic word is a keep-word. KEEP mirrors
-          # claude/scripts/i18n_glossary.py - keep the two in sync.
-          python3 - <<'PY'
-          import re, sys
-          from pathlib import Path
-          OVERLAY = {"en","en-us","en-ca","fr-ca","es-ar","zh-hk","yue","nn","de-ch"}
-          KEEP = {"mochi","stripe","github","pushbullet","ntfy","oauth","oidc",
-                  "pkce","jwt","saml","libp2p","crm","comptroller","git","google",
-                  "paypal","api","url","id","rss","qr","sgf","pgn","sha","apps",
-                  "chat","chess","disputes","email","feeds","forums","go","help",
-                  "home","market","mentions","menu","messages","moderation",
-                  "notifications","rose","teal","violet","wiki","wikis","server"}
-          WORD = re.compile(r"[A-Za-z]+")
-          PH = re.compile(r"\{[^}]*\}")
-          def keep(s):
-              w = WORD.findall(PH.sub("", s))
-              return bool(w) and all(x.lower() in KEEP for x in w)
-          def parse(p):
-              d = {}
-              for ln in p.read_text(encoding="utf-8").splitlines():
-                  ln = ln.strip()
-                  if ln and not ln.startswith("#") and "=" in ln:
-                      k, _, v = ln.partition("=")
-                      d[k.strip()] = v.strip()
-              return d
-          labels = Path("labels")
-          if not (labels / "en.conf").exists():
-              print("No labels/en.conf; nothing to check.")
-              sys.exit(0)
-          en = parse(labels / "en.conf")
-          violations = 0
-          for conf in sorted(labels.glob("*.conf")):
-              if conf.stem in OVERLAY:
-                  continue
-              translated = parse(conf)
-              for key, en_value in en.items():
-                  value = translated.get(key, "")
-                  if not value or (value == en_value and not keep(en_value)):
-                      print(f"::error file={conf}::{conf.stem}: untranslated label {key}")
-                      violations += 1
-          if violations:
-              print(f"\n{violations} untranslated server labels", file=sys.stderr)
-              sys.exit(1)
-          print("Server labels complete in every locale.")
-          PY
+      # Server label (.conf) completeness is checked by each repository's own
+      # i18n-check.yml through .github/scripts/check-labels.py, whose keep-lists
+      # and overlay set a parity test in the monorepo keeps in step. An inline
+      # copy here had drifted from it and failed every app.
 
       - name: Check i18n glossary (brand/protocol terms)
         run: |
@@ -171,35 +140,20 @@ jobs:
           def parse(s):
               return ''.join(re.findall(r'"((?:[^"\\]|\\.)*)"', s)).replace('\\n','\n').replace('\\"','"').replace('\\\\','\\')
           violations = 0
-          for po in list(Path('.').rglob('messages.po')) + list(Path('.').rglob('labels/*.conf')):
+          for po in Path('.').rglob('messages.po'):
               if any(p in po.parts for p in ('node_modules','dist','.git')):
                   continue
               text = po.read_text(encoding='utf-8', errors='replace')
-              if po.suffix == '.po':
-                  for m in ENTRY_RE.finditer(text):
-                      src, tgt = parse(m.group('id')), parse(m.group('str'))
-                      if not src or not tgt:
-                          continue
-                      for term in GLOSSARY:
-                          if term in src and term not in tgt:
-                              line = text.count('\n', 0, m.start()) + 1
-                              if not ALLOW_RE.search(text.split('\n')[line-1] if line-1 < len(text.split('\n')) else ''):
-                                  print(f"::error file={po},line={line}::{term} missing from translation: {tgt[:80]}")
-                                  violations += 1
-              else:
-                  for n, line in enumerate(text.splitlines(), 1):
-                      if '=' not in line or ALLOW_RE.search(line):
-                          continue
-                      val = line.split('=', 1)[1].strip()
-                      for term in GLOSSARY:
-                          if term in val:
-                              # Compare against en.conf to know if term should be there
-                              en_path = po.parent / 'en.conf'
-                              if en_path.exists() and term in en_path.read_text(encoding='utf-8'):
-                                  continue  # term in source too — fine
-                              if term not in val:
-                                  print(f"::error file={po},line={n}::{term} should be verbatim: {val[:80]}")
-                                  violations += 1
+              for m in ENTRY_RE.finditer(text):
+                  src, tgt = parse(m.group('id')), parse(m.group('str'))
+                  if not src or not tgt:
+                      continue
+                  for term in GLOSSARY:
+                      if term in src and term not in tgt:
+                          line = text.count('\n', 0, m.start()) + 1
+                          if not ALLOW_RE.search(text.split('\n')[line-1] if line-1 < len(text.split('\n')) else ''):
+                              print(f"::error file={po},line={line}::{term} missing from translation: {tgt[:80]}")
+                              violations += 1
           if violations:
               print(f"\n{violations} glossary violations", file=sys.stderr)
               sys.exit(1)
