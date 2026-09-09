@@ -53,6 +53,11 @@ function socketsFor(key: string): MockWebSocket[] {
   return MockWebSocket.instances.filter((ws) => ws.url.includes(`key=${key}`))
 }
 
+// jsdom leaves document.hidden read-only, so the visibility cases redefine it.
+function setHidden(hidden: boolean) {
+  Object.defineProperty(document, 'hidden', { value: hidden, configurable: true })
+}
+
 describe('entityWebsocketManager', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -130,6 +135,65 @@ describe('entityWebsocketManager', () => {
     Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
     window.dispatchEvent(new Event('online'))
     expect(MockWebSocket.instances.length).toBeGreaterThan(before)
+
+    if (original) Object.defineProperty(navigator, 'onLine', original)
+    stop()
+  })
+
+  // A hidden tab throttles setTimeout to a minute or worse, so a socket that
+  // dropped in the background is still down when the user comes back, and the
+  // pending retry is whatever the browser stretched it to.
+  it('reconnects when the tab is shown rather than waiting out a throttled timer', () => {
+    const stop = entityWebsocketManager.subscribe('wake', () => {})
+    MockWebSocket.instances[MockWebSocket.instances.length - 1].open()
+    vi.spyOn(Math, 'random').mockReturnValue(1)
+
+    // Climb the backoff to its ceiling, so the pending retry is far out.
+    setHidden(true)
+    for (let i = 0; i < 4; i++) {
+      MockWebSocket.instances[MockWebSocket.instances.length - 1].onclose?.()
+      vi.advanceTimersByTime(31000)
+    }
+    const before = MockWebSocket.instances.length
+    MockWebSocket.instances[before - 1].onclose?.()
+
+    // Nothing yet: the next retry is tens of seconds away.
+    vi.advanceTimersByTime(1000)
+    expect(MockWebSocket.instances.length).toBe(before)
+
+    setHidden(false)
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    expect(MockWebSocket.instances.length).toBeGreaterThan(before)
+    stop()
+  })
+
+  it('opens no second socket when the tab is shown with the connection live', () => {
+    const stop = entityWebsocketManager.subscribe('wakeLive', () => {})
+    MockWebSocket.instances[MockWebSocket.instances.length - 1].open()
+
+    const before = MockWebSocket.instances.length
+    setHidden(false)
+    document.dispatchEvent(new Event('visibilitychange'))
+    vi.runAllTimers()
+
+    expect(MockWebSocket.instances.length).toBe(before)
+    stop()
+  })
+
+  // Showing the tab is not evidence the network is back, and retrying into a
+  // dead network is what the offline guard exists to prevent.
+  it('does not reconnect on show while the browser reports offline', () => {
+    const stop = entityWebsocketManager.subscribe('wakeOffline', () => {})
+    const original = Object.getOwnPropertyDescriptor(navigator, 'onLine')
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+
+    const before = MockWebSocket.instances.length
+    MockWebSocket.instances[before - 1].onclose?.()
+    setHidden(false)
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    expect(MockWebSocket.instances.length).toBe(before)
 
     if (original) Object.defineProperty(navigator, 'onLine', original)
     stop()
