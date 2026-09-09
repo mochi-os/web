@@ -34,9 +34,18 @@ const sibling = createMockEntityObject({ id: 'obj-2', values: { title: 'Sibling'
 
 type Detail = EntityObjectDetail<EntityObject>
 
+// The server answers the row and its values as siblings, so the fixture must
+// not carry values on the row: the panel once titled the row and crashed on
+// every real fetch while a fixture shaped like the cache kept this green.
+function row(entity: EntityObject): Omit<EntityObject, 'values'> {
+  const { values, ...rest } = entity
+  void values
+  return rest
+}
+
 function detailFor(overrides?: Partial<Detail>): Detail {
   return {
-    object,
+    object: row(object),
     values: { title: 'Original' },
     outgoing: [],
     incoming: [],
@@ -174,12 +183,19 @@ describe('EntityObjectDetailPanel header', () => {
       values: { title: 'Original' },
     })
     vi.mocked(api.getObject).mockResolvedValue({
-      data: detailFor({ object: numbered }),
+      data: detailFor({ object: row(numbered) }),
     })
 
     renderPanel()
 
     expect(await screen.findByTestId('entity-readable')).toHaveTextContent('PROJ-14')
+  })
+
+  it('titles the object from the detail values, since the row carries none', async () => {
+    renderPanel()
+
+    expect(await screen.findByText('Original')).toBeInTheDocument()
+    expect(screen.queryByText('Try again')).toBeNull()
   })
 })
 

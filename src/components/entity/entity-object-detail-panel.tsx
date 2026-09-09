@@ -58,9 +58,11 @@ import type {
   EntityObjectLink,
 } from "../../types/entity-object";
 
-/** What `getObject` has to return. Apps may return more; the panel reads this. */
+/** What `getObject` has to return. Apps may return more; the panel reads this.
+ * The server sends the row and its values as siblings, so nothing here may
+ * expect `values` on the row itself. */
 export interface EntityObjectDetail<TObject extends EntityObject> {
-  object: TObject;
+  object: Omit<TObject, "values">;
   values: Record<string, string>;
   outgoing: EntityObjectLink[];
   incoming: EntityObjectLink[];
@@ -407,7 +409,7 @@ export function EntityObjectDetailPanel<
   const classOptions = design.options[object.class] || {};
   const cls = design.classes.find((c) => c.id === object.class);
   const titleField = cls?.title ? classFields.find((f) => f.id === cls.title) : undefined;
-  const title = entityObjectTitle(object, design.classes, prefix);
+  const title = entityObjectTitle({ ...object, values: data.values }, design.classes, prefix);
   const objectTitle = (obj: EntityTitleObject) =>
     entityObjectTitle(obj, design.classes, prefix);
 
