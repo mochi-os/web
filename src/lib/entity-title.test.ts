@@ -46,9 +46,10 @@ describe('entityObjectTitle', () => {
     expect(entityObjectTitle(obj, classes)).toBe('Untitled')
   })
 
-  // The object-detail endpoint returns `values` as a sibling of `object`, not
-  // inside it, so the panel can hand this function an object with no values
-  // map. Reading the title field off `undefined` crashed the whole detail view.
+  // The type requires `values`, so the panel merges the detail response's
+  // sibling `values` key in before it calls. These two cover the runtime hole
+  // the compiler cannot: apps pass server data the types never checked, and
+  // reading the title field off `undefined` crashed the whole detail view.
   it('does not throw when the object carries no values map', () => {
     const obj = { class: 'task' } as unknown as Parameters<
       typeof entityObjectTitle

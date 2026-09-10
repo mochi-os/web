@@ -14,9 +14,7 @@ export interface EntityTitleObject {
   class: string
   number?: number
   readable?: string
-  // The object-detail endpoint returns `values` alongside `object`, not inside
-  // it, so a caller passing `data.object` straight through has no values map.
-  values?: Record<string, string>
+  values: Record<string, string>
 }
 
 /**
