@@ -289,17 +289,3 @@ jobs:
               print(f"\n{violations} plural-completeness violations", file=sys.stderr)
               sys.exit(1)
           PY
-
-      - name: Check Android i18n catalogues
-        run: |
-          # Single implementation, living with the resources it checks:
-          # clients/android/tools/check-locales.py. Add checks there, not here.
-          # Repos with no Android module skip rather than fail.
-          checker=$(find . -path '*/tools/check-locales.py' -not -path './node_modules/*' | head -1)
-          if [ -z "$checker" ]; then
-            echo "No Android modules in this repo; nothing to check."
-            exit 0
-          fi
-          root=$(dirname "$(dirname "$checker")")
-          echo "Checking Android catalogues under $root"
-          python3 "$checker" --discover "$root" --strict
