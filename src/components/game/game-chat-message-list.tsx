@@ -202,7 +202,6 @@ export function GameChatMessageList<M extends GameChatMessage>({
       {Object.keys(groupedMessages).map((key) => (
         <Fragment key={key}>
           <div className='my-2 flex items-center justify-center'>
-            {/* eslint-disable-next-line lingui/no-unlocalized-strings -- 'T00:00:00' is an ISO-8601 time component, not a UI label */}
             <div className='text-muted-foreground text-[10px]'>
               {formatDate(new Date(key + 'T00:00:00'))}
             </div>

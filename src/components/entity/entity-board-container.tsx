@@ -206,7 +206,6 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     if (!el) return
     const update = () => {
       const top = Math.ceil(el.getBoundingClientRect().top)
-      // eslint-disable-next-line lingui/no-unlocalized-strings
       setBoardHeight(`calc(100dvh - ${top}px)`)
     }
     update()

@@ -112,7 +112,6 @@ export function createGameHooks<A extends GameApiShape>(
       enabled: Boolean(gameId) && (options?.enabled ?? true),
       queryFn: () => {
         if (!gameId) {
-          // eslint-disable-next-line lingui/no-unlocalized-strings -- thrown to the query's error boundary, never rendered
           throw new Error('Game ID is required')
         }
         return gamesApi.detail(gameId) as Promise<ViewResponse>

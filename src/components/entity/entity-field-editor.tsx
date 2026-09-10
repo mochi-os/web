@@ -193,7 +193,6 @@ export function EntityFieldEditor({
           )
         return (
           <span className='text-sm h-9 flex items-center'>
-            {/* eslint-disable-next-line lingui/no-unlocalized-strings */}
             {formatDate(new Date(value + 'T00:00:00'))}
           </span>
         )
