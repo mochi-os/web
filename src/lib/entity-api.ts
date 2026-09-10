@@ -524,13 +524,16 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
 
     // ============= Activity Methods =============
 
-    // List activity
+    // List activity, newest first. `page` asks for one slice of the history;
+    // without it the server answers with its default first page.
     listActivity: async (
       entityId: string,
       objectId: string,
+      page?: { limit: number; offset: number },
     ): Promise<EntityActivityListResponse> => {
+      const query = page ? `?limit=${page.limit}&offset=${page.offset}` : "";
       return request.get<EntityActivityListResponse>(
-        endpoints.activity(entityId, objectId),
+        `${endpoints.activity(entityId, objectId)}${query}`,
       );
     },
 
