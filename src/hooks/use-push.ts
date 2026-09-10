@@ -61,11 +61,19 @@ function shellPushRequest<T>(
 // They were inline `new Error(...)` literals before the shared helper; moving
 // them into argument position is what brought them under the rule.
 function shellPushSubscribe(): Promise<void> {
-  // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI (see above)
-  return shellPushRequest('push-subscribe', 'push-result', () => undefined, 'Push registration failed')
+  return shellPushRequest(
+    'push-subscribe',
+    'push-result',
+    () => undefined,
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI (see above)
+    'Push registration failed'
+  )
 }
 
-function shellPushStatus(): Promise<{ subscribed: boolean; permission: NotificationPermission }> {
+function shellPushStatus(): Promise<{
+  subscribed: boolean
+  permission: NotificationPermission
+}> {
   return shellPushRequest(
     'push-status',
     'push-status-result',
@@ -79,8 +87,13 @@ function shellPushStatus(): Promise<{ subscribed: boolean; permission: Notificat
 }
 
 function shellPushUnsubscribe(): Promise<void> {
-  // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI
-  return shellPushRequest('push-unsubscribe', 'push-unsubscribe-result', () => undefined, 'Push unsubscribe failed')
+  return shellPushRequest(
+    'push-unsubscribe',
+    'push-unsubscribe-result',
+    () => undefined,
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- diagnostic, not UI
+    'Push unsubscribe failed'
+  )
 }
 
 export function usePush() {

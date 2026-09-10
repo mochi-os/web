@@ -43,34 +43,47 @@ function formatErrorMessage(message: string): string | undefined {
   return trimmed
 }
 
-function getInlineCopy(status: number, rawMessage: string, errorMessage?: string, source?: string) {
+function getInlineCopy(
+  status: number,
+  rawMessage: string,
+  errorMessage?: string,
+  source?: string
+) {
   const lowerMessage = rawMessage.toLowerCase()
 
   if (source === 'error.message (network)') {
-    return { 
-      title: <Trans>Network error</Trans>, 
-      description: <Trans>Please check your internet connection and try again.</Trans> 
+    return {
+      title: <Trans>Network error</Trans>,
+      description: (
+        <Trans>Please check your internet connection and try again.</Trans>
+      ),
     }
   }
 
   if (status === 401 || status === 403 || lowerMessage.includes('permission')) {
-    return { 
-      title: <Trans>Access denied</Trans>, 
-      description: errorMessage ?? <Trans>You do not have access to this section.</Trans> 
+    return {
+      title: <Trans>Access denied</Trans>,
+      description: errorMessage ?? (
+        <Trans>You do not have access to this section.</Trans>
+      ),
     }
   }
 
   if (status === 404) {
-    return { 
-      title: <Trans>Not found</Trans>, 
-      description: errorMessage ?? <Trans>The requested content could not be found.</Trans> 
+    return {
+      title: <Trans>Not found</Trans>,
+      description: errorMessage ?? (
+        <Trans>The requested content could not be found.</Trans>
+      ),
     }
   }
 
   if (status === 429) {
-    return { 
-      title: <Trans>Too many requests</Trans>, 
-      description: errorMessage ?? <Trans>Please wait a moment and try again.</Trans> 
+    return {
+      title: <Trans>Too many requests</Trans>,
+      description: errorMessage ?? (
+        <Trans>Please wait a moment and try again.</Trans>
+      ),
     }
   }
 
@@ -93,10 +106,16 @@ export function GeneralError({
   const message = normalized.message
   const errorMessage = formatErrorMessage(message)
   const displayMessage = errorMessage ?? message
-  const inlineCopy = getInlineCopy(statusCode, message, errorMessage, normalized.source)
+  const inlineCopy = getInlineCopy(
+    statusCode,
+    message,
+    errorMessage,
+    normalized.source
+  )
 
   // Use the error message as the heading if it's descriptive
-  const isDescriptiveMessage = !!errorMessage &&
+  const isDescriptiveMessage =
+    !!errorMessage &&
     !errorMessage.toLowerCase().includes('status code') &&
     !errorMessage.toLowerCase().includes('request failed')
   const heading = isDescriptiveMessage ? errorMessage : statusCode.toString()
@@ -121,19 +140,16 @@ export function GeneralError({
             <div className='space-y-1'>
               <p className='text-sm font-semibold'>{inlineCopy.title}</p>
               {inlineCopy.description && (
-                <p className='text-muted-foreground text-sm'>{inlineCopy.description}</p>
+                <p className='text-muted-foreground text-sm'>
+                  {inlineCopy.description}
+                </p>
               )}
             </div>
           </div>
 
           {reset && (
             <div className='ps-9'>
-              <Button
-                type='button'
-                onClick={reset}
-                variant='outline'
-                size='sm'
-              >
+              <Button type='button' onClick={reset} variant='outline' size='sm'>
                 <RotateCcw className='h-4 w-4' />
                 <Trans>Try again</Trans>
               </Button>
@@ -145,13 +161,7 @@ export function GeneralError({
   }
 
   return (
-    <div
-      className={cn(
-        'w-full',
-        mode === 'fullscreen' && 'h-svh',
-        className
-      )}
-    >
+    <div className={cn('w-full', mode === 'fullscreen' && 'h-svh', className)}>
       <div
         className={cn(
           'flex w-full flex-col items-center justify-center gap-2',
@@ -159,12 +169,12 @@ export function GeneralError({
         )}
       >
         {showHeading && (
-          <h1 className='text-4xl leading-tight font-bold text-center'>{heading}</h1>
+          <h1 className='text-4xl leading-tight font-bold text-center'>
+            {heading}
+          </h1>
         )}
         {showMessage && (
-          <p className='text-muted-foreground text-center'>
-            {displayMessage}
-          </p>
+          <p className='text-muted-foreground text-center'>{displayMessage}</p>
         )}
         {reset && (
           <Button

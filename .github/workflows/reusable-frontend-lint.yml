@@ -44,8 +44,8 @@ jobs:
       # Apps declare `"@mochi/web": "workspace:*"`, which needs a workspace
       # root; locally that is the umbrella. CI synthesises one plus a shim
       # package.json at $GITHUB_WORKSPACE, mirroring mochi/package.json's
-      # eslint-plugin-lingui, pnpm.overrides and onlyBuiltDependencies - keep it
-      # in sync as the root grows, or CI lints against a different React than
+      # pnpm.overrides and onlyBuiltDependencies - keep it in sync as the root
+      # grows, or CI lints against a different React than
       # every real build.
       - name: Synthesise workspace root for @mochi/web
         working-directory: ${{ github.workspace }}
@@ -66,9 +66,6 @@ jobs:
           {
             "name": "mochi-ci-shim",
             "private": true,
-            "devDependencies": {
-              "eslint-plugin-lingui": "^0.13.1"
-            },
             "pnpm": {
               "overrides": {
                 "react": "19.2.1",

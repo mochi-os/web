@@ -21,10 +21,12 @@ function rows(from: number, count: number): Row[] {
 describe('useLoadMore', () => {
   it('keeps appended pages when the caller rebuilds initial on every render', async () => {
     const loaderItems = rows(1, 20)
-    const fetcher = vi.fn(async ({ page }: { page: number; limit: number }) => ({
-      items: rows(page * 20 - 19, 20),
-      total: 45,
-    }))
+    const fetcher = vi.fn(
+      async ({ page }: { page: number; limit: number }) => ({
+        items: rows(page * 20 - 19, 20),
+        total: 45,
+      })
+    )
 
     const { result, rerender } = renderHook(() =>
       // Exactly how the pages write it: a new wrapper object each render,
@@ -46,10 +48,12 @@ describe('useLoadMore', () => {
 
   it('asks for the next page each time rather than repeating page 2', async () => {
     const loaderItems = rows(1, 20)
-    const fetcher = vi.fn(async ({ page }: { page: number; limit: number }) => ({
-      items: rows(page * 20 - 19, 20),
-      total: 60,
-    }))
+    const fetcher = vi.fn(
+      async ({ page }: { page: number; limit: number }) => ({
+        items: rows(page * 20 - 19, 20),
+        total: 60,
+      })
+    )
 
     const { result, rerender } = renderHook(() =>
       useLoadMore<Row>({ fetcher, initial: { items: loaderItems, total: 60 } })

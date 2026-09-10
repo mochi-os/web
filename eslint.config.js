@@ -11,9 +11,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 import i18nConfig from './eslint-i18n-config.js'
-import { createRequire } from 'module';
+import { createRequire } from 'module'
 
-const require = createRequire(import.meta.url);
+const require = createRequire(import.meta.url)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -96,4 +96,4 @@ export default defineConfig(
     files: ['src/lib/shell-mic-session.ts', 'src/lib/shell-bridge.ts'],
     rules: { 'lingui/no-unlocalized-strings': 'off' },
   }
-);
+)

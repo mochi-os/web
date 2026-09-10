@@ -22,7 +22,9 @@ describe('highlightMentions', () => {
   it('leaves a token inside an attribute alone', () => {
     // A sanitiser lets an href or title through; splicing a span into the
     // attribute value would corrupt the element.
-    const fragment = parse(highlightMentions('<a href="/search?q=@[x]" title="@[y]">link @[z]</a>'))
+    const fragment = parse(
+      highlightMentions('<a href="/search?q=@[x]" title="@[y]">link @[z]</a>')
+    )
     const anchor = fragment.querySelector('a')!
     expect(anchor.getAttribute('href')).toBe('/search?q=@[x]')
     expect(anchor.getAttribute('title')).toBe('@[y]')
@@ -39,9 +41,20 @@ describe('highlightMentions', () => {
 
 const people = [{ id: 'p1', name: 'Alice' }]
 
-function Harness({ onKeyDown }: { onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void }) {
+function Harness({
+  onKeyDown,
+}: {
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
+}) {
   const [value, setValue] = useState('')
-  return <MentionTextarea value={value} onValueChange={setValue} people={people} onKeyDown={onKeyDown} />
+  return (
+    <MentionTextarea
+      value={value}
+      onValueChange={setValue}
+      people={people}
+      onKeyDown={onKeyDown}
+    />
+  )
 }
 
 describe('MentionTextarea Enter handling while the dropdown is open', () => {

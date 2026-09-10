@@ -51,18 +51,24 @@ type NavAction = BaseNavItem & {
 }
 
 // Sub-item that can be a link, action, or nested collapsible
-type NavSubItem = (BaseNavItem & {
-  url: LinkProps['to'] | (string & {})
-  external?: boolean
-  items?: never
-}) | NavAction | NavSubCollapsible
+type NavSubItem =
+  | (BaseNavItem & {
+      url: LinkProps['to'] | (string & {})
+      external?: boolean
+      items?: never
+    })
+  | NavAction
+  | NavSubCollapsible
 
 // Nested collapsible for sub-menus (supports one additional level)
 type NavSubCollapsible = BaseNavItem & {
-  items: (BaseNavItem & {
-    url: LinkProps['to'] | (string & {})
-    external?: boolean
-  } | NavAction)[]
+  items: (
+    | (BaseNavItem & {
+        url: LinkProps['to'] | (string & {})
+        external?: boolean
+      })
+    | NavAction
+  )[]
   url?: LinkProps['to'] | (string & {})
   external?: boolean
   open?: boolean
@@ -91,4 +97,14 @@ type SidebarData = {
   navGroups: NavGroup[]
 }
 
-export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavSubCollapsible, NavSubItem, NavLink, NavAction, NavMenuItem }
+export type {
+  SidebarData,
+  NavGroup,
+  NavItem,
+  NavCollapsible,
+  NavSubCollapsible,
+  NavSubItem,
+  NavLink,
+  NavAction,
+  NavMenuItem,
+}

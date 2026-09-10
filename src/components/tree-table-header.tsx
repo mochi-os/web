@@ -19,7 +19,10 @@ export interface TreeTableHeaderProps {
   idLabel?: string
 }
 
-function columnWidthClass(field: TreeTableHeaderField, isTitle: boolean): string {
+function columnWidthClass(
+  field: TreeTableHeaderField,
+  isTitle: boolean
+): string {
   if (isTitle) return 'min-w-[12rem]'
   switch (field.fieldtype) {
     case 'user':
@@ -43,16 +46,19 @@ export function TreeTableHeader({
 }: TreeTableHeaderProps) {
   const { t } = useLingui()
   return (
-    <thead className="border-b border-border">
-      <tr className="text-xs text-muted-foreground">
-        <th className="sticky top-0 z-10 w-10 min-w-10 py-2 ps-2 pe-2 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]" aria-hidden="true" />
+    <thead className='border-b border-border'>
+      <tr className='text-xs text-muted-foreground'>
+        <th
+          className='sticky top-0 z-10 w-10 min-w-10 py-2 ps-2 pe-2 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]'
+          aria-hidden='true'
+        />
         {showClass ? (
-          <th className="sticky top-0 z-10 px-2 py-2 text-start font-medium whitespace-nowrap w-24 shrink-0 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
+          <th className='sticky top-0 z-10 px-2 py-2 text-start font-medium whitespace-nowrap w-24 shrink-0 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]'>
             {classLabel}
           </th>
         ) : null}
         {showId ? (
-          <th className="sticky top-0 z-10 px-2 py-2 text-start font-medium whitespace-nowrap w-20 shrink-0 font-mono bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
+          <th className='sticky top-0 z-10 px-2 py-2 text-start font-medium whitespace-nowrap w-20 shrink-0 font-mono bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]'>
             {idLabel}
           </th>
         ) : null}
@@ -64,7 +70,7 @@ export function TreeTableHeader({
               className={cn(
                 'sticky top-0 z-10 px-2 py-2 text-start font-medium whitespace-nowrap bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]',
                 columnWidthClass(field, isTitle),
-                isTitle && 'w-full',
+                isTitle && 'w-full'
               )}
             >
               {field.name || t`Unknown`}

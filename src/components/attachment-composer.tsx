@@ -165,7 +165,7 @@ export function AttachmentComposer({
   // that block's edge instead of under the pointer, so those slots refuse it.
   const mediaCount = items.filter((item) => isMedia(item.type)).length
   const sameBlock = (from: number, to: number) =>
-    (from < mediaCount) === (to < mediaCount)
+    from < mediaCount === to < mediaCount
 
   const { draggingIndex, getGroupProps, getItemProps } = useDragReorder({
     count: items.length,
@@ -179,7 +179,10 @@ export function AttachmentComposer({
 
   const canDrag = reorderable && items.length > 1
   const removable = state !== 'uploading' && Boolean(onRemove)
-  const dragClass = cn('select-none', canDrag && 'cursor-grab active:cursor-grabbing')
+  const dragClass = cn(
+    'select-none',
+    canDrag && 'cursor-grab active:cursor-grabbing'
+  )
 
   /**
    * Arrow keys move the focused tile one place. Left and right only: the grid
@@ -198,7 +201,11 @@ export function AttachmentComposer({
           tabIndex: 0,
           onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
             const step =
-              event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+              event.key === 'ArrowRight'
+                ? 1
+                : event.key === 'ArrowLeft'
+                  ? -1
+                  : 0
             if (step === 0) return
             event.preventDefault()
             // Read the direction off the tile rather than assuming: in an RTL
@@ -214,7 +221,10 @@ export function AttachmentComposer({
   // in a wrapping flex row; grid only, since in the scrolling row it would be a
   // gap as wide as the composer.
   const dividerAt =
-    layout === 'grid' && groupMedia && mediaCount > 0 && mediaCount < items.length
+    layout === 'grid' &&
+    groupMedia &&
+    mediaCount > 0 &&
+    mediaCount < items.length
       ? mediaCount
       : -1
 
@@ -254,7 +264,10 @@ export function AttachmentComposer({
 
           const rule =
             position === dividerAt ? (
-              <div key='block-rule' className='flex w-full items-center gap-2 pt-1'>
+              <div
+                key='block-rule'
+                className='flex w-full items-center gap-2 pt-1'
+              >
                 {blockLabels?.files && (
                   <span className='text-muted-foreground text-[11px] font-medium'>
                     {blockLabels.files}
@@ -312,9 +325,18 @@ export function AttachmentComposer({
             >
               <AttachmentMedia variant={item.previewUrl ? 'image' : 'icon'}>
                 {item.previewUrl && item.previewKind === 'video' ? (
-                  <video src={item.previewUrl} muted playsInline draggable={false} />
+                  <video
+                    src={item.previewUrl}
+                    muted
+                    playsInline
+                    draggable={false}
+                  />
                 ) : item.previewUrl ? (
-                  <img src={item.previewUrl} alt={item.name} draggable={false} />
+                  <img
+                    src={item.previewUrl}
+                    alt={item.name}
+                    draggable={false}
+                  />
                 ) : (
                   <FileIcon />
                 )}

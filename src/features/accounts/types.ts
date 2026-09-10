@@ -74,7 +74,11 @@ export interface AccountsHookResult {
   providersError: unknown
   /** Error from the accounts list query, if it failed */
   accountsError: unknown
-  add: (type: string, fields: Record<string, string>, addToExisting?: boolean) => Promise<Account>
+  add: (
+    type: string,
+    fields: Record<string, string>,
+    addToExisting?: boolean
+  ) => Promise<Account>
   remove: (id: string) => Promise<boolean>
   update: (id: string, fields: Record<string, string>) => Promise<boolean>
   verify: (id: string, code?: string) => Promise<boolean>

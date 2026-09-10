@@ -3,7 +3,13 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
-import { formatDate, formatTime, formatDateTime, formatRelativeTime, formatUserTimestamp } from './locale-format'
+import {
+  formatDate,
+  formatTime,
+  formatDateTime,
+  formatRelativeTime,
+  formatUserTimestamp,
+} from './locale-format'
 
 // A date whose month abbreviation differs visibly between languages.
 const MARCH = new Date(2026, 2, 14, 15, 30, 0)
@@ -25,7 +31,7 @@ describe('month names follow the active language', () => {
     expect(formatDate(MARCH, 'D MMM YYYY')).toBe('14 Mar 2026')
   })
 
-  it('uses the language\'s own abbreviation, not English', () => {
+  it("uses the language's own abbreviation, not English", () => {
     load('de')
     const german = formatDate(MARCH, 'D MMM YYYY')
     load('fr')
@@ -82,7 +88,9 @@ describe('relative-time units are translatable', () => {
     const real = i18n._.bind(i18n)
     i18n._ = ((id: unknown, ...rest: unknown[]) => {
       // The macro compiles to a message descriptor, not positional arguments.
-      seen.push(typeof id === 'string' ? id : String((id as { id?: string })?.id))
+      seen.push(
+        typeof id === 'string' ? id : String((id as { id?: string })?.id)
+      )
       // @ts-expect-error - forwarding to the real implementation
       return real(id, ...rest)
     }) as typeof i18n._
@@ -115,7 +123,9 @@ describe('relative-time units are translatable', () => {
     load('en')
     expect(formatRelativeTime(now() - 10, 'YYYY-MM-DD')).toBe('Just now')
     // Older than a month falls through to an absolute date.
-    expect(formatRelativeTime(now() - 5184000, 'YYYY-MM-DD')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(formatRelativeTime(now() - 5184000, 'YYYY-MM-DD')).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/
+    )
   })
 })
 
@@ -148,7 +158,9 @@ describe('the timezone preference reaches the rendered value', () => {
   })
 
   it('combines both halves in formatDateTime', () => {
-    expect(formatDateTime(INSTANT, 'YYYY-MM-DD', '24h', 'Asia/Tokyo')).toBe('2026-03-15 00:30:00')
+    expect(formatDateTime(INSTANT, 'YYYY-MM-DD', '24h', 'Asia/Tokyo')).toBe(
+      '2026-03-15 00:30:00'
+    )
   })
 
   it('falls back to local time when the zone is absent or unusable', () => {
@@ -175,7 +187,10 @@ describe('the timezone preference reaches every timestamp display', () => {
 
   // 2026-03-14T15:30:00Z as a Unix timestamp.
   const INSTANT = Date.UTC(2026, 2, 14, 15, 30, 0) / 1000
-  const preferences = (timestampDisplay: 'absolute' | 'relative' | 'auto', timezone: string) => ({
+  const preferences = (
+    timestampDisplay: 'absolute' | 'relative' | 'auto',
+    timezone: string
+  ) => ({
     dateFormat: 'YYYY-MM-DD' as const,
     timeFormat: '24h' as const,
     timestampDisplay,
@@ -183,15 +198,23 @@ describe('the timezone preference reaches every timestamp display', () => {
   })
 
   it('renders an absolute timestamp in the preferred zone', () => {
-    expect(formatUserTimestamp(INSTANT, preferences('absolute', 'UTC'))).toBe('2026-03-14 15:30:00')
-    expect(formatUserTimestamp(INSTANT, preferences('absolute', 'Asia/Tokyo'))).toBe('2026-03-15 00:30:00')
+    expect(formatUserTimestamp(INSTANT, preferences('absolute', 'UTC'))).toBe(
+      '2026-03-14 15:30:00'
+    )
+    expect(
+      formatUserTimestamp(INSTANT, preferences('absolute', 'Asia/Tokyo'))
+    ).toBe('2026-03-15 00:30:00')
   })
 
   it('renders the date a relative timestamp falls back to in the preferred zone', () => {
     // Older than the thirty-day relative window in every zone, so the branch
     // under test is the absolute-date fallback.
     expect(formatRelativeTime(INSTANT, 'YYYY-MM-DD', 'UTC')).toBe('2026-03-14')
-    expect(formatRelativeTime(INSTANT, 'YYYY-MM-DD', 'Asia/Tokyo')).toBe('2026-03-15')
-    expect(formatUserTimestamp(INSTANT, preferences('relative', 'Asia/Tokyo'))).toBe('2026-03-15')
+    expect(formatRelativeTime(INSTANT, 'YYYY-MM-DD', 'Asia/Tokyo')).toBe(
+      '2026-03-15'
+    )
+    expect(
+      formatUserTimestamp(INSTANT, preferences('relative', 'Asia/Tokyo'))
+    ).toBe('2026-03-15')
   })
 })

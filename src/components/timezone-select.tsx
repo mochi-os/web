@@ -6,14 +6,23 @@ import { Trans, useLingui } from '@lingui/react/macro'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from './ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { t } from '@lingui/core/macro'
 
 function getTimezones(): string[] {
   try {
     return (
-      (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? []
+      (
+        Intl as { supportedValuesOf?: (key: string) => string[] }
+      ).supportedValuesOf?.('timeZone') ?? []
     )
   } catch {
     return []
@@ -34,7 +43,11 @@ interface TimezoneSelectProps {
   disabled?: boolean
 }
 
-export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProps) {
+export function TimezoneSelect({
+  value,
+  onChange,
+  disabled,
+}: TimezoneSelectProps) {
   const { t: t_ } = useLingui()
   const [open, setOpen] = useState(false)
   const timezones = useMemo(() => getTimezones(), [])
@@ -64,7 +77,9 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
         <Command>
           <CommandInput placeholder={t`Search time zone...`} />
           <CommandList>
-            <CommandEmpty><Trans>No time zone found.</Trans></CommandEmpty>
+            <CommandEmpty>
+              <Trans>No time zone found.</Trans>
+            </CommandEmpty>
             <CommandGroup>
               <CommandItem
                 value='auto'
@@ -80,7 +95,8 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
                   )}
                 />
                 <span className='truncate'>
-                  <Trans>Detect from web browser</Trans>: {formatTimezone(browserTimezone)}
+                  <Trans>Detect from web browser</Trans>:{' '}
+                  {formatTimezone(browserTimezone)}
                 </span>
               </CommandItem>
               {timezones.map((tz) => (

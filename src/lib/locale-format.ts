@@ -74,7 +74,14 @@ function meridiem(date: Date, timezone?: string): string {
 // own zone (the caller then uses the plain Date getters) and for a zone Intl
 // rejects, so an unusable preference degrades to local time rather than
 // throwing inside a render.
-type ZonedParts = { year: number; month: number; day: number; hour: number; minute: number; second: number }
+type ZonedParts = {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+}
 
 const partFormatters = new Map<string, Intl.DateTimeFormat>()
 
@@ -99,7 +106,8 @@ function zonedParts(date: Date, timezone?: string): ZonedParts | null {
     partFormatters.set(timezone, formatter)
   }
   const found: Record<string, string> = {}
-  for (const part of formatter.formatToParts(date)) found[part.type] = part.value
+  for (const part of formatter.formatToParts(date))
+    found[part.type] = part.value
   if (!found.year) return null
   return {
     year: Number(found.year),
@@ -115,12 +123,18 @@ function zonedParts(date: Date, timezone?: string): ZonedParts | null {
 
 // --- User-facing formatting (respects preferences) ---
 
-export type DateFormat = 'YYYY-MM-DD' | 'DD/MM/YYYY' | 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'D MMM YYYY'
+export type DateFormat =
+  'YYYY-MM-DD' | 'DD/MM/YYYY' | 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'D MMM YYYY'
 export type TimeFormat = '12h' | '24h'
 export type TimestampDisplay = 'auto' | 'relative' | 'absolute'
-export type NumberFormat = '1,000.00' | '1.000,00' | '1 000,00' | "1'000.00" | '1,00,000.00'
+export type NumberFormat =
+  '1,000.00' | '1.000,00' | '1 000,00' | "1'000.00" | '1,00,000.00'
 
-export function formatDate(date: Date, dateFormat: DateFormat, timezone?: string): string {
+export function formatDate(
+  date: Date,
+  dateFormat: DateFormat,
+  timezone?: string
+): string {
   const zoned = zonedParts(date, timezone)
   const y = zoned ? zoned.year : date.getFullYear()
   const monthNumber = zoned ? zoned.month : date.getMonth() + 1
@@ -141,7 +155,11 @@ export function formatDate(date: Date, dateFormat: DateFormat, timezone?: string
   }
 }
 
-export function formatTime(date: Date, timeFormat: TimeFormat, timezone?: string): string {
+export function formatTime(
+  date: Date,
+  timeFormat: TimeFormat,
+  timezone?: string
+): string {
   const zoned = zonedParts(date, timezone)
   const hours = zoned ? zoned.hour : date.getHours()
   const minutes = zoned ? zoned.minute : date.getMinutes()
@@ -171,7 +189,11 @@ export type ResolvedLocaleForTimestamp = {
 }
 
 /** Compact relative time: Just now, 5m, 3h, 2d, 3w, then date */
-export function formatRelativeTime(timestamp: number, dateFormat: DateFormat, timezone?: string): string {
+export function formatRelativeTime(
+  timestamp: number,
+  dateFormat: DateFormat,
+  timezone?: string
+): string {
   const now = Date.now() / 1000
   const diff = now - timestamp
 
@@ -199,7 +221,11 @@ export function formatRelativeTime(timestamp: number, dateFormat: DateFormat, ti
 }
 
 /** Format a Unix timestamp for user display, respecting timestamp_display preference */
-export function formatUserTimestamp(timestamp: number, locale: ResolvedLocaleForTimestamp, fallback = ''): string {
+export function formatUserTimestamp(
+  timestamp: number,
+  locale: ResolvedLocaleForTimestamp,
+  fallback = ''
+): string {
   if (!timestamp) return fallback
   if (locale.timestampDisplay === 'auto') {
     // Relative for recent past (< 24h ago), absolute otherwise. Future
@@ -209,12 +235,22 @@ export function formatUserTimestamp(timestamp: number, locale: ResolvedLocaleFor
     if (diff >= 0 && diff < 86400) {
       return formatRelativeTime(timestamp, locale.dateFormat, locale.timezone)
     }
-    return formatDateTime(new Date(timestamp * 1000), locale.dateFormat, locale.timeFormat, locale.timezone)
+    return formatDateTime(
+      new Date(timestamp * 1000),
+      locale.dateFormat,
+      locale.timeFormat,
+      locale.timezone
+    )
   }
   if (locale.timestampDisplay === 'relative') {
     return formatRelativeTime(timestamp, locale.dateFormat, locale.timezone)
   }
-  return formatDateTime(new Date(timestamp * 1000), locale.dateFormat, locale.timeFormat, locale.timezone)
+  return formatDateTime(
+    new Date(timestamp * 1000),
+    locale.dateFormat,
+    locale.timeFormat,
+    locale.timezone
+  )
 }
 
 // --- Number formatting ---
@@ -229,7 +265,11 @@ const numberFormats: Record<NumberFormat, NumberFormatParts> = {
   '1,00,000.00': { group: ',', decimal: '.', indian: true },
 }
 
-export function formatNumber(value: number, numberFormat: NumberFormat, decimals?: number): string {
+export function formatNumber(
+  value: number,
+  numberFormat: NumberFormat,
+  decimals?: number
+): string {
   const fmt = numberFormats[numberFormat]
   const isNeg = value < 0
   const abs = Math.abs(value)
@@ -270,22 +310,34 @@ export function formatNumber(value: number, numberFormat: NumberFormat, decimals
 }
 
 /** Format a price from minor currency units (e.g. 1500 → "£15.00") */
-export function formatPrice(amount: number, symbol: string, numberFormat: NumberFormat): string {
+export function formatPrice(
+  amount: number,
+  symbol: string,
+  numberFormat: NumberFormat
+): string {
   return `${symbol}${formatNumber(amount / 100, numberFormat, 2)}`
 }
 
 /** Format a byte count as a human-readable file size (e.g. 1048576 → "1.0 MB") */
-export function formatFileSize(bytes: number, numberFormat: NumberFormat): string {
+export function formatFileSize(
+  bytes: number,
+  numberFormat: NumberFormat
+): string {
   if (bytes < 1024) return `${formatNumber(bytes, numberFormat, 0)} B`
-  if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, numberFormat, 1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${formatNumber(bytes / (1024 * 1024), numberFormat, 1)} MB`
+  if (bytes < 1024 * 1024)
+    return `${formatNumber(bytes / 1024, numberFormat, 1)} KB`
+  if (bytes < 1024 * 1024 * 1024)
+    return `${formatNumber(bytes / (1024 * 1024), numberFormat, 1)} MB`
   return `${formatNumber(bytes / (1024 * 1024 * 1024), numberFormat, 1)} GB`
 }
 
 // --- System formatting (always fixed, ignores preferences) ---
 
 /** Always YYYY-MM-DD HH:MM:SS — for admin pages, logs, diagnostics */
-export function formatSystemTimestamp(timestamp?: number, fallback = ''): string {
+export function formatSystemTimestamp(
+  timestamp?: number,
+  fallback = ''
+): string {
   if (!timestamp) return fallback
   const date = new Date(timestamp * 1000)
   const y = date.getFullYear()
@@ -303,11 +355,18 @@ export function formatSystemTimestamp(timestamp?: number, fallback = ''): string
 export function formatList(
   items: string[],
   language: string,
-  type: 'conjunction' | 'disjunction' = 'conjunction',
+  type: 'conjunction' | 'disjunction' = 'conjunction'
 ): string {
   // The apps compile against an ES2020 library, which has no ListFormat type;
   // the runtime has had it since 2019, so it is looked up structurally.
-  const ListFormat = (Intl as unknown as { ListFormat?: new (language: string, options: { type: string }) => { format(items: string[]): string } }).ListFormat
+  const ListFormat = (
+    Intl as unknown as {
+      ListFormat?: new (
+        language: string,
+        options: { type: string }
+      ) => { format(items: string[]): string }
+    }
+  ).ListFormat
   if (!ListFormat) return items.join(', ')
   try {
     return new ListFormat(language, { type }).format(items) // i18n-format-ok: the shared list formatter itself

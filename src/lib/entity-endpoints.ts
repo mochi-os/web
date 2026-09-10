@@ -72,7 +72,7 @@ export const entityEndpoints = {
   attachmentDelete: (
     entityId: string,
     objectId: string,
-    attachmentId: string,
+    attachmentId: string
   ) => `${entityId}/-/objects/${objectId}/attachments/${attachmentId}/delete`,
 
   // Activity endpoint
@@ -142,14 +142,14 @@ export const entityEndpoints = {
     entityId: string,
     classId: string,
     fieldId: string,
-    optionId: string,
+    optionId: string
   ) =>
     `${entityId}/-/classes/${classId}/fields/${fieldId}/options/${optionId}/update`,
   optionDelete: (
     entityId: string,
     classId: string,
     fieldId: string,
-    optionId: string,
+    optionId: string
   ) =>
     `${entityId}/-/classes/${classId}/fields/${fieldId}/options/${optionId}/delete`,
 

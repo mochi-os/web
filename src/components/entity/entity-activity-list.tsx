@@ -21,7 +21,7 @@ export interface EntityActivityListProps {
   objectId: string
   listActivity: (
     containerId: string,
-    objectId: string,
+    objectId: string
   ) => Promise<{ data: { activities: EntityActivity[] } }>
   /** The object's class fields, which name the field an entry changed. */
   fields?: EntityField[]
@@ -64,14 +64,14 @@ export function EntityActivityList({
   }
 
   if (isLoading) {
-    return <ListSkeleton count={3} variant="simple" height="h-10" />
+    return <ListSkeleton count={3} variant='simple' height='h-10' />
   }
 
   const activities = data || []
 
   if (activities.length === 0) {
     return (
-      <EmptyState icon={Activity} title={t`No activity yet`} className="py-4" />
+      <EmptyState icon={Activity} title={t`No activity yet`} className='py-4' />
     )
   }
 
@@ -80,12 +80,12 @@ export function EntityActivityList({
       items={activities.map((activity) => ({
         id: activity.id,
         primary: (
-          <p className="text-sm font-medium">
+          <p className='text-sm font-medium'>
             {describe(activity)}
             {activity.oldvalue && activity.newvalue && (
               <>
                 {': '}
-                <span className="line-through font-normal text-muted-foreground">
+                <span className='line-through font-normal text-muted-foreground'>
                   {activity.oldvalue}
                 </span>
                 {' → '}
@@ -95,13 +95,13 @@ export function EntityActivityList({
           </p>
         ),
         secondary: (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className='flex items-center gap-2 text-xs text-muted-foreground'>
             <EntityAvatar
               src={`${getAppPath()}/${containerId}/-/activity/${activity.id}/asset/avatar`}
               styleUrl={`${getAppPath()}/${containerId}/-/activity/${activity.id}/asset/style`}
               seed={activity.user}
               name={activity.name || activity.user}
-              size="xs"
+              size='xs'
             />
             <span>{activity.name || activity.user}</span>
             <span>·</span>

@@ -16,7 +16,10 @@ export type MentionResolvePerson = {
   name: string
 }
 
-export function getMentionQuery(text: string, cursorPos: number): string | null {
+export function getMentionQuery(
+  text: string,
+  cursorPos: number
+): string | null {
   const match = text.slice(0, cursorPos).match(mentionQueryPattern)
   return match ? match[2] : null
 }

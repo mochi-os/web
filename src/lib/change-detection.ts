@@ -4,7 +4,9 @@
 /** Returned from mutationFn when proposed edit matches original — skip API side effects. */
 export const MUTATION_SKIPPED = Symbol('mutation-skipped')
 
-export function isMutationSkipped(result: unknown): result is typeof MUTATION_SKIPPED {
+export function isMutationSkipped(
+  result: unknown
+): result is typeof MUTATION_SKIPPED {
   return result === MUTATION_SKIPPED
 }
 
@@ -38,8 +40,10 @@ export function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
   return a.every((value, index) => value === b[index])
 }
 
-
-export function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+export function setsEqual(
+  a: ReadonlySet<string>,
+  b: ReadonlySet<string>
+): boolean {
   if (a.size !== b.size) return false
   for (const value of a) {
     if (!b.has(value)) return false

@@ -11,7 +11,14 @@ describe('EntityObjectLinks', () => {
       <EntityObjectLinks
         containerId='c1'
         objectId='o1'
-        outgoing={[{ target: 'o2', linktype: 'relates', created: 1, title: 'A very long linked object title that does not fit' }]}
+        outgoing={[
+          {
+            target: 'o2',
+            linktype: 'relates',
+            created: 1,
+            title: 'A very long linked object title that does not fit',
+          },
+        ]}
         incoming={[]}
         classes={[createMockEntityClass()]}
         readOnly={false}

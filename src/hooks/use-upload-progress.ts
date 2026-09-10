@@ -43,13 +43,17 @@ export function useUploadProgress() {
       sent,
       total,
       phase: total != null && sent >= total ? 'processing' : 'uploading',
-      slices: sizes ? (uploadSlices(sent, total, sizes) ?? undefined) : undefined,
+      slices: sizes
+        ? (uploadSlices(sent, total, sizes) ?? undefined)
+        : undefined,
     })
   }, [])
 
   const upload = useCallback(
-    async <Result,>(
-      request: (onProgress: (event: AxiosProgressEvent) => void) => Promise<Result>,
+    async <Result>(
+      request: (
+        onProgress: (event: AxiosProgressEvent) => void
+      ) => Promise<Result>,
       options?: UploadOptions
     ): Promise<Result> => {
       const sizes = options?.sizes
@@ -62,7 +66,9 @@ export function useUploadProgress() {
         sent: 0,
         total: null,
         phase: 'uploading',
-        slices: sizes ? (uploadSlices(0, payload, sizes) ?? undefined) : undefined,
+        slices: sizes
+          ? (uploadSlices(0, payload, sizes) ?? undefined)
+          : undefined,
       })
       try {
         return await request(track)

@@ -16,7 +16,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { UploadProgress } from './ui/upload-progress'
 import { useImageObjectUrls } from '../hooks/use-image-object-urls'
 import type { Upload } from '../hooks/use-upload-progress'
-import { isMedia, isVideo, pendingFileKey, removePendingFile } from '../lib/attachment-utils'
+import {
+  isMedia,
+  isVideo,
+  pendingFileKey,
+  removePendingFile,
+} from '../lib/attachment-utils'
 import { mergePendingFiles } from '../lib/composer-files'
 import { moveItem } from '../lib/reorder'
 import type { UploadSlice } from '../lib/upload-slices'
@@ -238,7 +243,9 @@ export function ComposerAttachments({
         // too, and asking only about images here threw it away and left the
         // video drawing an icon inside the media block.
         previewUrl: isMedia(file.type) ? previewUrls[i] : null,
-        previewKind: isVideo(file.type) ? ('video' as const) : ('image' as const),
+        previewKind: isVideo(file.type)
+          ? ('video' as const)
+          : ('image' as const),
         caption: captions?.[pendingFileKey(file)],
         progress: progress?.[i],
       })),
@@ -260,7 +267,9 @@ export function ComposerAttachments({
       addSlot={addSlot}
       onRetry={onRetry}
       onCaption={
-        onCaption ? (index, caption) => onCaption(files[index], caption) : undefined
+        onCaption
+          ? (index, caption) => onCaption(files[index], caption)
+          : undefined
       }
     />
   )
@@ -434,8 +443,16 @@ export function CommentBox({
 
   const labels =
     kind === 'reply'
-      ? { attach: t`Attach reply files`, cancel: t`Cancel reply`, send: t`Submit reply` }
-      : { attach: t`Attach comment files`, cancel: t`Cancel comment`, send: t`Submit comment` }
+      ? {
+          attach: t`Attach reply files`,
+          cancel: t`Cancel reply`,
+          send: t`Submit reply`,
+        }
+      : {
+          attach: t`Attach comment files`,
+          cancel: t`Cancel comment`,
+          send: t`Submit comment`,
+        }
 
   return (
     <div
@@ -544,7 +561,11 @@ export function CommentBox({
               }}
               aria-label={labels.send}
             >
-              {submitting ? <Loader2 className='size-4 animate-spin' /> : <Send className='size-4' />}
+              {submitting ? (
+                <Loader2 className='size-4 animate-spin' />
+              ) : (
+                <Send className='size-4' />
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{labels.send}</TooltipContent>

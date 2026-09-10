@@ -13,7 +13,9 @@ export function NotFoundError() {
     <div className='h-svh'>
       <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
         <h1 className='text-[7rem] leading-tight font-bold'>404</h1>
-        <span className='font-medium'><Trans>Oops! Page Not Found!</Trans></span>
+        <span className='font-medium'>
+          <Trans>Oops! Page Not Found!</Trans>
+        </span>
         <p className='text-muted-foreground text-center'>
           <Trans>
             It seems like the page you're looking for <br />
@@ -25,7 +27,10 @@ export function NotFoundError() {
             <ChevronLeft className='size-4' />
             <Trans>Go back</Trans>
           </Button>
-          <Button onClick={() => navigate({ to: '/' })}><Home className='size-4' /><Trans>Back to home</Trans></Button>
+          <Button onClick={() => navigate({ to: '/' })}>
+            <Home className='size-4' />
+            <Trans>Back to home</Trans>
+          </Button>
         </div>
       </div>
     </div>

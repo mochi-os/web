@@ -12,7 +12,8 @@ import { cn } from '../../lib/utils'
 import { shellClipboardWrite } from '../../lib/shell-bridge'
 
 interface CopyButtonProps
-  extends React.ComponentProps<typeof Button>,
+  extends
+    React.ComponentProps<typeof Button>,
     VariantProps<typeof buttonVariants> {
   value: string
   successMessage?: string
@@ -57,11 +58,13 @@ export function CopyButton({
       {...props}
     >
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-success" />
+        <Check className='h-3.5 w-3.5 text-success' />
       ) : (
-        <Copy className="h-3.5 w-3.5" />
+        <Copy className='h-3.5 w-3.5' />
       )}
-      <span className="sr-only"><Trans>Copy</Trans></span>
+      <span className='sr-only'>
+        <Trans>Copy</Trans>
+      </span>
     </Button>
   )
 }

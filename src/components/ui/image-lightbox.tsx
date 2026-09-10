@@ -6,8 +6,21 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Trans } from '@lingui/react/macro'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { ChevronLeft, ChevronRight, Download, FileWarning, ImageOff, Loader2, MessageCircle, X } from 'lucide-react'
-import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileWarning,
+  ImageOff,
+  Loader2,
+  MessageCircle,
+  X,
+} from 'lucide-react'
+import {
+  TransformWrapper,
+  TransformComponent,
+  type ReactZoomPanPinchRef,
+} from 'react-zoom-pan-pinch'
 import { cn } from '../../lib/utils'
 import { shellDownload } from '../../lib/shell-bridge'
 import { toast } from '../../lib/toast-utils'
@@ -63,7 +76,10 @@ export function ImageLightbox({
   // preference. Shell storage, not localStorage: the sandboxed iframe's origin
   // is opaque.
   const hasComments = Boolean(renderComments)
-  const [rememberedOpen, setRememberedOpen] = useShellStorage('lightbox.comments', false)
+  const [rememberedOpen, setRememberedOpen] = useShellStorage(
+    'lightbox.comments',
+    false
+  )
   const [commentsOpen, setCommentsOpen] = useState(false)
   useEffect(() => {
     setCommentsOpen(open ? commentsInitiallyOpen || rememberedOpen : false)
@@ -85,7 +101,10 @@ export function ImageLightbox({
   const imgRef = useRef<HTMLImageElement>(null)
   const transformRef = useRef<ReactZoomPanPinchRef>(null)
   const [currentScale, setCurrentScale] = useState(1)
-  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null)
+  const [naturalSize, setNaturalSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
 
   // Download the current media. `<a download>` and blob clicks are ignored in
   // the shell's opaque-origin iframe, so shellDownload hands the fetch and save
@@ -298,7 +317,10 @@ export function ImageLightbox({
       const deltaY = e.changedTouches[0].clientY - touchStartY.current
 
       // Only trigger if horizontal swipe is dominant and exceeds threshold
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+      if (
+        Math.abs(deltaX) > Math.abs(deltaY) &&
+        Math.abs(deltaX) > SWIPE_THRESHOLD
+      ) {
         if (deltaX > 0) {
           goToPrevious()
         } else {
@@ -323,9 +345,11 @@ export function ImageLightbox({
           aria-describedby={undefined}
         >
           <DialogPrimitive.Title className='sr-only'>
-            {isVideo
-              ? <Trans>Video viewer: {currentMedia.name}</Trans>
-              : <Trans>Image viewer: {currentMedia.name}</Trans>}
+            {isVideo ? (
+              <Trans>Video viewer: {currentMedia.name}</Trans>
+            ) : (
+              <Trans>Image viewer: {currentMedia.name}</Trans>
+            )}
           </DialogPrimitive.Title>
 
           {/* Full-screen media area. With the comments panel open, on wide
@@ -345,9 +369,17 @@ export function ImageLightbox({
             )}
             {hasError ? (
               <div className='flex flex-col items-center gap-3 text-white/70'>
-                {isVideo ? <FileWarning className='size-12' /> : <ImageOff className='size-12' />}
+                {isVideo ? (
+                  <FileWarning className='size-12' />
+                ) : (
+                  <ImageOff className='size-12' />
+                )}
                 <span className='text-sm'>
-                  {isVideo ? <Trans>Failed to load video</Trans> : <Trans>Failed to load image</Trans>}
+                  {isVideo ? (
+                    <Trans>Failed to load video</Trans>
+                  ) : (
+                    <Trans>Failed to load image</Trans>
+                  )}
                 </span>
               </div>
             ) : isVideo ? (
@@ -381,7 +413,13 @@ export function ImageLightbox({
                 >
                   <TransformComponent
                     wrapperStyle={{ width: '100%', height: '100%' }}
-                    contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    contentStyle={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     <img
                       ref={imgRef}
@@ -393,7 +431,10 @@ export function ImageLightbox({
                       )}
                       onLoad={(e) => {
                         const img = e.currentTarget
-                        setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
+                        setNaturalSize({
+                          width: img.naturalWidth,
+                          height: img.naturalHeight,
+                        })
                         setIsLoading(false)
                       }}
                       onError={() => {
@@ -420,69 +461,84 @@ export function ImageLightbox({
               'absolute left-1/2 top-3 flex max-w-[90vw] -translate-x-1/2 flex-col items-center gap-1 bg-black/60 backdrop-blur-md px-4 py-2 text-white transition-opacity duration-300',
               // Centred over the image, not the window: with the panel open
               // on a wide screen the image area is the left remainder.
-              hasComments && commentsOpen && 'sm:left-[calc(50%-12rem)] sm:max-w-[calc(90vw-24rem)]',
+              hasComments &&
+                commentsOpen &&
+                'sm:left-[calc(50%-12rem)] sm:max-w-[calc(90vw-24rem)]',
               // A one-row bar keeps the pill; the caption row would stretch
               // fully-round corners into a lozenge, so it squares them a step.
               currentMedia.caption ? 'rounded-2xl' : 'rounded-full',
-              isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              isVideo || controlsVisible
+                ? 'opacity-100'
+                : 'opacity-0 pointer-events-none'
             )}
           >
             <div className='flex max-w-full items-center gap-4'>
-            <span className='min-w-0 truncate text-sm text-white/70'>
-              {hasMultiple && <>{formatNumber(currentIndex + 1)}/{formatNumber(images.length)} · </>}
-              {currentMedia.name}
-            </span>
-            <div className='flex shrink-0 items-center gap-1 text-white/70'>
-              {hasComments && (
+              <span className='min-w-0 truncate text-sm text-white/70'>
+                {hasMultiple && (
+                  <>
+                    {formatNumber(currentIndex + 1)}/
+                    {formatNumber(images.length)} ·{' '}
+                  </>
+                )}
+                {currentMedia.name}
+              </span>
+              <div className='flex shrink-0 items-center gap-1 text-white/70'>
+                {hasComments && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type='button'
+                        onClick={toggleComments}
+                        aria-pressed={commentsOpen}
+                        aria-label={t`Comments`}
+                        className={cn(
+                          'flex items-center gap-1 rounded-full px-2 py-2 transition-colors hover:bg-white/20 hover:text-white',
+                          commentsOpen && 'bg-white/20 text-white'
+                        )}
+                      >
+                        <MessageCircle className='size-5' />
+                        {(commentCount?.(currentMedia.id) ?? 0) > 0 && (
+                          <span className='text-xs tabular-nums'>
+                            {commentCount?.(currentMedia.id)}
+                          </span>
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t`Comments`}</TooltipContent>
+                  </Tooltip>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type='button'
-                      onClick={toggleComments}
-                      aria-pressed={commentsOpen}
-                      aria-label={t`Comments`}
-                      className={cn(
-                        'flex items-center gap-1 rounded-full px-2 py-2 transition-colors hover:bg-white/20 hover:text-white',
-                        commentsOpen && 'bg-white/20 text-white'
-                      )}
+                      onClick={handleDownload}
+                      disabled={downloading}
+                      aria-label={t`Download`}
+                      className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-60'
                     >
-                      <MessageCircle className='size-5' />
-                      {(commentCount?.(currentMedia.id) ?? 0) > 0 && (
-                        <span className='text-xs tabular-nums'>{commentCount?.(currentMedia.id)}</span>
+                      {downloading ? (
+                        <Loader2 className='size-5 animate-spin' />
+                      ) : (
+                        <Download className='size-5' />
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>{t`Comments`}</TooltipContent>
+                  <TooltipContent>{t`Download`}</TooltipContent>
                 </Tooltip>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type='button'
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    aria-label={t`Download`}
-                    className='rounded-full p-2 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-60'
-                  >
-                    {downloading ? (
-                      <Loader2 className='size-5 animate-spin' />
-                    ) : (
-                      <Download className='size-5' />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t`Download`}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DialogPrimitive.Close className='rounded-full p-2 outline-none transition-colors hover:bg-white/20 hover:text-white'>
-                    <X className='size-5' />
-                    <span className='sr-only'><Trans>Close</Trans></span>
-                  </DialogPrimitive.Close>
-                </TooltipTrigger>
-                <TooltipContent><Trans>Close</Trans></TooltipContent>
-              </Tooltip>
-            </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DialogPrimitive.Close className='rounded-full p-2 outline-none transition-colors hover:bg-white/20 hover:text-white'>
+                      <X className='size-5' />
+                      <span className='sr-only'>
+                        <Trans>Close</Trans>
+                      </span>
+                    </DialogPrimitive.Close>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <Trans>Close</Trans>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
             {currentMedia.caption && (
               <span className='max-h-32 max-w-full overflow-y-auto text-center text-base text-white/70'>
@@ -516,7 +572,9 @@ export function ImageLightbox({
                     onClick={goToPrevious}
                     className={cn(
                       'absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:left-4 sm:p-3',
-                      isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      isVideo || controlsVisible
+                        ? 'opacity-100'
+                        : 'opacity-0 pointer-events-none'
                     )}
                     aria-label={t`Previous image`}
                   >
@@ -532,7 +590,9 @@ export function ImageLightbox({
                     className={cn(
                       'absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white/70 transition-all duration-300 hover:bg-black/70 hover:text-white sm:right-4 sm:p-3',
                       hasComments && commentsOpen && 'sm:right-[25rem]',
-                      isVideo || controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      isVideo || controlsVisible
+                        ? 'opacity-100'
+                        : 'opacity-0 pointer-events-none'
                     )}
                     aria-label={t`Next image`}
                   >

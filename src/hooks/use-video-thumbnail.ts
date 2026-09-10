@@ -31,7 +31,10 @@ type ThumbnailState = {
 const THUMBNAIL_CACHE_MAXIMUM = 200
 const thumbnailCache = new Map<string, { url: string; duration: number }>()
 
-function thumbnailCacheSet(key: string, value: { url: string; duration: number }) {
+function thumbnailCacheSet(
+  key: string,
+  value: { url: string; duration: number }
+) {
   thumbnailCache.delete(key)
   thumbnailCache.set(key, value)
   while (thumbnailCache.size > THUMBNAIL_CACHE_MAXIMUM) {
@@ -49,7 +52,12 @@ export function useVideoThumbnailCached(
   const [state, setState] = useState<ThumbnailState>(() => {
     if (videoUrl && thumbnailCache.has(videoUrl)) {
       const cached = thumbnailCache.get(videoUrl)!
-      return { url: cached.url, loading: false, error: false, duration: cached.duration }
+      return {
+        url: cached.url,
+        loading: false,
+        error: false,
+        duration: cached.duration,
+      }
     }
     return { url: null, loading: !!videoUrl, error: false, duration: null }
   })
@@ -69,7 +77,12 @@ export function useVideoThumbnailCached(
     // Check cache first
     if (thumbnailCache.has(videoUrl)) {
       const cached = thumbnailCache.get(videoUrl)!
-      setState({ url: cached.url, loading: false, error: false, duration: cached.duration })
+      setState({
+        url: cached.url,
+        loading: false,
+        error: false,
+        duration: cached.duration,
+      })
       return
     }
 
@@ -84,7 +97,11 @@ export function useVideoThumbnailCached(
 
     const handleLoadedMetadata = () => {
       if (cancelled) return
-      const targetTime = Math.min(seekTime, video.duration * 0.1, video.duration - 0.1)
+      const targetTime = Math.min(
+        seekTime,
+        video.duration * 0.1,
+        video.duration - 0.1
+      )
       video.currentTime = Math.max(0, targetTime)
     }
 

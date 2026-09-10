@@ -171,7 +171,9 @@ export function OptionsMenu({
                 <Trans>RSS feed</Trans>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onSelect={() => void handleCopyRssUrl('posts')}>
+                <DropdownMenuItem
+                  onSelect={() => void handleCopyRssUrl('posts')}
+                >
                   <Trans>Posts</Trans>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void handleCopyRssUrl('all')}>
@@ -229,7 +231,11 @@ export function OptionsMenu({
               disabled={!link}
               className='shrink-0'
             >
-              {copied ? <Check className='size-4' /> : <Copy className='size-4' />}
+              {copied ? (
+                <Check className='size-4' />
+              ) : (
+                <Copy className='size-4' />
+              )}
             </Button>
           </div>
         </ResponsiveDialogContent>

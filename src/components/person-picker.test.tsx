@@ -13,14 +13,27 @@ vi.mock('../lib/request', () => ({
 }))
 import { requestHelpers } from '../lib/request'
 
-type Descriptor = { id?: string; message?: string; values?: Record<string, unknown> }
+type Descriptor = {
+  id?: string
+  message?: string
+  values?: Record<string, unknown>
+}
 
 function show(props: Partial<React.ComponentProps<typeof PersonPicker>> = {}) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={client}>
       <I18nProvider i18n={i18n}>
-        <PersonPicker mode='multiple' value={[]} onChange={() => {}} open onOpenChange={() => {}} {...props} />
+        <PersonPicker
+          mode='multiple'
+          value={[]}
+          onChange={() => {}}
+          open
+          onOpenChange={() => {}}
+          {...props}
+        />
       </I18nProvider>
     </QueryClientProvider>
   )
@@ -37,7 +50,9 @@ describe('PersonPicker', () => {
     // reaches i18n at all, so the marker below can only come from plural().
     const original = i18n._.bind(i18n)
     vi.spyOn(i18n, '_').mockImplementation((...args: unknown[]) => {
-      const descriptor = (typeof args[0] === 'object' ? args[0] : { id: args[0], values: args[1] }) as Descriptor
+      const descriptor = (
+        typeof args[0] === 'object' ? args[0] : { id: args[0], values: args[1] }
+      ) as Descriptor
       if (descriptor.message?.includes('selected')) {
         const count = Object.values(descriptor.values ?? {})[0]
         return `SELECTED(${String(count)})`
@@ -50,7 +65,11 @@ describe('PersonPicker', () => {
 
   it('heads the local list with the label the caller gives it', async () => {
     const local: Person[] = [{ id: 'a', name: 'Ann' }]
-    show({ local, localLabel: 'Team', friendsFn: async () => [{ id: 'b', name: 'Bob' }] })
+    show({
+      local,
+      localLabel: 'Team',
+      friendsFn: async () => [{ id: 'b', name: 'Bob' }],
+    })
     await screen.findByText('Bob')
     expect(screen.getByText('Team')).toBeInTheDocument()
     expect(screen.queryByText('Project members')).not.toBeInTheDocument()

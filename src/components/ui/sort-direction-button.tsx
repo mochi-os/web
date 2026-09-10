@@ -30,7 +30,7 @@ export function SortDirectionButton({
     <Tooltip>
       <TooltipTrigger asChild>
         <button
-          type="button"
+          type='button'
           onClick={onToggle}
           className={cn(
             'flex items-center justify-center rounded-md border border-input bg-background transition-colors hover:bg-hover',

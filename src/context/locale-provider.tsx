@@ -2,8 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
-import { type LocalePreferences, getShellInitData, onShellMessage, isInShell } from '../lib/shell-bridge'
-import type { DateFormat, TimeFormat, TimestampDisplay, NumberFormat } from '../lib/locale-format'
+import {
+  type LocalePreferences,
+  getShellInitData,
+  onShellMessage,
+  isInShell,
+} from '../lib/shell-bridge'
+import type {
+  DateFormat,
+  TimeFormat,
+  TimestampDisplay,
+  NumberFormat,
+} from '../lib/locale-format'
 import { setActiveLocale } from './i18n-provider'
 
 export type ResolvedLocale = {
@@ -52,7 +62,9 @@ export function detectDateFormat(): DateFormat {
   try {
     // Format a known date and inspect output to detect locale order
     const formatted = new Intl.DateTimeFormat(navigator.language, {
-      year: 'numeric', month: '2-digit', day: '2-digit',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
     }).format(new Date(2024, 0, 15)) // Jan 15, 2024
 
     if (formatted.startsWith('2024')) return 'YYYY-MM-DD'
@@ -69,7 +81,9 @@ export function detectDateFormat(): DateFormat {
 
 export function detectTimeFormat(): TimeFormat {
   try {
-    const options = new Intl.DateTimeFormat(navigator.language, { hour: 'numeric' }).resolvedOptions()
+    const options = new Intl.DateTimeFormat(navigator.language, {
+      hour: 'numeric',
+    }).resolvedOptions()
     return options.hour12 ? '12h' : '24h'
   } catch {
     return '24h'
@@ -77,8 +91,13 @@ export function detectTimeFormat(): TimeFormat {
 }
 
 const weekDayMap: Record<string, number> = {
-  monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
-  friday: 5, saturday: 6, sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+  sunday: 0,
 }
 
 export function detectWeekStart(): number {
@@ -93,19 +112,28 @@ export function detectWeekStart(): number {
       // Intl uses 1=Monday...7=Sunday, convert to 0=Sunday...6=Saturday
       return day === 7 ? 0 : day
     }
-  } catch { /* fallback */ }
+  } catch {
+    /* fallback */
+  }
   return 1 // monday
 }
 
 export function detectNumberFormat(): NumberFormat {
   try {
-    const formatted = new Intl.NumberFormat(navigator.language).format(1234567.89)
+    const formatted = new Intl.NumberFormat(navigator.language).format(
+      1234567.89
+    )
     // Check decimal separator
     const hasCommaDec = formatted.includes(',89') || formatted.includes(',9')
     // Check group separator
     if (hasCommaDec) {
       if (formatted.includes('.')) return '1.000,00'
-      if (formatted.includes('\u202F') || formatted.includes('\u00A0') || formatted.includes(' ')) return '1 000,00'
+      if (
+        formatted.includes('\u202F') ||
+        formatted.includes('\u00A0') ||
+        formatted.includes(' ')
+      )
+        return '1 000,00'
       return '1.000,00'
     }
     // Period decimal
@@ -114,7 +142,11 @@ export function detectNumberFormat(): NumberFormat {
     const parts = formatted.split('.')
     const intPart = parts[0].replace(/[^0-9,]/g, '')
     const groups = intPart.split(',').filter(Boolean)
-    if (groups.length >= 3 && groups[groups.length - 1].length === 3 && groups[groups.length - 2].length === 2) {
+    if (
+      groups.length >= 3 &&
+      groups[groups.length - 1].length === 3 &&
+      groups[groups.length - 2].length === 2
+    ) {
       return '1,00,000.00'
     }
     return '1,000.00'
@@ -139,7 +171,9 @@ export function detectUnits(): 'metric' | 'imperial' | 'usa' {
     const region = new Intl.Locale(navigator.language).region?.toUpperCase()
     if (region === 'US') return 'usa'
     if (region === 'GB' || region === 'MM' || region === 'LR') return 'imperial'
-  } catch { /* fallback */ }
+  } catch {
+    /* fallback */
+  }
   return 'metric'
 }
 
@@ -153,12 +187,27 @@ function detectTimezone(): string {
 
 function resolveLocale(raw: LocalePreferences): ResolvedLocale {
   return {
-    dateFormat: raw.date_format === 'auto' ? detectDateFormat() : raw.date_format as DateFormat,
-    timeFormat: raw.time_format === 'auto' ? detectTimeFormat() : raw.time_format as TimeFormat,
+    dateFormat:
+      raw.date_format === 'auto'
+        ? detectDateFormat()
+        : (raw.date_format as DateFormat),
+    timeFormat:
+      raw.time_format === 'auto'
+        ? detectTimeFormat()
+        : (raw.time_format as TimeFormat),
     timestampDisplay: (raw.timestamp_display || 'auto') as TimestampDisplay,
-    weekStartsOn: raw.week_start === 'auto' ? detectWeekStart() : (weekDayMap[raw.week_start] ?? 1),
-    numberFormat: raw.number_format === 'auto' ? detectNumberFormat() : raw.number_format as NumberFormat,
-    units: raw.units === 'auto' ? detectUnits() : raw.units as 'metric' | 'imperial' | 'usa',
+    weekStartsOn:
+      raw.week_start === 'auto'
+        ? detectWeekStart()
+        : (weekDayMap[raw.week_start] ?? 1),
+    numberFormat:
+      raw.number_format === 'auto'
+        ? detectNumberFormat()
+        : (raw.number_format as NumberFormat),
+    units:
+      raw.units === 'auto'
+        ? detectUnits()
+        : (raw.units as 'metric' | 'imperial' | 'usa'),
     timezone: raw.timezone === 'auto' ? detectTimezone() : raw.timezone,
   }
 }
@@ -190,7 +239,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => {
         if (cancelled || !body) return
-        const preferences = (body.locale ?? body.data?.locale) as LocalePreferences | undefined
+        const preferences = (body.locale ?? body.data?.locale) as
+          LocalePreferences | undefined
         if (preferences) setRaw(preferences)
       })
       .catch(() => {})
@@ -214,11 +264,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     })
   }, [locale])
 
-  return (
-    <LocaleContext value={{ locale, raw }}>
-      {children}
-    </LocaleContext>
-  )
+  return <LocaleContext value={{ locale, raw }}>{children}</LocaleContext>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

@@ -30,7 +30,12 @@ interface AccountAddProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   providers: Provider[]
-  onAdd: (type: string, fields: Record<string, string>, addToExisting: boolean, setAsDefault?: boolean) => Promise<void>
+  onAdd: (
+    type: string,
+    fields: Record<string, string>,
+    addToExisting: boolean,
+    setAsDefault?: boolean
+  ) => Promise<void>
   isAdding: boolean
   appBase: string
   hasExistingAiAccount?: boolean
@@ -82,16 +87,17 @@ export function AccountAdd({
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      const type = availableProviders.length === 1 ? availableProviders[0].type : ''
+      const type =
+        availableProviders.length === 1 ? availableProviders[0].type : ''
       setSelectedType(type)
       setFields(getDefaultFields(providersList.find((p) => p.type === type)))
       setAddToExisting(true)
       setSetAsDefault(isAiType(type) && !hasExistingAiAccount)
     }
-  // Deliberately keyed on the dialog opening: this RESETS the form to its
-  // defaults, so it must read hasExistingAiAccount and providersList as they
-  // are at that moment rather than re-running whenever they change.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Deliberately keyed on the dialog opening: this RESETS the form to its
+    // defaults, so it must read hasExistingAiAccount and providersList as they
+    // are at that moment rather than re-running whenever they change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, availableProviders])
 
   const selectedProvider = providersList.find((p) => p.type === selectedType)
@@ -100,14 +106,19 @@ export function AccountAdd({
   useEffect(() => {
     setFields(getDefaultFields(selectedProvider))
     setSetAsDefault(isAiType(selectedType) && !hasExistingAiAccount)
-  // Same: this resets the fields when the chosen provider type changes, and
-  // must not re-run because a value it reads happened to change.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Same: this resets the fields when the chosen provider type changes, and
+    // must not re-run because a value it reads happened to change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedType])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await onAdd(selectedType, fields, addToExisting, isAiType(selectedType) ? setAsDefault : undefined)
+    await onAdd(
+      selectedType,
+      fields,
+      addToExisting,
+      isAiType(selectedType) ? setAsDefault : undefined
+    )
   }
 
   const handleFieldChange = (name: string, value: string) => {
@@ -126,19 +137,25 @@ export function AccountAdd({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit} autoComplete="off">
+      <ResponsiveDialogContent className='sm:max-w-[425px]'>
+        <form onSubmit={handleSubmit} autoComplete='off'>
           <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle><Trans>Add account</Trans></ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="sr-only"><Trans>Add a new account</Trans></ResponsiveDialogDescription>
+            <ResponsiveDialogTitle>
+              <Trans>Add account</Trans>
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className='sr-only'>
+              <Trans>Add a new account</Trans>
+            </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className='grid gap-4 py-4'>
             {availableProviders.length > 1 && (
-              <div className="grid gap-2">
-                <Label htmlFor="type"><Trans>Account type</Trans></Label>
+              <div className='grid gap-2'>
+                <Label htmlFor='type'>
+                  <Trans>Account type</Trans>
+                </Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger id="type" className="w-full">
+                  <SelectTrigger id='type' className='w-full'>
                     <SelectValue placeholder={t`Select account type`} />
                   </SelectTrigger>
                   <SelectContent>
@@ -153,38 +170,47 @@ export function AccountAdd({
             )}
 
             {selectedProvider &&
-              [...selectedProvider.fields].sort((a, b) => a.name === 'label' ? -1 : b.name === 'label' ? 1 : 0).map((field) => (
-                <div key={field.name} className="grid gap-2">
-                  <Label htmlFor={field.name}>{field.label}</Label>
-                  <Input
-                    id={field.name}
-                    type="text"
-                    autoComplete="off"
-                    value={fields[field.name] || ''}
-                    onChange={(e) =>
-                      handleFieldChange(field.name, e.target.value)
-                    }
-                    placeholder={field.placeholder || undefined}
-                    required={field.required}
+              [...selectedProvider.fields]
+                .sort((a, b) =>
+                  a.name === 'label' ? -1 : b.name === 'label' ? 1 : 0
+                )
+                .map((field) => (
+                  <div key={field.name} className='grid gap-2'>
+                    <Label htmlFor={field.name}>{field.label}</Label>
+                    <Input
+                      id={field.name}
+                      type='text'
+                      autoComplete='off'
+                      value={fields[field.name] || ''}
+                      onChange={(e) =>
+                        handleFieldChange(field.name, e.target.value)
+                      }
+                      placeholder={field.placeholder || undefined}
+                      required={field.required}
+                    />
+                  </div>
+                ))}
+
+            {selectedProvider &&
+              selectedProvider.capabilities.includes('notify') && (
+                <div className='flex items-center justify-between rounded-lg border p-4'>
+                  <div className='font-medium'>
+                    <Trans>Add to existing notifications</Trans>
+                  </div>
+                  <Switch
+                    checked={addToExisting}
+                    onCheckedChange={setAddToExisting}
                   />
                 </div>
-              ))}
-
-            {selectedProvider && selectedProvider.capabilities.includes('notify') && (
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="font-medium"><Trans>Add to existing notifications</Trans></div>
-                <Switch
-                  checked={addToExisting}
-                  onCheckedChange={setAddToExisting}
-                />
-              </div>
-            )}
+              )}
 
             {selectedProvider && isAiType(selectedType) && (
-              <div className="flex items-center justify-between">
-                <Label htmlFor="set-default"><Trans>Default AI account</Trans></Label>
+              <div className='flex items-center justify-between'>
+                <Label htmlFor='set-default'>
+                  <Trans>Default AI account</Trans>
+                </Label>
                 <Switch
-                  id="set-default"
+                  id='set-default'
                   checked={setAsDefault}
                   onCheckedChange={setSetAsDefault}
                 />
@@ -194,17 +220,17 @@ export function AccountAdd({
 
           <ResponsiveDialogFooter>
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={() => onOpenChange(false)}
             >
               <Trans>Cancel</Trans>
             </Button>
-            <Button type="submit" disabled={isAdding || !isFormValid()}>
+            <Button type='submit' disabled={isAdding || !isFormValid()}>
               {isAdding ? (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                <Loader2 className='me-2 h-4 w-4 animate-spin' />
               ) : (
-                <Plus className="me-2 h-4 w-4" />
+                <Plus className='me-2 h-4 w-4' />
               )}
               <Trans>Add</Trans>
             </Button>

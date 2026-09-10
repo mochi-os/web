@@ -15,7 +15,10 @@ import { getShellInitData } from './shell-bridge'
 
 // Read a server-injected meta tag value (null when absent)
 function getMeta(name: string): string | null {
-  return document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ?? null
+  return (
+    document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ??
+    null
+  )
 }
 
 // Check whether a server-injected meta tag is present
@@ -123,7 +126,11 @@ export function getAppBasepath(): string {
 // Splice the domain entity's fingerprint into a browser path. On a domain route
 // the entity is named by the hostname and absent from the URL, but the route
 // trees expect it as their first parameter.
-export function entityRouterPath(path: string, base: string, fingerprint: string): string {
+export function entityRouterPath(
+  path: string,
+  base: string,
+  fingerprint: string
+): string {
   if (!path.startsWith(base)) return path
   const rest = path.slice(base.length)
   // Already canonical: a link written before this mapping existed, or one the
@@ -134,11 +141,16 @@ export function entityRouterPath(path: string, base: string, fingerprint: string
 }
 
 // Remove the domain entity's fingerprint from a router path.
-export function entityBrowserPath(path: string, base: string, fingerprint: string): string {
+export function entityBrowserPath(
+  path: string,
+  base: string,
+  fingerprint: string
+): string {
   if (!path.startsWith(base)) return path
   const rest = path.slice(base.length)
   if (rest === fingerprint) return base
-  if (rest.startsWith(fingerprint + '/')) return base + rest.slice(fingerprint.length + 1)
+  if (rest.startsWith(fingerprint + '/'))
+    return base + rest.slice(fingerprint.length + 1)
   return path
 }
 
@@ -156,12 +168,19 @@ function parseHistoryHref(href: string, state: unknown): HistoryLocation {
   const hash = href.indexOf('#')
   const search = href.indexOf('?')
   const end =
-    hash > 0 ? (search > 0 ? Math.min(hash, search) : hash) : search > 0 ? search : href.length
+    hash > 0
+      ? search > 0
+        ? Math.min(hash, search)
+        : hash
+      : search > 0
+        ? search
+        : href.length
   return {
     href,
     pathname: href.substring(0, end),
     hash: hash > -1 ? href.substring(hash) : '',
-    search: search > -1 ? href.slice(search, hash === -1 ? undefined : hash) : '',
+    search:
+      search > -1 ? href.slice(search, hash === -1 ? undefined : hash) : '',
     state: (state ?? { __TSR_index: 0 }) as HistoryLocation['state'],
   }
 }

@@ -35,7 +35,7 @@ export function EntityLoadError({
         <GeneralError
           error={new Error(message)}
           minimal
-          mode="inline"
+          mode='inline'
           reset={onRetry}
         />
       </Main>

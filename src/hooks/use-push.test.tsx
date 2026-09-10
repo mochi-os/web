@@ -15,29 +15,45 @@ let parentPostMessage: ReturnType<typeof vi.fn>
 let parentStub: { postMessage: ReturnType<typeof vi.fn> }
 
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return createElement(QueryClientProvider, { client }, children)
 }
 
 // A reply carrying the shell's identity, as the real parent's would: both the
 // source window and the origin, which fromShell pins.
-function replyFromParent(data: unknown, origin: string = window.location.origin) {
+function replyFromParent(
+  data: unknown,
+  origin: string = window.location.origin
+) {
   const event = new MessageEvent('message', { data, origin })
-  Object.defineProperty(event, 'source', { value: parentStub, configurable: true })
+  Object.defineProperty(event, 'source', {
+    value: parentStub,
+    configurable: true,
+  })
   window.dispatchEvent(event)
 }
 
 // The forgery: same type, same id, different window — a sibling iframe, a popup,
 // or a frame the app itself embedded.
 function replyFromImposter(data: unknown) {
-  const event = new MessageEvent('message', { data, origin: window.location.origin })
-  Object.defineProperty(event, 'source', { value: { notTheParent: true }, configurable: true })
+  const event = new MessageEvent('message', {
+    data,
+    origin: window.location.origin,
+  })
+  Object.defineProperty(event, 'source', {
+    value: { notTheParent: true },
+    configurable: true,
+  })
   window.dispatchEvent(event)
 }
 
 // The id the hook used for its most recent request of this type.
 function requestId(type: string): number {
-  const call = [...parentPostMessage.mock.calls].reverse().find((c) => c[0]?.type === type)
+  const call = [...parentPostMessage.mock.calls]
+    .reverse()
+    .find((c) => c[0]?.type === type)
   if (!call) throw new Error(`no ${type} request was posted`)
   return call[0].id
 }
@@ -77,7 +93,13 @@ describe('usePush', () => {
     const id = requestId('push-status')
 
     act(() => {
-      replyFromImposter({ type: 'push-status-result', id, ok: true, subscribed: true, permission: 'granted' })
+      replyFromImposter({
+        type: 'push-status-result',
+        id,
+        ok: true,
+        subscribed: true,
+        permission: 'granted',
+      })
     })
     await flush()
     // Still the initial state: the forged reply claimed a subscription.
@@ -86,7 +108,13 @@ describe('usePush', () => {
     // The genuine reply is accepted, which proves the assertion above failed
     // for the right reason rather than because nothing was listening.
     act(() => {
-      replyFromParent({ type: 'push-status-result', id, ok: true, subscribed: true, permission: 'granted' })
+      replyFromParent({
+        type: 'push-status-result',
+        id,
+        ok: true,
+        subscribed: true,
+        permission: 'granted',
+      })
     })
     await waitFor(() => expect(result.current.subscribed).toBe(true))
   })
@@ -106,10 +134,12 @@ describe('usePush', () => {
         }
       )
     })
-    await waitFor(() => expect(parentPostMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'push-subscribe' }),
-      window.location.origin
-    ))
+    await waitFor(() =>
+      expect(parentPostMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'push-subscribe' }),
+        window.location.origin
+      )
+    )
     const id = requestId('push-subscribe')
 
     act(() => {
@@ -139,10 +169,12 @@ describe('usePush', () => {
         }
       )
     })
-    await waitFor(() => expect(parentPostMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'push-unsubscribe' }),
-      window.location.origin
-    ))
+    await waitFor(() =>
+      expect(parentPostMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'push-unsubscribe' }),
+        window.location.origin
+      )
+    )
     const id = requestId('push-unsubscribe')
 
     act(() => {

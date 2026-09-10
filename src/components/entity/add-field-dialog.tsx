@@ -6,7 +6,7 @@
 // wrapped the "add option" button in a Tooltip and projects did not. crm's
 // version wins here, so projects gains the tooltip.
 
-import { useState } from "react";
+import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import {
@@ -15,35 +15,40 @@ import {
   SheetDescription,
   SheetTitle,
   SheetFooter,
-} from "../ui/sheet";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { useFieldTypeLabels } from "../../hooks/use-field-type-labels";
-import { ENTITY_LIMIT } from "../../lib/entity-api";
-import { naturalCompare } from "../../lib/utils";
-import { Label } from "../ui/label";
+} from '../ui/sheet'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { useFieldTypeLabels } from '../../hooks/use-field-type-labels'
+import { ENTITY_LIMIT } from '../../lib/entity-api'
+import { naturalCompare } from '../../lib/utils'
+import { Label } from '../ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { PRESET_COLOURS } from "../colour-picker";
-import { Plus, X } from "lucide-react";
+} from '../ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+import { PRESET_COLOURS } from '../colour-picker'
+import { Plus, X } from 'lucide-react'
 
 /** A field option built in the dialog, before the field itself exists. */
 export interface PendingOption {
-  id: string;
-  name: string;
-  colour: string;
+  id: string
+  name: string
+  colour: string
 }
 
 export interface AddFieldDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAdd: (name: string, fieldtype: string, rows?: number, options?: PendingOption[]) => void | Promise<void>;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onAdd: (
+    name: string,
+    fieldtype: string,
+    rows?: number,
+    options?: PendingOption[]
+  ) => void | Promise<void>
 }
 
 export function AddFieldDialog({
@@ -51,33 +56,33 @@ export function AddFieldDialog({
   onOpenChange,
   onAdd,
 }: AddFieldDialogProps) {
-  const [name, setName] = useState("");
-  const [fieldtype, setFieldtype] = useState("text");
-  const fieldTypeLabels = useFieldTypeLabels();
-  const [rows, setRows] = useState(1);
-  const [options, setOptions] = useState<PendingOption[]>([]);
-  const [newOptionName, setNewOptionName] = useState("");
+  const [name, setName] = useState('')
+  const [fieldtype, setFieldtype] = useState('text')
+  const fieldTypeLabels = useFieldTypeLabels()
+  const [rows, setRows] = useState(1)
+  const [options, setOptions] = useState<PendingOption[]>([])
+  const [newOptionName, setNewOptionName] = useState('')
 
   const resetForm = () => {
-    setName("");
-    setFieldtype("text");
-    setRows(1);
-    setOptions([]);
-    setNewOptionName("");
-  };
+    setName('')
+    setFieldtype('text')
+    setRows(1)
+    setOptions([])
+    setNewOptionName('')
+  }
 
   const handleSubmit = async () => {
     if (name.trim()) {
       await onAdd(
         name.trim(),
         fieldtype,
-        fieldtype === "text" && rows > 1 ? rows : undefined,
-        fieldtype === "enumerated" ? options : undefined
-      );
-      resetForm();
-      onOpenChange(false);
+        fieldtype === 'text' && rows > 1 ? rows : undefined,
+        fieldtype === 'enumerated' ? options : undefined
+      )
+      resetForm()
+      onOpenChange(false)
     }
-  };
+  }
 
   const addOption = () => {
     if (newOptionName.trim()) {
@@ -88,41 +93,53 @@ export function AddFieldDialog({
           name: newOptionName.trim(),
           colour: PRESET_COLOURS[options.length % PRESET_COLOURS.length],
         },
-      ]);
-      setNewOptionName("");
+      ])
+      setNewOptionName('')
     }
-  };
+  }
 
   const removeOption = (id: string) => {
-    setOptions(options.filter((o) => o.id !== id));
-  };
+    setOptions(options.filter((o) => o.id !== id))
+  }
 
   const handleClose = () => {
-    resetForm();
-    onOpenChange(false);
-  };
+    resetForm()
+    onOpenChange(false)
+  }
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col [&>button:last-child]:hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <SheetTitle><Trans>Add field</Trans></SheetTitle>
-          <SheetDescription className="sr-only"><Trans>Add a new field to this class</Trans></SheetDescription>
+      <SheetContent className='w-full sm:max-w-md p-0 flex flex-col [&>button:last-child]:hidden'>
+        <div className='flex items-center justify-between px-6 py-4 border-b'>
+          <SheetTitle>
+            <Trans>Add field</Trans>
+          </SheetTitle>
+          <SheetDescription className='sr-only'>
+            <Trans>Add a new field to this class</Trans>
+          </SheetDescription>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8" onClick={handleClose} aria-label={t`Close dialog`}>
-                <X className="size-4" />
+              <Button
+                variant='ghost'
+                size='icon'
+                className='size-8'
+                onClick={handleClose}
+                aria-label={t`Close dialog`}
+              >
+                <X className='size-4' />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t`Close dialog`}</TooltipContent>
           </Tooltip>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="field-name"><Trans>Name</Trans></Label>
-            <div className="ps-4">
+        <div className='flex-1 overflow-y-auto p-6 space-y-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='field-name'>
+              <Trans>Name</Trans>
+            </Label>
+            <div className='ps-4'>
               <Input
-                id="field-name"
+                id='field-name'
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={ENTITY_LIMIT.name}
@@ -130,63 +147,73 @@ export function AddFieldDialog({
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="field-type"><Trans>Type</Trans></Label>
-            <div className="ps-4">
+          <div className='space-y-2'>
+            <Label htmlFor='field-type'>
+              <Trans>Type</Trans>
+            </Label>
+            <div className='ps-4'>
               <Select value={fieldtype} onValueChange={setFieldtype}>
-                <SelectTrigger id="field-type" className="w-full">
+                <SelectTrigger id='field-type' className='w-full'>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(fieldTypeLabels)
                     .sort(([, a], [, b]) => naturalCompare(a, b))
                     .map(([id, label]) => (
-                      <SelectItem key={id} value={id}>{label}</SelectItem>
+                      <SelectItem key={id} value={id}>
+                        {label}
+                      </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          {fieldtype === "text" && (
-            <div className="space-y-2">
-              <Label htmlFor="field-rows"><Trans>Rows</Trans></Label>
-              <div className="ps-4">
+          {fieldtype === 'text' && (
+            <div className='space-y-2'>
+              <Label htmlFor='field-rows'>
+                <Trans>Rows</Trans>
+              </Label>
+              <div className='ps-4'>
                 <Input
-                  id="field-rows"
-                  type="number"
+                  id='field-rows'
+                  type='number'
                   min={1}
                   max={20}
                   value={rows}
                   onChange={(e) => setRows(parseInt(e.target.value) || 1)}
                 />
-                <p className={`text-xs text-muted-foreground mt-1 ${rows === 1 ? "" : "invisible"}`}>
+                <p
+                  className={`text-xs text-muted-foreground mt-1 ${rows === 1 ? '' : 'invisible'}`}
+                >
                   <Trans>Single line of text only</Trans>
                 </p>
               </div>
             </div>
           )}
-          {fieldtype === "enumerated" && (
-            <div className="space-y-2">
-              <Label><Trans>Options</Trans></Label>
-              <div className="ps-4 space-y-2">
+          {fieldtype === 'enumerated' && (
+            <div className='space-y-2'>
+              <Label>
+                <Trans>Options</Trans>
+              </Label>
+              <div className='ps-4 space-y-2'>
                 {options.length > 0 && (
-                  <div className="space-y-1">
+                  <div className='space-y-1'>
                     {options.map((opt) => (
                       <div
                         key={opt.id}
-                        className="flex items-center justify-between p-2 border rounded-md"
+                        className='flex items-center justify-between p-2 border rounded-md'
                       >
-                        <div className="flex items-center gap-2">
+                        <div className='flex items-center gap-2'>
                           <span
-                            className="size-3 rounded-full"
+                            className='size-3 rounded-full'
                             style={{ backgroundColor: opt.colour }}
                           />
-                          <span className="text-sm">{opt.name}</span>
+                          <span className='text-sm'>{opt.name}</span>
                         </div>
                         <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
+                          type='button'
+                          variant='ghost'
+                          size='sm'
                           onClick={() => removeOption(opt.id)}
                         >
                           <Trans>Remove</Trans>
@@ -195,28 +222,28 @@ export function AddFieldDialog({
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className='flex gap-2'>
                   <Input
                     value={newOptionName}
                     onChange={(e) => setNewOptionName(e.target.value)}
                     placeholder={t`Option name`}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addOption();
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addOption()
                       }
                     }}
                   />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        type="button"
-                        variant="outline"
+                        type='button'
+                        variant='outline'
                         onClick={addOption}
                         disabled={!newOptionName.trim()}
                         aria-label={t`Add option`}
                       >
-                        <Plus className="size-4" />
+                        <Plus className='size-4' />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>{t`Add option`}</TooltipContent>
@@ -226,16 +253,19 @@ export function AddFieldDialog({
             </div>
           )}
         </div>
-        <SheetFooter className="px-6 py-4 border-t">
+        <SheetFooter className='px-6 py-4 border-t'>
           <Button
             onClick={handleSubmit}
-            disabled={!name.trim() || (fieldtype === "enumerated" && options.length === 0)}
+            disabled={
+              !name.trim() ||
+              (fieldtype === 'enumerated' && options.length === 0)
+            }
           >
-            <Plus className="size-4" />
+            <Plus className='size-4' />
             <Trans>Add field</Trans>
           </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

@@ -25,12 +25,10 @@ export interface EntityFindRow {
 
 export interface EntityFindApi {
   recommendations: () => Promise<{ data?: Record<string, unknown> }>
-  subscribe: (
-    id: string,
-    location?: string,
-    peer?: string,
-  ) => Promise<unknown>
-  probe: (url: string) => Promise<{ data?: Record<string, unknown> } & Record<string, unknown>>
+  subscribe: (id: string, location?: string, peer?: string) => Promise<unknown>
+  probe: (
+    url: string
+  ) => Promise<{ data?: Record<string, unknown> } & Record<string, unknown>>
 }
 
 export interface EntityFindPageLabels {
@@ -85,22 +83,23 @@ export function EntityFindPage<TRow extends EntityFindRow>({
     retry: false,
     refetchOnWindowFocus: false,
   })
-  const recommendations = (recommendationsData?.data?.[listKey] ?? []) as never[]
+  const recommendations = (recommendationsData?.data?.[listKey] ??
+    []) as never[]
 
   const accessibleIds = useMemo(
     () =>
       new Set(
         rows.flatMap((row) =>
-          [row.id, row.fingerprint].filter((x): x is string => !!x),
-        ),
+          [row.id, row.fingerprint].filter((x): x is string => !!x)
+        )
       ),
-    [rows],
+    [rows]
   )
 
   const handleSubscribe = useCallback(
     async (
       id: string,
-      entity: { fingerprint?: string; location?: string; peer?: string },
+      entity: { fingerprint?: string; location?: string; peer?: string }
     ) => {
       try {
         await toastAction(api.subscribe(id, entity.location, entity.peer), {
@@ -117,7 +116,7 @@ export function EntityFindPage<TRow extends EntityFindRow>({
         // toast already shown
       }
     },
-    [api, labels, refresh, onOpen],
+    [api, labels, refresh, onOpen]
   )
 
   // Resolve a pasted mochi:// share link to the container's name via probe, so
@@ -137,7 +136,7 @@ export function EntityFindPage<TRow extends EntityFindRow>({
         peer: data.peer,
       } as ResolvedEntry
     },
-    [api],
+    [api]
   )
 
   return (

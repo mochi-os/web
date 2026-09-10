@@ -9,7 +9,11 @@ vi.mock('./shell-bridge', () => ({
   shellRequestPermission: vi.fn(() => Promise.resolve('granted')),
 }))
 
-import { isPermissionError, getCurrentAppId, handlePermissionError } from './permission-utils'
+import {
+  isPermissionError,
+  getCurrentAppId,
+  handlePermissionError,
+} from './permission-utils'
 import { isInShell, shellRequestPermission } from './shell-bridge'
 
 const mockIsInShell = vi.mocked(isInShell)
@@ -20,7 +24,12 @@ beforeEach(() => {
   mockShellRequestPermission.mockReturnValue(Promise.resolve('granted'))
   // Mock window.location
   Object.defineProperty(window, 'location', {
-    value: { pathname: '/feeds/settings', search: '', reload: vi.fn(), href: '' },
+    value: {
+      pathname: '/feeds/settings',
+      search: '',
+      reload: vi.fn(),
+      href: '',
+    },
     writable: true,
     configurable: true,
   })
@@ -170,7 +179,11 @@ describe('handlePermissionError', () => {
     })
 
     it('never names an app: only the permission is sent', () => {
-      handlePermissionError({ error: 'permission_required', app: 'feeds', permission: 'accounts/read' })
+      handlePermissionError({
+        error: 'permission_required',
+        app: 'feeds',
+        permission: 'accounts/read',
+      })
 
       // The shell resolves the app from __mochi_shell.appId. A caller-chosen
       // app would let one app request a grant against another.

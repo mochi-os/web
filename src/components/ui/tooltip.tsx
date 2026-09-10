@@ -50,7 +50,10 @@ function TooltipTrigger({
         // its trigger, or the tooltip stays stuck open after the overlay
         // dismisses. Radix skips its own onOpen when this handler
         // preventDefaults.
-        if (!event.defaultPrevented && !event.currentTarget.matches(':focus-visible')) {
+        if (
+          !event.defaultPrevented &&
+          !event.currentTarget.matches(':focus-visible')
+        ) {
           event.preventDefault()
         }
       }}

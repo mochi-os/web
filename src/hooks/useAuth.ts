@@ -36,7 +36,7 @@ export function useAuth() {
     startLogoutTransition,
     endLogoutTransition,
     initialize,
-    
+
     logout: async () => {
       const { authManager } = await import('../lib/auth-manager')
       authManager.logout()
@@ -48,5 +48,3 @@ export function useAuth() {
     },
   }
 }
-
-

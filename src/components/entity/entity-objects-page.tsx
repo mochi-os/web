@@ -87,7 +87,7 @@ const BUILT_IN_SORT_FIELDS = ['rank', 'created', 'updated', 'number']
 // The default sort a view was designed with (design → view → Default sort).
 // Empty means the designer left it unset, which is manual rank order.
 function viewSortState(
-  view?: { sort?: string; direction?: string } | null,
+  view?: { sort?: string; direction?: string } | null
 ): EntitySortState {
   const sort = view?.sort || ''
   if (!sort) return { field: 'rank', direction: 'asc' }
@@ -127,10 +127,10 @@ export interface EntityObjectsPageApi<TObject extends EntityObject> {
   exportData: (id: string) => Promise<Blob>
   unsubscribe: (id: string) => Promise<unknown>
   listObjects: (
-    containerId: string,
+    containerId: string
   ) => Promise<{ data: { objects: TObject[]; watched?: string[] } }>
   listPeople: (
-    containerId: string,
+    containerId: string
   ) => Promise<{ data: { people: { id: string; name: string }[] } }>
   moveObject: (
     containerId: string,
@@ -142,37 +142,37 @@ export interface EntityObjectsPageApi<TObject extends EntityObject> {
       row?: { field: string; value?: string }
       scope?: string
       promote?: string
-    },
+    }
   ) => Promise<unknown>
   updateObject: (
     containerId: string,
     objectId: string,
-    data: { parent?: string; class?: string },
+    data: { parent?: string; class?: string }
   ) => Promise<unknown>
   createOption: (
     containerId: string,
     classId: string,
     fieldId: string,
-    data: { name: string; colour: string },
+    data: { name: string; colour: string }
   ) => Promise<unknown>
   updateOption: (
     containerId: string,
     classId: string,
     fieldId: string,
     optionId: string,
-    data: { name: string },
+    data: { name: string }
   ) => Promise<unknown>
   deleteOption: (
     containerId: string,
     classId: string,
     fieldId: string,
-    optionId: string,
+    optionId: string
   ) => Promise<unknown>
   reorderOptions: (
     containerId: string,
     classId: string,
     fieldId: string,
-    order: string[],
+    order: string[]
   ) => Promise<unknown>
 }
 
@@ -304,7 +304,9 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   renderViewOptionsBar: (props: EntityObjectsViewOptionsSlotProps) => ReactNode
   renderBoard: (props: EntityObjectsBoardSlotProps<TObject>) => ReactNode
   renderTree: (props: EntityObjectsTreeSlotProps<TObject>) => ReactNode
-  renderCreateDialog: (props: EntityObjectsCreateSlotProps<TObject>) => ReactNode
+  renderCreateDialog: (
+    props: EntityObjectsCreateSlotProps<TObject>
+  ) => ReactNode
   renderDetailPanel: (props: {
     objectId: string | null
     onClose: () => void
@@ -418,7 +420,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   }, [setShortcutEnabled])
 
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(
-    initialObjectId ?? null,
+    initialObjectId ?? null
   )
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createDefaultFields, setCreateDefaultFields] = useState<
@@ -433,17 +435,17 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const [showViewOptions, setShowViewOptions] = useShellStorage(
     `${storagePrefix}-view-options-expanded`,
-    true,
+    true
   )
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1)
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false)
   const [isReorderingColumns, setIsReorderingColumns] = useState(false)
   const [pendingColumnOrder, setPendingColumnOrder] = useState<string[] | null>(
-    null,
+    null
   )
   const [hintDismissed, setHintDismissed] = useShellStorage(
     `${storagePrefix}-hint-dismissed`,
-    false,
+    false
   )
 
   const dismissBoardHint = () => {
@@ -488,7 +490,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     const path = selectedObjectId
       ? `${appPath}/${containerId}/${selectedObjectId}`
       : `${appPath}/${containerId}`
-    const viewParam = activeViewId !== defaultViewId ? `?view=${activeViewId}` : ''
+    const viewParam =
+      activeViewId !== defaultViewId ? `?view=${activeViewId}` : ''
     const routerHistory = router.history as unknown as {
       _ignoreSubscribers?: boolean
     }
@@ -508,7 +511,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
   // Sort state, seeded from the view's designed default sort
   const [sort, setSort] = useState<EntitySortState | null>(() =>
-    viewSortState(activeView),
+    viewSortState(activeView)
   )
 
   const queryClient = useQueryClient()
@@ -531,7 +534,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     if (!emptyViewClass || didAutoSwitch.current || search.view) return
     if (objectsData && objectsData.length === 0) {
       const fallbackView = design.views.find((v) =>
-        v.classes?.includes(emptyViewClass),
+        v.classes?.includes(emptyViewClass)
       )
       if (fallbackView && fallbackView.id !== activeViewId) {
         didAutoSwitch.current = true
@@ -562,7 +565,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const isDescendant = (
     obj: TObject,
     ancestorId: string,
-    allObjects: TObject[],
+    allObjects: TObject[]
   ): boolean => {
     let current = obj.parent
     while (current) {
@@ -639,14 +642,15 @@ export function EntityObjectsPage<TObject extends EntityObject>({
             let others: TObject[]
             if (scopeParent !== undefined) {
               others = old.objects.filter(
-                (o) => o.parent === scopeParent && o.id !== objectId,
+                (o) => o.parent === scopeParent && o.id !== objectId
               )
             } else {
               const oldVal =
                 old.objects.find((o) => o.id === objectId)?.values[field] || ''
               const targetValue = value || oldVal
               others = old.objects.filter(
-                (o) => o.id !== objectId && (o.values[field] || '') === targetValue,
+                (o) =>
+                  o.id !== objectId && (o.values[field] || '') === targetValue
               )
             }
             others.sort((a, b) => rankCompare(a.rank, b.rank))
@@ -684,7 +688,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               return obj
             }),
           }
-        },
+        }
       )
 
       return { previousData }
@@ -750,7 +754,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               return updated
             }),
           }
-        },
+        }
       )
 
       return { previousData }
@@ -895,8 +899,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       const searchLower = filters.search.toLowerCase()
       result = result.filter((obj) =>
         Object.values(obj.values).some(
-          (v) => typeof v === 'string' && v.toLowerCase().includes(searchLower),
-        ),
+          (v) => typeof v === 'string' && v.toLowerCase().includes(searchLower)
+        )
       )
     }
 
@@ -949,7 +953,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         setSort(viewSortState(design.views[index]))
       }
     },
-    [design.views],
+    [design.views]
   )
 
   // Get the column and row fields for the current view
@@ -960,14 +964,19 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const viewClasses = activeView?.classes
   const boardClass = useMemo(() => {
     if (viewClasses?.length) {
-      return design.classes.find((c) => c.id === viewClasses[0]) ?? design.classes[0]
+      return (
+        design.classes.find((c) => c.id === viewClasses[0]) ?? design.classes[0]
+      )
     }
     return design.classes[0]
   }, [design.classes, viewClasses])
 
   const getDefaultColumnValue = useCallback(() => {
     const effectiveType = boardClass?.id
-    if (effectiveType && design.options[effectiveType]?.[columnField]?.length > 0) {
+    if (
+      effectiveType &&
+      design.options[effectiveType]?.[columnField]?.length > 0
+    ) {
       return [
         {
           field: columnField,
@@ -1059,7 +1068,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     newRank?: number,
     newRow?: string,
     scopeParent?: string,
-    promote?: boolean,
+    promote?: boolean
   ) => {
     moveMutation.mutate({
       objectId,
@@ -1082,7 +1091,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       objectId: string,
       statusFieldId: string,
       newStatus: string,
-      newRank?: number,
+      newRank?: number
     ) => {
       mutateMove({
         objectId,
@@ -1091,7 +1100,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         rank: newRank,
       })
     },
-    [mutateMove],
+    [mutateMove]
   )
 
   const handleReparent = (objectId: string, newParentId: string | null) => {
@@ -1116,7 +1125,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const handleDeleteColumn = async (
     classId: string,
     fieldId: string,
-    optionId: string,
+    optionId: string
   ) => {
     await deleteColumnMutation.mutateAsync({ classId, fieldId, optionId })
   }
@@ -1125,7 +1134,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     classId: string,
     fieldId: string,
     optionId: string,
-    newName: string,
+    newName: string
   ) => {
     await renameColumnMutation.mutateAsync({
       classId,
@@ -1171,7 +1180,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         obj.parent,
         ...allFields.map((f) => {
           const raw = obj.values[f.id] ?? ''
-          if (f.fieldtype === 'enumerated') return optionNames[f.id]?.[raw] ?? raw
+          if (f.fieldtype === 'enumerated')
+            return optionNames[f.id]?.[raw] ?? raw
           if (f.fieldtype === 'user') return peopleMap[raw] ?? raw
           return raw
         }),
@@ -1179,10 +1189,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       return cells.map((cell) => `"${csvCell(cell)}"`).join(',')
     })
 
-    const csv = [
-      headers.map((h) => `"${csvCell(h)}"`).join(','),
-      ...rows,
-    ].join('\n')
+    const csv = [headers.map((h) => `"${csvCell(h)}"`).join(','), ...rows].join(
+      '\n'
+    )
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const filename = `${container.name}.csv`
     // A bare anchor-click save silently no-ops in the shell's sandboxed
@@ -1256,46 +1265,50 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     <>
       <PageHeader
         title={container.name}
-        icon={<Icon className="size-4 md:size-5" />}
+        icon={<Icon className='size-4 md:size-5' />}
         primaryAction={
           canCreate(access) ? (
             <Button
-              variant="outline"
-              size="sm"
-              className="px-2.5"
+              variant='outline'
+              size='sm'
+              className='px-2.5'
               onClick={handleOpenCreateDialog}
             >
-              <Plus className="size-4" />
-              <span className="md:hidden">{labels.createShort}</span>
-              <span className="hidden md:inline">{primaryActionLabel}</span>
+              <Plus className='size-4' />
+              <span className='md:hidden'>{labels.createShort}</span>
+              <span className='hidden md:inline'>{primaryActionLabel}</span>
             </Button>
           ) : undefined
         }
         menuAction={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <IconButton variant="ghost" label={labels.pageActions}>
-                <Ellipsis className="size-4" />
+              <IconButton variant='ghost' label={labels.pageActions}>
+                <Ellipsis className='size-4' />
               </IconButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align='end'>
               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <SlidersHorizontal className="size-4 me-2" />
+                <SlidersHorizontal className='size-4 me-2' />
                 {labels.viewOptions}
                 <Switch
-                  className="ms-auto"
+                  className='ms-auto'
                   checked={showViewOptions}
                   onCheckedChange={setShowViewOptions}
                 />
               </DropdownMenuItem>
               {canDesign(access) && activeView?.viewtype !== 'list' && (
                 <>
-                  <DropdownMenuItem onClick={() => setAddColumnDialogOpen(true)}>
-                    <Columns3 className="size-4 me-2" />
+                  <DropdownMenuItem
+                    onClick={() => setAddColumnDialogOpen(true)}
+                  >
+                    <Columns3 className='size-4 me-2' />
                     {labels.addColumn}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsReorderingColumns(true)}>
-                    <GripVertical className="size-4 me-2" />
+                  <DropdownMenuItem
+                    onClick={() => setIsReorderingColumns(true)}
+                  >
+                    <GripVertical className='size-4 me-2' />
                     {labels.reorderColumns}
                   </DropdownMenuItem>
                 </>
@@ -1303,18 +1316,18 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               <DropdownMenuSeparator />
               {csvExport && (
                 <DropdownMenuItem onClick={handleExportCSV}>
-                  <Download className="size-4 me-2" />
+                  <Download className='size-4 me-2' />
                   {csvExport.menuAction}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={handleDataExport}>
-                <FileDown className="size-4 me-2" />
+                <FileDown className='size-4 me-2' />
                 {labels.exportData}
               </DropdownMenuItem>
               {/* Canonical menu tail: Link, Design, Settings, Unsubscribe. */}
               {isOwner && (
                 <DropdownMenuItem onClick={() => void openLinkDialog()}>
-                  <LinkIcon className="size-4 me-2" />
+                  <LinkIcon className='size-4 me-2' />
                   {labels.shareAction}
                 </DropdownMenuItem>
               )}
@@ -1324,7 +1337,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setUnsubscribeOpen(true)}>
-                    <LogOut className="size-4 me-2" />
+                    <LogOut className='size-4 me-2' />
                     {labels.unsubscribe}
                   </DropdownMenuItem>
                 </>
@@ -1345,16 +1358,16 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           showSort: true,
         })}
       {isReorderingColumns && (
-        <div className="flex items-center justify-between px-4 py-2 bg-muted border-b">
-          <span className="text-sm text-muted-foreground">
+        <div className='flex items-center justify-between px-4 py-2 bg-muted border-b'>
+          <span className='text-sm text-muted-foreground'>
             {labels.reorderHint}
           </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCancelReorder}>
+          <div className='flex items-center gap-2'>
+            <Button variant='outline' size='sm' onClick={handleCancelReorder}>
               {labels.cancel}
             </Button>
             <Button
-              size="sm"
+              size='sm'
               onClick={handleSaveColumnOrder}
               disabled={
                 !pendingColumnOrder ||
@@ -1362,7 +1375,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 arraysEqual(pendingColumnOrder, baselineColumnOrder)
               }
             >
-              <Check className="size-4" />
+              <Check className='size-4' />
               {labels.save}
             </Button>
           </div>
@@ -1372,27 +1385,27 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         !isReorderingColumns &&
         activeView?.viewtype !== 'list' &&
         canCreate(access) && (
-          <div className="flex items-center justify-between px-4 py-2 bg-muted border-b">
-            <span className="text-sm text-muted-foreground">
+          <div className='flex items-center justify-between px-4 py-2 bg-muted border-b'>
+            <span className='text-sm text-muted-foreground'>
               {labels.boardHint}
             </span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
+                  variant='ghost'
+                  size='icon'
+                  className='size-6'
                   onClick={dismissBoardHint}
                   aria-label={labels.dismissBoardHint}
                 >
-                  <X className="size-4" />
+                  <X className='size-4' />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{labels.dismissBoardHint}</TooltipContent>
             </Tooltip>
           </div>
         )}
-      <Main fluid className="flex flex-col min-h-0 min-w-0 flex-1 !p-0">
+      <Main fluid className='flex flex-col min-h-0 min-w-0 flex-1 !p-0'>
         {/* Content area */}
         <div
           className={
@@ -1404,7 +1417,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           {!populated || objectsLoading ? (
             <LoadingContent />
           ) : activeView?.viewtype === 'list' ? (
-            <div className="p-4">
+            <div className='p-4'>
               {renderTree({
                 objects: filteredObjects,
                 peopleMap,
@@ -1416,7 +1429,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 onCardClick: handleCardClick,
                 onReparent: canWrite(access) ? handleReparent : undefined,
                 onReorder: canWrite(access) ? handleReorder : undefined,
-                onMoveObject: canWrite(access) ? handleListMoveObject : undefined,
+                onMoveObject: canWrite(access)
+                  ? handleListMoveObject
+                  : undefined,
                 selectedObjectId,
                 onCreateClick: canCreate(access)
                   ? handleOpenCreateDialog
@@ -1424,7 +1439,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               })}
             </div>
           ) : (
-            <div className="px-4 w-fit min-w-full">
+            <div className='px-4 w-fit min-w-full'>
               {renderBoard({
                 objects: filteredObjects,
                 statusField: columnField,
@@ -1438,11 +1453,17 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 onCardDoubleClick: canCreate(access)
                   ? handleCreateChild
                   : undefined,
-                onCreateClick: canCreate(access) ? handleCreateClick : undefined,
+                onCreateClick: canCreate(access)
+                  ? handleCreateClick
+                  : undefined,
                 onMoveObject: canWrite(access) ? handleMoveObject : undefined,
                 onReparentObject: canWrite(access) ? handleReparent : undefined,
-                onRenameColumn: canDesign(access) ? handleRenameColumn : undefined,
-                onDeleteColumn: canDesign(access) ? handleDeleteColumn : undefined,
+                onRenameColumn: canDesign(access)
+                  ? handleRenameColumn
+                  : undefined,
+                onDeleteColumn: canDesign(access)
+                  ? handleDeleteColumn
+                  : undefined,
                 isReordering: isReorderingColumns,
                 onReorderColumns: handleReorderColumns,
               })}
@@ -1485,8 +1506,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle>{labels.shareTitle}</ResponsiveDialogTitle>
           </ResponsiveDialogHeader>
-          <div className="bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm">
-            <code className="flex-1 break-all">{shareLink || '…'}</code>
+          <div className='bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm'>
+            <code className='flex-1 break-all'>{shareLink || '…'}</code>
             <CopyButton value={shareLink} disabled={!shareLink} />
           </div>
         </ResponsiveDialogContent>

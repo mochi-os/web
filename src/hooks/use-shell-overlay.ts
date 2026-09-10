@@ -25,7 +25,10 @@ export function useShellOverlay(open = true) {
     shellOverlayCount += 1
     if (shellOverlayCount === 1) {
       setShellOverlay(true)
-      shellOverlayHeartbeat = window.setInterval(() => setShellOverlay(true), HEARTBEAT_MS)
+      shellOverlayHeartbeat = window.setInterval(
+        () => setShellOverlay(true),
+        HEARTBEAT_MS
+      )
     }
 
     return () => {

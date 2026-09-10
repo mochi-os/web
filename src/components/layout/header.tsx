@@ -7,7 +7,12 @@ type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   compact?: boolean
 }
 
-export function Header({ className, compact, children, ...props }: HeaderProps) {
+export function Header({
+  className,
+  compact,
+  children,
+  ...props
+}: HeaderProps) {
   // Don't render empty header
   if (!children) {
     return null
@@ -15,7 +20,12 @@ export function Header({ className, compact, children, ...props }: HeaderProps) 
 
   return (
     <header
-      className={cn('z-40', compact ? 'h-14' : 'h-17', 'border-b bg-background', className)}
+      className={cn(
+        'z-40',
+        compact ? 'h-14' : 'h-17',
+        'border-b bg-background',
+        className
+      )}
       {...props}
     >
       <div className='relative flex h-full w-full items-center justify-center'>

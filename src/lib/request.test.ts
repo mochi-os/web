@@ -29,13 +29,17 @@ describe('request', () => {
 
   it('unwraps the data envelope', async () => {
     answer({ data: { items: [1, 2] } })
-    await expect(request<{ items: number[] }>({ url: '/x' })).resolves.toEqual({ items: [1, 2] })
+    await expect(request<{ items: number[] }>({ url: '/x' })).resolves.toEqual({
+      items: [1, 2],
+    })
     expect(errorLog).not.toHaveBeenCalled()
   })
 
   it('turns a root-level status envelope into an ApiError carrying the status', async () => {
     answer({ status: 404, error: 'gone' })
-    const failure = (await request({ url: '/x' }).catch((e: unknown) => e)) as ApiError
+    const failure = (await request({ url: '/x' }).catch(
+      (e: unknown) => e
+    )) as ApiError
     expect(failure).toBeInstanceOf(ApiError)
     expect(failure.status).toBe(404)
     expect(failure.message).toBe('gone')
@@ -43,14 +47,18 @@ describe('request', () => {
 
   it('turns a status envelope under data into an ApiError', async () => {
     answer({ data: { status: 403, error: 'no' } })
-    const failure = (await request({ url: '/x' }).catch((e: unknown) => e)) as ApiError
+    const failure = (await request({ url: '/x' }).catch(
+      (e: unknown) => e
+    )) as ApiError
     expect(failure).toBeInstanceOf(ApiError)
     expect(failure.status).toBe(403)
   })
 
   it('leaves an error field without a status alone: it is data', async () => {
     answer({ data: { error: 'not_found' } })
-    await expect(request({ url: '/x' })).resolves.toEqual({ error: 'not_found' })
+    await expect(request({ url: '/x' })).resolves.toEqual({
+      error: 'not_found',
+    })
   })
 
   it('logs an envelope error once, not once per catch block', async () => {
@@ -61,7 +69,9 @@ describe('request', () => {
 
   it('logs a transport failure once too', async () => {
     vi.spyOn(apiClient, 'request').mockRejectedValue(new Error('Network Error'))
-    const failure = (await request({ url: '/x' }).catch((e: unknown) => e)) as ApiError
+    const failure = (await request({ url: '/x' }).catch(
+      (e: unknown) => e
+    )) as ApiError
     expect(failure).toBeInstanceOf(ApiError)
     expect(errorLog).toHaveBeenCalledTimes(1)
   })

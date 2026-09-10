@@ -105,7 +105,10 @@ describe('createAppClient interceptor', () => {
       expect(seen[0].withCredentials).toBe(false)
       expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
     } finally {
-      Object.defineProperty(window, 'parent', { configurable: true, get: () => window })
+      Object.defineProperty(window, 'parent', {
+        configurable: true,
+        get: () => window,
+      })
     }
   })
 

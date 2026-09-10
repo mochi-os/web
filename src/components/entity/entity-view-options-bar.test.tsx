@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, createMockEntityView } from './entity-test-utils'
+import {
+  render,
+  screen,
+  fireEvent,
+  createMockEntityView,
+} from './entity-test-utils'
 
 vi.mock('../../hooks/use-screen-size', () => ({
   useScreenSize: () => ({ size: 'xs', width: 360 }),
@@ -25,7 +30,9 @@ describe('EntityViewOptionsBar', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: 'Open view controls' }))
-    const description = await screen.findByText('Search, watch, and sort this view.')
+    const description = await screen.findByText(
+      'Search, watch, and sort this view.'
+    )
     expect(description.className).toContain('sr-only')
   })
 })

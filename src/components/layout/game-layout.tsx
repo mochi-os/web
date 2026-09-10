@@ -28,11 +28,7 @@ export interface GameLayoutLabels {
 
 const opponentIconCache = new Map<string, FC>()
 
-function opponentIcon(
-  appName: string,
-  gameId: string,
-  opponentId: string,
-): FC {
+function opponentIcon(appName: string, gameId: string, opponentId: string): FC {
   // Served by the app's own asset proxy, never by a direct /people/ fetch:
   // inside the shell iframe a cross-app request goes out anonymous, and for a
   // remote opponent there is no local /people/ entity at all - the proxy
@@ -45,7 +41,7 @@ function opponentIcon(
         <EntityAvatar
           src={`/${appName}/${gameId}/-/user/${opponentId}/asset/avatar`}
           styleUrl={`/${appName}/${gameId}/-/user/${opponentId}/asset/style`}
-          size="xs"
+          size='xs'
         />
       )
     }
@@ -70,7 +66,7 @@ function WebsocketStatusIndicator({
     <div
       className={cn(
         'text-muted-foreground flex items-center gap-2 px-2 py-2 text-xs',
-        isCollapsed && 'justify-center px-0',
+        isCollapsed && 'justify-center px-0'
       )}
     >
       <span

@@ -11,7 +11,13 @@ function Drawer({
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
   // Disable vaul's built-in input repositioning; we handle keyboard offset
   // ourselves via visualViewport in DrawerContent to avoid conflicting scrolls.
-  return <DrawerPrimitive.Root data-slot='drawer' repositionInputs={false} {...props} />
+  return (
+    <DrawerPrimitive.Root
+      data-slot='drawer'
+      repositionInputs={false}
+      {...props}
+    />
+  )
 }
 
 function DrawerTrigger({
@@ -54,7 +60,8 @@ function DrawerContent({
   onPointerDownOutside,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
-  const ref = React.useRef<React.ComponentRef<typeof DrawerPrimitive.Content>>(null)
+  const ref =
+    React.useRef<React.ComponentRef<typeof DrawerPrimitive.Content>>(null)
 
   React.useEffect(() => {
     const vv = window.visualViewport
@@ -64,7 +71,10 @@ function DrawerContent({
       if (!ref.current) return
       // Keyboard height = layout viewport height minus the visible area height
       // (offsetTop accounts for any top-level page scroll on desktop)
-      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - vv.height - vv.offsetTop
+      )
       ref.current.style.bottom = keyboardHeight > 0 ? `${keyboardHeight}px` : ''
     }
 
@@ -93,7 +103,8 @@ function DrawerContent({
           className
         )}
         onPointerDownOutside={(event) => {
-          if (insideToaster(event.detail.originalEvent.target)) event.preventDefault()
+          if (insideToaster(event.detail.originalEvent.target))
+            event.preventDefault()
           onPointerDownOutside?.(event)
         }}
         {...props}

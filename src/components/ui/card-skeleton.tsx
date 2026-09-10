@@ -12,12 +12,7 @@ interface CardSkeletonProps {
 
 export function CardSkeleton({ count = 3, className }: CardSkeletonProps) {
   return (
-    <div
-      className={cn(
-        'grid gap-4 sm:grid-cols-2 lg:grid-cols-3',
-        className
-      )}
-    >
+    <div className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-3', className)}>
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i} className='overflow-hidden shadow-none'>
           <CardContent className='p-4'>

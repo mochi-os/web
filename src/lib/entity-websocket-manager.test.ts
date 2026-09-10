@@ -6,7 +6,10 @@
 // otherwise leaves an orphan fanning every event out twice.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { entityWebsocketManager, type EntityWebsocketEvent } from './entity-websocket-manager'
+import {
+  entityWebsocketManager,
+  type EntityWebsocketEvent,
+} from './entity-websocket-manager'
 
 class MockWebSocket {
   static CONNECTING = 0
@@ -55,7 +58,10 @@ function socketsFor(key: string): MockWebSocket[] {
 
 // jsdom leaves document.hidden read-only, so the visibility cases redefine it.
 function setHidden(hidden: boolean) {
-  Object.defineProperty(document, 'hidden', { value: hidden, configurable: true })
+  Object.defineProperty(document, 'hidden', {
+    value: hidden,
+    configurable: true,
+  })
 }
 
 describe('entityWebsocketManager', () => {
@@ -125,14 +131,20 @@ describe('entityWebsocketManager', () => {
   it('defers the reconnect while offline and resumes when the network returns', () => {
     const stop = entityWebsocketManager.subscribe('offline', () => {})
     const original = Object.getOwnPropertyDescriptor(navigator, 'onLine')
-    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    Object.defineProperty(navigator, 'onLine', {
+      value: false,
+      configurable: true,
+    })
 
     const before = MockWebSocket.instances.length
     MockWebSocket.instances[MockWebSocket.instances.length - 1].onclose?.()
     vi.advanceTimersByTime(120000)
     expect(MockWebSocket.instances.length).toBe(before)
 
-    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+    Object.defineProperty(navigator, 'onLine', {
+      value: true,
+      configurable: true,
+    })
     window.dispatchEvent(new Event('online'))
     expect(MockWebSocket.instances.length).toBeGreaterThan(before)
 
@@ -186,7 +198,10 @@ describe('entityWebsocketManager', () => {
   it('does not reconnect on show while the browser reports offline', () => {
     const stop = entityWebsocketManager.subscribe('wakeOffline', () => {})
     const original = Object.getOwnPropertyDescriptor(navigator, 'onLine')
-    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    Object.defineProperty(navigator, 'onLine', {
+      value: false,
+      configurable: true,
+    })
 
     const before = MockWebSocket.instances.length
     MockWebSocket.instances[before - 1].onclose?.()
@@ -239,12 +254,16 @@ describe('entityWebsocketManager', () => {
     // The server closes the socket (handlers still attached, state CLOSING);
     // a new subscriber arrives in that window and opens a replacement.
     const received: string[] = []
-    entityWebsocketManager.subscribe('kC', (event) => received.push(`a:${event.type}`))
+    entityWebsocketManager.subscribe('kC', (event) =>
+      received.push(`a:${event.type}`)
+    )
     const [first] = socketsFor('kC')
     first.open()
     first.readyState = MockWebSocket.CLOSING
 
-    entityWebsocketManager.subscribe('kC', (event) => received.push(`b:${event.type}`))
+    entityWebsocketManager.subscribe('kC', (event) =>
+      received.push(`b:${event.type}`)
+    )
     expect(socketsFor('kC')).toHaveLength(2)
     const second = socketsFor('kC')[1]
     second.open()

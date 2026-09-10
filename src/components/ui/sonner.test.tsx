@@ -24,7 +24,9 @@ describe('Toaster under a modal', () => {
     })
     await screen.findByText('Boom')
 
-    const toaster = document.querySelector('[data-sonner-toaster]') as HTMLElement
+    const toaster = document.querySelector(
+      '[data-sonner-toaster]'
+    ) as HTMLElement
     expect(getComputedStyle(toaster).pointerEvents).toBe('auto')
     document.body.style.pointerEvents = ''
   })

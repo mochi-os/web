@@ -107,7 +107,9 @@ export function CommentTreeLayout({
                 )}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{isCollapsed ? t`Expand` : t`Collapse`}</TooltipContent>
+            <TooltipContent>
+              {isCollapsed ? t`Expand` : t`Collapse`}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -137,11 +139,13 @@ export function CommentTreeLayout({
           </div>
 
           {/* Content Body */}
-          <div className={cn('min-w-0 flex-1', isComfortable ? 'pt-0' : 'pt-0.5')}>
+          <div
+            className={cn('min-w-0 flex-1', isComfortable ? 'pt-0' : 'pt-0.5')}
+          >
             <div
               className={cn(
                 isComfortable &&
-                'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0'
+                  'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0'
               )}
             >
               {isCollapsed ? collapsedContent : content}

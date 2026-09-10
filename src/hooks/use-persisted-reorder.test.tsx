@@ -47,15 +47,20 @@ function Gallery({
 }) {
   const [items, setItems] = useState<Photo[]>(initial.map((id) => ({ id })))
   append = (id) => setItems((current) => [...current, { id }])
-  const { saving, draggingIndex, getGroupProps, getItemProps } = usePersistedReorder({
-    items,
-    setItems,
-    save,
-    onError,
-  })
+  const { saving, draggingIndex, getGroupProps, getItemProps } =
+    usePersistedReorder({
+      items,
+      setItems,
+      save,
+      onError,
+    })
 
   return (
-    <div data-testid='group' data-saving={saving ? 'true' : undefined} {...getGroupProps()}>
+    <div
+      data-testid='group'
+      data-saving={saving ? 'true' : undefined}
+      {...getGroupProps()}
+    >
       {items.map((item, index) => (
         <div
           key={item.id}
@@ -120,7 +125,13 @@ afterEach(() => {
 })
 
 function pointer(x: number, y: number) {
-  return { pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y }
+  return {
+    pointerId: 1,
+    pointerType: 'mouse',
+    button: 0,
+    clientX: x,
+    clientY: y,
+  }
 }
 
 /** Drag the tile with the given label from the last slot of the row onto the first. */
@@ -153,9 +164,10 @@ describe('usePersistedReorder', () => {
   it('holds the list still while the save is in flight', async () => {
     let release: () => void = () => {}
     const save = vi.fn(
-      () => new Promise<void>((resolve) => {
-        release = resolve
-      })
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        })
     )
     render(<Gallery initial={['a', 'b', 'c']} save={save} />)
 

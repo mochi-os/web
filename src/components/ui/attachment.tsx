@@ -1,14 +1,14 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { Slot } from "@radix-ui/react-slot"
-import { Captions, GripVertical, Plus, X } from "lucide-react"
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { Slot } from '@radix-ui/react-slot'
+import { Captions, GripVertical, Plus, X } from 'lucide-react'
 
-import { cn } from "../../lib/utils"
-import type { UploadSlice } from "../../lib/upload-slices"
-import { Button } from "./button"
+import { cn } from '../../lib/utils'
+import type { UploadSlice } from '../../lib/upload-slices'
+import { Button } from './button'
 
 /**
  * Fill for one attachment's own bytes along the bottom edge of its parent.
@@ -26,14 +26,14 @@ function AttachmentProgress({
   return (
     <div
       aria-hidden
-      data-slot="attachment-progress"
+      data-slot='attachment-progress'
       className={cn(
-        "bg-foreground/15 absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-[inherit]",
+        'bg-foreground/15 absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-[inherit]',
         className
       )}
     >
       <div
-        className="bg-primary h-full transition-[width] duration-300"
+        className='bg-primary h-full transition-[width] duration-300'
         style={{ width: `${percent}%` }}
       />
     </div>
@@ -41,18 +41,18 @@ function AttachmentProgress({
 }
 
 const attachmentVariants = cva(
-  "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-colors focus-within:ring-1 focus-within:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
+  'group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-colors focus-within:ring-1 focus-within:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed',
   {
     variants: {
       size: {
         default:
-          "gap-2 text-sm has-data-[slot=attachment-content]:px-2.5 has-data-[slot=attachment-content]:py-2 has-data-[slot=attachment-media]:p-2",
-        sm: "gap-2.5 text-xs has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5",
-        xs: "gap-1.5 rounded-lg text-xs has-data-[slot=attachment-content]:px-1.5 has-data-[slot=attachment-content]:py-1 has-data-[slot=attachment-media]:p-1",
+          'gap-2 text-sm has-data-[slot=attachment-content]:px-2.5 has-data-[slot=attachment-content]:py-2 has-data-[slot=attachment-media]:p-2',
+        sm: 'gap-2.5 text-xs has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5',
+        xs: 'gap-1.5 rounded-lg text-xs has-data-[slot=attachment-content]:px-1.5 has-data-[slot=attachment-content]:py-1 has-data-[slot=attachment-media]:p-1',
       },
       orientation: {
-        horizontal: "min-w-40 items-center",
-        vertical: "w-24 flex-col has-data-[slot=attachment-content]:w-30",
+        horizontal: 'min-w-40 items-center',
+        vertical: 'w-24 flex-col has-data-[slot=attachment-content]:w-30',
       },
     },
   }
@@ -60,21 +60,21 @@ const attachmentVariants = cva(
 
 function Attachment({
   className,
-  state = "done",
-  size = "default",
-  orientation = "horizontal",
+  state = 'done',
+  size = 'default',
+  orientation = 'horizontal',
   progress,
   children,
   ...props
-}: React.ComponentProps<"div"> &
+}: React.ComponentProps<'div'> &
   VariantProps<typeof attachmentVariants> & {
-    state?: "idle" | "uploading" | "processing" | "error" | "done"
+    state?: 'idle' | 'uploading' | 'processing' | 'error' | 'done'
     /** This file's own share of an upload in flight. */
     progress?: UploadSlice | null
   }) {
   return (
     <div
-      data-slot="attachment"
+      data-slot='attachment'
       data-state={state}
       data-size={size}
       data-orientation={orientation}
@@ -92,25 +92,25 @@ const attachmentMediaVariants = cva(
   {
     variants: {
       variant: {
-        icon: "",
+        icon: '',
         image:
-          "opacity-60 group-data-[state=done]/attachment:opacity-100 group-data-[state=idle]/attachment:opacity-100 *:[img]:aspect-square *:[img]:w-full *:[img]:object-cover",
+          'opacity-60 group-data-[state=done]/attachment:opacity-100 group-data-[state=idle]/attachment:opacity-100 *:[img]:aspect-square *:[img]:w-full *:[img]:object-cover',
       },
     },
     defaultVariants: {
-      variant: "icon",
+      variant: 'icon',
     },
   }
 )
 
 function AttachmentMedia({
   className,
-  variant = "icon",
+  variant = 'icon',
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof attachmentMediaVariants>) {
+}: React.ComponentProps<'div'> & VariantProps<typeof attachmentMediaVariants>) {
   return (
     <div
-      data-slot="attachment-media"
+      data-slot='attachment-media'
       data-variant={variant}
       className={cn(attachmentMediaVariants({ variant }), className)}
       {...props}
@@ -121,12 +121,12 @@ function AttachmentMedia({
 function AttachmentContent({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="attachment-content"
+      data-slot='attachment-content'
       className={cn(
-        "max-w-full min-w-0 flex-1 leading-tight group-data-[orientation=vertical]/attachment:px-1",
+        'max-w-full min-w-0 flex-1 leading-tight group-data-[orientation=vertical]/attachment:px-1',
         className
       )}
       {...props}
@@ -137,12 +137,12 @@ function AttachmentContent({
 function AttachmentTitle({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   return (
     <span
-      data-slot="attachment-title"
+      data-slot='attachment-title'
       className={cn(
-        "block max-w-full min-w-0 truncate font-medium group-data-[state=processing]/attachment:animate-pulse group-data-[state=uploading]/attachment:animate-pulse",
+        'block max-w-full min-w-0 truncate font-medium group-data-[state=processing]/attachment:animate-pulse group-data-[state=uploading]/attachment:animate-pulse',
         className
       )}
       {...props}
@@ -153,13 +153,13 @@ function AttachmentTitle({
 function AttachmentDescription({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   return (
     <span
-      data-slot="attachment-description"
+      data-slot='attachment-description'
       className={cn(
-        "mt-0.5 block min-w-0 truncate text-xs text-muted-foreground group-data-[state=error]/attachment:text-destructive/80",
-        "max-w-full",
+        'mt-0.5 block min-w-0 truncate text-xs text-muted-foreground group-data-[state=error]/attachment:text-destructive/80',
+        'max-w-full',
         className
       )}
       {...props}
@@ -170,12 +170,12 @@ function AttachmentDescription({
 function AttachmentActions({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="attachment-actions"
+      data-slot='attachment-actions'
       className={cn(
-        "relative z-20 flex shrink-0 items-center group-data-[orientation=vertical]/attachment:absolute group-data-[orientation=vertical]/attachment:top-3 group-data-[orientation=vertical]/attachment:right-3 group-data-[orientation=vertical]/attachment:gap-1",
+        'relative z-20 flex shrink-0 items-center group-data-[orientation=vertical]/attachment:absolute group-data-[orientation=vertical]/attachment:top-3 group-data-[orientation=vertical]/attachment:right-3 group-data-[orientation=vertical]/attachment:gap-1',
         className
       )}
       {...props}
@@ -186,14 +186,14 @@ function AttachmentActions({
 function AttachmentAction({
   className,
   variant,
-  size = "icon",
-  type = "button",
+  size = 'icon',
+  type = 'button',
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
     <Button
-      data-slot="attachment-action"
-      variant={variant ?? "ghost"}
+      data-slot='attachment-action'
+      variant={variant ?? 'ghost'}
       size={size}
       // A bare button defaults to type="submit", and these actions live inside
       // composer and create forms: removing a staged file submitted the form,
@@ -210,36 +210,36 @@ function AttachmentTrigger({
   asChild = false,
   type,
   ...props
-}: React.ComponentProps<"button"> & {
+}: React.ComponentProps<'button'> & {
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot : "button"
+  const Comp = asChild ? Slot : 'button'
 
   return (
     <Comp
-      data-slot="attachment-trigger"
-      type={asChild ? undefined : (type ?? "button")}
-      className={cn("absolute inset-0 z-10 outline-none", className)}
+      data-slot='attachment-trigger'
+      type={asChild ? undefined : (type ?? 'button')}
+      className={cn('absolute inset-0 z-10 outline-none', className)}
       {...props}
     />
   )
 }
 
-const attachmentGroupVariants = cva("flex min-w-0 gap-3 py-1", {
+const attachmentGroupVariants = cva('flex min-w-0 gap-3 py-1', {
   variants: {
     layout: {
       // One row that scrolls sideways. Compact, but only ever shows the few
       // attachments that fit, which is wrong wherever the order matters.
-      row: "snap-x snap-mandatory scroll-px-1 no-scrollbar overflow-x-auto overscroll-x-contain *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start",
+      row: 'snap-x snap-mandatory scroll-px-1 no-scrollbar overflow-x-auto overscroll-x-contain *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start',
       // Wraps onto as many rows as it takes, so every attachment is on screen.
       // items-start is load-bearing: a flex line stretches its items to the
       // tallest one by default, which pulls every tile to the height of the
       // largest and leaves dead space under the short ones.
-      grid: "flex-wrap content-start items-start",
+      grid: 'flex-wrap content-start items-start',
     },
   },
   defaultVariants: {
-    layout: "row",
+    layout: 'row',
   },
 })
 
@@ -247,19 +247,18 @@ function AttachmentGroup({
   className,
   layout,
   ...props
-}: React.ComponentProps<"div"> &
-  VariantProps<typeof attachmentGroupVariants>) {
+}: React.ComponentProps<'div'> & VariantProps<typeof attachmentGroupVariants>) {
   return (
     <div
-      data-slot="attachment-group"
-      data-layout={layout ?? "row"}
+      data-slot='attachment-group'
+      data-layout={layout ?? 'row'}
       className={cn(attachmentGroupVariants({ layout }), className)}
       {...props}
     />
   )
 }
 
-type AttachmentTileProps = Omit<React.ComponentProps<"div">, "children"> & {
+type AttachmentTileProps = Omit<React.ComponentProps<'div'>, 'children'> & {
   /** File name, shown under the preview and used as the image's alt text. */
   name: string
   /** Second line: the formatted size, or an error in its place. */
@@ -267,10 +266,10 @@ type AttachmentTileProps = Omit<React.ComponentProps<"div">, "children"> & {
   /** Object URL or thumbnail. Falls back to `icon` when absent. */
   previewUrl?: string | null
   /** A video preview needs a <video>; an <img> renders nothing for one. */
-  previewKind?: "image" | "video"
+  previewKind?: 'image' | 'video'
   /** Shown in place of a preview, for anything that is not an image. */
   icon?: React.ReactNode
-  state?: "idle" | "uploading" | "error"
+  state?: 'idle' | 'uploading' | 'error'
   /**
    * This file's own share of an upload in flight. Supersedes the pulse that
    * `state: "uploading"` draws on the name.
@@ -304,9 +303,9 @@ function AttachmentTile({
   name,
   meta,
   previewUrl,
-  previewKind = "image",
+  previewKind = 'image',
   icon,
-  state = "idle",
+  state = 'idle',
   progress,
   dragging = false,
   draggable = false,
@@ -321,37 +320,37 @@ function AttachmentTile({
 }: AttachmentTileProps) {
   // Files still queued behind the one on the wire are dimmed, so the order the
   // upload is working through is legible without reading a single number.
-  const waiting = progress?.state === "waiting"
+  const waiting = progress?.state === 'waiting'
   return (
     <div
-      data-slot="attachment-tile"
+      data-slot='attachment-tile'
       data-state={state}
       className={cn(
-        "group/tile bg-card text-card-foreground relative flex w-24 shrink-0 flex-col overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none sm:w-32",
-        state === "error" && "border-destructive/40",
-        dragging && "ring-primary z-10 scale-[1.04] shadow-lg ring-2",
+        'group/tile bg-card text-card-foreground relative flex w-24 shrink-0 flex-col overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none sm:w-32',
+        state === 'error' && 'border-destructive/40',
+        dragging && 'ring-primary z-10 scale-[1.04] shadow-lg ring-2',
         className
       )}
       {...props}
     >
       <div
         className={cn(
-          "bg-muted relative aspect-square w-full shrink-0 overflow-hidden",
-          waiting && "opacity-50 transition-opacity"
+          'bg-muted relative aspect-square w-full shrink-0 overflow-hidden',
+          waiting && 'opacity-50 transition-opacity'
         )}
       >
-        {previewUrl && previewKind === "video" ? (
+        {previewUrl && previewKind === 'video' ? (
           <video
             src={previewUrl}
             muted
             playsInline
             draggable={false}
             className={cn(
-              "absolute inset-0 size-full object-contain",
+              'absolute inset-0 size-full object-contain',
               // The blanket dim is the indeterminate signal. With a real slice
               // the fill and the queued dim say it better, and stacking the two
               // put a waiting tile at 30% — which reads as broken, not queued.
-              state === "uploading" && !progress && "opacity-60"
+              state === 'uploading' && !progress && 'opacity-60'
             )}
           />
         ) : previewUrl ? (
@@ -361,10 +360,10 @@ function AttachmentTile({
              * grey bands. The browser already has this bitmap. */}
             <img
               src={previewUrl}
-              alt=""
+              alt=''
               aria-hidden
               draggable={false}
-              className="absolute inset-0 size-full scale-110 object-cover opacity-40 blur-xl"
+              className='absolute inset-0 size-full scale-110 object-cover opacity-40 blur-xl'
             />
             {/* Absolutely positioned, not merely sized: an in-flow image keeps its
              * intrinsic height as a minimum, so a tall screenshot forces the square
@@ -374,19 +373,19 @@ function AttachmentTile({
               alt={name}
               draggable={false}
               className={cn(
-                "absolute inset-0 size-full object-contain",
+                'absolute inset-0 size-full object-contain',
                 // The blanket dim is the indeterminate signal. With a real slice
                 // the fill and the queued dim say it better, and stacking the two
                 // put a waiting tile at 30% — which reads as broken, not queued.
-                state === "uploading" && !progress && "opacity-60"
+                state === 'uploading' && !progress && 'opacity-60'
               )}
             />
           </>
         ) : (
           <div
             className={cn(
-              "text-muted-foreground absolute inset-0 flex items-center justify-center [&_svg]:size-7",
-              state === "error" && "text-destructive"
+              'text-muted-foreground absolute inset-0 flex items-center justify-center [&_svg]:size-7',
+              state === 'error' && 'text-destructive'
             )}
           >
             {icon}
@@ -398,37 +397,35 @@ function AttachmentTile({
         {draggable && (
           <div
             aria-hidden
-            className="pointer-events-none absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/55 py-0.5 pr-1.5 pl-1 text-[11px] leading-none font-medium text-white backdrop-blur-sm"
+            className='pointer-events-none absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/55 py-0.5 pr-1.5 pl-1 text-[11px] leading-none font-medium text-white backdrop-blur-sm'
           >
-            <GripVertical className="size-3" />
+            <GripVertical className='size-3' />
             {position != null && <span>{position}</span>}
           </div>
         )}
-        {badge && (
-          <div className="absolute bottom-1.5 left-1.5">{badge}</div>
-        )}
+        {badge && <div className='absolute bottom-1.5 left-1.5'>{badge}</div>}
         {onRemove && (
           <button
-            type="button"
+            type='button'
             onClick={onRemove}
             aria-label={removeLabel}
             // Revealed on hover where there is a pointer, always visible where
             // there is not — a tap has no hover state to reveal it with.
-            className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white group-hover/tile:opacity-100 [@media(hover:none)]:opacity-100"
+            className='absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white group-hover/tile:opacity-100 [@media(hover:none)]:opacity-100'
           >
-            <X className="size-3.5" strokeWidth={2.5} />
+            <X className='size-3.5' strokeWidth={2.5} />
           </button>
         )}
         {onCaption && (
           <button
-            type="button"
+            type='button'
             onClick={onCaption}
             aria-label={captionLabel}
             // Same reveal rules as the remove button; bottom corner so the two
             // never crowd each other, opposite the badge.
-            className="absolute right-1.5 bottom-1.5 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white group-hover/tile:opacity-100 [@media(hover:none)]:opacity-100"
+            className='absolute right-1.5 bottom-1.5 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white group-hover/tile:opacity-100 [@media(hover:none)]:opacity-100'
           >
-            <Captions className="size-3.5" />
+            <Captions className='size-3.5' />
           </button>
         )}
         {progress && (
@@ -436,15 +433,15 @@ function AttachmentTile({
             fraction={progress.fraction}
             // Square preview, square corners: the tile's own radius is on the
             // card below it, not on this edge.
-            className="rounded-none"
+            className='rounded-none'
           />
         )}
       </div>
-      <div className="min-w-0 px-2 py-1.5">
+      <div className='min-w-0 px-2 py-1.5'>
         <p
           className={cn(
-            "truncate text-xs leading-tight font-medium",
-            state === "uploading" && !progress && "animate-pulse"
+            'truncate text-xs leading-tight font-medium',
+            state === 'uploading' && !progress && 'animate-pulse'
           )}
           title={name}
         >
@@ -453,8 +450,8 @@ function AttachmentTile({
         {meta && (
           <p
             className={cn(
-              "text-muted-foreground mt-0.5 truncate text-[11px]",
-              state === "error" && "text-destructive"
+              'text-muted-foreground mt-0.5 truncate text-[11px]',
+              state === 'error' && 'text-destructive'
             )}
           >
             {meta}
@@ -474,19 +471,19 @@ function AttachmentAddTile({
   label,
   className,
   ...props
-}: React.ComponentProps<"button"> & { label?: React.ReactNode }) {
+}: React.ComponentProps<'button'> & { label?: React.ReactNode }) {
   return (
     <button
-      type="button"
-      data-slot="attachment-add-tile"
+      type='button'
+      data-slot='attachment-add-tile'
       className={cn(
-        "text-muted-foreground hover:border-ring hover:text-foreground focus-visible:ring-ring flex aspect-square w-24 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 sm:w-32",
+        'text-muted-foreground hover:border-ring hover:text-foreground focus-visible:ring-ring flex aspect-square w-24 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 sm:w-32',
         className
       )}
       {...props}
     >
-      <Plus className="size-5" />
-      {label && <span className="px-2 text-xs font-medium">{label}</span>}
+      <Plus className='size-5' />
+      {label && <span className='px-2 text-xs font-medium'>{label}</span>}
     </button>
   )
 }

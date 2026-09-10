@@ -55,10 +55,12 @@ export function AccountVerify({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px]">
+      <ResponsiveDialogContent className='sm:max-w-[425px]'>
         <form onSubmit={handleSubmit}>
           <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle><Trans>Verify email address</Trans></ResponsiveDialogTitle>
+            <ResponsiveDialogTitle>
+              <Trans>Verify email address</Trans>
+            </ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
               <Trans>
                 We sent a verification code to{' '}
@@ -68,15 +70,17 @@ export function AccountVerify({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="code"><Trans>Verification code</Trans></Label>
+          <div className='grid gap-4 py-4'>
+            <div className='grid gap-2'>
+              <Label htmlFor='code'>
+                <Trans>Verification code</Trans>
+              </Label>
               <Input
-                id="code"
+                id='code'
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                autoComplete="one-time-code"
-                className="font-mono text-center text-lg tracking-wider"
+                autoComplete='one-time-code'
+                className='font-mono text-center text-lg tracking-wider'
                 maxLength={10}
               />
             </div>
@@ -84,29 +88,29 @@ export function AccountVerify({
 
           <ResponsiveDialogFooter>
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={() => onOpenChange(false)}
             >
               <Trans>Cancel</Trans>
             </Button>
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={handleResend}
               disabled={isResending}
             >
-              {isResending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {isResending && <Loader2 className='me-2 h-4 w-4 animate-spin' />}
               <Trans>Send again</Trans>
             </Button>
             <Button
-              type="submit"
+              type='submit'
               disabled={isVerifying || code.trim().length < 10}
             >
               {isVerifying ? (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                <Loader2 className='me-2 h-4 w-4 animate-spin' />
               ) : (
-                <Check className="me-2 h-4 w-4" />
+                <Check className='me-2 h-4 w-4' />
               )}
               <Trans>Verify</Trans>
             </Button>

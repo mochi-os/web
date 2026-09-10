@@ -20,7 +20,9 @@ function item(name: string, extra: Partial<ComposerItem> = {}): ComposerItem {
   return { key: name, name, size: 1024, type: 'image/png', ...extra }
 }
 
-function show(props: Partial<React.ComponentProps<typeof AttachmentComposer>> = {}) {
+function show(
+  props: Partial<React.ComponentProps<typeof AttachmentComposer>> = {}
+) {
   return render(
     <I18nProvider i18n={i18n}>
       <AttachmentComposer items={[item('a.png'), item('b.png')]} {...props} />
@@ -36,32 +38,38 @@ describe('AttachmentComposer', () => {
 
   it('defaults to the scrolling row of inline chips', () => {
     show()
-    expect(document.querySelector('[data-slot=attachment-group]')).toHaveAttribute(
-      'data-layout',
-      'row'
-    )
+    expect(
+      document.querySelector('[data-slot=attachment-group]')
+    ).toHaveAttribute('data-layout', 'row')
     expect(document.querySelectorAll('[data-slot=attachment]')).toHaveLength(2)
-    expect(document.querySelectorAll('[data-slot=attachment-tile]')).toHaveLength(0)
+    expect(
+      document.querySelectorAll('[data-slot=attachment-tile]')
+    ).toHaveLength(0)
   })
 
   it('takes layout and preview separately', () => {
     show({ layout: 'grid', preview: 'inline' })
-    expect(document.querySelector('[data-slot=attachment-group]')).toHaveAttribute(
-      'data-layout',
-      'grid'
-    )
+    expect(
+      document.querySelector('[data-slot=attachment-group]')
+    ).toHaveAttribute('data-layout', 'grid')
     expect(document.querySelectorAll('[data-slot=attachment]')).toHaveLength(2)
   })
 
   it('renders square tiles when asked for them', () => {
     show({ preview: 'tile' })
-    expect(document.querySelectorAll('[data-slot=attachment-tile]')).toHaveLength(2)
+    expect(
+      document.querySelectorAll('[data-slot=attachment-tile]')
+    ).toHaveLength(2)
     expect(screen.getByText('a.png')).toBeInTheDocument()
   })
 
   describe('video previews', () => {
     const clip = (name: string) =>
-      item(name, { type: 'video/mp4', previewUrl: `blob:${name}`, previewKind: 'video' as const })
+      item(name, {
+        type: 'video/mp4',
+        previewUrl: `blob:${name}`,
+        previewKind: 'video' as const,
+      })
 
     it('draws a video element for a staged clip', () => {
       show({ preview: 'tile', items: [clip('clip.mp4')] })
@@ -72,11 +80,17 @@ describe('AttachmentComposer', () => {
 
     it('draws one in an inline chip too', () => {
       show({ preview: 'inline', items: [clip('clip.mp4')] })
-      expect(document.querySelector('video')).toHaveAttribute('src', 'blob:clip.mp4')
+      expect(document.querySelector('video')).toHaveAttribute(
+        'src',
+        'blob:clip.mp4'
+      )
     })
 
     it('falls back to the icon when there is no preview URL', () => {
-      show({ preview: 'tile', items: [item('clip.mp4', { type: 'video/mp4' })] })
+      show({
+        preview: 'tile',
+        items: [item('clip.mp4', { type: 'video/mp4' })],
+      })
       expect(document.querySelector('video')).toBeNull()
       expect(screen.getByText('clip.mp4')).toBeInTheDocument()
     })
@@ -107,7 +121,9 @@ describe('AttachmentComposer', () => {
   it('offers a retry only after a failed send', () => {
     const onRetry = vi.fn()
     show({ onRetry })
-    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /retry/i })
+    ).not.toBeInTheDocument()
 
     show({ onRetry, state: 'error' })
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
@@ -118,11 +134,15 @@ describe('AttachmentComposer', () => {
   // width it draws and the byte line beside it, not an aria value.
   describe('per-file progress', () => {
     const fill = () =>
-      document.querySelector('[data-slot=attachment-progress] > div') as HTMLElement
+      document.querySelector(
+        '[data-slot=attachment-progress] > div'
+      ) as HTMLElement
 
     it('draws nothing until a slice arrives', () => {
       show({ preview: 'tile' })
-      expect(document.querySelector('[data-slot=attachment-progress]')).toBeNull()
+      expect(
+        document.querySelector('[data-slot=attachment-progress]')
+      ).toBeNull()
     })
 
     it('fills each tile by its own share', () => {
@@ -148,7 +168,9 @@ describe('AttachmentComposer', () => {
       show({
         preview: 'tile',
         state: 'uploading',
-        items: [item('a.png', { progress: { fraction: 0.25, state: 'uploading' } })],
+        items: [
+          item('a.png', { progress: { fraction: 0.25, state: 'uploading' } }),
+        ],
       })
       expect(screen.getByText('256 B of 1.0 KB')).toBeInTheDocument()
     })
@@ -172,9 +194,13 @@ describe('AttachmentComposer', () => {
       show({
         preview: 'tile',
         state: 'idle',
-        items: [item('a.png', { progress: { fraction: 0.5, state: 'uploading' } })],
+        items: [
+          item('a.png', { progress: { fraction: 0.5, state: 'uploading' } }),
+        ],
       })
-      expect(document.querySelector('[data-slot=attachment-progress]')).toBeNull()
+      expect(
+        document.querySelector('[data-slot=attachment-progress]')
+      ).toBeNull()
       expect(screen.getByText('1.0 KB')).toBeInTheDocument()
     })
 
@@ -189,14 +215,18 @@ describe('AttachmentComposer', () => {
           }),
         ],
       })
-      expect(document.querySelector('[data-slot=attachment-progress]')).toBeNull()
+      expect(
+        document.querySelector('[data-slot=attachment-progress]')
+      ).toBeNull()
     })
 
     it('replaces the indeterminate pulse once there is a real fraction', () => {
       show({
         preview: 'tile',
         state: 'uploading',
-        items: [item('a.png', { progress: { fraction: 0.5, state: 'uploading' } })],
+        items: [
+          item('a.png', { progress: { fraction: 0.5, state: 'uploading' } }),
+        ],
       })
       expect(screen.getByText('a.png')).not.toHaveClass('animate-pulse')
       expect(fill().style.width).toBe('50%')
@@ -206,7 +236,9 @@ describe('AttachmentComposer', () => {
       show({
         preview: 'inline',
         state: 'uploading',
-        items: [item('a.png', { progress: { fraction: 0.4, state: 'uploading' } })],
+        items: [
+          item('a.png', { progress: { fraction: 0.4, state: 'uploading' } }),
+        ],
       })
       expect(fill().style.width).toBe('40%')
     })
@@ -228,14 +260,34 @@ describe('AttachmentComposer', () => {
       }
     )
     const frames: FrameRequestCallback[] = []
-    vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => frames.push(f))
+    vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) =>
+      frames.push(f)
+    )
     vi.stubGlobal('cancelAnimationFrame', () => {})
 
     show({ preview: 'tile', onReorder })
-    const first = screen.getByText('a.png').closest('[data-slot=attachment-tile]')!
-    fireEvent.pointerDown(first, { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 50, clientY: 50 })
-    fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'mouse', clientX: 60, clientY: 50 })
-    fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'mouse', clientX: 210, clientY: 50 })
+    const first = screen
+      .getByText('a.png')
+      .closest('[data-slot=attachment-tile]')!
+    fireEvent.pointerDown(first, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 50,
+      clientY: 50,
+    })
+    fireEvent.pointerMove(window, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      clientX: 60,
+      clientY: 50,
+    })
+    fireEvent.pointerMove(window, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      clientX: 210,
+      clientY: 50,
+    })
     frames.splice(0).forEach((f) => f(0))
 
     expect(onReorder).toHaveBeenCalledWith(0, 1)
@@ -247,10 +299,23 @@ describe('AttachmentComposer', () => {
   it('freezes the order while a send is in flight', () => {
     const onReorder = vi.fn()
     show({ preview: 'tile', onReorder, state: 'uploading' })
-    const first = screen.getByText('a.png').closest('[data-slot=attachment-tile]')!
+    const first = screen
+      .getByText('a.png')
+      .closest('[data-slot=attachment-tile]')!
 
-    fireEvent.pointerDown(first, { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 50, clientY: 50 })
-    fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'mouse', clientX: 210, clientY: 50 })
+    fireEvent.pointerDown(first, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 50,
+      clientY: 50,
+    })
+    fireEvent.pointerMove(window, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      clientX: 210,
+      clientY: 50,
+    })
 
     expect(onReorder).not.toHaveBeenCalled()
   })
@@ -290,7 +355,11 @@ describe('AttachmentComposer', () => {
         preview: 'tile',
         groupMedia: true,
         onReorder,
-        items: [item('notes.md', { type: 'text/plain' }), item('a.png'), item('b.png')],
+        items: [
+          item('notes.md', { type: 'text/plain' }),
+          item('a.png'),
+          item('b.png'),
+        ],
       })
 
       // b.png is drawn last in the media block, with the file block after it.
@@ -317,7 +386,9 @@ describe('AttachmentComposer', () => {
   describe('captions', () => {
     it('offers the caption button on media tiles when asked', () => {
       show({ preview: 'tile', onCaption: vi.fn() })
-      expect(screen.getAllByRole('button', { name: 'Add caption' })).toHaveLength(2)
+      expect(
+        screen.getAllByRole('button', { name: 'Add caption' })
+      ).toHaveLength(2)
     })
 
     it('offers nothing without the callback, or on non-media files', () => {
@@ -338,12 +409,19 @@ describe('AttachmentComposer', () => {
         onCaption: vi.fn(),
         items: [item('a.png', { caption: 'The harbour' }), item('b.png')],
       })
-      expect(screen.getByRole('button', { name: 'Edit caption' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Add caption' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Edit caption' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Add caption' })
+      ).toBeInTheDocument()
     })
 
     it('shows the caption in place of the size line', () => {
-      show({ preview: 'tile', items: [item('a.png', { caption: 'The harbour' })] })
+      show({
+        preview: 'tile',
+        items: [item('a.png', { caption: 'The harbour' })],
+      })
       expect(screen.getByText('The harbour')).toBeInTheDocument()
       expect(screen.queryByText('1.0 KB')).toBeNull()
     })
@@ -387,7 +465,10 @@ describe('AttachmentComposer', () => {
     show({ preview: 'tile', addSlot: <button type='button'>add</button> })
     expect(screen.getByText('add')).toBeInTheDocument()
 
-    const { container } = show({ items: [], addSlot: <button type='button'>add</button> })
+    const { container } = show({
+      items: [],
+      addSlot: <button type='button'>add</button>,
+    })
     expect(container).not.toBeEmptyDOMElement()
   })
 
@@ -409,28 +490,47 @@ describe('AttachmentComposer', () => {
     // jsdom does no layout, so the tiles are handed a row of rectangles in the
     // order they are drawn, 160px apart and 100px wide.
     function layOut(names: string[]) {
-      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-        function (this: HTMLElement) {
-          if (this.getAttribute('data-slot') !== 'attachment-tile') {
-            return { left: 0, top: 0, right: 1000, bottom: 100 } as DOMRect
-          }
-          const slot = names.findIndex((name) => tileName(this) === name)
-          return {
-            left: slot * 160,
-            top: 0,
-            right: slot * 160 + 100,
-            bottom: 100,
-          } as DOMRect
+      vi.spyOn(
+        HTMLElement.prototype,
+        'getBoundingClientRect'
+      ).mockImplementation(function (this: HTMLElement) {
+        if (this.getAttribute('data-slot') !== 'attachment-tile') {
+          return { left: 0, top: 0, right: 1000, bottom: 100 } as DOMRect
         }
-      )
+        const slot = names.findIndex((name) => tileName(this) === name)
+        return {
+          left: slot * 160,
+          top: 0,
+          right: slot * 160 + 100,
+          bottom: 100,
+        } as DOMRect
+      })
     }
 
     function dragTile(name: string, toX: number) {
-      const tile = screen.getByText(name).closest('[data-slot=attachment-tile]')!
-      fireEvent.pointerDown(tile, { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 50, clientY: 50 })
+      const tile = screen
+        .getByText(name)
+        .closest('[data-slot=attachment-tile]')!
+      fireEvent.pointerDown(tile, {
+        pointerId: 1,
+        pointerType: 'mouse',
+        button: 0,
+        clientX: 50,
+        clientY: 50,
+      })
       // Far enough to start the drag, then on to the slot being aimed at.
-      fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'mouse', clientX: 60, clientY: 50 })
-      fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'mouse', clientX: toX, clientY: 50 })
+      fireEvent.pointerMove(window, {
+        pointerId: 1,
+        pointerType: 'mouse',
+        clientX: 60,
+        clientY: 50,
+      })
+      fireEvent.pointerMove(window, {
+        pointerId: 1,
+        pointerType: 'mouse',
+        clientX: toX,
+        clientY: 50,
+      })
     }
 
     afterEach(() => {
@@ -453,7 +553,11 @@ describe('AttachmentComposer', () => {
       show({
         preview: 'tile',
         groupMedia: true,
-        items: [doc('notes.md'), item('clip.mp4', { type: 'video/mp4' }), item('a.png')],
+        items: [
+          doc('notes.md'),
+          item('clip.mp4', { type: 'video/mp4' }),
+          item('a.png'),
+        ],
       })
       expect(drawnNames()).toEqual(['clip.mp4', 'a.png', 'notes.md'])
     })
@@ -513,7 +617,9 @@ describe('AttachmentComposer', () => {
     it('reorders by staged index, not by drawn position', () => {
       const onReorder = vi.fn()
       const frames: FrameRequestCallback[] = []
-      vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => frames.push(f))
+      vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) =>
+        frames.push(f)
+      )
       vi.stubGlobal('cancelAnimationFrame', () => {})
       layOut(['a.png', 'b.png', 'notes.md'])
 
@@ -530,7 +636,9 @@ describe('AttachmentComposer', () => {
     it('holds a drag inside the block it started in', () => {
       const onReorder = vi.fn()
       const frames: FrameRequestCallback[] = []
-      vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => frames.push(f))
+      vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) =>
+        frames.push(f)
+      )
       vi.stubGlobal('cancelAnimationFrame', () => {})
       layOut(['a.png', 'b.png', 'notes.md'])
 
@@ -542,7 +650,12 @@ describe('AttachmentComposer', () => {
 
       // And the refusal did not end the gesture, which is also what stops this
       // passing on a drag that never started: back over its own block it moves.
-      fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'mouse', clientX: 210, clientY: 50 })
+      fireEvent.pointerMove(window, {
+        pointerId: 1,
+        pointerType: 'mouse',
+        clientX: 210,
+        clientY: 50,
+      })
       frames.splice(0).forEach((f) => f(0))
 
       expect(onReorder).toHaveBeenCalledWith(1, 2)

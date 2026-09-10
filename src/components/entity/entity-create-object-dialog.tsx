@@ -5,15 +5,14 @@
 // deliberately: `containerId` is the route parameter the object list is cached
 // under, `recordId` is the entity record id the write endpoints take.
 
-
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Paperclip, Plus, Upload, X } from "lucide-react";
-import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
-import type { AxiosProgressEvent } from "axios";
-import { Button } from "../ui/button";
-import { Label } from "../ui/label";
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { Loader2, Paperclip, Plus, Upload, X } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
+import type { AxiosProgressEvent } from 'axios'
+import { Button } from '../ui/button'
+import { Label } from '../ui/label'
 import {
   Sheet,
   SheetContent,
@@ -21,83 +20,83 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "../ui/sheet";
+} from '../ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+} from '../ui/select'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import {
   ComposerAttachments,
   dropActiveClass,
   useComposerDrop,
-} from "../comment-composer";
-import { UploadProgress } from "../ui/upload-progress";
-import { cn, naturalCompare } from "../../lib/utils";
-import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
-import { useUploadProgress } from "../../hooks/use-upload-progress";
-import { useFormat } from "../../hooks/use-format";
-import { useAttachmentError } from "../../hooks/use-attachment-error";
-import { removePendingFile } from "../../lib/attachment-utils";
-import { mergePendingFiles } from "../../lib/composer-files";
-import { moveItem } from "../../lib/reorder";
-import { rankBetween, rankCompare } from "../../lib/rank";
-import { EntityFieldEditor } from "./entity-field-editor";
-import type { EntityDesign, EntityObject } from "../../types/entity-object";
+} from '../comment-composer'
+import { UploadProgress } from '../ui/upload-progress'
+import { cn, naturalCompare } from '../../lib/utils'
+import { useImageObjectUrls } from '../../hooks/use-image-object-urls'
+import { useUploadProgress } from '../../hooks/use-upload-progress'
+import { useFormat } from '../../hooks/use-format'
+import { useAttachmentError } from '../../hooks/use-attachment-error'
+import { removePendingFile } from '../../lib/attachment-utils'
+import { mergePendingFiles } from '../../lib/composer-files'
+import { moveItem } from '../../lib/reorder'
+import { rankBetween, rankCompare } from '../../lib/rank'
+import { EntityFieldEditor } from './entity-field-editor'
+import type { EntityDesign, EntityObject } from '../../types/entity-object'
 import {
   entityObjectTitle,
   type EntityTitleObject,
-} from "../../lib/entity-title";
+} from '../../lib/entity-title'
 
 export interface EntityCreateObjectDialogProps<TObject extends EntityObject> {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
   /** Route parameter the object list is cached under. */
-  containerId: string;
+  containerId: string
   /** The entity record's own id, which the write endpoints take. */
-  recordId: string;
-  design: EntityDesign;
+  recordId: string
+  design: EntityDesign
   /** Readable-id prefix, when the app issues them. */
-  prefix?: string;
-  defaultFields?: { field: string; value: string }[];
-  defaultParent?: string;
-  allowedClasses?: string[];
-  onCreated?: (id: string, number?: number, readable?: string) => void;
+  prefix?: string
+  defaultFields?: { field: string; value: string }[]
+  defaultParent?: string
+  allowedClasses?: string[]
+  onCreated?: (id: string, number?: number, readable?: string) => void
   /** Screen-reader only sheet title and description; each app words its own. */
-  srTitle: ReactNode;
-  srDescription: ReactNode;
+  srTitle: ReactNode
+  srDescription: ReactNode
   /** Turns the shared fields into the app's object type for the cache write. */
-  buildObject: (base: EntityObject) => TObject;
+  buildObject: (base: EntityObject) => TObject
   listObjects: (
-    containerId: string,
-  ) => Promise<{ data: { objects: TObject[]; watched?: string[] } }>;
+    containerId: string
+  ) => Promise<{ data: { objects: TObject[]; watched?: string[] } }>
   listPeople: (
-    containerId: string,
-  ) => Promise<{ data: { people: { id: string; name: string }[] } }>;
+    containerId: string
+  ) => Promise<{ data: { people: { id: string; name: string }[] } }>
   createObject: (
     recordId: string,
-    data: { class: string; title?: string; parent?: string },
+    data: { class: string; title?: string; parent?: string }
   ) => Promise<{
-    data: { id: string; number?: number; readable?: string; parent?: string };
-  }>;
+    data: { id: string; number?: number; readable?: string; parent?: string }
+  }>
   setValue: (
     recordId: string,
     objectId: string,
     fieldId: string,
-    value: string,
-  ) => Promise<unknown>;
+    value: string
+  ) => Promise<unknown>
   uploadAttachments: (
     recordId: string,
     objectId: string,
     files: File[],
-    onProgress?: (event: AxiosProgressEvent) => void,
-  ) => Promise<unknown>;
-  searchUsers: (
-    query: string,
-  ) => Promise<{ data: { results: { id: string; name: string; fingerprint: string }[] } }>;
+    onProgress?: (event: AxiosProgressEvent) => void
+  ) => Promise<unknown>
+  searchUsers: (query: string) => Promise<{
+    data: { results: { id: string; name: string; fingerprint: string }[] }
+  }>
 }
 
 export function EntityCreateObjectDialog<TObject extends EntityObject>({
@@ -121,218 +120,247 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   uploadAttachments,
   searchUsers,
 }: EntityCreateObjectDialogProps<TObject>) {
-  const [error, setError] = useState<string | null>(null);
-  const [selectedClass, setSelectedType] = useState(design.classes[0]?.id || "");
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
-  const [parent, setParent] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const pendingFilePreviewUrls = useImageObjectUrls(pendingFiles);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null)
+  const [selectedClass, setSelectedType] = useState(design.classes[0]?.id || '')
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  const [parent, setParent] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const pendingFilePreviewUrls = useImageObjectUrls(pendingFiles)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // The object the current attempt created. A retry after a failed value
   // write or upload resumes on it instead of creating a second one.
   const createdRef = useRef<{
-    id: string;
-    number?: number;
-    readable?: string;
-    parent?: string;
-  } | null>(null);
-  const { formatList } = useFormat();
+    id: string
+    number?: number
+    readable?: string
+    parent?: string
+  } | null>(null)
+  const { formatList } = useFormat()
 
   useEffect(() => {
-    if (!open) createdRef.current = null;
-  }, [open]);
+    if (!open) createdRef.current = null
+  }, [open])
 
   // One staging path for the picker and for a drop, so the two cannot come to
   // disagree about what counts as a file already staged.
   const addFiles = (picked: File[]) => {
-    if (picked.length === 0) return;
-    setPendingFiles((prev) => mergePendingFiles(prev, picked));
-  };
-  const queryClient = useQueryClient();
-  const { progress: uploadProgress, upload } = useUploadProgress();
-  const attachmentError = useAttachmentError();
+    if (picked.length === 0) return
+    setPendingFiles((prev) => mergePendingFiles(prev, picked))
+  }
+  const queryClient = useQueryClient()
+  const { progress: uploadProgress, upload } = useUploadProgress()
+  const attachmentError = useAttachmentError()
 
   // Filter classes to those allowed by the current view
   const availableClasses = useMemo(() => {
     return allowedClasses?.length
       ? design.classes.filter((c) => allowedClasses.includes(c.id))
-      : design.classes;
-  }, [allowedClasses, design.classes]);
+      : design.classes
+  }, [allowedClasses, design.classes])
 
   // Load objects for parent selection (shares cache with design page)
   const { data: objectListData } = useQuery({
-    queryKey: ["objects", containerId],
+    queryKey: ['objects', containerId],
     queryFn: async () => {
-      const response = await listObjects(containerId);
-      return response.data;
+      const response = await listObjects(containerId)
+      return response.data
     },
-  });
-  const objectsData = objectListData?.objects;
+  })
+  const objectsData = objectListData?.objects
 
   // Filter out classes that require a parent but have no valid parent objects
   const creatableClasses = useMemo(() => {
-    if (!objectsData) return availableClasses;
+    if (!objectsData) return availableClasses
     return availableClasses.filter((cls) => {
-      const parentClasses = design.hierarchy[cls.id] || [];
-      if (parentClasses.length === 0 || parentClasses.includes("")) return true;
-      const parentClassIds = parentClasses.filter((t) => t !== "");
-      return objectsData.some((obj) => parentClassIds.includes(obj.class));
-    });
-  }, [availableClasses, design.hierarchy, objectsData]);
+      const parentClasses = design.hierarchy[cls.id] || []
+      if (parentClasses.length === 0 || parentClasses.includes('')) return true
+      const parentClassIds = parentClasses.filter((t) => t !== '')
+      return objectsData.some((obj) => parentClassIds.includes(obj.class))
+    })
+  }, [availableClasses, design.hierarchy, objectsData])
 
   // A value is usable when the field exists on the class and, for enumerated
   // fields, is one of that class's options. A board default comes from
   // whichever class the board renders, so on a multi-class view it can be
   // invalid (#467).
   const usableValue = (classId: string, fieldId: string, value: string) => {
-    const field = (design.fields[classId] || []).find((f) => f.id === fieldId);
-    if (!field) return false;
-    if (field.fieldtype !== "enumerated") return true;
-    return (design.options[classId]?.[fieldId] || []).some((o) => o.id === value);
-  };
+    const field = (design.fields[classId] || []).find((f) => f.id === fieldId)
+    if (!field) return false
+    if (field.fieldtype !== 'enumerated') return true
+    return (design.options[classId]?.[fieldId] || []).some(
+      (o) => o.id === value
+    )
+  }
 
-  const resetRef = useRef({ creatableClasses, defaultFields, defaultParent, design, usableValue });
-  resetRef.current = { creatableClasses, defaultFields, defaultParent, design, usableValue };
+  const resetRef = useRef({
+    creatableClasses,
+    defaultFields,
+    defaultParent,
+    design,
+    usableValue,
+  })
+  resetRef.current = {
+    creatableClasses,
+    defaultFields,
+    defaultParent,
+    design,
+    usableValue,
+  }
   useEffect(() => {
     if (open) {
-      const { creatableClasses, defaultFields, defaultParent, design, usableValue } = resetRef.current;
-      const initialType = creatableClasses[0]?.id || "";
-      setSelectedType(initialType);
-      setParent(defaultParent || "");
-      setPendingFiles([]);
-      setError(null);
+      const {
+        creatableClasses,
+        defaultFields,
+        defaultParent,
+        design,
+        usableValue,
+      } = resetRef.current
+      const initialType = creatableClasses[0]?.id || ''
+      setSelectedType(initialType)
+      setParent(defaultParent || '')
+      setPendingFiles([])
+      setError(null)
       // Initialize field values with defaults valid for the initial class
-      const initialValues: Record<string, string> = {};
+      const initialValues: Record<string, string> = {}
       if (defaultFields) {
         for (const df of defaultFields) {
           if (usableValue(initialType, df.field, df.value)) {
-            initialValues[df.field] = df.value;
+            initialValues[df.field] = df.value
           }
         }
       }
       // Auto-select first option for required enumerated fields
-      const fields = design.fields[initialType] || [];
-      const opts = design.options[initialType] || {};
+      const fields = design.fields[initialType] || []
+      const opts = design.options[initialType] || {}
       for (const f of fields) {
-        if (f.fieldtype === "enumerated" && f.flags?.split(",").includes("required") && !initialValues[f.id]) {
-          const fieldOpts = opts[f.id] || [];
+        if (
+          f.fieldtype === 'enumerated' &&
+          f.flags?.split(',').includes('required') &&
+          !initialValues[f.id]
+        ) {
+          const fieldOpts = opts[f.id] || []
           if (fieldOpts.length > 0) {
-            initialValues[f.id] = fieldOpts[0].id;
+            initialValues[f.id] = fieldOpts[0].id
           }
         }
       }
-      setFieldValues(initialValues);
+      setFieldValues(initialValues)
     }
-  }, [open]);
+  }, [open])
 
   useEffect(() => {
-    if (!open || creatableClasses.length === 0) return;
+    if (!open || creatableClasses.length === 0) return
     if (!creatableClasses.some((c) => c.id === selectedClass)) {
-      setSelectedType(creatableClasses[0].id);
+      setSelectedType(creatableClasses[0].id)
     }
-  }, [open, creatableClasses, selectedClass]);
+  }, [open, creatableClasses, selectedClass])
 
   // When the class changes: drop values that aren't usable for the new class
   // (an enumerated value carried over from another class would be rejected by
   // the server), re-apply the usable defaults, and auto-select the first
   // option for any required enumerated field left empty.
   useEffect(() => {
-    if (!selectedClass) return;
+    if (!selectedClass) return
     setFieldValues((prev) => {
-      const next: Record<string, string> = {};
+      const next: Record<string, string> = {}
       for (const [fieldId, value] of Object.entries(prev)) {
         if (usableValue(selectedClass, fieldId, value)) {
-          next[fieldId] = value;
+          next[fieldId] = value
         }
       }
       if (defaultFields) {
         for (const df of defaultFields) {
           if (usableValue(selectedClass, df.field, df.value)) {
-            next[df.field] = df.value;
+            next[df.field] = df.value
           }
         }
       }
-      const fields = design.fields[selectedClass] || [];
-      const opts = design.options[selectedClass] || {};
+      const fields = design.fields[selectedClass] || []
+      const opts = design.options[selectedClass] || {}
       for (const f of fields) {
-        if (f.fieldtype === "enumerated" && f.flags?.split(",").includes("required") && !next[f.id]) {
-          const fieldOpts = opts[f.id] || [];
+        if (
+          f.fieldtype === 'enumerated' &&
+          f.flags?.split(',').includes('required') &&
+          !next[f.id]
+        ) {
+          const fieldOpts = opts[f.id] || []
           if (fieldOpts.length > 0) {
-            next[f.id] = fieldOpts[0].id;
+            next[f.id] = fieldOpts[0].id
           }
         }
       }
-      return next;
-    });
-  }, [selectedClass, defaultFields, design.fields, design.options]);
+      return next
+    })
+  }, [selectedClass, defaultFields, design.fields, design.options])
 
   // Fetch design members for the owner picker
   const { data: peopleData } = useQuery({
-    queryKey: ["people", containerId],
+    queryKey: ['people', containerId],
     queryFn: async () => {
-      const response = await listPeople(containerId);
-      return response.data.people;
+      const response = await listPeople(containerId)
+      return response.data.people
     },
     staleTime: 60000,
-  });
+  })
 
   // Get fields and options for selected type
   const classFields = useMemo(() => {
-    return design.fields[selectedClass] || [];
-  }, [design.fields, selectedClass]);
+    return design.fields[selectedClass] || []
+  }, [design.fields, selectedClass])
 
   const classOptions = useMemo(() => {
-    return design.options[selectedClass] || {};
-  }, [design.options, selectedClass]);
+    return design.options[selectedClass] || {}
+  }, [design.options, selectedClass])
 
   const missingRequired = classFields.some(
-    (f) => f.flags?.split(",").includes("required") && !fieldValues[f.id]?.trim(),
-  );
+    (f) =>
+      f.flags?.split(',').includes('required') && !fieldValues[f.id]?.trim()
+  )
 
   // Get display title for any object using its class's title field
   const objectTitle = (obj: EntityTitleObject) =>
-    entityObjectTitle(obj, design.classes, prefix);
+    entityObjectTitle(obj, design.classes, prefix)
 
   // Filter objects to only show valid parents based on hierarchy rules
   const allowedParentClasses = useMemo(() => {
-    return design.hierarchy[selectedClass] || [];
-  }, [design.hierarchy, selectedClass]);
+    return design.hierarchy[selectedClass] || []
+  }, [design.hierarchy, selectedClass])
 
-  const canBeTopLevel = allowedParentClasses.includes("");
-  const parentRequired = !canBeTopLevel && allowedParentClasses.length > 0;
+  const canBeTopLevel = allowedParentClasses.includes('')
+  const parentRequired = !canBeTopLevel && allowedParentClasses.length > 0
 
   // Human-readable names for required parent classes (used in "no parents" message)
   const parentClassNames = useMemo(() => {
     return formatList(
       allowedParentClasses
-        .filter((t) => t !== "")
+        .filter((t) => t !== '')
         .map((id) => design.classes.find((c) => c.id === id)?.name || id),
-      "disjunction",
-    );
-  }, [allowedParentClasses, design.classes, formatList]);
+      'disjunction'
+    )
+  }, [allowedParentClasses, design.classes, formatList])
 
   const validParentOptions = useMemo(() => {
-    if (!objectsData || !selectedClass) return [];
+    if (!objectsData || !selectedClass) return []
 
-    const parentClassIds = allowedParentClasses.filter((t) => t !== "");
-    if (parentClassIds.length === 0) return [];
+    const parentClassIds = allowedParentClasses.filter((t) => t !== '')
+    if (parentClassIds.length === 0) return []
 
     return objectsData
       .filter((obj) => parentClassIds.includes(obj.class))
-      .sort((a, b) => naturalCompare(objectTitle(a), objectTitle(b)));
-  }, [objectsData, selectedClass, allowedParentClasses]);
+      .sort((a, b) => naturalCompare(objectTitle(a), objectTitle(b)))
+  }, [objectsData, selectedClass, allowedParentClasses])
 
   // Get current parent object info
   const currentParent = useMemo(() => {
-    if (!parent || !objectsData) return null;
-    return objectsData.find((obj) => obj.id === parent);
-  }, [parent, objectsData]);
+    if (!parent || !objectsData) return null
+    return objectsData.find((obj) => obj.id === parent)
+  }, [parent, objectsData])
 
   const createMutation = useMutation({
     mutationFn: async () => {
       // Find the title field from the class
-      const selectedCls = design.classes.find((c) => c.id === selectedClass);
-      const titleFieldId = selectedCls?.title;
+      const selectedCls = design.classes.find((c) => c.id === selectedClass)
+      const titleFieldId = selectedCls?.title
 
       // Create the object, unless a failed earlier attempt already did
       const created =
@@ -340,18 +368,22 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         (
           await createObject(recordId, {
             class: selectedClass,
-            title: titleFieldId ? fieldValues[titleFieldId] || undefined : undefined,
+            title: titleFieldId
+              ? fieldValues[titleFieldId] || undefined
+              : undefined,
             parent: parent || undefined,
           })
-        ).data;
-      createdRef.current = created;
+        ).data
+      createdRef.current = created
 
       // Set all field values (skip title — already sent in create call)
-      const objectId = created.id;
-      const validFields = new Set((design.fields[selectedClass] || []).map((f) => f.id));
+      const objectId = created.id
+      const validFields = new Set(
+        (design.fields[selectedClass] || []).map((f) => f.id)
+      )
       for (const [fieldId, value] of Object.entries(fieldValues)) {
         if (fieldId !== titleFieldId && value && validFields.has(fieldId)) {
-          await setValue(recordId, objectId, fieldId, value);
+          await setValue(recordId, objectId, fieldId, value)
         }
       }
 
@@ -360,141 +392,152 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         await upload(
           (onProgress) =>
             uploadAttachments(recordId, objectId, pendingFiles, onProgress),
-          { sizes: pendingFiles.map((file) => file.size) },
-        );
+          { sizes: pendingFiles.map((file) => file.size) }
+        )
       }
 
       return {
         ...created,
         fieldValues,
         parent,
-      };
+      }
     },
     onSuccess: (data) => {
-      createdRef.current = null;
+      createdRef.current = null
       // Add new object to cache immediately for instant UI update
       queryClient.setQueryData(
-        ["objects", containerId],
+        ['objects', containerId],
         (old: { objects: TObject[]; watched?: string[] } | undefined) => {
-          const maxRank = old?.objects.reduce(
-            (max, o) => (max === null || rankCompare(o.rank, max) > 0 ? o.rank : max),
-            null as string | null,
-          ) ?? null;
+          const maxRank =
+            old?.objects.reduce(
+              (max, o) =>
+                max === null || rankCompare(o.rank, max) > 0 ? o.rank : max,
+              null as string | null
+            ) ?? null
           const newObject = buildObject({
             id: data.id,
             class: selectedClass,
             number: data.number,
-            parent: data.parent || "",
+            parent: data.parent || '',
             rank: rankBetween(maxRank, null),
             created: Math.floor(Date.now() / 1000),
             updated: Math.floor(Date.now() / 1000),
             values: { ...fieldValues },
-          });
-          if (!old) return { objects: [newObject], watched: [] };
-          return { ...old, objects: [...old.objects, newObject] };
-        },
-      );
+          })
+          if (!old) return { objects: [newObject], watched: [] }
+          return { ...old, objects: [...old.objects, newObject] }
+        }
+      )
       queryClient.invalidateQueries({
-        queryKey: ["objects", containerId],
-      });
-      onCreated?.(data.id, data.number, data.readable);
-      onOpenChange(false);
+        queryKey: ['objects', containerId],
+      })
+      onCreated?.(data.id, data.number, data.readable)
+      onOpenChange(false)
     },
     onError: (err: Error) => {
       // An oversized attachment used to surface here as whatever the server
       // put in the body, which said nothing about the files.
-      setError(attachmentError(err, err.message));
+      setError(attachmentError(err, err.message))
     },
-  });
+  })
 
   // Claims the drop for the whole dialog. Without this the browser takes it,
   // navigates to the dropped file, and the half-filled form goes with it.
   const { isDragActive, dropzoneProps } = useComposerDrop({
     onFiles: addFiles,
     disabled: createMutation.isPending,
-  });
+  })
 
   // Shared by the Create button and the composer's retry, so a second attempt
   // clears the banner the same way the first one does.
   const submit = () => {
-    setError(null);
-    createMutation.mutate();
-  };
+    setError(null)
+    createMutation.mutate()
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    submit();
-  };
+    e.preventDefault()
+    submit()
+  }
 
   const handleFieldChange = (fieldId: string, value: string) => {
-    setFieldValues((prev) => ({ ...prev, [fieldId]: value }));
-  };
+    setFieldValues((prev) => ({ ...prev, [fieldId]: value }))
+  }
 
   // Auto-select first parent when parent is required, preferring one in the same column
   useEffect(() => {
     if (open && parentRequired && !parent && validParentOptions.length > 0) {
       if (defaultFields && defaultFields.length > 0) {
         const columnParent = validParentOptions.find((obj) =>
-          defaultFields.every((df) => obj.values[df.field] === df.value),
-        );
+          defaultFields.every((df) => obj.values[df.field] === df.value)
+        )
         if (columnParent) {
-          setParent(columnParent.id);
-          return;
+          setParent(columnParent.id)
+          return
         }
       }
-      setParent(validParentOptions[0].id);
+      setParent(validParentOptions[0].id)
     }
-  }, [open, parentRequired, parent, validParentOptions, defaultFields]);
+  }, [open, parentRequired, parent, validParentOptions, defaultFields])
 
   const handleTypeChange = (newType: string) => {
-    setSelectedType(newType);
-    setParent("");
+    setSelectedType(newType)
+    setParent('')
     // Reset field values but keep defaults if applicable
-    const newValues: Record<string, string> = {};
+    const newValues: Record<string, string> = {}
     if (defaultFields) {
-      const newTypeFields = design.fields[newType] || [];
+      const newTypeFields = design.fields[newType] || []
       for (const df of defaultFields) {
         if (newTypeFields.some((f) => f.id === df.field)) {
-          newValues[df.field] = df.value;
+          newValues[df.field] = df.value
         }
       }
     }
     // Auto-select first option for required enumerated fields
-    const fields = design.fields[newType] || [];
-    const opts = design.options[newType] || {};
+    const fields = design.fields[newType] || []
+    const opts = design.options[newType] || {}
     for (const f of fields) {
-      if (f.fieldtype === "enumerated" && f.flags?.split(",").includes("required") && !newValues[f.id]) {
-        const fieldOpts = opts[f.id] || [];
+      if (
+        f.fieldtype === 'enumerated' &&
+        f.flags?.split(',').includes('required') &&
+        !newValues[f.id]
+      ) {
+        const fieldOpts = opts[f.id] || []
         if (fieldOpts.length > 0) {
-          newValues[f.id] = fieldOpts[0].id;
+          newValues[f.id] = fieldOpts[0].id
         }
       }
     }
-    setFieldValues(newValues);
-  };
+    setFieldValues(newValues)
+  }
 
   const handleClose = () => {
-    onOpenChange(false);
-  };
+    onOpenChange(false)
+  }
 
   return (
     <Sheet open={open} onOpenChange={handleClose} modal={false}>
-      <SheetContent className="w-full sm:max-w-2xl p-0 gap-0 [&>button:last-child]:hidden" onOpenAutoFocus={(event) => event.preventDefault()}>
-        <SheetHeader className="sr-only">
+      <SheetContent
+        className='w-full sm:max-w-2xl p-0 gap-0 [&>button:last-child]:hidden'
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        <SheetHeader className='sr-only'>
           <SheetTitle>{srTitle}</SheetTitle>
           <SheetDescription>{srDescription}</SheetDescription>
         </SheetHeader>
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b shrink-0">
-          <div className="flex items-center gap-2 flex-1">
+        <div className='flex items-center gap-3 px-6 py-4 border-b shrink-0'>
+          <div className='flex items-center gap-2 flex-1'>
             {creatableClasses.length > 0 ? (
               <>
-                <Label className="text-xl font-bold"><Trans>New</Trans></Label>
+                <Label className='text-xl font-bold'>
+                  <Trans>New</Trans>
+                </Label>
                 <Select value={selectedClass} onValueChange={handleTypeChange}>
-                  <SelectTrigger className="w-auto h-auto py-1 px-2 text-xl font-bold">
+                  <SelectTrigger className='w-auto h-auto py-1 px-2 text-xl font-bold'>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="z-[60]">
+                  <SelectContent className='z-[60]'>
                     {creatableClasses.map((type) => (
                       <SelectItem key={type.id} value={type.id}>
                         {type.name}
@@ -504,19 +547,21 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                 </Select>
               </>
             ) : (
-              <Label className="text-xl font-bold"><Trans>Create</Trans></Label>
+              <Label className='text-xl font-bold'>
+                <Trans>Create</Trans>
+              </Label>
             )}
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8'
                 onClick={handleClose}
                 aria-label={t`Close`}
               >
-                <X className="size-4" />
+                <X className='size-4' />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t`Close`}</TooltipContent>
@@ -526,39 +571,49 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         {/* Content */}
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col flex-1 overflow-hidden"
+          className='flex flex-col flex-1 overflow-hidden'
           {...dropzoneProps}
         >
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className='flex-1 overflow-y-auto p-6'>
             {/* The outline sits on the field stack rather than the form: the
                 form is the scroll clip, and an outline on it would be cut off. */}
-            <div className={cn("max-w-2xl space-y-6", isDragActive && dropActiveClass)}>
+            <div
+              className={cn(
+                'max-w-2xl space-y-6',
+                isDragActive && dropActiveClass
+              )}
+            >
               {creatableClasses.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  <Trans>No item types can be created yet. Create the required parent items first.</Trans>
+                <p className='text-sm text-muted-foreground'>
+                  <Trans>
+                    No item types can be created yet. Create the required parent
+                    items first.
+                  </Trans>
                 </p>
               )}
 
               {/* Parent picker */}
               {(validParentOptions.length > 0 || parentRequired) && (
-                <div className="grid grid-cols-[120px_1fr] gap-4 items-start">
-                  <label className="text-sm font-medium text-muted-foreground pt-2">
+                <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                  <label className='text-sm font-medium text-muted-foreground pt-2'>
                     <Trans>Parent</Trans>
                   </label>
                   {validParentOptions.length > 0 ? (
                     <Select
-                      value={parent || "_none_"}
-                      onValueChange={(v) => setParent(v === "_none_" ? "" : v)}
+                      value={parent || '_none_'}
+                      onValueChange={(v) => setParent(v === '_none_' ? '' : v)}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className='w-full'>
                         <SelectValue placeholder={t`None`}>
-                          {currentParent
-                            ? objectTitle(currentParent)
-                            : t`None`}
+                          {currentParent ? objectTitle(currentParent) : t`None`}
                         </SelectValue>
                       </SelectTrigger>
-                      <SelectContent className="z-[60]">
-                        {!parentRequired && <SelectItem value="_none_"><Trans>None</Trans></SelectItem>}
+                      <SelectContent className='z-[60]'>
+                        {!parentRequired && (
+                          <SelectItem value='_none_'>
+                            <Trans>None</Trans>
+                          </SelectItem>
+                        )}
                         {validParentOptions.map((obj) => (
                           <SelectItem key={obj.id} value={obj.id}>
                             {objectTitle(obj)}
@@ -567,7 +622,7 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <p className="text-sm text-muted-foreground pt-2">
+                    <p className='text-sm text-muted-foreground pt-2'>
                       {t`No ${parentClassNames} to add to`}
                     </p>
                   )}
@@ -576,15 +631,20 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
 
               {/* Dynamic fields based on selected type */}
               {classFields.map((field, index) => {
-                  const isFirstTextField = field.fieldtype === "text" && classFields.findIndex((f) => f.fieldtype === "text") === index;
-                  return (
-                  <div key={field.id} className="grid grid-cols-[120px_1fr] gap-4 items-start">
-                    <label className="text-sm font-medium text-muted-foreground pt-2">
+                const isFirstTextField =
+                  field.fieldtype === 'text' &&
+                  classFields.findIndex((f) => f.fieldtype === 'text') === index
+                return (
+                  <div
+                    key={field.id}
+                    className='grid grid-cols-[120px_1fr] gap-4 items-start'
+                  >
+                    <label className='text-sm font-medium text-muted-foreground pt-2'>
                       {field.name}
                     </label>
                     <EntityFieldEditor
                       field={field}
-                      value={fieldValues[field.id] || ""}
+                      value={fieldValues[field.id] || ''}
                       options={classOptions[field.id] || []}
                       onChange={(value) => handleFieldChange(field.id, value)}
                       disabled={createMutation.isPending}
@@ -592,19 +652,21 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                       immediate
                       hideLabel
                       localPeople={peopleData}
-                      searchUsers={async (q) => (await searchUsers(q)).data.results}
+                      searchUsers={async (q) =>
+                        (await searchUsers(q)).data.results
+                      }
                     />
                   </div>
-                  );
-                })}
+                )
+              })}
 
               {/* File attachments */}
-              <div className="grid grid-cols-[120px_1fr] gap-4 items-start">
-                <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
-                  <Paperclip className="size-3.5" />
+              <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                <label className='text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5'>
+                  <Paperclip className='size-3.5' />
                   <Trans>Files</Trans>
                 </label>
-                <div className="space-y-2 pt-1">
+                <div className='space-y-2 pt-1'>
                   <ComposerAttachments
                     files={pendingFiles}
                     previewUrls={pendingFilePreviewUrls}
@@ -613,10 +675,10 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                     // a stall.
                     state={
                       createMutation.isPending
-                        ? "uploading"
+                        ? 'uploading'
                         : error
-                          ? "error"
-                          : "idle"
+                          ? 'error'
+                          : 'idle'
                     }
                     onRetry={submit}
                     progress={uploadProgress?.slices}
@@ -630,48 +692,56 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                   />
                   <input
                     ref={fileInputRef}
-                    type="file"
+                    type='file'
                     multiple
-                    className="hidden"
+                    className='hidden'
                     onChange={(e) => {
                       // Copy the FileList before clearing the input: it is
                       // live, so resetting the value empties it and a deferred
                       // state updater would then read no files and drop the
                       // pick.
-                      const picked = Array.from(e.target.files ?? []);
-                      e.target.value = "";
-                      addFiles(picked);
+                      const picked = Array.from(e.target.files ?? [])
+                      e.target.value = ''
+                      addFiles(picked)
                     }}
                   />
                   <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='h-7 text-xs'
                     onClick={() => fileInputRef.current?.click()}
                     disabled={createMutation.isPending}
                   >
-                    <Upload className="size-3 me-1.5" />
+                    <Upload className='size-3 me-1.5' />
                     <Trans>Upload</Trans>
                   </Button>
                 </div>
               </div>
 
               {error && (
-                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                <div className='text-sm text-destructive bg-destructive/10 p-3 rounded-md'>
                   {error}
                 </div>
               )}
             </div>
           </div>
 
-          <UploadProgress progress={uploadProgress} className="px-6 pb-2" />
-          <SheetFooter className="px-6 py-4 border-t">
-            <Button type="submit" disabled={createMutation.isPending || (parentRequired && !parent) || missingRequired || creatableClasses.length === 0}>
+          <UploadProgress progress={uploadProgress} className='px-6 pb-2' />
+          <SheetFooter className='px-6 py-4 border-t'>
+            <Button
+              type='submit'
+              disabled={
+                createMutation.isPending ||
+                (parentRequired && !parent) ||
+                missingRequired ||
+                creatableClasses.length === 0
+              }
+            >
               {createMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className='size-4 animate-spin' />
               ) : (
-                <Plus className="size-4" />
+                <Plus className='size-4' />
               )}
               {createMutation.isPending ? t`Creating...` : t`Create`}
             </Button>
@@ -679,5 +749,5 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         </form>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

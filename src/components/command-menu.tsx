@@ -54,7 +54,9 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
       <CommandInput placeholder={t`Type a command or search...`} />
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
-          <CommandEmpty><Trans>No results found.</Trans></CommandEmpty>
+          <CommandEmpty>
+            <Trans>No results found.</Trans>
+          </CommandEmpty>
           {sidebarData.navGroups.map((group, index) => (
             <CommandGroup key={group.id ?? `${index}`} heading={group.title}>
               {group.items.map((navItem, i) => {
@@ -81,7 +83,10 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
                       key={`${navItem.url}-${i}`}
                       value={navItem.title}
                       onSelect={() =>
-                        navigateTo(navItem.url as string, 'external' in navItem ? navItem.external : undefined)
+                        navigateTo(
+                          navItem.url as string,
+                          'external' in navItem ? navItem.external : undefined
+                        )
                       }
                     >
                       <div className='flex size-4 items-center justify-center'>
@@ -92,20 +97,24 @@ export function CommandMenu({ sidebarData }: CommandMenuProps) {
                   )
 
                 // Handle collapsible items (items array)
-                return ('items' in navItem ? navItem.items : [])?.map((subItem, i) => (
-                  <CommandItem
-                    key={`${navItem.title}-${subItem.url}-${i}`}
-                    value={`${navItem.title}-${subItem.url}`}
-                    onSelect={() =>
-                      navigateTo(subItem.url as string, subItem.external)
-                    }
-                  >
-                    <div className='flex size-4 items-center justify-center'>
-                      <ArrowRight className='text-muted-foreground/80 size-2 rtl:rotate-180' />
-                    </div>
-                    {navItem.title} <ChevronRight className="rtl:rotate-180" /> {subItem.title}
-                  </CommandItem>
-                ))
+                return ('items' in navItem ? navItem.items : [])?.map(
+                  (subItem, i) => (
+                    <CommandItem
+                      key={`${navItem.title}-${subItem.url}-${i}`}
+                      value={`${navItem.title}-${subItem.url}`}
+                      onSelect={() =>
+                        navigateTo(subItem.url as string, subItem.external)
+                      }
+                    >
+                      <div className='flex size-4 items-center justify-center'>
+                        <ArrowRight className='text-muted-foreground/80 size-2 rtl:rotate-180' />
+                      </div>
+                      {navItem.title}{' '}
+                      <ChevronRight className='rtl:rotate-180' />{' '}
+                      {subItem.title}
+                    </CommandItem>
+                  )
+                )
               })}
             </CommandGroup>
           ))}

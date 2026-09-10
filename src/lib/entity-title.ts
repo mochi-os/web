@@ -26,7 +26,7 @@ export interface EntityTitleObject {
 export function entityObjectTitle(
   obj: EntityTitleObject,
   classes: EntityClass[],
-  prefix?: string,
+  prefix?: string
 ): string {
   const cls = classes.find((c) => c.id === obj.class)
   const title = (cls?.title ? obj.values?.[cls.title] : '') || ''

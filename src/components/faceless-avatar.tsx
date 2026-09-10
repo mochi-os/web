@@ -65,7 +65,7 @@ export const FacelessAvatar = memo(function FacelessAvatar({
         color,
         ...style,
       }}
-      role="img"
+      role='img'
       aria-label={name ? t`Initials avatar for ${name}` : t`Initials avatar`}
     >
       {Icon ? <Icon size={Math.round(size * 0.5)} /> : initials}

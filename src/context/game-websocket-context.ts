@@ -4,5 +4,6 @@
 import { createContext } from 'react'
 import type { ChatWebsocketManager } from '../lib/realtime-websocket-manager'
 
-export const GameWebsocketContext =
-  createContext<ChatWebsocketManager | null>(null)
+export const GameWebsocketContext = createContext<ChatWebsocketManager | null>(
+  null
+)

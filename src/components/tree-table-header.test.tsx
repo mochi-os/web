@@ -12,7 +12,11 @@ describe('TreeTableHeader', () => {
     render(
       <I18nProvider i18n={i18n}>
         <table>
-          <TreeTableHeader fields={[{ id: 'fld_9', name: '', fieldtype: 'text' }]} showClass={false} showId={false} />
+          <TreeTableHeader
+            fields={[{ id: 'fld_9', name: '', fieldtype: 'text' }]}
+            showClass={false}
+            showId={false}
+          />
         </table>
       </I18nProvider>
     )

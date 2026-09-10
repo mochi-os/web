@@ -6,9 +6,36 @@ import { render, screen, createMockEntityField } from './entity-test-utils'
 import { EntityActivityList } from './entity-activity-list'
 
 const activities = [
-  { id: 'a1', user: 'u1', name: 'Ada', action: 'update', field: 'due_date', oldvalue: '1', newvalue: '2', created: 1 },
-  { id: 'a2', user: 'u1', name: 'Ada', action: 'create', field: '', oldvalue: '', newvalue: '', created: 2 },
-  { id: 'a3', user: 'u1', name: 'Ada', action: 'update', field: 'gone', oldvalue: '', newvalue: '', created: 3 },
+  {
+    id: 'a1',
+    user: 'u1',
+    name: 'Ada',
+    action: 'update',
+    field: 'due_date',
+    oldvalue: '1',
+    newvalue: '2',
+    created: 1,
+  },
+  {
+    id: 'a2',
+    user: 'u1',
+    name: 'Ada',
+    action: 'create',
+    field: '',
+    oldvalue: '',
+    newvalue: '',
+    created: 2,
+  },
+  {
+    id: 'a3',
+    user: 'u1',
+    name: 'Ada',
+    action: 'update',
+    field: 'gone',
+    oldvalue: '',
+    newvalue: '',
+    created: 3,
+  },
 ]
 
 describe('EntityActivityList', () => {

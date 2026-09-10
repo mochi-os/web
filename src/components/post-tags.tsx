@@ -46,7 +46,14 @@ interface PostTagsProps {
 
 const TAG_PATTERN = /^[a-z0-9 /-]+$/
 
-export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInterestDown, onInterestRemove }: PostTagsTooltipProps) {
+export function PostTagsTooltip({
+  tags,
+  onFilter,
+  onAdd,
+  onInterestUp,
+  onInterestDown,
+  onInterestRemove,
+}: PostTagsTooltipProps) {
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
@@ -90,10 +97,17 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {open && createPortal(
-        <div className="fixed inset-0 z-[59]" onPointerDown={(e) => { e.preventDefault(); setOpen(false) }} />,
-        document.body
-      )}
+      {open &&
+        createPortal(
+          <div
+            className='fixed inset-0 z-[59]'
+            onPointerDown={(e) => {
+              e.preventDefault()
+              setOpen(false)
+            }}
+          />,
+          document.body
+        )}
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -121,13 +135,22 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        <PostTags tags={tags} onFilter={onFilter} onInterestUp={onInterestUp} onInterestDown={onInterestDown} onInterestRemove={onInterestRemove} />
+        <PostTags
+          tags={tags}
+          onFilter={onFilter}
+          onInterestUp={onInterestUp}
+          onInterestDown={onInterestDown}
+          onInterestRemove={onInterestRemove}
+        />
         <div className={tags.length > 0 ? 'mt-1.5 border-t pt-1.5' : ''}>
           <input
             ref={inputRef}
             type='text'
             value={value}
-            onChange={(e) => { setValue(e.target.value); setError('') }}
+            onChange={(e) => {
+              setValue(e.target.value)
+              setError('')
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
@@ -146,8 +169,16 @@ export function PostTagsTooltip({ tags, onFilter, onAdd, onInterestUp, onInteres
 
 // The tag list inside the tooltip. Not exported: PostTagsTooltip is the
 // component the apps render.
-function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemove }: PostTagsProps) {
-  const [adjustments, setAdjustments] = useState<Record<string, number | null>>({})
+function PostTags({
+  tags,
+  onFilter,
+  onInterestUp,
+  onInterestDown,
+  onInterestRemove,
+}: PostTagsProps) {
+  const [adjustments, setAdjustments] = useState<Record<string, number | null>>(
+    {}
+  )
   const { formatNumber } = useFormat()
 
   if (!tags.length) return null
@@ -157,7 +188,8 @@ function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemo
       {tags.map((tag) => {
         const adjusted = tag.qid && tag.qid in adjustments
         const interest = adjusted ? adjustments[tag.qid!] : tag.interest
-        const relevance = tag.relevance != null ? formatNumber(tag.relevance) : null
+        const relevance =
+          tag.relevance != null ? formatNumber(tag.relevance) : null
         const weight = interest != null ? formatNumber(interest) : null
         const title =
           relevance != null && weight != null
@@ -168,86 +200,105 @@ function PostTags({ tags, onFilter, onInterestUp, onInterestDown, onInterestRemo
                 ? t`Interest ${weight}`
                 : undefined
         return (
-        <div
-          key={tag.id}
-          className='group/tag flex items-center gap-1 text-sm'
-        >
-          <button
-            type='button'
-            className='hover:underline truncate text-start'
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onFilter?.(tag.label)
-            }}
-            title={title}
-            style={interest != null ? { color: interestColor(interest) } : undefined}
+          <div
+            key={tag.id}
+            className='group/tag flex items-center gap-1 text-sm'
           >
-            #{tag.label}
-          </button>
-          <span className='ms-auto inline-flex shrink-0 items-center gap-0.5'>
-            {tag.qid && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type='button'
-                    aria-label={t`Boost interest`}
-                    className='text-muted-foreground hover:bg-hover hover:text-foreground rounded p-0.5 transition-colors'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      onInterestUp?.(tag.qid!)
-                      setAdjustments((prev) => ({ ...prev, [tag.qid!]: Math.min(100, (prev[tag.qid!] ?? tag.interest ?? 0) + 15) }))
-                    }}
-                  >
-                    <Plus className='size-3.5' />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t`Boost interest`}</TooltipContent>
-              </Tooltip>
-            )}
-            {tag.qid && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type='button'
-                    aria-label={t`Reduce interest`}
-                    className='text-muted-foreground hover:bg-hover hover:text-foreground rounded p-0.5 transition-colors'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      onInterestDown?.(tag.qid!)
-                      setAdjustments((prev) => ({ ...prev, [tag.qid!]: Math.max(-100, (prev[tag.qid!] ?? tag.interest ?? 0) - 20) }))
-                    }}
-                  >
-                    <Minus className='size-3.5' />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t`Reduce interest`}</TooltipContent>
-              </Tooltip>
-            )}
-            {tag.qid && onInterestRemove && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type='button'
-                    aria-label={t`Remove interest`}
-                    className='text-muted-foreground hover:bg-hover rounded p-0.5 transition-colors'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      onInterestRemove(tag.qid!)
-                      setAdjustments((prev) => ({ ...prev, [tag.qid!]: null }))
-                    }}
-                  >
-                    <X className='size-3.5' />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t`Remove interest`}</TooltipContent>
-              </Tooltip>
-            )}
-          </span>
-        </div>
+            <button
+              type='button'
+              className='hover:underline truncate text-start'
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onFilter?.(tag.label)
+              }}
+              title={title}
+              style={
+                interest != null
+                  ? { color: interestColor(interest) }
+                  : undefined
+              }
+            >
+              #{tag.label}
+            </button>
+            <span className='ms-auto inline-flex shrink-0 items-center gap-0.5'>
+              {tag.qid && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type='button'
+                      aria-label={t`Boost interest`}
+                      className='text-muted-foreground hover:bg-hover hover:text-foreground rounded p-0.5 transition-colors'
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        onInterestUp?.(tag.qid!)
+                        setAdjustments((prev) => ({
+                          ...prev,
+                          [tag.qid!]: Math.min(
+                            100,
+                            (prev[tag.qid!] ?? tag.interest ?? 0) + 15
+                          ),
+                        }))
+                      }}
+                    >
+                      <Plus className='size-3.5' />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t`Boost interest`}</TooltipContent>
+                </Tooltip>
+              )}
+              {tag.qid && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type='button'
+                      aria-label={t`Reduce interest`}
+                      className='text-muted-foreground hover:bg-hover hover:text-foreground rounded p-0.5 transition-colors'
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        onInterestDown?.(tag.qid!)
+                        setAdjustments((prev) => ({
+                          ...prev,
+                          [tag.qid!]: Math.max(
+                            -100,
+                            (prev[tag.qid!] ?? tag.interest ?? 0) - 20
+                          ),
+                        }))
+                      }}
+                    >
+                      <Minus className='size-3.5' />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t`Reduce interest`}</TooltipContent>
+                </Tooltip>
+              )}
+              {tag.qid && onInterestRemove && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type='button'
+                      aria-label={t`Remove interest`}
+                      className='text-muted-foreground hover:bg-hover rounded p-0.5 transition-colors'
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        onInterestRemove(tag.qid!)
+                        setAdjustments((prev) => ({
+                          ...prev,
+                          [tag.qid!]: null,
+                        }))
+                      }}
+                    >
+                      <X className='size-3.5' />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t`Remove interest`}</TooltipContent>
+                </Tooltip>
+              )}
+            </span>
+          </div>
         )
       })}
     </div>

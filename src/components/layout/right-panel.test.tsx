@@ -13,7 +13,11 @@ vi.mock('../../lib/shell-storage', () => ({
 }))
 
 import { getItem, setItem } from '../../lib/shell-storage'
-import { RightPanel, RightPanelCloseButton, RightPanelProvider } from './right-panel'
+import {
+  RightPanel,
+  RightPanelCloseButton,
+  RightPanelProvider,
+} from './right-panel'
 
 function show() {
   render(
@@ -31,7 +35,10 @@ function show() {
 describe('RightPanel persistence', () => {
   beforeEach(() => {
     // A desktop width: below it the panel is a sheet with its own state.
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1400 })
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1400,
+    })
     vi.mocked(getItem).mockReset().mockResolvedValue(null)
     vi.mocked(setItem).mockClear()
   })
@@ -46,6 +53,8 @@ describe('RightPanel persistence', () => {
     vi.mocked(getItem).mockResolvedValue('false')
     show()
     expect(getItem).toHaveBeenCalledWith('right_panel_state')
-    await waitFor(() => expect(screen.queryByText('panel body')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText('panel body')).not.toBeInTheDocument()
+    )
   })
 })

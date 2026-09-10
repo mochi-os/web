@@ -7,13 +7,23 @@ import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { PostTagsTooltip } from './post-tags'
 
-type Descriptor = { id?: string; message?: string; values?: Record<string, unknown> }
+type Descriptor = {
+  id?: string
+  message?: string
+  values?: Record<string, unknown>
+}
 
-function show(props: Partial<React.ComponentProps<typeof PostTagsTooltip>> = {}) {
+function show(
+  props: Partial<React.ComponentProps<typeof PostTagsTooltip>> = {}
+) {
   const onAdd = vi.fn(async () => {})
   render(
     <I18nProvider i18n={i18n}>
-      <PostTagsTooltip tags={[{ id: 't1', label: 'x', relevance: 3, interest: 5, qid: 'q' }]} onAdd={onAdd} {...props} />
+      <PostTagsTooltip
+        tags={[{ id: 't1', label: 'x', relevance: 3, interest: 5, qid: 'q' }]}
+        onAdd={onAdd}
+        {...props}
+      />
     </I18nProvider>
   )
   fireEvent.click(screen.getByLabelText('Tags'))
@@ -28,7 +38,9 @@ describe('PostTagsTooltip', () => {
   it('builds the tag tooltip through the catalogue', async () => {
     const original = i18n._.bind(i18n)
     vi.spyOn(i18n, '_').mockImplementation((...args: unknown[]) => {
-      const descriptor = (typeof args[0] === 'object' ? args[0] : { id: args[0], values: args[1] }) as Descriptor
+      const descriptor = (
+        typeof args[0] === 'object' ? args[0] : { id: args[0], values: args[1] }
+      ) as Descriptor
       if (descriptor.message?.startsWith('Relevance')) {
         return `T(${String(descriptor.values?.relevance)},${String(descriptor.values?.weight)})`
       }
@@ -44,7 +56,9 @@ describe('PostTagsTooltip', () => {
     const input = await screen.findByPlaceholderText('Add tag...')
     fireEvent.change(input, { target: { value: 'a_b' } })
     fireEvent.keyDown(input, { key: 'Enter' })
-    expect(screen.getByText('Letters, numbers, spaces, hyphens, and slashes only')).toBeInTheDocument()
+    expect(
+      screen.getByText('Letters, numbers, spaces, hyphens, and slashes only')
+    ).toBeInTheDocument()
     expect(onAdd).not.toHaveBeenCalled()
     fireEvent.change(input, { target: { value: 'a/b' } })
     fireEvent.keyDown(input, { key: 'Enter' })

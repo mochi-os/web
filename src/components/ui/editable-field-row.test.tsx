@@ -8,10 +8,16 @@ import { i18n } from '@lingui/core'
 import { EditableFieldRow } from './editable-field-row'
 
 describe('EditableFieldRow', () => {
-  it('passes the caller\'s length cap to the editor', () => {
+  it("passes the caller's length cap to the editor", () => {
     render(
       <I18nProvider i18n={i18n}>
-        <EditableFieldRow label='Description' value='x' onSave={vi.fn()} multiline maxLength={10000} />
+        <EditableFieldRow
+          label='Description'
+          value='x'
+          onSave={vi.fn()}
+          multiline
+          maxLength={10000}
+        />
       </I18nProvider>
     )
     fireEvent.click(screen.getAllByRole('button')[0])

@@ -45,7 +45,11 @@ function start(
     settled.catch(() => {})
   })
 
-  return { request, emit: (e: AxiosProgressEvent) => act(() => emit(e)), settled }
+  return {
+    request,
+    emit: (e: AxiosProgressEvent) => act(() => emit(e)),
+    settled,
+  }
 }
 
 const event = (loaded: number, total?: number) =>
@@ -114,9 +118,9 @@ describe('useUploadProgress', () => {
     emit(event(4000, 4000))
 
     expect(result.current.progress?.phase).toBe('processing')
-    expect(result.current.progress?.slices?.every((s) => s.state === 'sent')).toBe(
-      true
-    )
+    expect(
+      result.current.progress?.slices?.every((s) => s.state === 'sent')
+    ).toBe(true)
 
     request.resolve('done')
     await act(async () => {

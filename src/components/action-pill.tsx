@@ -1,7 +1,12 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { createContext, useContext, type ComponentProps, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
 import { cn } from '../lib/utils'
 
 type ActionPillHoverGroup = 'card' | 'row' | 'bubble'
@@ -87,7 +92,11 @@ function ActionPill({
     : emptyReveal === 'none'
       ? INLINE_BASE
       : emptyReveal === 'opacity'
-        ? cn(INLINE_BASE, 'transition-opacity pointer-events-auto opacity-100', EXPAND_OPACITY[hoverGroup])
+        ? cn(
+            INLINE_BASE,
+            'transition-opacity pointer-events-auto opacity-100',
+            EXPAND_OPACITY[hoverGroup]
+          )
         : cn(
             INLINE_BASE,
             'overflow-hidden transition-all duration-200 max-w-full opacity-100 pointer-events-auto',
@@ -96,9 +105,18 @@ function ActionPill({
 
   return (
     <ActionPillContext.Provider
-      value={{ sticky, hoverGroup, expandWidth, expandActions: sticky ? expandActions : false }}
+      value={{
+        sticky,
+        hoverGroup,
+        expandWidth,
+        expandActions: sticky ? expandActions : false,
+      }}
     >
-      <div data-slot='action-pill' className={cn(shellClass, className)} {...props}>
+      <div
+        data-slot='action-pill'
+        className={cn(shellClass, className)}
+        {...props}
+      >
         {children}
       </div>
     </ActionPillContext.Provider>
@@ -107,13 +125,21 @@ function ActionPill({
 
 type ActionPillStickyProps = ComponentProps<'div'>
 
-function ActionPillSticky({ className, children, ...props }: ActionPillStickyProps) {
+function ActionPillSticky({
+  className,
+  children,
+  ...props
+}: ActionPillStickyProps) {
   useActionPillContext('ActionPillSticky')
   if (!children) return null
   return (
     <div
       data-slot='action-pill-sticky'
-      className={cn('flex items-center gap-0.5 leading-none', STICKY_SHELL, className)}
+      className={cn(
+        'flex items-center gap-0.5 leading-none',
+        STICKY_SHELL,
+        className
+      )}
       {...props}
     >
       {children}
@@ -132,7 +158,8 @@ function ActionPillActions({
   alwaysVisible,
   ...props
 }: ActionPillActionsProps) {
-  const { sticky, hoverGroup, expandWidth, expandActions } = useActionPillContext('ActionPillActions')
+  const { sticky, hoverGroup, expandWidth, expandActions } =
+    useActionPillContext('ActionPillActions')
   const shouldExpand = alwaysVisible ? false : sticky && expandActions
 
   return (

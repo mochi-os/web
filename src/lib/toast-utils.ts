@@ -17,7 +17,10 @@ const ERROR_DURATION = 10000
  * that error must not throw the form away.
  */
 export function insideToaster(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest('[data-sonner-toaster]') !== null
+  return (
+    target instanceof Element &&
+    target.closest('[data-sonner-toaster]') !== null
+  )
 }
 
 // Toast wrapper that adds copy functionality to error toasts

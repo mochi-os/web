@@ -44,24 +44,40 @@ export function computeMentionDropdownPosition(
   const { rect, viewportWidth, viewportHeight } = input
 
   const availableAbove = Math.max(0, rect.top - margin - gap)
-  const availableBelow = Math.max(0, viewportHeight - rect.bottom - margin - gap)
+  const availableBelow = Math.max(
+    0,
+    viewportHeight - rect.bottom - margin - gap
+  )
 
   const placement: 'above' | 'below' =
     availableBelow >= availableAbove ? 'below' : 'above'
-  const availableOnSide = placement === 'below' ? availableBelow : availableAbove
+  const availableOnSide =
+    placement === 'below' ? availableBelow : availableAbove
   const maxHeight = Math.min(preferredMaxHeight, availableOnSide)
 
   const maxWidth = Math.max(0, viewportWidth - 2 * margin)
   const width = Math.min(Math.max(0, rect.width), maxWidth)
-  const left = clamp(rect.left, margin, Math.max(margin, viewportWidth - margin - width))
+  const left = clamp(
+    rect.left,
+    margin,
+    Math.max(margin, viewportWidth - margin - width)
+  )
 
   let top: number | undefined = undefined
   let bottom: number | undefined = undefined
 
   if (placement === 'below') {
-    top = clamp(rect.bottom + gap, margin, Math.max(margin, viewportHeight - margin - maxHeight))
+    top = clamp(
+      rect.bottom + gap,
+      margin,
+      Math.max(margin, viewportHeight - margin - maxHeight)
+    )
   } else {
-    bottom = clamp(viewportHeight - rect.top + gap, margin, Math.max(margin, viewportHeight - margin - maxHeight))
+    bottom = clamp(
+      viewportHeight - rect.top + gap,
+      margin,
+      Math.max(margin, viewportHeight - margin - maxHeight)
+    )
   }
 
   return { placement, top, bottom, left, width, maxHeight }

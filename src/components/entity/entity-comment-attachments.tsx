@@ -22,7 +22,7 @@ export function EntityCommentAttachments({
     authenticatedUrl(`${basePath}${id}${suffix}`)
 
   return (
-    <div className="mt-1">
+    <div className='mt-1'>
       <AttachmentGallery
         attachments={attachments}
         getUrl={(att) => attUrl(att.id)}

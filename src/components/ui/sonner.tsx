@@ -7,7 +7,11 @@ import { useTheme } from '../../context/theme-provider'
 // Default durations (in ms): success/info 6s, error 10s
 const DEFAULT_DURATION = 6000
 
-export function Toaster({ duration = DEFAULT_DURATION, closeButton = true, ...props }: ToasterProps) {
+export function Toaster({
+  duration = DEFAULT_DURATION,
+  closeButton = true,
+  ...props
+}: ToasterProps) {
   const { theme = 'system' } = useTheme()
 
   return (
@@ -15,7 +19,7 @@ export function Toaster({ duration = DEFAULT_DURATION, closeButton = true, ...pr
       theme={theme as ToasterProps['theme']}
       duration={duration}
       closeButton={closeButton}
-      position="bottom-right"
+      position='bottom-right'
       className='toaster group'
       style={
         {

@@ -37,7 +37,9 @@ export function ListCard({
         <div
           className={cn(
             'flex h-10 w-10 items-center justify-center rounded-lg',
-            highlighted ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground'
+            highlighted
+              ? 'bg-primary/10 text-primary'
+              : 'bg-muted text-foreground'
           )}
         >
           {icon}

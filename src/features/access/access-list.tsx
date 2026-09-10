@@ -32,7 +32,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../../components/ui/alert-dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '../../components/ui/tooltip'
 import type { AccessLevel, AccessRule } from './types'
 import { GeneralError } from '../errors/general-error'
 import { t } from '@lingui/core/macro'
@@ -79,15 +83,15 @@ function formatSubject(subject: string, name?: string): string {
 
 function getSubjectIcon(subject: string) {
   if (subject === '*') {
-    return <Globe className="h-4 w-4 shrink-0" />
+    return <Globe className='h-4 w-4 shrink-0' />
   }
   if (subject === '+') {
-    return <Users className="h-4 w-4 shrink-0" />
+    return <Users className='h-4 w-4 shrink-0' />
   }
   if (subject.startsWith('@')) {
-    return <UsersRound className="h-4 w-4 shrink-0" />
+    return <UsersRound className='h-4 w-4 shrink-0' />
   }
-  return <User className="h-4 w-4 shrink-0" />
+  return <User className='h-4 w-4 shrink-0' />
 }
 
 // Sort subjects: owners first, then users, then groups, then +, then *
@@ -147,10 +151,10 @@ export function AccessList({
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+      <div className='space-y-2'>
+        <Skeleton className='h-10 w-full' />
+        <Skeleton className='h-10 w-full' />
+        <Skeleton className='h-10 w-full' />
       </div>
     )
   }
@@ -161,8 +165,11 @@ export function AccessList({
 
   if (!rules.length) {
     return (
-      <p className="text-muted-foreground text-sm">
-        <Trans>No access rules configured. Add rules to control who can access this resource.</Trans>
+      <p className='text-muted-foreground text-sm'>
+        <Trans>
+          No access rules configured. Add rules to control who can access this
+          resource.
+        </Trans>
       </p>
     )
   }
@@ -170,7 +177,10 @@ export function AccessList({
   // Group rules by subject
   // For hierarchical model, there's one rule per subject
   // For permission model, there might be multiple rules per subject
-  const subjectData = new Map<string, { rules: AccessRule[]; name?: string; owner?: boolean }>()
+  const subjectData = new Map<
+    string,
+    { rules: AccessRule[]; name?: string; owner?: boolean }
+  >()
   for (const rule of rules) {
     const existing = subjectData.get(rule.subject)
     if (existing) {
@@ -186,16 +196,21 @@ export function AccessList({
 
   // Sort by priority (owners first, then users, then groups, +, *)
   const sortedSubjects = [...subjectData.entries()].sort(
-    ([a, aData], [b, bData]) => subjectPriority(a, aData.owner) - subjectPriority(b, bData.owner)
+    ([a, aData], [b, bData]) =>
+      subjectPriority(a, aData.owner) - subjectPriority(b, bData.owner)
   )
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead><Trans>Subject</Trans></TableHead>
-          <TableHead><Trans>Access level</Trans></TableHead>
-          <TableHead className="w-[50px]"></TableHead>
+          <TableHead>
+            <Trans>Subject</Trans>
+          </TableHead>
+          <TableHead>
+            <Trans>Access level</Trans>
+          </TableHead>
+          <TableHead className='w-[50px]'></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -210,23 +225,30 @@ export function AccessList({
           return (
             <TableRow key={subject}>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className='flex items-center gap-2'>
                   {getSubjectIcon(subject)}
-                  <span className="font-medium">
+                  <span className='font-medium'>
                     {formatSubject(subject, data.name)}
                   </span>
                 </div>
               </TableCell>
               <TableCell>
                 {isOwner ? (
-                  <span className="text-sm"><Trans>Owner</Trans></span>
+                  <span className='text-sm'>
+                    <Trans>Owner</Trans>
+                  </span>
                 ) : (
                   <Select
                     value={currentLevel}
-                    onValueChange={(newLevel) => void handleLevelChange(subject, newLevel)}
+                    onValueChange={(newLevel) =>
+                      void handleLevelChange(subject, newLevel)
+                    }
                     disabled={isUpdating}
                   >
-                    <SelectTrigger style={{ minWidth: selectWidth }} className="h-8 -ms-3 max-w-full">
+                    <SelectTrigger
+                      style={{ minWidth: selectWidth }}
+                      className='h-8 -ms-3 max-w-full'
+                    >
                       <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -246,12 +268,12 @@ export function AccessList({
                       <TooltipTrigger asChild>
                         <AlertDialogTrigger asChild>
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant='ghost'
+                            size='icon'
                             disabled={isUpdating}
                             aria-label={t`Remove access rule`}
                           >
-                            <X className="h-4 w-4" />
+                            <X className='h-4 w-4' />
                           </Button>
                         </AlertDialogTrigger>
                       </TooltipTrigger>
@@ -259,14 +281,23 @@ export function AccessList({
                     </Tooltip>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle><Trans>Remove access?</Trans></AlertDialogTitle>
+                        <AlertDialogTitle>
+                          <Trans>Remove access?</Trans>
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                          <Trans>Remove access rule for "{formatSubject(subject, data.name)}"?</Trans>
+                          <Trans>
+                            Remove access rule for "
+                            {formatSubject(subject, data.name)}"?
+                          </Trans>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel><Trans>Cancel</Trans></AlertDialogCancel>
-                        <AlertDialogAction onClick={() => void handleRevoke(subject)}>
+                        <AlertDialogCancel>
+                          <Trans>Cancel</Trans>
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => void handleRevoke(subject)}
+                        >
                           <Trans>Remove</Trans>
                         </AlertDialogAction>
                       </AlertDialogFooter>

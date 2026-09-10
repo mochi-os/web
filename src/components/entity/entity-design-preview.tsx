@@ -40,14 +40,14 @@ export function EntityDesignPreview<TObject extends EntityObject>({
   fallbackTitle,
 }: EntityDesignPreviewProps<TObject>) {
   const [selectedViewId, setSelectedViewId] = useState<string | null>(
-    design.views[0]?.id || null,
+    design.views[0]?.id || null
   )
 
   // Sync to editor's class selection: pick the first view for that class
   useEffect(() => {
     if (!selectedClassId) return
     const match = design.views.find(
-      (v) => v.classes.length === 0 || v.classes.includes(selectedClassId),
+      (v) => v.classes.length === 0 || v.classes.includes(selectedClassId)
     )
     if (match) setSelectedViewId(match.id)
   }, [selectedClassId, design.views])
@@ -61,24 +61,24 @@ export function EntityDesignPreview<TObject extends EntityObject>({
       viewClasses.length > 0
         ? objects.filter((obj) => viewClasses.includes(obj.class))
         : objects,
-    [objects, viewClasses],
+    [objects, viewClasses]
   )
 
   const noop = () => {}
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="overflow-x-auto no-scrollbar border-b">
-        <div className="flex items-center px-4 py-2 min-w-max">
+    <div className='h-full flex flex-col'>
+      <div className='overflow-x-auto no-scrollbar border-b'>
+        <div className='flex items-center px-4 py-2 min-w-max'>
           <ViewTabs
-            variant="pill"
+            variant='pill'
             views={design.views}
             activeViewId={selectedViewId || ''}
             onViewChange={setSelectedViewId}
           />
         </div>
       </div>
-      <div className="flex-1 p-4 overflow-auto">
+      <div className='flex-1 p-4 overflow-auto'>
         {selectedView ? (
           selectedView.viewtype === 'board' ? (
             <EntityBoardContainer
@@ -110,7 +110,7 @@ export function EntityDesignPreview<TObject extends EntityObject>({
             />
           )
         ) : (
-          <div className="text-sm text-muted-foreground text-center py-8">
+          <div className='text-sm text-muted-foreground text-center py-8'>
             <Trans>No views</Trans>
           </div>
         )}

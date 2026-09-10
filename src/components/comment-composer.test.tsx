@@ -6,7 +6,13 @@
 // able to render and address.
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { CommentBox, ComposerAttachments } from './comment-composer'
@@ -81,14 +87,21 @@ describe('CommentBox', () => {
     const onValueChange = vi.fn()
     const utils = render(
       <I18nProvider i18n={i18n}>
-        <CommentBox value='hello' onValueChange={onValueChange} onSubmit={onSubmit} {...props} />
+        <CommentBox
+          value='hello'
+          onValueChange={onValueChange}
+          onSubmit={onSubmit}
+          {...props}
+        />
       </I18nProvider>
     )
     return { ...utils, onSubmit, onValueChange }
   }
 
   function stage(container: HTMLElement, ...files: File[]) {
-    const input = container.querySelector('input[type=file]') as HTMLInputElement
+    const input = container.querySelector(
+      'input[type=file]'
+    ) as HTMLInputElement
     fireEvent.change(input, { target: { files } })
   }
 
@@ -103,18 +116,25 @@ describe('CommentBox', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Submit comment' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('hello', [photo]))
-    await waitFor(() => expect(screen.queryByText('photo.png')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText('photo.png')).not.toBeInTheDocument()
+    )
     expect(onFilesChange).toHaveBeenLastCalledWith(0)
   })
 
   it('sends without a files argument when nothing is staged', async () => {
     const { onSubmit } = box()
     fireEvent.click(screen.getByRole('button', { name: 'Submit comment' }))
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('hello', undefined))
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith('hello', undefined)
+    )
   })
 
   it('keeps the files and offers Retry when the send rejects', async () => {
-    const onSubmit = vi.fn().mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce(undefined)
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValueOnce(undefined)
     const { container } = box({ onSubmit })
     const photo = pick('photo.png')
 
@@ -130,7 +150,9 @@ describe('CommentBox', () => {
 
   it('shows Cancel only when a host handles closing, and routes Escape to it', () => {
     box()
-    expect(screen.queryByRole('button', { name: 'Cancel comment' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Cancel comment' })
+    ).not.toBeInTheDocument()
 
     cleanup()
     const onClose = vi.fn()
@@ -142,8 +164,14 @@ describe('CommentBox', () => {
 
   it('carries the reply labels when asked', () => {
     box({ kind: 'reply', onClose: () => {} })
-    expect(screen.getByRole('button', { name: 'Submit reply' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cancel reply' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Attach reply files' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Submit reply' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Cancel reply' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Attach reply files' })
+    ).toBeInTheDocument()
   })
 })

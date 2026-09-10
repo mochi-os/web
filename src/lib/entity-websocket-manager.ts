@@ -194,7 +194,10 @@ class EntityWebsocketManager {
     }
     const failures = this.reconnectFailures.get(key) ?? 0
     this.reconnectFailures.set(key, failures + 1)
-    const base = Math.min(RECONNECT_DELAY_MINIMUM * 2 ** failures, RECONNECT_DELAY_MAXIMUM)
+    const base = Math.min(
+      RECONNECT_DELAY_MINIMUM * 2 ** failures,
+      RECONNECT_DELAY_MAXIMUM
+    )
     // Full jitter: without it every tab that dropped together retries
     // together, and the reconnect storm is what finished off the server.
     const delay = Math.round(base / 2 + Math.random() * (base / 2))

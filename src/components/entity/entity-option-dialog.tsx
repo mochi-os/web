@@ -167,7 +167,11 @@ export function EntityOptionDialog({
               >
                 <Trans>Cancel</Trans>
               </Button>
-              <Button type='button' onClick={handleSave} disabled={!name.trim()}>
+              <Button
+                type='button'
+                onClick={handleSave}
+                disabled={!name.trim()}
+              >
                 <Check className='size-4' />
                 <Trans>Save</Trans>
               </Button>

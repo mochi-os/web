@@ -37,7 +37,12 @@ describe('entityObjectTitle', () => {
   })
 
   it("prefers the server's own readable id over one rebuilt from the prefix", () => {
-    const obj = { class: 'task', number: 14, readable: 'PROJ-0014', values: { name: '' } }
+    const obj = {
+      class: 'task',
+      number: 14,
+      readable: 'PROJ-0014',
+      values: { name: '' },
+    }
     expect(entityObjectTitle(obj, classes, 'PROJ')).toBe('PROJ-0014')
   })
 

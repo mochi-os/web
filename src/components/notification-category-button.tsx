@@ -5,7 +5,13 @@ import { Trans } from '@lingui/react/macro'
 import { SlidersHorizontal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select'
 import { Skeleton } from './ui/skeleton'
 import { cn, naturalCompare } from '../lib/utils'
 import { t } from '@lingui/core/macro'
@@ -41,7 +47,10 @@ interface Props {
   topic: NotificationTopic | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCategoryChange: (topic: NotificationTopic, category: string) => Promise<void>
+  onCategoryChange: (
+    topic: NotificationTopic,
+    category: string
+  ) => Promise<void>
   saving?: boolean
   className?: string
 }
@@ -76,7 +85,7 @@ export function NotificationCategoryButton({
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <button
-              type="button"
+              type='button'
               aria-label={t`Change notification category`}
               onClick={(e) => e.stopPropagation()}
               className={cn(
@@ -84,45 +93,53 @@ export function NotificationCategoryButton({
                 className
               )}
             >
-              <SlidersHorizontal className="size-3.5" />
+              <SlidersHorizontal className='size-3.5' />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>{t`Change notification category`}</TooltipContent>
       </Tooltip>
       <PopoverContent
-        align="end"
-        className="w-64 p-3"
+        align='end'
+        className='w-64 p-3'
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground"><Trans>Category for these notifications</Trans></p>
+        <div className='space-y-2'>
+          <p className='text-xs font-medium text-muted-foreground'>
+            <Trans>Category for these notifications</Trans>
+          </p>
           {row?.label ? (
-            <p className="text-sm font-medium">{row.label}</p>
+            <p className='text-sm font-medium'>{row.label}</p>
           ) : null}
           {!ordered ? (
-            <Skeleton className="h-9 w-full" />
+            <Skeleton className='h-9 w-full' />
           ) : !row ? (
-            <p className="text-xs text-muted-foreground"><Trans>No topic record yet — try again after the next notification.</Trans></p>
+            <p className='text-xs text-muted-foreground'>
+              <Trans>
+                No topic record yet — try again after the next notification.
+              </Trans>
+            </p>
           ) : (
             <Select
               value={row.category != null ? String(row.category) : ''}
               onValueChange={onChange}
               disabled={saving}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className='w-full'>
                 <SelectValue placeholder={t`Unassigned`} />
               </SelectTrigger>
               <SelectContent>
                 {ordered.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>{cat.display ?? cat.label}</SelectItem>
+                  <SelectItem key={cat.id} value={String(cat.id)}>
+                    {cat.display ?? cat.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
           <a
-            href="/settings/user/notifications"
-            className="block text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            href='/settings/user/notifications'
+            className='block text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline'
           >
             <Trans>Manage categories</Trans>
           </a>

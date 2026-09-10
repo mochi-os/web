@@ -31,7 +31,7 @@ describe('auth store avatar version', () => {
     expect(useAuthStore.getState().avatar).toBe('456')
   })
 
-  it('never hydrates another identity\'s stored version', () => {
+  it("never hydrates another identity's stored version", () => {
     localStorage.setItem('avatar:person-b', '456')
     useAuthStore.getState().setProfile('person-a', 'Person A')
 
@@ -66,7 +66,10 @@ describe('auth store avatar version', () => {
 // app anonymous until the ten-minute refresh.
 describe('auth store initialize in the shell', () => {
   let parentPostMessage: ReturnType<typeof vi.fn>
-  let parentStub: { postMessage: ReturnType<typeof vi.fn>; readonly document: never }
+  let parentStub: {
+    postMessage: ReturnType<typeof vi.fn>
+    readonly document: never
+  }
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -78,17 +81,29 @@ describe('auth store initialize in the shell', () => {
         throw new DOMException('Blocked', 'SecurityError')
       },
     }
-    Object.defineProperty(window, 'parent', { configurable: true, get: () => parentStub })
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => parentStub,
+    })
   })
 
   afterEach(() => {
-    Object.defineProperty(window, 'parent', { configurable: true, get: () => window })
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => window,
+    })
     vi.useRealTimers()
   })
 
   function fromShell(data: unknown) {
-    const event = new MessageEvent('message', { data, origin: window.location.origin })
-    Object.defineProperty(event, 'source', { value: parentStub, configurable: true })
+    const event = new MessageEvent('message', {
+      data,
+      origin: window.location.origin,
+    })
+    Object.defineProperty(event, 'source', {
+      value: parentStub,
+      configurable: true,
+    })
     window.dispatchEvent(event)
   }
 

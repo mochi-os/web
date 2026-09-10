@@ -115,10 +115,10 @@ export function FindEntityPage({
       const base = `${window.location.origin}${getAppPath()}/`
       const url = new URL(searchEndpoint, base)
       url.searchParams.set('search', debouncedSearch)
-      const response = await requestHelpers.get<DirectoryEntry[] | { results: DirectoryEntry[] }>(
-        url.href
-      )
-      return Array.isArray(response) ? response : (response.results || [])
+      const response = await requestHelpers.get<
+        DirectoryEntry[] | { results: DirectoryEntry[] }
+      >(url.href)
+      return Array.isArray(response) ? response : response.results || []
     },
     enabled: debouncedSearch.length > 0 && !isLink,
   })
@@ -135,12 +135,17 @@ export function FindEntityPage({
   }
 
   const isSubscribed = (entity: DirectoryEntry) =>
-    entity.subscribed || subscribedIds.has(entity.id) || (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
+    entity.subscribed ||
+    subscribedIds.has(entity.id) ||
+    (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
 
   const isRecommendationSubscribed = (entity: EntityCardItem) =>
-    subscribedIds.has(entity.id) || (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
+    subscribedIds.has(entity.id) ||
+    (!!entity.fingerprint && subscribedIds.has(entity.fingerprint))
 
-  const filteredRecommendations = recommendations.filter((rec) => !isRecommendationSubscribed(rec))
+  const filteredRecommendations = recommendations.filter(
+    (rec) => !isRecommendationSubscribed(rec)
+  )
   const filteredResults = results.filter((entity) => !isSubscribed(entity))
 
   return (
@@ -198,25 +203,38 @@ export function FindEntityPage({
           {!isLink && isLoading && debouncedSearch && (
             <div className='flex flex-col items-center justify-center py-12 gap-2'>
               <Loader2 className='text-primary size-8 animate-spin' />
-              <p className='text-sm text-muted-foreground'><Trans>Searching...</Trans></p>
+              <p className='text-sm text-muted-foreground'>
+                <Trans>Searching...</Trans>
+              </p>
             </div>
           )}
 
           {isError && (
             <div className='py-12'>
-              <GeneralError error={error} minimal mode='inline' reset={refetch} />
+              <GeneralError
+                error={error}
+                minimal
+                mode='inline'
+                reset={refetch}
+              />
             </div>
           )}
 
-          {!isLink && !isLoading && !isError && debouncedSearch && filteredResults.length === 0 && (
-            <div className='py-12 text-center'>
-              <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
-                <Icon className='text-muted-foreground size-8' />
+          {!isLink &&
+            !isLoading &&
+            !isError &&
+            debouncedSearch &&
+            filteredResults.length === 0 && (
+              <div className='py-12 text-center'>
+                <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
+                  <Icon className='text-muted-foreground size-8' />
+                </div>
+                <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
+                <p className='text-muted-foreground text-xs mt-1'>
+                  <Trans>Try adjusting your search terms</Trans>
+                </p>
               </div>
-              <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
-              <p className='text-muted-foreground text-xs mt-1'><Trans>Try adjusting your search terms</Trans></p>
-            </div>
-          )}
+            )}
 
           {!debouncedSearch && (
             <div>
@@ -251,7 +269,11 @@ export function FindEntityPage({
                         iconClassName={iconClassName}
                         isPending={pendingEntityId === rec.id}
                         onSubscribe={() =>
-                          handleSubscribe({ id: rec.id, name: rec.name, fingerprint: rec.fingerprint })
+                          handleSubscribe({
+                            id: rec.id,
+                            name: rec.name,
+                            fingerprint: rec.fingerprint,
+                          })
                         }
                         subscribeLabel={subscribeLabel}
                       />

@@ -38,32 +38,36 @@ export function ListSectionHeader({
     <tr
       className={cn(
         'bg-muted/30 border-t border-border first:border-t-0 transition-colors',
-        canAcceptDrop && isDragOver && 'bg-primary/15 ring-2 ring-inset ring-primary/40',
-        className,
+        canAcceptDrop &&
+          isDragOver &&
+          'bg-primary/15 ring-2 ring-inset ring-primary/40',
+        className
       )}
       onDragOver={canAcceptDrop ? onSectionDragOver : undefined}
       onDrop={canAcceptDrop ? onSectionDrop : undefined}
       onDragLeave={canAcceptDrop ? onSectionDragLeave : undefined}
     >
-      <td colSpan={colSpan} className="px-2 py-2">
+      <td colSpan={colSpan} className='px-2 py-2'>
         <button
-          type="button"
+          type='button'
           onClick={onToggle}
-          className="flex items-center gap-2 w-full text-start rounded-md px-1 py-0.5 hover:bg-hover transition-colors"
+          className='flex items-center gap-2 w-full text-start rounded-md px-1 py-0.5 hover:bg-hover transition-colors'
         >
           {isExpanded ? (
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronDown className='size-4 shrink-0 text-muted-foreground' />
           ) : (
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground rtl:rotate-180" />
+            <ChevronRight className='size-4 shrink-0 text-muted-foreground rtl:rotate-180' />
           )}
           {colour ? (
             <span
-              className="size-2.5 rounded-full shrink-0 ring-1 ring-border/50"
+              className='size-2.5 rounded-full shrink-0 ring-1 ring-border/50'
               style={{ backgroundColor: colour }}
             />
           ) : null}
-          <span className="font-medium text-sm text-foreground">{name}</span>
-          <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+          <span className='font-medium text-sm text-foreground'>{name}</span>
+          <span className='text-xs text-muted-foreground tabular-nums'>
+            {count}
+          </span>
         </button>
       </td>
     </tr>

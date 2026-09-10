@@ -19,11 +19,14 @@ export function useVerifySession(enabled: boolean = true) {
 
     if (!enabled) return
 
-    const interval = setInterval(() => {
-      if (token && !isLogoutInProgress) {
-        authManager.loadIdentity(true)
-      }
-    }, 30 * 60 * 1000)
+    const interval = setInterval(
+      () => {
+        if (token && !isLogoutInProgress) {
+          authManager.loadIdentity(true)
+        }
+      },
+      30 * 60 * 1000
+    )
 
     return () => clearInterval(interval)
   }, [token, isLogoutInProgress, enabled])

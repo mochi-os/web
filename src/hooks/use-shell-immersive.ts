@@ -14,7 +14,10 @@ export function useShellImmersive(on: boolean) {
   useEffect(() => {
     if (!on || !isInShell()) return
     shellSetImmersive(true)
-    const heartbeat = window.setInterval(() => shellSetImmersive(true), HEARTBEAT_MS)
+    const heartbeat = window.setInterval(
+      () => shellSetImmersive(true),
+      HEARTBEAT_MS
+    )
     return () => {
       window.clearInterval(heartbeat)
       shellSetImmersive(false)

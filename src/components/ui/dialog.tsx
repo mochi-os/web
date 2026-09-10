@@ -69,7 +69,8 @@ function DialogContent({
           className
         )}
         onPointerDownOutside={(event) => {
-          if (insideToaster(event.detail.originalEvent.target)) event.preventDefault()
+          if (insideToaster(event.detail.originalEvent.target))
+            event.preventDefault()
           onPointerDownOutside?.(event)
         }}
         {...props}
@@ -81,7 +82,9 @@ function DialogContent({
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-hover data-[state=open]:text-muted-foreground absolute end-4 top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
-            <span className='sr-only'><Trans>Close</Trans></span>
+            <span className='sr-only'>
+              <Trans>Close</Trans>
+            </span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -93,7 +96,10 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='dialog-header'
-      className={cn('flex shrink-0 flex-col gap-2 text-center sm:text-start', className)}
+      className={cn(
+        'flex shrink-0 flex-col gap-2 text-center sm:text-start',
+        className
+      )}
       {...props}
     />
   )

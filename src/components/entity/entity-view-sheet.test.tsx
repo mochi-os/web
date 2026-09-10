@@ -8,20 +8,38 @@ beforeAll(() => {
   Element.prototype.releasePointerCapture = () => {}
   Element.prototype.scrollIntoView = () => {}
 })
-import { render, screen, fireEvent, createMockEntityClass, createMockEntityView } from './entity-test-utils'
+import {
+  render,
+  screen,
+  fireEvent,
+  createMockEntityClass,
+  createMockEntityView,
+} from './entity-test-utils'
 import { ViewSheet } from './entity-view-sheet'
 
 function openSort() {
   // The sort select is the one whose current value reads None.
-  const trigger = screen.getAllByRole('combobox').find((el) => el.textContent?.includes('None')) as HTMLElement
-  fireEvent.pointerDown(trigger, new MouseEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false }))
+  const trigger = screen
+    .getAllByRole('combobox')
+    .find((el) => el.textContent?.includes('None')) as HTMLElement
+  fireEvent.pointerDown(
+    trigger,
+    new MouseEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+  )
   fireEvent.click(trigger)
 }
 
 describe('ViewSheet', () => {
   it('offers the Number sort only where objects are numbered', () => {
     const { unmount } = render(
-      <ViewSheet open onOpenChange={() => {}} mode='create' fields={[]} classes={[createMockEntityClass()]} onCreate={vi.fn()} />
+      <ViewSheet
+        open
+        onOpenChange={() => {}}
+        mode='create'
+        fields={[]}
+        classes={[createMockEntityClass()]}
+        onCreate={vi.fn()}
+      />
     )
     openSort()
     expect(screen.queryByRole('option', { name: 'Number' })).toBeNull()
@@ -29,7 +47,15 @@ describe('ViewSheet', () => {
     unmount()
 
     render(
-      <ViewSheet open onOpenChange={() => {}} mode='create' numbered fields={[]} classes={[createMockEntityClass()]} onCreate={vi.fn()} />
+      <ViewSheet
+        open
+        onOpenChange={() => {}}
+        mode='create'
+        numbered
+        fields={[]}
+        classes={[createMockEntityClass()]}
+        onCreate={vi.fn()}
+      />
     )
     openSort()
     expect(screen.getByRole('option', { name: 'Number' })).toBeInTheDocument()
@@ -47,13 +73,22 @@ describe('ViewSheet', () => {
         onUpdate={vi.fn()}
       />
     )
-    const trigger = screen.getAllByRole('combobox').find((el) => el.textContent?.includes('Number')) as HTMLElement
+    const trigger = screen
+      .getAllByRole('combobox')
+      .find((el) => el.textContent?.includes('Number')) as HTMLElement
     expect(trigger).toBeDefined()
   })
 
   it('leads Add view with the add glyph', () => {
     render(
-      <ViewSheet open onOpenChange={() => {}} mode='create' fields={[]} classes={[createMockEntityClass()]} onCreate={vi.fn()} />
+      <ViewSheet
+        open
+        onOpenChange={() => {}}
+        mode='create'
+        fields={[]}
+        classes={[createMockEntityClass()]}
+        onCreate={vi.fn()}
+      />
     )
     const add = screen.getByRole('button', { name: 'Add view' })
     expect(add.querySelector('svg.lucide-plus')).not.toBeNull()

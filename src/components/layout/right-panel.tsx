@@ -8,7 +8,13 @@ import { getItem, setItem } from '../../lib/shell-storage'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../ui/sheet'
 import { XIcon } from 'lucide-react'
 
 // Shell storage key for the persisted open state. Cookies are no-ops inside
@@ -28,7 +34,9 @@ type RightPanelContextProps = {
   togglePanel: () => void
 }
 
-const RightPanelContext = React.createContext<RightPanelContextProps | null>(null)
+const RightPanelContext = React.createContext<RightPanelContextProps | null>(
+  null
+)
 
 function useRightPanel() {
   const context = React.useContext(RightPanelContext)
@@ -101,13 +109,21 @@ function RightPanelProvider({
       isLargeScreen,
       togglePanel,
     }),
-    [open, setOpen, openMobile, setOpenMobile, isMobile, isLargeScreen, togglePanel]
+    [
+      open,
+      setOpen,
+      openMobile,
+      setOpenMobile,
+      isMobile,
+      isLargeScreen,
+      togglePanel,
+    ]
   )
 
   return (
     <RightPanelContext.Provider value={contextValue}>
       <div
-        data-slot="right-panel-wrapper"
+        data-slot='right-panel-wrapper'
         style={
           {
             '--right-panel-width': RIGHT_PANEL_WIDTH,
@@ -135,20 +151,24 @@ function RightPanel({ className, children, ...props }: RightPanelProps) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
-          data-slot="right-panel"
-          className="bg-background text-foreground w-(--right-panel-width) p-0"
+          data-slot='right-panel'
+          className='bg-background text-foreground w-(--right-panel-width) p-0'
           style={
             {
               '--right-panel-width': RIGHT_PANEL_WIDTH_MOBILE,
             } as React.CSSProperties
           }
-          side="right"
+          side='right'
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle><Trans>Details Panel</Trans></SheetTitle>
-            <SheetDescription><Trans>Contextual information and details.</Trans></SheetDescription>
+          <SheetHeader className='sr-only'>
+            <SheetTitle>
+              <Trans>Details Panel</Trans>
+            </SheetTitle>
+            <SheetDescription>
+              <Trans>Contextual information and details.</Trans>
+            </SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className='flex h-full w-full flex-col'>{children}</div>
         </SheetContent>
       </Sheet>
     )
@@ -161,7 +181,7 @@ function RightPanel({ className, children, ...props }: RightPanelProps) {
 
   return (
     <div
-      data-slot="right-panel"
+      data-slot='right-panel'
       className={cn(
         'hidden xl:flex',
         'h-full w-(--right-panel-width) flex-shrink-0 flex-col',
@@ -177,30 +197,42 @@ function RightPanel({ className, children, ...props }: RightPanelProps) {
   )
 }
 
-function RightPanelHeader({ className, ...props }: React.ComponentProps<'div'>) {
+function RightPanelHeader({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="right-panel-header"
-      className={cn('flex flex-shrink-0 items-center gap-2 border-b p-4', className)}
+      data-slot='right-panel-header'
+      className={cn(
+        'flex flex-shrink-0 items-center gap-2 border-b p-4',
+        className
+      )}
       {...props}
     />
   )
 }
 
-function RightPanelContent({ className, ...props }: React.ComponentProps<'div'>) {
+function RightPanelContent({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="right-panel-content"
+      data-slot='right-panel-content'
       className={cn('flex-1 overflow-auto p-4', className)}
       {...props}
     />
   )
 }
 
-function RightPanelFooter({ className, ...props }: React.ComponentProps<'div'>) {
+function RightPanelFooter({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="right-panel-footer"
+      data-slot='right-panel-footer'
       className={cn('flex-shrink-0 border-t p-4', className)}
       {...props}
     />
@@ -217,9 +249,9 @@ function RightPanelCloseButton({
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          data-slot="right-panel-close"
-          variant="ghost"
-          size="icon"
+          data-slot='right-panel-close'
+          variant='ghost'
+          size='icon'
           className={cn('size-8', className)}
           onClick={() => {
             if (!isLargeScreen) {
@@ -230,11 +262,15 @@ function RightPanelCloseButton({
           }}
           {...props}
         >
-          <XIcon className="size-4" />
-          <span className="sr-only"><Trans>Close panel</Trans></span>
+          <XIcon className='size-4' />
+          <span className='sr-only'>
+            <Trans>Close panel</Trans>
+          </span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent><Trans>Close panel</Trans></TooltipContent>
+      <TooltipContent>
+        <Trans>Close panel</Trans>
+      </TooltipContent>
     </Tooltip>
   )
 }

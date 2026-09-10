@@ -5,7 +5,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 vi.mock('./request', () => ({
-  requestHelpers: { get: vi.fn(), post: vi.fn(), isAuthError: vi.fn(() => false) },
+  requestHelpers: {
+    get: vi.fn(),
+    post: vi.fn(),
+    isAuthError: vi.fn(() => false),
+  },
 }))
 vi.mock('./toast-utils', () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
@@ -28,7 +32,9 @@ describe('logoutRedirectTarget', () => {
   })
 
   it('drops a foreign return path: a post-login redirect is an open redirect otherwise', () => {
-    expect(logoutRedirectTarget(undefined, 'https://evil.example/phish')).toBe('/')
+    expect(logoutRedirectTarget(undefined, 'https://evil.example/phish')).toBe(
+      '/'
+    )
     expect(logoutRedirectTarget(undefined, '//evil.example/phish')).toBe('/')
   })
 
@@ -57,8 +63,20 @@ describe('authManager', () => {
     useAuthStore.setState({ token: 'session-token' })
     const client = axios.create({
       adapter: async (config: InternalAxiosRequestConfig) => {
-        const response = { data: {}, status: 401, statusText: '', headers: {}, config }
-        throw new AxiosError('Request failed with status code 401', AxiosError.ERR_BAD_REQUEST, config, undefined, response)
+        const response = {
+          data: {},
+          status: 401,
+          statusText: '',
+          headers: {},
+          config,
+        }
+        throw new AxiosError(
+          'Request failed with status code 401',
+          AxiosError.ERR_BAD_REQUEST,
+          config,
+          undefined,
+          response
+        )
       },
     })
     attachApiResponseInterceptors(client)
@@ -68,7 +86,9 @@ describe('authManager', () => {
 
   it('loads the identity into the store', async () => {
     useAuthStore.setState({ token: 'session-token', isInitialized: true })
-    vi.mocked(requestHelpers.get).mockResolvedValue({ identity: { id: 'person-1', name: 'Person One' } })
+    vi.mocked(requestHelpers.get).mockResolvedValue({
+      identity: { id: 'person-1', name: 'Person One' },
+    })
     await authManager.loadIdentity(true)
     expect(useAuthStore.getState().identity).toBe('person-1')
     expect(useAuthStore.getState().name).toBe('Person One')

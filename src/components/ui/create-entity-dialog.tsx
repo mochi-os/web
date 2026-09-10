@@ -95,20 +95,24 @@ export function CreateEntityDialog({
   const setIsOpen = onOpenChange ?? setInternalOpen
 
   // Build schema dynamically (memoized to prevent re-validation on every render)
-  const schema = useMemo(() => z.object({
-    name: z
-      .string()
-      .min(1, t`Name is required`)
-      .max(1000, t`Name must be 1000 characters or less`)
-      .refine((val: string) => !DISALLOWED_NAME_CHARS.test(val), {
-        message: t`Name cannot contain < or > characters`,
+  const schema = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .min(1, t`Name is required`)
+          .max(1000, t`Name must be 1000 characters or less`)
+          .refine((val: string) => !DISALLOWED_NAME_CHARS.test(val), {
+            message: t`Name cannot contain < or > characters`,
+          }),
+        description: z.string().optional(),
+        allowSearch: z.boolean(),
+        ...Object.fromEntries(
+          extraToggles.map((toggle) => [toggle.name, z.boolean()])
+        ),
       }),
-    description: z.string().optional(),
-    allowSearch: z.boolean(),
-    ...Object.fromEntries(
-      extraToggles.map((toggle) => [toggle.name, z.boolean()])
-    ),
-  }), [extraToggles])
+    [extraToggles]
+  )
 
   type FormValues = z.infer<typeof schema>
 
@@ -129,8 +133,13 @@ export function CreateEntityDialog({
     await onSubmit({
       name: name.trim(),
       description: showDescription ? description?.trim() : undefined,
-      privacy: showPrivacyToggle ? (allowSearch ? 'public' : 'private') : undefined,
-      toggles: extraToggles.length > 0 ? rest as Record<string, boolean> : undefined,
+      privacy: showPrivacyToggle
+        ? allowSearch
+          ? 'public'
+          : 'private'
+        : undefined,
+      toggles:
+        extraToggles.length > 0 ? (rest as Record<string, boolean>) : undefined,
     })
     form.reset()
     setIsOpen(false)
@@ -153,27 +162,36 @@ export function CreateEntityDialog({
     >
       {!hideTrigger && (
         <ResponsiveDialogTrigger asChild>
-          <Button size="sm" className="text-sm">
-            {TriggerIcon ? <TriggerIcon className="size-4" /> : <Plus className="size-4" />}
+          <Button size='sm' className='text-sm'>
+            {TriggerIcon ? (
+              <TriggerIcon className='size-4' />
+            ) : (
+              <Plus className='size-4' />
+            )}
             {triggerLabel ?? defaultSubmitLabel}
           </Button>
         </ResponsiveDialogTrigger>
       )}
-      <ResponsiveDialogContent className="sm:max-w-[520px]">
+      <ResponsiveDialogContent className='sm:max-w-[520px]'>
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle className="flex items-center gap-2">
-            {Icon && <Icon className="size-5" />}
+          <ResponsiveDialogTitle className='flex items-center gap-2'>
+            {Icon && <Icon className='size-5' />}
             {title}
           </ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
         <Form {...form}>
-          <form className="space-y-4" onSubmit={form.handleSubmit(handleSubmit)}>
+          <form
+            className='space-y-4'
+            onSubmit={form.handleSubmit(handleSubmit)}
+          >
             <FormField
               control={form.control}
-              name="name"
+              name='name'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel><Trans>{entityLabel} name</Trans></FormLabel>
+                  <FormLabel>
+                    <Trans>{entityLabel} name</Trans>
+                  </FormLabel>
                   <FormControl>
                     <Input disabled={isPending} {...field} />
                   </FormControl>
@@ -185,7 +203,7 @@ export function CreateEntityDialog({
             {showDescription && (
               <FormField
                 control={form.control}
-                name="description"
+                name='description'
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{descriptionLabel}</FormLabel>
@@ -199,14 +217,14 @@ export function CreateEntityDialog({
             )}
 
             {(showPrivacyToggle || extraToggles.length > 0) && (
-              <div className="space-y-3">
+              <div className='space-y-3'>
                 {showPrivacyToggle && (
                   <FormField
                     control={form.control}
-                    name="allowSearch"
+                    name='allowSearch'
                     render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border px-4 py-3">
-                        <FormLabel className="text-sm font-medium">
+                      <FormItem className='flex items-center justify-between rounded-lg border px-4 py-3'>
+                        <FormLabel className='text-sm font-medium'>
                           {privacyLabel}
                         </FormLabel>
                         <FormControl>
@@ -227,8 +245,8 @@ export function CreateEntityDialog({
                     control={form.control}
                     name={toggle.name as FieldPath<FormValues>}
                     render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border px-4 py-3">
-                        <FormLabel className="text-sm font-medium">
+                      <FormItem className='flex items-center justify-between rounded-lg border px-4 py-3'>
+                        <FormLabel className='text-sm font-medium'>
                           {toggle.label}
                         </FormLabel>
                         <FormControl>
@@ -245,19 +263,24 @@ export function CreateEntityDialog({
               </div>
             )}
 
-            <ResponsiveDialogFooter className="gap-2">
+            <ResponsiveDialogFooter className='gap-2'>
               <ResponsiveDialogClose asChild>
-                <Button type="button" variant="outline" disabled={isPending}>
+                <Button type='button' variant='outline' disabled={isPending}>
                   <Trans>Cancel</Trans>
                 </Button>
               </ResponsiveDialogClose>
-              <Button type="submit" disabled={!form.formState.isValid || isPending}>
+              <Button
+                type='submit'
+                disabled={!form.formState.isValid || isPending}
+              >
                 {isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className='size-4 animate-spin' />
                 ) : (
-                  <Plus className="size-4" />
+                  <Plus className='size-4' />
                 )}
-                {isPending ? t`Creating...` : (submitLabel ?? defaultSubmitLabel)}
+                {isPending
+                  ? t`Creating...`
+                  : (submitLabel ?? defaultSubmitLabel)}
               </Button>
             </ResponsiveDialogFooter>
           </form>

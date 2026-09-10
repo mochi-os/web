@@ -32,7 +32,11 @@ export interface Group {
 // const is resolved once at import, before the user's language is known.
 export function specialSubjects() {
   return [
-    { id: '+', name: t`Authenticated users`, description: t`Anyone who is logged in` },
+    {
+      id: '+',
+      name: t`Authenticated users`,
+      description: t`Anyone who is logged in`,
+    },
     { id: '*', name: t`Anyone`, description: t`Including anonymous users` },
   ]
 }

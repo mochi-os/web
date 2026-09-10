@@ -30,8 +30,7 @@ function getStatusErrorEnvelope(payload: unknown): {
         ? Number(rawStatus)
         : NaN
 
-  const error =
-    typeof envelope.error === 'string' ? envelope.error.trim() : ''
+  const error = typeof envelope.error === 'string' ? envelope.error.trim() : ''
 
   if (!Number.isFinite(status) || status < 400 || !error) {
     return null

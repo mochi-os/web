@@ -22,17 +22,30 @@ export function useFormat() {
   const language = i18n.locale
   return useMemo(
     () => ({
-      formatDate: (date: Date) => formatDate(date, locale.dateFormat, locale.timezone),
-      formatTime: (date: Date) => formatTime(date, locale.timeFormat, locale.timezone),
-      formatDateTime: (date: Date) => formatDateTime(date, locale.dateFormat, locale.timeFormat, locale.timezone),
-      formatTimestamp: (ts: number, fallback?: string) => formatUserTimestamp(ts, locale, fallback),
-      formatNumber: (value: number, decimals?: number) => formatNumber(value, locale.numberFormat, decimals),
-      formatFileSize: (bytes: number) => formatFileSize(bytes, locale.numberFormat),
-      formatList: (items: string[], type: 'conjunction' | 'disjunction' = 'conjunction') =>
-        formatList(items, language, type),
+      formatDate: (date: Date) =>
+        formatDate(date, locale.dateFormat, locale.timezone),
+      formatTime: (date: Date) =>
+        formatTime(date, locale.timeFormat, locale.timezone),
+      formatDateTime: (date: Date) =>
+        formatDateTime(
+          date,
+          locale.dateFormat,
+          locale.timeFormat,
+          locale.timezone
+        ),
+      formatTimestamp: (ts: number, fallback?: string) =>
+        formatUserTimestamp(ts, locale, fallback),
+      formatNumber: (value: number, decimals?: number) =>
+        formatNumber(value, locale.numberFormat, decimals),
+      formatFileSize: (bytes: number) =>
+        formatFileSize(bytes, locale.numberFormat),
+      formatList: (
+        items: string[],
+        type: 'conjunction' | 'disjunction' = 'conjunction'
+      ) => formatList(items, language, type),
       weekStartsOn: locale.weekStartsOn,
       units: locale.units,
     }),
-    [locale, language],
+    [locale, language]
   )
 }

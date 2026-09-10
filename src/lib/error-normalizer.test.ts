@@ -7,7 +7,11 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
-import { normalizeError, detectHtmlResponse, GENERIC_ERROR_MESSAGE } from './error-normalizer'
+import {
+  normalizeError,
+  detectHtmlResponse,
+  GENERIC_ERROR_MESSAGE,
+} from './error-normalizer'
 
 function axios(status: number, data: unknown) {
   return { response: { status, data } }
@@ -140,14 +144,16 @@ describe('normalizeError', () => {
 // repositories client and the wikis page component) before the shared response
 // interceptor started rejecting it.
 describe('detectHtmlResponse', () => {
-  const indexHtml = '<!doctype html>\n<html><head><title>Feeds</title></head><body><div id="root"></div></body></html>'
+  const indexHtml =
+    '<!doctype html>\n<html><head><title>Feeds</title></head><body><div id="root"></div></body></html>'
 
   it('detects a served SPA document and takes its title', () => {
     expect(detectHtmlResponse(indexHtml)).toEqual({ detail: 'Feeds' })
   })
 
   it('prefers the pre block, which carries the server-side cause', () => {
-    const errorPage = '<!doctype html><html><head><title>Error</title></head><body><pre>no such action</pre></body></html>'
+    const errorPage =
+      '<!doctype html><html><head><title>Error</title></head><body><pre>no such action</pre></body></html>'
     expect(detectHtmlResponse(errorPage)).toEqual({ detail: 'no such action' })
   })
 
@@ -156,7 +162,8 @@ describe('detectHtmlResponse', () => {
     // it, and the response interceptor shows the detail to the user. In
     // production the detection must still fire - an HTML body where JSON was
     // expected is the signal callers act on - but carry nothing.
-    const panic = '<!doctype html><html><head><title>Error</title></head><body>' +
+    const panic =
+      '<!doctype html><html><head><title>Error</title></head><body>' +
       '<pre>runtime error: index out of range\n\t/home/build/core/server/web.go:412</pre></body></html>'
 
     vi.stubEnv('DEV', false)
@@ -171,19 +178,24 @@ describe('detectHtmlResponse', () => {
     // Companion: the same body still yields its cause in development, so the
     // check above means "withheld", not "detection stopped working".
     expect(detectHtmlResponse(panic)).toEqual({
-      detail: 'runtime error: index out of range\n\t/home/build/core/server/web.go:412',
+      detail:
+        'runtime error: index out of range\n\t/home/build/core/server/web.go:412',
     })
   })
 
   it('reports HTML with no usable explanation as detail-free', () => {
-    expect(detectHtmlResponse('<!doctype html><html><body>x</body></html>')).toEqual({})
+    expect(
+      detectHtmlResponse('<!doctype html><html><body>x</body></html>')
+    ).toEqual({})
     expect(detectHtmlResponse('<html><body>x</body></html>')).toEqual({})
     // Present but empty must not become the detail.
     expect(detectHtmlResponse('<!doctype html><title>   </title>')).toEqual({})
   })
 
   it('tolerates leading whitespace and mixed case', () => {
-    expect(detectHtmlResponse('\n\n  <!DOCTYPE HTML><TITLE>Wikis</TITLE>')).toEqual({ detail: 'Wikis' })
+    expect(
+      detectHtmlResponse('\n\n  <!DOCTYPE HTML><TITLE>Wikis</TITLE>')
+    ).toEqual({ detail: 'Wikis' })
   })
 
   it('passes over anything that is not an HTML document', () => {
@@ -194,11 +206,15 @@ describe('detectHtmlResponse', () => {
     expect(detectHtmlResponse(undefined)).toBeNull()
     expect(detectHtmlResponse(42)).toBeNull()
     // A string that merely mentions markup is not a document.
-    expect(detectHtmlResponse('the page contains <html> in its body')).toBeNull()
+    expect(
+      detectHtmlResponse('the page contains <html> in its body')
+    ).toBeNull()
   })
 
   it('passes over binary bodies, so downloads are unaffected', () => {
-    expect(detectHtmlResponse(new Blob([indexHtml], { type: 'text/html' }))).toBeNull()
+    expect(
+      detectHtmlResponse(new Blob([indexHtml], { type: 'text/html' }))
+    ).toBeNull()
     expect(detectHtmlResponse(new ArrayBuffer(8))).toBeNull()
   })
 })
@@ -218,7 +234,9 @@ describe('the generic fallback is translated', () => {
       messages: { [GENERIC_ERROR_MESSAGE.id]: 'Boom in another language' },
     })
     expect(normalizeError({}).message).toBe('Boom in another language')
-    expect(normalizeError(new Error('')).message).toBe('Boom in another language')
+    expect(normalizeError(new Error('')).message).toBe(
+      'Boom in another language'
+    )
   })
 
   it('still reads as English under the empty catalogue', () => {

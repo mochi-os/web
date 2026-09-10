@@ -45,12 +45,16 @@ export function TravellingPicker({
   const originInputRef = useRef<HTMLInputElement>(null)
   const destinationInputRef = useRef<HTMLInputElement>(null)
 
-  const { places: originPlaces, isFetching: originFetching } = usePlaceSearch(originQuery, {
-    enabled: activeField === 'origin',
-  })
-  const { places: destinationPlaces, isFetching: destinationFetching } = usePlaceSearch(destinationQuery, {
-    enabled: activeField === 'destination',
-  })
+  const { places: originPlaces, isFetching: originFetching } = usePlaceSearch(
+    originQuery,
+    {
+      enabled: activeField === 'origin',
+    }
+  )
+  const { places: destinationPlaces, isFetching: destinationFetching } =
+    usePlaceSearch(destinationQuery, {
+      enabled: activeField === 'destination',
+    })
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -119,33 +123,37 @@ export function TravellingPicker({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className='sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col'>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plane className="h-5 w-5" />
+          <DialogTitle className='flex items-center gap-2'>
+            <Plane className='h-5 w-5' />
             <Trans>Travelling</Trans>
           </DialogTitle>
-          <DialogDescription className="sr-only"><Trans>Set origin and destination</Trans></DialogDescription>
+          <DialogDescription className='sr-only'>
+            <Trans>Set origin and destination</Trans>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto flex-1 min-h-0 px-1">
+        <div className='space-y-4 overflow-y-auto flex-1 min-h-0 px-1'>
           {/* Origin field */}
-          <div className="space-y-2">
-            <Label><Trans>From</Trans></Label>
-            <div className="relative">
+          <div className='space-y-2'>
+            <Label>
+              <Trans>From</Trans>
+            </Label>
+            <div className='relative'>
               {origin ? (
-                <div className="flex items-center gap-2 border rounded-[8px] px-3 py-2">
+                <div className='flex items-center gap-2 border rounded-[8px] px-3 py-2'>
                   <PlaceIcon category={origin.category} />
-                  <span className="flex-1 truncate">{origin.name}</span>
+                  <span className='flex-1 truncate'>{origin.name}</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        type="button"
+                        type='button'
                         onClick={clearOrigin}
                         aria-label={t`Clear`}
-                        className="text-muted-foreground hover:text-foreground"
+                        className='text-muted-foreground hover:text-foreground'
                       >
-                        <X className="h-4 w-4" />
+                        <X className='h-4 w-4' />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>{t`Clear`}</TooltipContent>
@@ -165,7 +173,7 @@ export function TravellingPicker({
                     autoFocus
                   />
                   {originFetching && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                    <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground' />
                   )}
                 </>
               )}
@@ -173,19 +181,19 @@ export function TravellingPicker({
 
             {/* Origin results */}
             {activeField === 'origin' && !origin && originPlaces.length > 0 && (
-              <div className="max-h-40 overflow-y-auto border rounded-[8px] divide-y">
+              <div className='max-h-40 overflow-y-auto border rounded-[8px] divide-y'>
                 {originPlaces.map((place, index) => (
                   <button
                     key={place.osmId || index}
-                    type="button"
+                    type='button'
                     onClick={() => handleOriginSelect(place)}
-                    className="w-full px-3 py-2 text-start hover:bg-hover transition-colors flex items-start gap-2"
+                    className='w-full px-3 py-2 text-start hover:bg-hover transition-colors flex items-start gap-2'
                   >
                     <PlaceIcon category={place.category} />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">{place.name}</div>
+                    <div className='min-w-0 flex-1'>
+                      <div className='font-medium truncate'>{place.name}</div>
                       {place.displayName !== place.name && (
-                        <div className="text-sm text-muted-foreground truncate">
+                        <div className='text-sm text-muted-foreground truncate'>
                           {place.displayName}
                         </div>
                       )}
@@ -197,22 +205,24 @@ export function TravellingPicker({
           </div>
 
           {/* Destination field */}
-          <div className="space-y-2">
-            <Label><Trans>To</Trans></Label>
-            <div className="relative">
+          <div className='space-y-2'>
+            <Label>
+              <Trans>To</Trans>
+            </Label>
+            <div className='relative'>
               {destination ? (
-                <div className="flex items-center gap-2 border rounded-[8px] px-3 py-2">
+                <div className='flex items-center gap-2 border rounded-[8px] px-3 py-2'>
                   <PlaceIcon category={destination.category} />
-                  <span className="flex-1 truncate">{destination.name}</span>
+                  <span className='flex-1 truncate'>{destination.name}</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        type="button"
+                        type='button'
                         onClick={clearDestination}
                         aria-label={t`Clear`}
-                        className="text-muted-foreground hover:text-foreground"
+                        className='text-muted-foreground hover:text-foreground'
                       >
-                        <X className="h-4 w-4" />
+                        <X className='h-4 w-4' />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>{t`Clear`}</TooltipContent>
@@ -231,40 +241,42 @@ export function TravellingPicker({
                     placeholder={t`Search for destination...`}
                   />
                   {destinationFetching && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                    <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground' />
                   )}
                 </>
               )}
             </div>
 
             {/* Destination results */}
-            {activeField === 'destination' && !destination && destinationPlaces.length > 0 && (
-              <div className="max-h-40 overflow-y-auto border rounded-[8px] divide-y">
-                {destinationPlaces.map((place, index) => (
-                  <button
-                    key={place.osmId || index}
-                    type="button"
-                    onClick={() => handleDestinationSelect(place)}
-                    className="w-full px-3 py-2 text-start hover:bg-hover transition-colors flex items-start gap-2"
-                  >
-                    <PlaceIcon category={place.category} />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">{place.name}</div>
-                      {place.displayName !== place.name && (
-                        <div className="text-sm text-muted-foreground truncate">
-                          {place.displayName}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            {activeField === 'destination' &&
+              !destination &&
+              destinationPlaces.length > 0 && (
+                <div className='max-h-40 overflow-y-auto border rounded-[8px] divide-y'>
+                  {destinationPlaces.map((place, index) => (
+                    <button
+                      key={place.osmId || index}
+                      type='button'
+                      onClick={() => handleDestinationSelect(place)}
+                      className='w-full px-3 py-2 text-start hover:bg-hover transition-colors flex items-start gap-2'
+                    >
+                      <PlaceIcon category={place.category} />
+                      <div className='min-w-0 flex-1'>
+                        <div className='font-medium truncate'>{place.name}</div>
+                        {place.displayName !== place.name && (
+                          <div className='text-sm text-muted-foreground truncate'>
+                            {place.displayName}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
           </div>
 
           {/* Map preview when both are selected */}
           {origin && destination && (
-            <div className="space-y-2">
+            <div className='space-y-2'>
               <MapView
                 lat={destination.lat}
                 lon={destination.lon}
@@ -279,20 +291,16 @@ export function TravellingPicker({
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleClose}
-            >
+          <div className='flex gap-2'>
+            <Button variant='outline' className='flex-1' onClick={handleClose}>
               <Trans>Cancel</Trans>
             </Button>
             <Button
-              className="flex-1"
+              className='flex-1'
               onClick={handleConfirm}
               disabled={!canConfirm}
             >
-              <Check className="size-4" />
+              <Check className='size-4' />
               <Trans>Confirm</Trans>
             </Button>
           </div>

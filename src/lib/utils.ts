@@ -8,7 +8,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-
 // naturalCompare - case- and accent-insensitive, numeric-aware ("Sprint 2"
 // before "Sprint 10"), locale-undefined. Use it for any user-facing list sorted
 // by a name, title or label; SQL orders by intrinsic columns only.

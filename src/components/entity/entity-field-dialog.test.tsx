@@ -11,7 +11,11 @@ describe('EditFieldDialog', () => {
       <EditFieldDialog
         open
         onOpenChange={() => {}}
-        field={createMockEntityField({ id: 'status', name: 'Status', fieldtype: 'enumerated' })}
+        field={createMockEntityField({
+          id: 'status',
+          name: 'Status',
+          fieldtype: 'enumerated',
+        })}
         options={[]}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}

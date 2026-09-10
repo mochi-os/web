@@ -1,7 +1,13 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useQuery, useInfiniteQuery, type UseQueryOptions, type UseInfiniteQueryOptions, type QueryKey } from '@tanstack/react-query'
+import {
+  useQuery,
+  useInfiniteQuery,
+  type UseQueryOptions,
+  type UseInfiniteQueryOptions,
+  type QueryKey,
+} from '@tanstack/react-query'
 import { GeneralError } from '../features/errors/general-error'
 
 /**
@@ -13,17 +19,15 @@ export function useQueryWithError<
   TError = unknown,
   TData = TQueryFnData,
   TQueryKey extends QueryKey = QueryKey,
->(
-  options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>
-) {
+>(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>) {
   const query = useQuery(options)
 
   return {
     ...query,
     ErrorComponent: query.isError ? (
-      <GeneralError 
-        error={query.error} 
-        minimal 
+      <GeneralError
+        error={query.error}
+        minimal
         reset={query.refetch}
         mode='inline'
       />
@@ -42,16 +46,22 @@ export function useInfiniteQueryWithError<
   TQueryKey extends QueryKey = QueryKey,
   TPageParam = unknown,
 >(
-  options: UseInfiniteQueryOptions<TQueryFnData, TError, TData, TQueryKey, TPageParam>
+  options: UseInfiniteQueryOptions<
+    TQueryFnData,
+    TError,
+    TData,
+    TQueryKey,
+    TPageParam
+  >
 ) {
   const query = useInfiniteQuery(options)
 
   return {
     ...query,
     ErrorComponent: query.isError ? (
-      <GeneralError 
-        error={query.error} 
-        minimal 
+      <GeneralError
+        error={query.error}
+        minimal
         reset={query.refetch}
         mode='inline'
       />

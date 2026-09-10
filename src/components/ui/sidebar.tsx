@@ -98,7 +98,9 @@ function SidebarProvider({
       }
 
       // Persist sidebar state: cookie for non-shell, postMessage for shell
-      safeCookieSet(`${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`)
+      safeCookieSet(
+        `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      )
       shellSetSidebarState(openState)
     },
     [setOpenProp, open]
@@ -254,8 +256,12 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className='sr-only'>
-            <SheetTitle><Trans>Sidebar</Trans></SheetTitle>
-            <SheetDescription><Trans>Displays the mobile sidebar.</Trans></SheetDescription>
+            <SheetTitle>
+              <Trans>Sidebar</Trans>
+            </SheetTitle>
+            <SheetDescription>
+              <Trans>Displays the mobile sidebar.</Trans>
+            </SheetDescription>
           </SheetHeader>
           <div className='flex h-full w-full flex-col'>{children}</div>
         </SheetContent>
@@ -334,10 +340,14 @@ function SidebarTrigger({
           {...props}
         >
           <PanelLeftIcon className='size-5' />
-          <span className='sr-only'><Trans>Toggle sidebar</Trans></span>
+          <span className='sr-only'>
+            <Trans>Toggle sidebar</Trans>
+          </span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent><Trans>Toggle sidebar</Trans></TooltipContent>
+      <TooltipContent>
+        <Trans>Toggle sidebar</Trans>
+      </TooltipContent>
     </Tooltip>
   )
 }

@@ -3,7 +3,15 @@
 
 import { useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { User, UsersRound, Search, Globe, Users, Loader2, Plus } from 'lucide-react'
+import {
+  User,
+  UsersRound,
+  Search,
+  Globe,
+  Users,
+  Loader2,
+  Plus,
+} from 'lucide-react'
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -15,7 +23,12 @@ import {
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../components/ui/tabs'
 import { Card, CardContent } from '../../components/ui/card'
 import {
   Select,
@@ -66,11 +79,18 @@ export function AccessDialog({
   onRetryGroups,
 }: AccessDialogProps) {
   const [userSearch, setUserSearch] = useState('')
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
+    null
+  )
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
-  const [selectedSpecial, setSelectedSpecial] = useState<{ id: string; name: string } | null>(null)
+  const [selectedSpecial, setSelectedSpecial] = useState<{
+    id: string
+    name: string
+  } | null>(null)
   const [level, setLevel] = useState(defaultLevel)
-  const [activeTab, setActiveTab] = useState<'user' | 'group' | 'special'>('user')
+  const [activeTab, setActiveTab] = useState<'user' | 'group' | 'special'>(
+    'user'
+  )
   const [isAdding, setIsAdding] = useState(false)
 
   // Reset level when dialog opens
@@ -143,51 +163,58 @@ export function AccessDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={resetAndClose}>
-      <ResponsiveDialogContent className="sm:max-w-[500px]">
+      <ResponsiveDialogContent className='sm:max-w-[500px]'>
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle><Trans>Add access</Trans></ResponsiveDialogTitle>
+          <ResponsiveDialogTitle>
+            <Trans>Add access</Trans>
+          </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             <Trans>Select a user, group, or other rule to grant access.</Trans>
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="user">
-              <User className="me-2 h-4 w-4" />
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+        >
+          <TabsList className='grid w-full grid-cols-3'>
+            <TabsTrigger value='user'>
+              <User className='me-2 h-4 w-4' />
               <Trans>User</Trans>
             </TabsTrigger>
-            <TabsTrigger value="group">
-              <UsersRound className="me-2 h-4 w-4" />
+            <TabsTrigger value='group'>
+              <UsersRound className='me-2 h-4 w-4' />
               <Trans>Group</Trans>
             </TabsTrigger>
-            <TabsTrigger value="special">
-              <Globe className="me-2 h-4 w-4" />
+            <TabsTrigger value='special'>
+              <Globe className='me-2 h-4 w-4' />
               <Trans>Other</Trans>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="user" className="mt-4">
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="user-search"><Trans>Search users</Trans></Label>
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <TabsContent value='user' className='mt-4'>
+            <div className='space-y-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='user-search'>
+                  <Trans>Search users</Trans>
+                </Label>
+                <div className='relative'>
+                  <Search className='text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2' />
                   <Input
-                    id="user-search"
+                    id='user-search'
                     value={userSearch}
                     onChange={(e) => {
                       setUserSearch(e.target.value)
                       setSelectedUser(null)
                     }}
                     placeholder={t`Type to search...`}
-                    className="ps-10"
+                    className='ps-10'
                   />
                 </div>
               </div>
 
               {userSearch.length < 1 ? (
-                <p className="text-muted-foreground text-center text-sm">
+                <p className='text-muted-foreground text-center text-sm'>
                   <Trans>Type to search users</Trans>
                 </p>
               ) : userSearchError ? (
@@ -198,15 +225,15 @@ export function AccessDialog({
                   reset={onRetryUserSearch}
                 />
               ) : userSearchLoading ? (
-                <p className="text-muted-foreground text-center text-sm">
+                <p className='text-muted-foreground text-center text-sm'>
                   <Trans>Searching...</Trans>
                 </p>
               ) : !userSearchResults.length ? (
-                <p className="text-muted-foreground text-center text-sm">
+                <p className='text-muted-foreground text-center text-sm'>
                   <Trans>No users found</Trans>
                 </p>
               ) : (
-                <div className="max-h-48 overflow-y-auto rounded-md border">
+                <div className='max-h-48 overflow-y-auto rounded-md border'>
                   {userSearchResults.map((user) => (
                     <div
                       key={user.id}
@@ -217,8 +244,8 @@ export function AccessDialog({
                       }`}
                       onClick={() => setSelectedUser(user)}
                     >
-                      <User className="h-4 w-4 shrink-0" />
-                      <span className="truncate text-sm">{user.name}</span>
+                      <User className='h-4 w-4 shrink-0' />
+                      <span className='truncate text-sm'>{user.name}</span>
                     </div>
                   ))}
                 </div>
@@ -226,9 +253,11 @@ export function AccessDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="group" className="mt-4">
-            <div className="space-y-4">
-              <Label><Trans>Select group</Trans></Label>
+          <TabsContent value='group' className='mt-4'>
+            <div className='space-y-4'>
+              <Label>
+                <Trans>Select group</Trans>
+              </Label>
               {groupsError ? (
                 <GeneralError
                   error={groupsError}
@@ -237,11 +266,11 @@ export function AccessDialog({
                   reset={onRetryGroups}
                 />
               ) : groups.length === 0 ? (
-                <p className="text-muted-foreground text-center text-sm">
+                <p className='text-muted-foreground text-center text-sm'>
                   <Trans>No groups available</Trans>
                 </p>
               ) : (
-                <div className="max-h-48 overflow-y-auto rounded-md border">
+                <div className='max-h-48 overflow-y-auto rounded-md border'>
                   {groups.map((group) => (
                     <div
                       key={group.id}
@@ -252,11 +281,11 @@ export function AccessDialog({
                       }`}
                       onClick={() => setSelectedGroup(group)}
                     >
-                      <UsersRound className="h-4 w-4 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="truncate text-sm">{group.name}</span>
+                      <UsersRound className='h-4 w-4 shrink-0' />
+                      <div className='min-w-0'>
+                        <span className='truncate text-sm'>{group.name}</span>
                         {group.description && (
-                          <p className="text-muted-foreground truncate text-xs">
+                          <p className='text-muted-foreground truncate text-xs'>
                             {group.description}
                           </p>
                         )}
@@ -268,10 +297,12 @@ export function AccessDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="special" className="mt-4">
-            <div className="space-y-4">
-              <Label><Trans>Select access rule</Trans></Label>
-              <div className="space-y-2">
+          <TabsContent value='special' className='mt-4'>
+            <div className='space-y-4'>
+              <Label>
+                <Trans>Select access rule</Trans>
+              </Label>
+              <div className='space-y-2'>
                 {specialSubjects().map((special) => (
                   <Card
                     key={special.id}
@@ -282,15 +313,17 @@ export function AccessDialog({
                     }`}
                     onClick={() => setSelectedSpecial(special)}
                   >
-                    <CardContent className="flex items-center gap-2 px-3 py-2">
+                    <CardContent className='flex items-center gap-2 px-3 py-2'>
                       {special.id === '*' ? (
-                        <Globe className="h-4 w-4 shrink-0" />
+                        <Globe className='h-4 w-4 shrink-0' />
                       ) : (
-                        <Users className="h-4 w-4 shrink-0" />
+                        <Users className='h-4 w-4 shrink-0' />
                       )}
-                      <div className="min-w-0">
-                        <span className="text-sm font-medium">{special.name}</span>
-                        <p className="text-muted-foreground text-xs">
+                      <div className='min-w-0'>
+                        <span className='text-sm font-medium'>
+                          {special.name}
+                        </span>
+                        <p className='text-muted-foreground text-xs'>
                           {special.description}
                         </p>
                       </div>
@@ -304,9 +337,12 @@ export function AccessDialog({
 
         {/* Access level selector - shown when something is selected */}
         {canAdd && (
-          <div className="mt-4 space-y-3 border-t pt-4">
-            <p className="text-sm">
-              <Trans>Selected: <span className="font-medium">{getSelectedName()}</span></Trans>
+          <div className='mt-4 space-y-3 border-t pt-4'>
+            <p className='text-sm'>
+              <Trans>
+                Selected:{' '}
+                <span className='font-medium'>{getSelectedName()}</span>
+              </Trans>
             </p>
             <Select value={level} onValueChange={setLevel}>
               <SelectTrigger>
@@ -324,11 +360,15 @@ export function AccessDialog({
         )}
 
         <ResponsiveDialogFooter>
-          <Button variant="outline" onClick={resetAndClose}>
+          <Button variant='outline' onClick={resetAndClose}>
             <Trans>Cancel</Trans>
           </Button>
           <Button onClick={handleAdd} disabled={!canAdd || isAdding}>
-            {isAdding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            {isAdding ? (
+              <Loader2 className='size-4 animate-spin' />
+            ) : (
+              <Plus className='size-4' />
+            )}
             {isAdding ? t`Adding...` : t`Add`}
           </Button>
         </ResponsiveDialogFooter>

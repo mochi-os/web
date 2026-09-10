@@ -6,11 +6,7 @@
 
 import type { ReactElement, ReactNode } from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import {
-  render as rtlRender,
-  screen,
-  fireEvent,
-} from '@testing-library/react'
+import { render as rtlRender, screen, fireEvent } from '@testing-library/react'
 import { i18n } from '@lingui/core'
 import { I18nProvider } from '@lingui/react'
 import { GameChatSidebar, GameChatSheet } from './game-chat-panel'

@@ -100,38 +100,45 @@ export function GameNewGameDialog({
       onOpenChange={onOpenChange}
       shouldCloseOnInteractOutside={false}
     >
-      <ResponsiveDialogContent className="sm:max-w-[420px]">
+      <ResponsiveDialogContent className='sm:max-w-[420px]'>
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle className="flex items-center gap-2">
+          <ResponsiveDialogTitle className='flex items-center gap-2'>
             {labels.title}
           </ResponsiveDialogTitle>
-          <ResponsiveDialogDescription className="sr-only">
+          <ResponsiveDialogDescription className='sr-only'>
             {labels.description}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{labels.opponentLabel}</label>
+        <div className='space-y-4'>
+          <div className='space-y-2'>
+            <label className='text-sm font-medium'>
+              {labels.opponentLabel}
+            </label>
             {isLoading ? (
-              <Skeleton className="h-9 w-full" />
+              <Skeleton className='h-9 w-full' />
             ) : error ? (
-              <GeneralError error={error} minimal mode="inline" reset={onRetry} />
+              <GeneralError
+                error={error}
+                minimal
+                mode='inline'
+                reset={onRetry}
+              />
             ) : friends.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border py-8 text-center">
-                <UserPlus className="text-muted-foreground mb-3 h-10 w-10 opacity-50" />
-                <p className="text-muted-foreground text-sm font-medium">
+              <div className='flex flex-col items-center justify-center rounded-lg border py-8 text-center'>
+                <UserPlus className='text-muted-foreground mb-3 h-10 w-10 opacity-50' />
+                <p className='text-muted-foreground text-sm font-medium'>
                   {labels.emptyTitle}
                 </p>
-                <p className="text-muted-foreground mt-1 text-xs">
+                <p className='text-muted-foreground mt-1 text-xs'>
                   {labels.emptyHint}
                 </p>
                 <Button
-                  size="sm"
-                  className="mt-3"
+                  size='sm'
+                  className='mt-3'
                   onClick={() => shellNavigateExternal('/people/?action=add')}
                 >
-                  <Users className="size-4" />
+                  <Users className='size-4' />
                   {labels.addFriends}
                 </Button>
               </div>
@@ -153,9 +160,9 @@ export function GameNewGameDialog({
           {options}
         </div>
 
-        <ResponsiveDialogFooter className="gap-2">
+        <ResponsiveDialogFooter className='gap-2'>
           <Button
-            variant="outline"
+            variant='outline'
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
@@ -163,9 +170,9 @@ export function GameNewGameDialog({
           </Button>
           <Button onClick={onSubmit} disabled={!canSubmit}>
             {isSubmitting ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className='size-4 animate-spin' />
             ) : (
-              <Plus className="size-4" />
+              <Plus className='size-4' />
             )}
             {isSubmitting ? labels.submitting : labels.submit}
           </Button>

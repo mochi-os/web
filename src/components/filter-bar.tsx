@@ -26,10 +26,18 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
     onFilterChange({ search: '', watched: false })
   }
 
-  const activeFilters: { key: keyof FilterState; label: string; value: string }[] = []
+  const activeFilters: {
+    key: keyof FilterState
+    label: string
+    value: string
+  }[] = []
 
   if (filters.search) {
-    activeFilters.push({ key: 'search', label: t`Search`, value: filters.search })
+    activeFilters.push({
+      key: 'search',
+      label: t`Search`,
+      value: filters.search,
+    })
   }
   if (filters.watched) {
     activeFilters.push({ key: 'watched', label: t`Watched`, value: t`On` })

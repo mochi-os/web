@@ -92,7 +92,6 @@ function extractErrorFromPayloadWithSource(payload: unknown): {
   return {}
 }
 
-
 /**
  * Detect an HTML document served where data was expected: a path with no
  * matching action falls through to the SPA catch-all, which answers 200 with
@@ -212,7 +211,10 @@ export function normalizeError(
   if (!message && error instanceof Error) {
     const errorMessage = asNonEmptyString(error.message)
     if (errorMessage) {
-      if (errorMessage.toLowerCase() === 'network error' || errorMessage.toLowerCase() === 'failed to fetch') {
+      if (
+        errorMessage.toLowerCase() === 'network error' ||
+        errorMessage.toLowerCase() === 'failed to fetch'
+      ) {
         // Runtime lookup, not a macro: this file is imported by tests without
         // babel. The msgid stays in every catalog via the identical <Trans>
         // sentence in general-error.tsx.
@@ -225,8 +227,7 @@ export function normalizeError(
     }
   }
 
-  const fallbackMessage =
-    asNonEmptyString(fallback) ?? genericErrorMessage()
+  const fallbackMessage = asNonEmptyString(fallback) ?? genericErrorMessage()
 
   return {
     message: message ?? fallbackMessage,
@@ -235,4 +236,3 @@ export function normalizeError(
     source: message ? source : 'fallback',
   }
 }
-

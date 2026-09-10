@@ -33,7 +33,10 @@ const typography = [
   '[&_hr]:my-8 [&_hr]:border-muted',
 ].join(' ')
 
-function useDocumentMeta(name: DocumentName): { title: string; icon: typeof BookOpen } {
+function useDocumentMeta(name: DocumentName): {
+  title: string
+  icon: typeof BookOpen
+} {
   const { t } = useLingui()
   switch (name) {
     case 'rules':
@@ -50,7 +53,13 @@ function useDocumentMeta(name: DocumentName): { title: string; icon: typeof Book
  * `-/document/get` action calling `mochi.document.get(name)` and SPA routes for
  * document/rules, document/terms and document/privacy that mount this.
  */
-export function DocumentPage({ name, back }: { name: DocumentName; back?: import('../../components/layout/back-button').HeaderBackConfig }) {
+export function DocumentPage({
+  name,
+  back,
+}: {
+  name: DocumentName
+  back?: import('../../components/layout/back-button').HeaderBackConfig
+}) {
   const { title, icon: Icon } = useDocumentMeta(name)
   usePageTitle(title)
   const [html, setHtml] = useState<string | null>(null)
@@ -75,7 +84,11 @@ export function DocumentPage({ name, back }: { name: DocumentName; back?: import
 
   return (
     <>
-      <PageHeader title={title} icon={<Icon className='size-4 md:size-5' />} back={back} />
+      <PageHeader
+        title={title}
+        icon={<Icon className='size-4 md:size-5' />}
+        back={back}
+      />
       <Main>
         {error ? (
           <p className='text-destructive'>

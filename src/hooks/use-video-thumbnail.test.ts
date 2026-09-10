@@ -85,7 +85,10 @@ describe('useVideoThumbnailCached', () => {
     const decodes = videos.length
 
     const again = renderHook(() => useVideoThumbnailCached('/videos/a.mp4'))
-    expect(again.result.current).toMatchObject({ loading: false, url: state.url })
+    expect(again.result.current).toMatchObject({
+      loading: false,
+      url: state.url,
+    })
     expect(videos.length).toBe(decodes)
   })
 
@@ -95,10 +98,14 @@ describe('useVideoThumbnailCached', () => {
       generate(`/videos/bounded-${i}.mp4`)
     }
     // The newest entry is cached...
-    const newest = renderHook(() => useVideoThumbnailCached(`/videos/bounded-${cap}.mp4`))
+    const newest = renderHook(() =>
+      useVideoThumbnailCached(`/videos/bounded-${cap}.mp4`)
+    )
     expect(newest.result.current.loading).toBe(false)
     // ...and the oldest has been evicted, so it decodes afresh.
-    const oldest = renderHook(() => useVideoThumbnailCached('/videos/bounded-0.mp4'))
+    const oldest = renderHook(() =>
+      useVideoThumbnailCached('/videos/bounded-0.mp4')
+    )
     expect(oldest.result.current.loading).toBe(true)
     expect(oldest.result.current.url).toBeNull()
   })

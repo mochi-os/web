@@ -11,7 +11,7 @@ import type { EntityObject, EntitySortState } from '../types/entity-object'
 export function compareEntityObjects<TObject extends EntityObject>(
   a: TObject,
   b: TObject,
-  sort?: EntitySortState | null,
+  sort?: EntitySortState | null
 ): number {
   const sortField = sort?.field || 'rank'
   const sortDirection = sort?.direction || 'asc'
@@ -54,7 +54,7 @@ export function compareEntityObjects<TObject extends EntityObject>(
 
 export function sortEntityObjects<TObject extends EntityObject>(
   objects: TObject[],
-  sort?: EntitySortState | null,
+  sort?: EntitySortState | null
 ): TObject[] {
   return [...objects].sort((a, b) => compareEntityObjects(a, b, sort))
 }

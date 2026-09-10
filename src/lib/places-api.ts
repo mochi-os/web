@@ -4,7 +4,11 @@
 // Photon geocoding API client
 // https://photon.komoot.io/
 
-import type { PhotonResponse, PhotonPlace, PhotonFeature } from '../types/places'
+import type {
+  PhotonResponse,
+  PhotonPlace,
+  PhotonFeature,
+} from '../types/places'
 
 const PHOTON_URL = 'https://photon.komoot.io/api'
 
@@ -31,7 +35,10 @@ function featureToPlace(feature: PhotonFeature): PhotonPlace {
     city: props.city,
     country: props.country,
     category: props.osm_key,
-    osmId: props.osm_type && props.osm_id ? `${props.osm_type}${props.osm_id}` : undefined,
+    osmId:
+      props.osm_type && props.osm_id
+        ? `${props.osm_type}${props.osm_id}`
+        : undefined,
   }
 }
 

@@ -113,7 +113,11 @@ describe('notification link navigation', () => {
 
     middleClick(screen.getByText('A notification'))
 
-    expect(openSpy).toHaveBeenCalledWith('/feeds/abc', '_blank', 'noopener,noreferrer')
+    expect(openSpy).toHaveBeenCalledWith(
+      '/feeds/abc',
+      '_blank',
+      'noopener,noreferrer'
+    )
   })
 
   it('refuses a javascript: link on middle click too', async () => {
@@ -133,7 +137,8 @@ describe('notification link navigation', () => {
 describe('MochiMenu notification affordance', () => {
   async function renderMenu(props: Record<string, unknown>) {
     const { MochiMenu } = await import('./mochi-menu')
-    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query')
+    const { QueryClient, QueryClientProvider } =
+      await import('@tanstack/react-query')
     // MochiMenu renders EntityAvatar, which queries for the accent colour.
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -158,7 +163,9 @@ describe('MochiMenu notification affordance', () => {
         markAllAsRead: () => {},
       },
     })
-    expect(screen.getByLabelText('Open menu (1 unread notification)')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Open menu (1 unread notification)')
+    ).toBeInTheDocument()
   })
 
   it('offers no notification affordance when no source is supplied', async () => {

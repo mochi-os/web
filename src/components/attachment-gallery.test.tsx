@@ -57,7 +57,9 @@ describe('AttachmentGallery failure tiles', () => {
     const fetched = probe(503)
     show()
     fireEvent.error(screen.getByAltText('photo.jpg'))
-    await waitFor(() => expect(screen.getByText('Unavailable')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText('Unavailable')).toBeInTheDocument()
+    )
     expect(fetched).toHaveBeenCalledWith('/app/entity/-/attachments/a1', {
       credentials: 'same-origin',
     })
@@ -67,15 +69,22 @@ describe('AttachmentGallery failure tiles', () => {
     probe(404)
     show()
     fireEvent.error(screen.getByAltText('photo.jpg'))
-    await waitFor(() => expect(screen.getByText('Not found')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText('Not found')).toBeInTheDocument()
+    )
     expect(screen.queryByText('Unavailable')).not.toBeInTheDocument()
   })
 
   it('treats an unreachable server as unavailable, not gone', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+    )
     show()
     fireEvent.error(screen.getByAltText('photo.jpg'))
-    await waitFor(() => expect(screen.getByText('Unavailable')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText('Unavailable')).toBeInTheDocument()
+    )
   })
 
   it('never probes a tile that loads', () => {
@@ -91,7 +100,9 @@ describe('AttachmentGallery failure tiles', () => {
     probe(503)
     show()
     fireEvent.error(screen.getByAltText('photo.jpg'))
-    await waitFor(() => expect(screen.getByText('Unavailable')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText('Unavailable')).toBeInTheDocument()
+    )
     fireEvent.click(screen.getByText('Unavailable'))
     // The placeholder is gone and the image is back for another attempt -
     // and the click stopped at the placeholder, so no lightbox appeared.
@@ -104,12 +115,20 @@ describe('AttachmentGallery failure tiles', () => {
 describe('AttachmentGallery file chips', () => {
   it('downloads through the shell instead of exposing a tokened href', () => {
     const { container } = show([
-      attachment({ id: 'f1', name: 'notes.pdf', type: 'application/pdf', url: '/app/e/-/attachments/f1' }),
+      attachment({
+        id: 'f1',
+        name: 'notes.pdf',
+        type: 'application/pdf',
+        url: '/app/e/-/attachments/f1',
+      }),
     ])
     // No anchor at all: the resolved URL carries the app token, which must
     // not sit in the DOM, and a download link is inert inside the shell.
     expect(container.querySelector('a[href]')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'notes.pdf' }))
-    expect(shellDownload).toHaveBeenCalledWith('/app/e/-/attachments/f1', 'notes.pdf')
+    expect(shellDownload).toHaveBeenCalledWith(
+      '/app/e/-/attachments/f1',
+      'notes.pdf'
+    )
   })
 })
