@@ -102,6 +102,10 @@ jobs:
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: pnpm lint --max-warnings=0
 
+      - name: Check formatting
+        working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
+        run: pnpm format:check
+
       - name: Unit tests
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
         run: |
