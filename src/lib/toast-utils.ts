@@ -10,6 +10,16 @@ import { shellClipboardWrite } from './shell-bridge'
 // Error toasts stay longer (10s vs default 6s)
 const ERROR_DURATION = 10000
 
+/**
+ * True when a pointer landed on a toast. A modal dialog dismisses on any
+ * pointer-down outside itself, and a toast is outside by design: a failed
+ * submit leaves the form open with the error toast beside it, and copying
+ * that error must not throw the form away.
+ */
+export function insideToaster(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[data-sonner-toaster]') !== null
+}
+
 // Toast wrapper that adds copy functionality to error toasts
 export const toast = {
   ...sonnerToast,

@@ -22,6 +22,10 @@ export function Toaster({ duration = DEFAULT_DURATION, closeButton = true, ...pr
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
+          // A modal dialog sets pointer-events: none on the body while it is
+          // open; without this the toasts inherit it and their copy and
+          // close buttons ignore every click.
+          pointerEvents: 'auto',
         } as React.CSSProperties
       }
       {...props}

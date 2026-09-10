@@ -52,6 +52,13 @@ global.IntersectionObserver = class IntersectionObserver {
 // passes while one that actually picks an option throws.
 Element.prototype.scrollIntoView = vi.fn();
 
+// Sonner captures the pointer on every pointer-down inside a toast so a swipe
+// can leave the toast's box. jsdom has no pointer capture; without these a
+// pointer-down on a toast reports an uncaught exception from Sonner's handler.
+Element.prototype.setPointerCapture = vi.fn();
+Element.prototype.releasePointerCapture = vi.fn();
+Element.prototype.hasPointerCapture = vi.fn(() => false);
+
 // @formkit/auto-animate calls el.animate() from a MutationObserver, so a missing
 // Web Animations API throws outside any test's stack: every test still reports
 // as passed and only the exit code says otherwise.
