@@ -6,6 +6,7 @@ import { Trans, useLingui } from '@lingui/react/macro'
 import { LogOut, UserMinus } from 'lucide-react'
 import { Button } from './ui/button'
 import { ListSkeleton } from './ui/list-skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { EntityAvatar } from './entity-avatar'
 import { GeneralError } from '../features/errors/general-error'
 import { naturalCompare } from '../lib/utils'
@@ -113,16 +114,21 @@ export function MemberList({
           }
         } else if (onRemove) {
           action = (
-            <Button
-              variant='ghost'
-              size='icon'
-              aria-label={t`Remove ${name}`}
-              disabled={disabled}
-              onClick={() => onRemove(member)}
-              className={ACTION_CLASS}
-            >
-              <UserMinus className='size-4' />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  aria-label={t`Remove ${name}`}
+                  disabled={disabled}
+                  onClick={() => onRemove(member)}
+                  className={ACTION_CLASS}
+                >
+                  <UserMinus className='size-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t`Remove ${name}`}</TooltipContent>
+            </Tooltip>
           )
         }
 
