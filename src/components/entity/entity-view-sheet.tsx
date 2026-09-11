@@ -319,21 +319,16 @@ export function ViewSheet({
             </Tooltip>
             {mode === 'edit' && onDelete && (
               <DropdownMenu>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='size-8'
-                        aria-label={t`Open view actions`}
-                      >
-                        <MoreHorizontal className='size-4' />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>{t`Open view actions`}</TooltipContent>
-                </Tooltip>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='size-8'
+                    aria-label={t`Open view actions`}
+                  >
+                    <MoreHorizontal className='size-4' />
+                  </Button>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align='end'
                   onCloseAutoFocus={(e) => e.preventDefault()}

@@ -18,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ConfirmDialog } from '../confirm-dialog'
 import { EntityOnboardingEmptyState } from '../entity-onboarding-empty-state'
 import { ListCard } from '../list-card'
@@ -164,21 +163,16 @@ export function EntityListPage<Row extends EntityListRow>({
                   menu={
                     isSubscribed && (
                       <DropdownMenu>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='icon'
-                                aria-label={labels.rowActions}
-                                className='size-8 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100'
-                              >
-                                <Ellipsis className='size-4' />
-                              </Button>
-                            </DropdownMenuTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>{labels.rowActions}</TooltipContent>
-                        </Tooltip>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            aria-label={labels.rowActions}
+                            className='size-8 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100'
+                          >
+                            <Ellipsis className='size-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
                           <DropdownMenuItem
                             onSelect={() => setUnsubscribeId(row.id)}

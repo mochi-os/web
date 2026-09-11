@@ -263,16 +263,11 @@ function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
 
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <SidebarItemAction showOnHover aria-label={t`Open actions`}>
-              <MoreHorizontal />
-            </SidebarItemAction>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{t`Open actions`}</TooltipContent>
-      </Tooltip>
+      <DropdownMenuTrigger asChild>
+        <SidebarItemAction showOnHover aria-label={t`Open actions`}>
+          <MoreHorizontal />
+        </SidebarItemAction>
+      </DropdownMenuTrigger>
       <DropdownMenuContent side='right' align='start' sideOffset={4}>
         {menu.map((menuItem) => (
           <DropdownMenuItem

@@ -648,21 +648,16 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             onRenameColumn ||
             (totalCount === 0 && onDeleteColumn)) && (
             <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type='button'
-                      data-column-menu
-                      aria-label={t`Column actions`}
-                      className='rounded p-1 transition-colors hover:bg-hover active:bg-interactive-active'
-                    >
-                      <MoreHorizontal className='size-4 text-muted-foreground' />
-                    </button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>{t`Column actions`}</TooltipContent>
-              </Tooltip>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type='button'
+                  data-column-menu
+                  aria-label={t`Column actions`}
+                  className='rounded p-1 transition-colors hover:bg-hover active:bg-interactive-active'
+                >
+                  <MoreHorizontal className='size-4 text-muted-foreground' />
+                </button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
                 {(onCreateClick || preview) && (
                   <DropdownMenuItem

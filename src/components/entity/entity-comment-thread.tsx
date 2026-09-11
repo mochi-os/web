@@ -19,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
 import { EntityAvatar } from '../entity-avatar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { useFormat } from '../../hooks/use-format'
 import { getAppPath } from '../../lib/app-path'
 import { MentionTextarea, renderMentions } from '../mention-textarea'
@@ -293,20 +292,15 @@ export function EntityCommentThread({
 
             {/* Mobile: always-visible dropdown */}
             <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type='button'
-                      aria-label={t`Comment actions`}
-                      className='text-muted-foreground hover:bg-hover rounded-full p-1 transition-colors md:hidden'
-                    >
-                      <MoreHorizontal className='size-4' />
-                    </button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>{t`Comment actions`}</TooltipContent>
-              </Tooltip>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type='button'
+                  aria-label={t`Comment actions`}
+                  className='text-muted-foreground hover:bg-hover rounded-full p-1 transition-colors md:hidden'
+                >
+                  <MoreHorizontal className='size-4' />
+                </button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align='start'>
                 <DropdownMenuItem onClick={() => onStartReply(comment.id)}>
                   <Reply className='me-2 size-4' />

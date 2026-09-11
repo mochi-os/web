@@ -25,7 +25,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { Button } from './ui/button'
 import {
   ResponsiveDialog,
@@ -137,20 +136,15 @@ export function OptionsMenu({
   return (
     <>
       <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <button
-                type='button'
-                aria-label={t`More options`}
-                className='text-muted-foreground hover:bg-hover hover:text-foreground inline-flex items-center justify-center rounded-md p-2 transition-colors'
-              >
-                <MoreHorizontal className='size-4' />
-              </button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{t`More options`}</TooltipContent>
-        </Tooltip>
+        <DropdownMenuTrigger asChild>
+          <button
+            type='button'
+            aria-label={t`More options`}
+            className='text-muted-foreground hover:bg-hover hover:text-foreground inline-flex items-center justify-center rounded-md p-2 transition-colors'
+          >
+            <MoreHorizontal className='size-4' />
+          </button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
           {onSources && (
             <DropdownMenuItem onSelect={onSources}>
