@@ -11,6 +11,13 @@ on:
         required: false
         type: string
         default: '20'
+      knip:
+        # Unused exports, files and dependencies. Opt-in per app: the check is
+        # only meaningful once an app's run is clean, and an app that has never
+        # been triaged would go red on its first push. air opted in 2026-09-12.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -116,6 +123,21 @@ jobs:
           else
             echo "no test script — skipping unit tests"
           fi
+
+      # knip's configuration is one file, lib/web/knip.jsonc, checked out above
+      # and copied to the synthesised root because that is where knip resolves
+      # workspaces from. It is NOT duplicated here: the umbrella root carries a
+      # symlink to the same file, so a local run and a CI run read one config.
+      # knip itself is declared only in the umbrella's package.json, which CI
+      # cannot see, so the version is pinned here - keep it in step with the
+      # umbrella's, as with the React overrides above.
+      - name: Check for unused code
+        if: inputs.knip
+        working-directory: ${{ github.workspace }}
+        run: |
+          cp lib/web/knip.jsonc knip.jsonc
+          pnpm add -w -D knip@^6.31.0 --ignore-scripts
+          pnpm exec knip --workspace apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}
 
       - name: Check i18n catalogs
         working-directory: apps/${{ github.event.repository.name }}/${{ inputs.web_dir }}

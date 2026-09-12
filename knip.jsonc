@@ -1,0 +1,63 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    // The root workspace holds no source of its own: its only entry is the
+    // gates script the root Makefile runs. The Android client is a separate
+    // build whose own gitignore knip does not read, so its build output is
+    // excluded here.
+    ".": {
+      "entry": ["claude/scripts/check-jsx-text.mjs"],
+      "ignore": ["clients/**"]
+    },
+    "lib/web": {
+      "entry": [
+        "src/index.ts",
+        "src/vite/mochi-plugin.js",
+        "eslint.config.js",
+        "eslint-i18n-config.js"
+      ],
+      "project": ["src/**/*.{ts,tsx}"],
+      "includeEntryExports": true,
+      "ignore": ["src/**/*.test.{ts,tsx}", "src/test/**"],
+      "vite": false
+    },
+    // air keeps a module nothing imports on purpose: src/lib/parked.ts holds the
+    // catalogue entries for parked features (head tracking, #57). Extraction runs
+    // with --clean and drops every msgid no source mentions, so without that file
+    // the translations vanish from all 105 locales and have to be redone when the
+    // feature returns. lingui reads the source; knip reads the import graph; the
+    // file is an entry point to one and unreachable to the other.
+    "apps/air/web": {
+      "entry": ["src/main.tsx", "src/test/setup.ts", "src/lib/parked.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "vite": false
+    },
+    "apps/*/web": {
+      // main.tsx is the bundle root. setup.ts is named only in vitest.config.ts,
+      // which knip does not read while the vite integration is off.
+      "entry": ["src/main.tsx", "src/test/setup.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      // Left off on purpose: with it on, knip evaluates vite.config.ts, whose
+      // lingui plugin reads lingui.config.js from the working directory and
+      // throws because knip runs from the repository root.
+      "vite": false
+    }
+  },
+  "ignoreDependencies": [
+    "@fontsource/.+",
+    "@lingui/swc-plugin",
+    "@lingui/vite-plugin",
+    // Type-imported by every app's vite-env.d.ts (Messages), which knip does not
+    // follow; go, home, publisher and recommendations declare it for that alone.
+    "@lingui/core",
+    // Loaded by the CSS `@plugin` line, which knip does not follow.
+    "@tailwindcss/typography",
+    "@tailwindcss/vite",
+    "@tanstack/router-plugin",
+    "@testing-library/jest-dom",
+    // Imported only by vite.config.ts and vitest.config.ts (see "vite": false).
+    "@vitejs/plugin-react-swc",
+    "tailwindcss",
+    "tw-animate-css"
+  ]
+}
