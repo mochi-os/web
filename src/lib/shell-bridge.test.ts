@@ -345,6 +345,33 @@ describe('authenticatedUrl', () => {
     expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=abc123')
   })
 
+  // A URL is copied, logged and kept, so what goes in one is the short-lived
+  // read-only token, never the app token that authorizes every action for a
+  // year.
+  it('prefers the asset token to the app token', async () => {
+    const { authenticatedUrl } = await loadInShell('app-token', {
+      asset: 'asset-token',
+    })
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=asset-token')
+  })
+
+  it('falls back to the app token when an older shell sends no asset token', async () => {
+    const { authenticatedUrl } = await loadInShell('app-token')
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=app-token')
+  })
+
+  it('takes the refreshed asset token, which expires long before the app token', async () => {
+    const { authenticatedUrl } = await loadInShell('app-token', {
+      asset: 'first-asset',
+    })
+    dispatchFromParent({
+      type: 'token-refresh',
+      token: 'app-token',
+      asset: 'second-asset',
+    })
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=second-asset')
+  })
+
   // The shell mounts every app on one origin. A same-origin check alone
   // would hand chat's token to a markdown image whose source names another
   // app's action, which then runs as this reader.

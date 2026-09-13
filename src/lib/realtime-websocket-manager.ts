@@ -3,6 +3,13 @@
 
 // WebSocket manager — generic, works with any app
 
+import {
+  websocketFailed,
+  websocketOpened,
+  websocketProtocols,
+  websocketQueryToken,
+} from './websocket-token'
+
 const devConsole = globalThis.console
 
 export type WebsocketConnectionStatus =
@@ -272,20 +279,27 @@ export class ChatWebsocketManager {
     socketUrl.searchParams.set('key', chatKey)
 
     // Same-origin only, as api-client.ts gates the Authorization header:
-    // base need not be this origin and the token travels in the query
-    // string. Tested
-    // against the http(s) base - wss://host never equals https://host.
+    // base need not be this origin. Tested against the http(s) base - wss://host
+    // never equals https://host. The token itself rides in the subprotocol, and
+    // reaches the query string only where the page has fallen back for a server
+    // that ignores it.
     const token = this.sameOrigin() ? this.token?.() : undefined
-    if (token) {
-      const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
-      socketUrl.searchParams.set('token', rawToken)
+    const query = websocketQueryToken(token)
+    if (query) {
+      socketUrl.searchParams.set('token', query)
     }
+    const protocols = websocketProtocols(token)
 
     try {
-      const socket = new WebSocket(socketUrl.toString())
+      const socket = new WebSocket(socketUrl.toString(), protocols)
       entry.socket = socket
       this.updateStatus(entry, 'connecting')
+      // A handshake that never opens is how a server that ignores the token
+      // subprotocol presents itself, and the next attempt then falls back.
+      let established = false
       socket.onopen = () => {
+        established = true
+        websocketOpened(protocols)
         entry.retries = 0
         entry.pendingReconnect = false
         this.updateStatus(entry, 'ready')
@@ -300,6 +314,7 @@ export class ChatWebsocketManager {
         this.updateStatus(entry, 'error', 'socket-error')
       }
       socket.onclose = (event) => {
+        if (!established) websocketFailed(protocols)
         this.handleClose(entry, socket, event)
       }
     } catch (error) {

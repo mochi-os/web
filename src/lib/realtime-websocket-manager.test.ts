@@ -7,6 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChatWebsocketManager } from './realtime-websocket-manager'
+import { websocketTokenReset } from './websocket-token'
 
 class MockWebSocket {
   static CONNECTING = 0
@@ -16,6 +17,7 @@ class MockWebSocket {
   static instances: MockWebSocket[] = []
 
   url: string
+  protocols?: string | string[]
   readyState = MockWebSocket.CONNECTING
   onopen: (() => void) | null = null
   onmessage: ((event: { data: string }) => void) | null = null
@@ -23,8 +25,9 @@ class MockWebSocket {
   onerror: (() => void) | null = null
   closeCalled = false
 
-  constructor(url: string) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url
+    this.protocols = protocols
     MockWebSocket.instances.push(this)
   }
 
@@ -186,6 +189,9 @@ describe('ChatWebsocketManager token scoping', () => {
     vi.useFakeTimers()
     MockWebSocket.instances = []
     vi.stubGlobal('WebSocket', MockWebSocket)
+    // Page-scoped state: a fallback recorded by another test would move the
+    // token back into the URL and make these assertions measure that instead.
+    websocketTokenReset()
   })
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -199,9 +205,9 @@ describe('ChatWebsocketManager token scoping', () => {
     })
     manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
     await vi.advanceTimersByTimeAsync(0)
-    const url = MockWebSocket.instances[0]?.url ?? ''
+    const socket = MockWebSocket.instances[0]
     manager.dispose()
-    return url
+    return { url: socket?.url ?? '', protocols: socket?.protocols }
   }
 
   it('defaults to the socket route core serves', async () => {
@@ -215,30 +221,34 @@ describe('ChatWebsocketManager token scoping', () => {
     const url = new URL(MockWebSocket.instances[0]?.url ?? 'ws://unset/')
     manager.dispose()
     expect(url.pathname).toBe('/_/websocket')
-    expect(url.searchParams.get('token')).toBe('secret-jwt')
   })
 
-  it('sends the token to this origin', async () => {
-    // Companion to the refusals below: without it, "no token in the URL"
+  // The token is presented in the handshake's subprotocol, not its URL, where
+  // it landed in every access log and in any URL a viewer copied.
+  it('sends the token to this origin, in the subprotocol', async () => {
+    // Companion to the refusals below: without it, "no token presented"
     // would pass just as well against a manager that never connects.
-    const url = await connect(window.location.origin)
+    const { url, protocols } = await connect(window.location.origin)
     expect(url).toContain('key=k1')
-    expect(url).toContain('token=secret-jwt')
+    expect(protocols).toEqual(['mochi.token.secret-jwt'])
+    expect(url).not.toContain('token=')
   })
 
   it('withholds the token from another origin', async () => {
-    const url = await connect('https://evil.example')
+    const { url, protocols } = await connect('https://evil.example')
     expect(url).toContain('key=k1')
     expect(url).not.toContain('secret-jwt')
     expect(url).not.toContain('token=')
+    expect(protocols).toBeUndefined()
   })
 
   it('withholds the token from another port on this host', async () => {
     // A port is part of an origin, and this is the case a host-only check
     // would wave through.
-    const url = await connect(
+    const { url, protocols } = await connect(
       `${window.location.protocol}//${window.location.hostname}:8443`
     )
     expect(url).not.toContain('secret-jwt')
+    expect(protocols).toBeUndefined()
   })
 })

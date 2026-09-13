@@ -10,6 +10,8 @@ import {
   entityWebsocketManager,
   type EntityWebsocketEvent,
 } from './entity-websocket-manager'
+import { websocketTokenReset } from './websocket-token'
+import { useAuthStore } from '../stores/auth-store'
 
 class MockWebSocket {
   static CONNECTING = 0
@@ -19,6 +21,7 @@ class MockWebSocket {
   static instances: MockWebSocket[] = []
 
   url: string
+  protocols?: string | string[]
   readyState = MockWebSocket.CONNECTING
   onopen: (() => void) | null = null
   onmessage: ((event: { data: string }) => void) | null = null
@@ -26,8 +29,9 @@ class MockWebSocket {
   onerror: (() => void) | null = null
   closeCalled = false
 
-  constructor(url: string) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url
+    this.protocols = protocols
     MockWebSocket.instances.push(this)
   }
 
@@ -276,5 +280,55 @@ describe('entityWebsocketManager', () => {
     expect(socketsFor('kC')).toHaveLength(2)
     second.deliver({ type: 'ping' })
     expect(received).toEqual(['a:ping', 'b:ping'])
+  })
+
+  // The token used to travel in the handshake URL, where it lands in every
+  // access log and in any URL a viewer copies.
+  describe('token presentation', () => {
+    beforeEach(() => {
+      websocketTokenReset()
+      useAuthStore.setState({ token: 'Bearer secret-token' })
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    })
+
+    afterEach(() => {
+      useAuthStore.setState({ token: '' })
+      websocketTokenReset()
+    })
+
+    it('offers the token as a subprotocol and leaves the URL clean', () => {
+      entityWebsocketManager.subscribe('kToken', () => {})
+      const [socket] = socketsFor('kToken')
+      expect(socket.protocols).toEqual(['mochi.token.secret-token'])
+      expect(socket.url).not.toContain('token=')
+    })
+
+    it('falls back to the URL for a server that ignores the subprotocol', () => {
+      entityWebsocketManager.subscribe('kFallback', () => {})
+      const [first] = socketsFor('kFallback')
+      // Closed without ever opening: the handshake was refused, which is what
+      // a core too old to read the subprotocol does.
+      first.finishClose()
+      vi.runAllTimers()
+
+      const sockets = socketsFor('kFallback')
+      expect(sockets.length).toBeGreaterThan(1)
+      const retry = sockets[sockets.length - 1]
+      expect(retry.protocols).toBeUndefined()
+      expect(retry.url).toContain('token=secret-token')
+    })
+
+    it('keeps the token out of the URL when a live socket drops', () => {
+      entityWebsocketManager.subscribe('kDrop', () => {})
+      const [first] = socketsFor('kDrop')
+      first.open()
+      first.finishClose()
+      vi.runAllTimers()
+
+      const sockets = socketsFor('kDrop')
+      const retry = sockets[sockets.length - 1]
+      expect(retry.protocols).toEqual(['mochi.token.secret-token'])
+      expect(retry.url).not.toContain('token=')
+    })
   })
 })

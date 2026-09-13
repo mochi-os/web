@@ -91,6 +91,12 @@ export type LocalePreferences = {
 
 type ShellInitData = {
   token: string
+  /**
+   * The short-lived, read-only token for URL-borne use: an image or attachment
+   * source, which a browser fetches with no header of ours on it. Absent from
+   * an older shell, and authenticatedUrl then falls back to `token`.
+   */
+  asset?: string
   theme?: string
   colorTheme?: ColorTheme | null
   inShell: boolean
@@ -993,7 +999,11 @@ export function authenticatedUrl(url: string): string {
   if (!prefix || !new URL(url, document.baseURI).pathname.startsWith(prefix))
     return url
 
-  const token = shellInitData.token
+  // The asset token in preference to the app token: this one ends up in the
+  // DOM, in a copied image address and in anything that keeps a URL, so it is
+  // minted read-only and expires in half an hour rather than a year. An older
+  // shell sends none, and the app token is then all there is.
+  const token = shellInitData.asset || shellInitData.token
   if (!token) return url
 
   const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
@@ -1060,6 +1070,9 @@ if (typeof window !== 'undefined') {
     // Handle token refresh
     if (data.type === 'token-refresh' && shellInitData) {
       shellInitData.token = data.token as string
+      // The asset token expires far sooner than the app token, so the refresh
+      // is what keeps later image URLs working.
+      if (typeof data.asset === 'string') shellInitData.asset = data.asset
     }
 
     // Handle clipboard result
