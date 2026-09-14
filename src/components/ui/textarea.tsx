@@ -4,7 +4,12 @@
 import * as React from 'react'
 import { cn } from '../../lib/utils'
 
-function Textarea({ className, ref, onInput, ...props }: React.ComponentProps<'textarea'>) {
+function Textarea({
+  className,
+  ref,
+  onInput,
+  ...props
+}: React.ComponentProps<'textarea'>) {
   const innerRef = React.useRef<HTMLTextAreaElement | null>(null)
 
   const autoResize = React.useCallback((el: HTMLTextAreaElement | null) => {

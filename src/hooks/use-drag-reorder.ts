@@ -1,7 +1,13 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useCallback, useEffect, useRef, useState, type RefCallback } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefCallback,
+} from 'react'
 import { nearestSlotIndex, type Slot } from '../lib/reorder'
 import { useListAutoAnimate } from './use-list-auto-animate'
 
@@ -168,7 +174,8 @@ export function useDragReorder({
       document.body.style.removeProperty('user-select')
       document.body.style.removeProperty('cursor')
 
-      const moved = Boolean(gesture?.active) && gesture!.index !== gesture!.originIndex
+      const moved =
+        Boolean(gesture?.active) && gesture!.index !== gesture!.originIndex
       if (moved && outcome === 'cancel') {
         onMoveRef.current(gesture!.index, gesture!.originIndex)
       }

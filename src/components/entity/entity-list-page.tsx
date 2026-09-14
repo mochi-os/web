@@ -18,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ConfirmDialog } from '../confirm-dialog'
 import { EntityOnboardingEmptyState } from '../entity-onboarding-empty-state'
 import { ListCard } from '../list-card'
@@ -109,25 +108,25 @@ export function EntityListPage<Row extends EntityListRow>({
     () =>
       new Set(
         rows.flatMap((row) =>
-          [row.id, row.fingerprint].filter((x): x is string => !!x),
-        ),
+          [row.id, row.fingerprint].filter((x): x is string => !!x)
+        )
       ),
-    [rows],
+    [rows]
   )
 
   return (
     <>
       <PageHeader
         title={labels.title}
-        icon={<Icon className="size-4 md:size-5" />}
+        icon={<Icon className='size-4 md:size-5' />}
       />
       <Main>
         {error && (
-          <div className="mb-4">
+          <div className='mb-4'>
             <GeneralError
               error={new Error(error)}
               minimal
-              mode="inline"
+              mode='inline'
               reset={() => {
                 void refresh()
               }}
@@ -143,43 +142,38 @@ export function EntityListPage<Row extends EntityListRow>({
             description={labels.emptyDescription}
             searchSlot={renderSearch(subscribedIds)}
             primaryActionSlot={
-              <Button variant="outline" onClick={onCreate}>
-                <Plus className="me-2 h-4 w-4" />
+              <Button variant='outline' onClick={onCreate}>
+                <Plus className='me-2 h-4 w-4' />
                 {labels.createAction}
               </Button>
             }
             secondarySlot={renderRecommended(subscribedIds)}
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
             {rows.map((row) => {
               const isSubscribed = !row.owner.local
               return (
                 <ListCard
                   key={row.id}
-                  icon={<Icon className="size-5" />}
+                  icon={<Icon className='size-5' />}
                   title={row.name}
                   highlighted={isSubscribed}
                   renderLink={(className) => renderLink(row, className)}
                   menu={
                     isSubscribed && (
                       <DropdownMenu>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={labels.rowActions}
-                                className="size-8 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                              >
-                                <Ellipsis className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>{labels.rowActions}</TooltipContent>
-                        </Tooltip>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            aria-label={labels.rowActions}
+                            className='size-8 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100'
+                          >
+                            <Ellipsis className='size-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
                           <DropdownMenuItem
                             onSelect={() => setUnsubscribeId(row.id)}
                           >
@@ -191,7 +185,7 @@ export function EntityListPage<Row extends EntityListRow>({
                   }
                 >
                   {row.description && (
-                    <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                    <p className='text-muted-foreground mt-1 line-clamp-2 text-sm'>
                       {row.description}
                     </p>
                   )}

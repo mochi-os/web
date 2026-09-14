@@ -79,7 +79,12 @@ function getInitialColorTheme(): ColorTheme | null {
   const overrides: Record<string, string> = {}
   for (let i = 0; i < root.style.length; i++) {
     const prop = root.style[i]
-    if (prop.startsWith('--') && prop !== '--hue' && prop !== '--hue-chroma' && prop !== '--hue-bg') {
+    if (
+      prop.startsWith('--') &&
+      prop !== '--hue' &&
+      prop !== '--hue-chroma' &&
+      prop !== '--hue-bg'
+    ) {
       overrides[prop] = root.style.getPropertyValue(prop).trim()
     }
   }
@@ -129,7 +134,12 @@ function applyColorThemeToDOM(ct: ColorTheme | null) {
     // The hue triple arrives over postMessage from an untrusted app - the shell
     // relays whatever any app sends - so it gets the same guard as the
     // overrides below rather than being installed on sight.
-    if (ct.hue && !isFetchingValue(ct.hue) && !isFetchingValue(ct.chroma) && !isFetchingValue(ct.background)) {
+    if (
+      ct.hue &&
+      !isFetchingValue(ct.hue) &&
+      !isFetchingValue(ct.chroma) &&
+      !isFetchingValue(ct.background)
+    ) {
       install('--hue', ct.hue)
       install('--hue-chroma', ct.chroma)
       install('--hue-bg', ct.background)
@@ -241,7 +251,10 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       // hueBg: read by shells and app builds older than 2026-09; drop after
       // one release.
       window.parent.postMessage(
-        { type: 'color-theme-set', colorTheme: ct && { ...ct, hueBg: ct.background } },
+        {
+          type: 'color-theme-set',
+          colorTheme: ct && { ...ct, hueBg: ct.background },
+        },
         shellOrigin()
       )
     }

@@ -69,8 +69,11 @@ export function EntityAvatar({
   icon,
 }: EntityAvatarProps) {
   const px = typeof size === 'number' ? size : AVATAR_SIZES[size]
-  const rawSrc = src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
-  const resolvedSrc = rawSrc ? authenticatedUrl(normalizeEntityUrl(rawSrc)) : null
+  const rawSrc =
+    src ?? (fingerprint ? fingerprintUrl(fingerprint, version) : null)
+  const resolvedSrc = rawSrc
+    ? authenticatedUrl(normalizeEntityUrl(rawSrc))
+    : null
   const { accent: fetched } = useAccent(
     !accent && styleUrl ? normalizeEntityUrl(styleUrl) : undefined
   )

@@ -8,7 +8,9 @@ import { useFormat } from './use-format'
 describe('useFormat', () => {
   it('joins a list the way the interface language does', () => {
     const { result } = renderHook(() => useFormat())
-    expect(result.current.formatList(['Epic', 'Story', 'Task'], 'disjunction')).toBe('Epic, Story, or Task')
+    expect(
+      result.current.formatList(['Epic', 'Story', 'Task'], 'disjunction')
+    ).toBe('Epic, Story, or Task')
     expect(result.current.formatList(['Epic', 'Story'])).toBe('Epic and Story')
     expect(result.current.formatList(['Epic'])).toBe('Epic')
   })

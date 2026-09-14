@@ -16,7 +16,7 @@ export function coerceObjectArray<T extends object>(value: unknown): T[] {
 
   const values = Object.values(value)
   return values.every(
-    (item) => Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+    (item) => Boolean(item) && typeof item === 'object' && !Array.isArray(item)
   )
     ? (values as T[])
     : []

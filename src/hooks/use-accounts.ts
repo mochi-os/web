@@ -48,7 +48,8 @@ export function useAccounts(
     data: providersData,
     isLoading: isProvidersLoading,
     error: providersError,
-  } = useQuery({ // eslint-disable-line @tanstack/query/exhaustive-deps
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  } = useQuery({
     queryKey: ['accounts', 'providers', appBase, capability],
     queryFn: async () => {
       try {
@@ -69,7 +70,8 @@ export function useAccounts(
     isLoading: isAccountsLoading,
     error: accountsError,
     refetch,
-  } = useQuery({ // eslint-disable-line @tanstack/query/exhaustive-deps
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  } = useQuery({
     queryKey: ['accounts', 'list', appBase, capability],
     queryFn: async () => {
       try {
@@ -86,8 +88,14 @@ export function useAccounts(
 
   // Memoize to prevent unstable references during loading
   // Use Array.isArray to handle cases where API returns non-array data
-  const providers = useMemo(() => Array.isArray(providersData) ? providersData : [], [providersData])
-  const accounts = useMemo(() => Array.isArray(accountsData) ? accountsData : [], [accountsData])
+  const providers = useMemo(
+    () => (Array.isArray(providersData) ? providersData : []),
+    [providersData]
+  )
+  const accounts = useMemo(
+    () => (Array.isArray(accountsData) ? accountsData : []),
+    [accountsData]
+  )
 
   const addMutation = useMutation({
     mutationFn: async ({
@@ -208,8 +216,16 @@ export function useAccounts(
     isAccountsLoading,
     providersError,
     accountsError,
-    add: async (type: string, fields: Record<string, string>, addToExisting = true) => {
-      const result = await addMutation.mutateAsync({ type, fields, addToExisting })
+    add: async (
+      type: string,
+      fields: Record<string, string>,
+      addToExisting = true
+    ) => {
+      const result = await addMutation.mutateAsync({
+        type,
+        fields,
+        addToExisting,
+      })
       if (!result) throw new Error(t`Failed to add account`)
       return result
     },

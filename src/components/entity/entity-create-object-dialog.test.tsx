@@ -32,7 +32,9 @@ function show(over: Record<string, unknown> = {}) {
     srTitle: 'Create',
     srDescription: 'Create an object',
     buildObject: (base: EntityObject) => base,
-    listObjects: vi.fn(async () => ({ data: { objects: [] as EntityObject[] } })),
+    listObjects: vi.fn(async () => ({
+      data: { objects: [] as EntityObject[] },
+    })),
     listPeople: vi.fn(async () => ({ data: { people: [] } })),
     createObject,
     setValue,
@@ -40,7 +42,11 @@ function show(over: Record<string, unknown> = {}) {
     searchUsers: vi.fn(async () => ({ data: { results: [] } })),
     ...over,
   }
-  render(<EntityCreateObjectDialog {...(props as Parameters<typeof EntityCreateObjectDialog>[0])} />)
+  render(
+    <EntityCreateObjectDialog
+      {...(props as Parameters<typeof EntityCreateObjectDialog>[0])}
+    />
+  )
   return { createObject, setValue }
 }
 
@@ -58,7 +64,9 @@ describe('EntityCreateObjectDialog', () => {
     expect(createObject).toHaveBeenCalledTimes(1)
 
     fireEvent.submit(again.closest('form') as HTMLFormElement)
-    await waitFor(() => expect(setValue.mock.calls.length).toBeGreaterThanOrEqual(3))
+    await waitFor(() =>
+      expect(setValue.mock.calls.length).toBeGreaterThanOrEqual(3)
+    )
     expect(createObject).toHaveBeenCalledTimes(1)
     expect(setValue.mock.calls.every((call) => call[1] === 'o1')).toBe(true)
   })
@@ -83,7 +91,9 @@ describe('EntityCreateObjectDialog', () => {
       },
     })
     show({ design })
-    expect(await screen.findByText('No Epic, Story, or Task to add to')).toBeInTheDocument()
+    expect(
+      await screen.findByText('No Epic, Story, or Task to add to')
+    ).toBeInTheDocument()
   })
 
   it('leads the Create button with the add glyph', async () => {

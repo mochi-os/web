@@ -7,17 +7,17 @@
 // reloading.
 
 const RTL_BASES = new Set([
-  'ar',  // Arabic
-  'he',  // Hebrew (modern)
-  'iw',  // Hebrew (legacy ISO 639-1)
-  'fa',  // Persian
-  'ur',  // Urdu
-  'ps',  // Pashto
-  'sd',  // Sindhi
-  'ku',  // Kurdish (Sorani)
+  'ar', // Arabic
+  'he', // Hebrew (modern)
+  'iw', // Hebrew (legacy ISO 639-1)
+  'fa', // Persian
+  'ur', // Urdu
+  'ps', // Pashto
+  'sd', // Sindhi
+  'ku', // Kurdish (Sorani)
   'ckb', // Central Kurdish
-  'yi',  // Yiddish
-  'dv',  // Dhivehi
+  'yi', // Yiddish
+  'dv', // Dhivehi
 ])
 
 /**

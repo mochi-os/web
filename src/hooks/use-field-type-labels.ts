@@ -17,6 +17,6 @@ export function useFieldTypeLabels(): Record<string, string> {
       text: t`Text`,
       user: t`User`,
     }),
-    [t],
+    [t]
   )
 }

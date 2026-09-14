@@ -23,7 +23,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '../ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ColourPicker, PRESET_COLOURS } from '../colour-picker'
 import type { EntityFieldOption } from '../../types/entity-object'
 
@@ -96,21 +95,16 @@ export function EntityOptionDialog({
           </ResponsiveDialogDescription>
           {isEdit && onDelete && (
             <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      className='size-8'
-                      aria-label={t`Open option actions`}
-                    >
-                      <MoreHorizontal className='size-4' />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>{t`Open option actions`}</TooltipContent>
-              </Tooltip>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-8'
+                  aria-label={t`Open option actions`}
+                >
+                  <MoreHorizontal className='size-4' />
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
                 <DropdownMenuItem onClick={onDelete}>
                   <Minus className='size-4' />
@@ -167,7 +161,11 @@ export function EntityOptionDialog({
               >
                 <Trans>Cancel</Trans>
               </Button>
-              <Button type='button' onClick={handleSave} disabled={!name.trim()}>
+              <Button
+                type='button'
+                onClick={handleSave}
+                disabled={!name.trim()}
+              >
                 <Check className='size-4' />
                 <Trans>Save</Trans>
               </Button>

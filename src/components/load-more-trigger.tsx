@@ -72,8 +72,8 @@ export function LoadMoreTrigger({
   return (
     <div ref={sentinelRef} className={cn('min-h-2', className)}>
       {isLoading && (
-        <div className="flex justify-center py-4">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <div className='flex justify-center py-4'>
+          <Loader2 className='size-5 animate-spin text-muted-foreground' />
         </div>
       )}
     </div>

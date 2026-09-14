@@ -8,7 +8,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // suite does: parent !== window, and parent.document throws SecurityError.
 
 let parentPostMessage: ReturnType<typeof vi.fn>
-let parentStub: { postMessage: ReturnType<typeof vi.fn>; readonly document: never }
+let parentStub: {
+  postMessage: ReturnType<typeof vi.fn>
+  readonly document: never
+}
 
 beforeEach(() => {
   parentPostMessage = vi.fn()
@@ -36,7 +39,11 @@ afterEach(() => {
   vi.resetModules()
 })
 
-function dispatchFrom(source: unknown, data: unknown, origin: string = window.location.origin) {
+function dispatchFrom(
+  source: unknown,
+  data: unknown,
+  origin: string = window.location.origin
+) {
   const event = new MessageEvent('message', { data, origin })
   Object.defineProperty(event, 'source', { value: source, configurable: true })
   window.dispatchEvent(event)
@@ -68,7 +75,11 @@ describe('shell-storage getItem', () => {
     expect(sent.type).toBe('storage.get')
     expect(sent.key).toBe('key')
 
-    dispatchFrom(window.parent, { type: 'storage.result', id: sent.id, value: 'genuine' })
+    dispatchFrom(window.parent, {
+      type: 'storage.result',
+      id: sent.id,
+      value: 'genuine',
+    })
     expect(await pending).toBe('genuine')
   })
 
@@ -78,16 +89,23 @@ describe('shell-storage getItem', () => {
     const sent = parentPostMessage.mock.calls[0][0]
 
     // A sibling frame or popup guessing the counter-based id.
-    dispatchFrom({ name: 'not-the-shell' }, {
-      type: 'storage.result',
-      id: sent.id,
-      value: 'forged',
-    })
+    dispatchFrom(
+      { name: 'not-the-shell' },
+      {
+        type: 'storage.result',
+        id: sent.id,
+        value: 'forged',
+      }
+    )
     expect(await settledValue(pending)).toBe('PENDING')
 
     // Still answerable by the real shell afterwards — the forged message must
     // not have consumed the pending resolver on its way to being ignored.
-    dispatchFrom(window.parent, { type: 'storage.result', id: sent.id, value: 'genuine' })
+    dispatchFrom(window.parent, {
+      type: 'storage.result',
+      id: sent.id,
+      value: 'genuine',
+    })
     expect(await pending).toBe('genuine')
   })
 
@@ -96,7 +114,11 @@ describe('shell-storage getItem', () => {
     const pending = getItem('key')
     const sent = parentPostMessage.mock.calls[0][0]
 
-    dispatchFrom(window, { type: 'storage.result', id: sent.id, value: 'forged' })
+    dispatchFrom(window, {
+      type: 'storage.result',
+      id: sent.id,
+      value: 'forged',
+    })
     expect(await settledValue(pending)).toBe('PENDING')
   })
 
@@ -105,7 +127,11 @@ describe('shell-storage getItem', () => {
     const pending = getItem('key')
     const sent = parentPostMessage.mock.calls[0][0]
 
-    dispatchFrom(window.parent, { type: 'init', id: sent.id, value: 'wrong-type' })
+    dispatchFrom(window.parent, {
+      type: 'init',
+      id: sent.id,
+      value: 'wrong-type',
+    })
     expect(await settledValue(pending)).toBe('PENDING')
   })
 })

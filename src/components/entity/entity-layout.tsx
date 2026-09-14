@@ -109,7 +109,19 @@ export function EntityLayout<Row extends EntityListRow>({
     ]
 
     return { navGroups: groups }
-  }, [rows, onCreate, error, refresh, icon, viewUrl, group, all, find, create, retry])
+  }, [
+    rows,
+    onCreate,
+    error,
+    refresh,
+    icon,
+    viewUrl,
+    group,
+    all,
+    find,
+    create,
+    retry,
+  ])
 
   return (
     <>

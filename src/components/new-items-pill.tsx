@@ -30,12 +30,12 @@ export function NewItemsPill({
       )}
     >
       <button
-        type="button"
+        type='button'
         onClick={onClick}
-        aria-live="polite"
-        className="bg-primary text-primary-foreground focus-visible:ring-ring pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium shadow-lg ring-1 ring-black/5 transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none"
+        aria-live='polite'
+        className='bg-primary text-primary-foreground focus-visible:ring-ring pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium shadow-lg ring-1 ring-black/5 transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none'
       >
-        <ArrowUp className="size-4" />
+        <ArrowUp className='size-4' />
         {label}
       </button>
     </div>

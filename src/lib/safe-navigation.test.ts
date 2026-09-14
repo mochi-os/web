@@ -29,16 +29,22 @@ describe('isSameOriginRequest', () => {
   it('attaches to an absolute same-origin URL', () => {
     // search-entity-page builds these deliberately, to bypass an
     // entity-context baseURL. They must keep their token.
-    expect(isSameOriginRequest('/forums/x/-/', `${ORIGIN}/forums/directory`)).toBe(true)
+    expect(
+      isSameOriginRequest('/forums/x/-/', `${ORIGIN}/forums/directory`)
+    ).toBe(true)
   })
 
   it('refuses an absolute foreign URL', () => {
-    expect(isSameOriginRequest('/feeds/', 'https://attacker.example/')).toBe(false)
+    expect(isSameOriginRequest('/feeds/', 'https://attacker.example/')).toBe(
+      false
+    )
     expect(isSameOriginRequest('', 'http://attacker.example/x')).toBe(false)
   })
 
   it('refuses a protocol-relative URL, which axios treats as absolute', () => {
-    expect(isSameOriginRequest('/feeds/', '//attacker.example/-/info')).toBe(false)
+    expect(isSameOriginRequest('/feeds/', '//attacker.example/-/info')).toBe(
+      false
+    )
     expect(isSameOriginRequest('', '//attacker.example/-/info')).toBe(false)
   })
 
@@ -86,7 +92,9 @@ describe('isSameOriginResource', () => {
   })
 
   it('accepts an absolute same-origin URL', () => {
-    expect(isSameOriginResource(`${ORIGIN}/chat/abc/-/attachments/1`)).toBe(true)
+    expect(isSameOriginResource(`${ORIGIN}/chat/abc/-/attachments/1`)).toBe(
+      true
+    )
   })
 
   it('refuses a protocol-relative URL', () => {
@@ -105,14 +113,18 @@ describe('isSameOriginResource', () => {
   })
 
   it('refuses a same-host URL on another port', () => {
-    expect(isSameOriginResource(ORIGIN.replace(/:\d+$/, '') + ':4433/x')).toBe(false)
+    expect(isSameOriginResource(ORIGIN.replace(/:\d+$/, '') + ':4433/x')).toBe(
+      false
+    )
   })
 })
 
 describe('getSafeNavigationTarget', () => {
   it('returns a path for a same-origin target', () => {
     expect(getSafeNavigationTarget('/feeds/abc', ORIGIN)).toBe('/feeds/abc')
-    expect(getSafeNavigationTarget(`${ORIGIN}/feeds/abc?x=1#y`, ORIGIN)).toBe('/feeds/abc?x=1#y')
+    expect(getSafeNavigationTarget(`${ORIGIN}/feeds/abc?x=1#y`, ORIGIN)).toBe(
+      '/feeds/abc?x=1#y'
+    )
   })
 
   it('rejects empty and blank targets', () => {
@@ -124,28 +136,46 @@ describe('getSafeNavigationTarget', () => {
 
   it('rejects an unsafe scheme', () => {
     expect(getSafeNavigationTarget('javascript:alert(1)', ORIGIN)).toBeNull()
-    expect(getSafeNavigationTarget('  javascript:alert(1)  ', ORIGIN)).toBeNull()
-    expect(getSafeNavigationTarget('data:text/html,<script>', ORIGIN)).toBeNull()
+    expect(
+      getSafeNavigationTarget('  javascript:alert(1)  ', ORIGIN)
+    ).toBeNull()
+    expect(
+      getSafeNavigationTarget('data:text/html,<script>', ORIGIN)
+    ).toBeNull()
   })
 
   it('rejects an untrusted external host', () => {
-    expect(getSafeNavigationTarget('https://attacker.example/x', ORIGIN)).toBeNull()
+    expect(
+      getSafeNavigationTarget('https://attacker.example/x', ORIGIN)
+    ).toBeNull()
     expect(getSafeNavigationTarget('//attacker.example/x', ORIGIN)).toBeNull()
   })
 
   it('allows a trusted external host over https only', () => {
     const options = { trustedExternalHosts: ['checkout.stripe.com'] }
-    expect(getSafeNavigationTarget('https://checkout.stripe.com/pay', ORIGIN, options)).toBe(
-      'https://checkout.stripe.com/pay'
-    )
-    expect(getSafeNavigationTarget('http://checkout.stripe.com/pay', ORIGIN, options)).toBeNull()
+    expect(
+      getSafeNavigationTarget(
+        'https://checkout.stripe.com/pay',
+        ORIGIN,
+        options
+      )
+    ).toBe('https://checkout.stripe.com/pay')
+    expect(
+      getSafeNavigationTarget('http://checkout.stripe.com/pay', ORIGIN, options)
+    ).toBeNull()
   })
 
   it('matches a wildcard trusted host on its own domain and subdomains', () => {
     const options = { trustedExternalHosts: ['*.stripe.com'] }
-    expect(getSafeNavigationTarget('https://stripe.com/x', ORIGIN, options)).not.toBeNull()
-    expect(getSafeNavigationTarget('https://checkout.stripe.com/x', ORIGIN, options)).not.toBeNull()
+    expect(
+      getSafeNavigationTarget('https://stripe.com/x', ORIGIN, options)
+    ).not.toBeNull()
+    expect(
+      getSafeNavigationTarget('https://checkout.stripe.com/x', ORIGIN, options)
+    ).not.toBeNull()
     // Suffix matching must not admit a lookalike registrable domain.
-    expect(getSafeNavigationTarget('https://evilstripe.com/x', ORIGIN, options)).toBeNull()
+    expect(
+      getSafeNavigationTarget('https://evilstripe.com/x', ORIGIN, options)
+    ).toBeNull()
   })
 })

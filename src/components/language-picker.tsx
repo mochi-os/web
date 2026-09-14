@@ -10,12 +10,7 @@ import { useLingui } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Globe } from 'lucide-react'
 import { Button } from './ui/button'
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from './ui/command'
+import { Command, CommandGroup, CommandItem, CommandList } from './ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { setStoredLanguage } from '../context/i18n-provider'
@@ -37,120 +32,120 @@ function capitalise(s: string): string {
 // Intl.DisplayNames returns wording Mochi does not use (en-us -> "American
 // English"). `en` is neutral English, not UK or US.
 const displayNameOverrides: Record<string, string> = {
-  'en': 'English (international)',
+  en: 'English (international)',
   'en-us': 'English (USA)',
-  'es': 'Español (España)',
+  es: 'Español (España)',
   'es-419': 'Español (latinoamericano)',
   // No CLDR data: Intl.DisplayNames falls back to en-GB and returns the English
   // exonym instead of the autonym. Only the picker label is fixed here; date
   // and number formatting for these locales still fall back to en-GB.
-  'ay': 'Aymar aru',
-  'gn': "Avañe'ẽ",
-  'ht': 'Kreyòl ayisyen',
+  ay: 'Aymar aru',
+  gn: "Avañe'ẽ",
+  ht: 'Kreyòl ayisyen',
 }
 
 // Native autonyms by lower-cased BCP 47 tag: Intl.DisplayNames ships data for
 // only a subset and returns the English exonym otherwise. Values are final -
 // never pass them through `capitalise`, which corrupts caseless scripts.
 const nativeNames: Record<string, string> = {
-  'af': 'Afrikaans',
-  'am': 'አማርኛ',
-  'ar': 'العربية',
-  'az': 'Azərbaycan',
-  'be': 'Беларуская',
-  'bg': 'Български',
-  'bho': 'भोजपुरी',
-  'bn': 'বাংলা',
-  'bs': 'Bosanski',
-  'ca': 'Català',
-  'ckb': 'کوردیی ناوەندی',
-  'cs': 'Čeština',
-  'cy': 'Cymraeg',
-  'da': 'Dansk',
-  'de': 'Deutsch',
+  af: 'Afrikaans',
+  am: 'አማርኛ',
+  ar: 'العربية',
+  az: 'Azərbaycan',
+  be: 'Беларуская',
+  bg: 'Български',
+  bho: 'भोजपुरी',
+  bn: 'বাংলা',
+  bs: 'Bosanski',
+  ca: 'Català',
+  ckb: 'کوردیی ناوەندی',
+  cs: 'Čeština',
+  cy: 'Cymraeg',
+  da: 'Dansk',
+  de: 'Deutsch',
   'de-ch': 'Schweizer Hochdeutsch',
-  'el': 'Ελληνικά',
+  el: 'Ελληνικά',
   'es-ar': 'Español (Argentina)',
-  'et': 'Eesti',
-  'eu': 'Euskara',
-  'fa': 'فارسی',
-  'fi': 'Suomi',
-  'fr': 'Français',
+  et: 'Eesti',
+  eu: 'Euskara',
+  fa: 'فارسی',
+  fi: 'Suomi',
+  fr: 'Français',
   'fr-ca': 'Français canadien',
-  'ga': 'Gaeilge',
-  'gd': 'Gàidhlig',
-  'gl': 'Galego',
-  'gu': 'ગુજરાતી',
-  'ha': 'Hausa',
-  'he': 'עברית',
-  'hi': 'हिन्दी',
-  'hr': 'Hrvatski',
-  'hu': 'Magyar',
-  'hy': 'Հայերեն',
-  'id': 'Bahasa Indonesia',
-  'is': 'Íslenska',
-  'it': 'Italiano',
-  'ja': '日本語',
-  'jv': 'Jawa',
-  'ka': 'ქართული',
-  'kk': 'Қазақ тілі',
-  'km': 'ខ្មែរ',
-  'kn': 'ಕನ್ನಡ',
-  'ko': '한국어',
-  'ku': 'Kurdî (kurmancî)',
-  'ky': 'Кыргызча',
-  'lo': 'ລາວ',
-  'lt': 'Lietuvių',
-  'lv': 'Latviešu',
-  'mk': 'Македонски',
-  'ml': 'മലയാളം',
-  'mn': 'Монгол',
-  'mr': 'मराठी',
-  'ms': 'Melayu',
-  'mt': 'Malti',
-  'my': 'မြန်မာ',
-  'nb': 'Norsk bokmål',
-  'ne': 'नेपाली',
-  'nl': 'Nederlands',
+  ga: 'Gaeilge',
+  gd: 'Gàidhlig',
+  gl: 'Galego',
+  gu: 'ગુજરાતી',
+  ha: 'Hausa',
+  he: 'עברית',
+  hi: 'हिन्दी',
+  hr: 'Hrvatski',
+  hu: 'Magyar',
+  hy: 'Հայերեն',
+  id: 'Bahasa Indonesia',
+  is: 'Íslenska',
+  it: 'Italiano',
+  ja: '日本語',
+  jv: 'Jawa',
+  ka: 'ქართული',
+  kk: 'Қазақ тілі',
+  km: 'ខ្មែរ',
+  kn: 'ಕನ್ನಡ',
+  ko: '한국어',
+  ku: 'Kurdî (kurmancî)',
+  ky: 'Кыргызча',
+  lo: 'ລາວ',
+  lt: 'Lietuvių',
+  lv: 'Latviešu',
+  mk: 'Македонски',
+  ml: 'മലയാളം',
+  mn: 'Монгол',
+  mr: 'मराठी',
+  ms: 'Melayu',
+  mt: 'Malti',
+  my: 'မြန်မာ',
+  nb: 'Norsk bokmål',
+  ne: 'नेपाली',
+  nl: 'Nederlands',
   'nl-be': 'Vlaams',
-  'nn': 'Norsk nynorsk',
-  'om': 'Oromoo',
-  'pa': 'ਪੰਜਾਬੀ',
-  'pl': 'Polski',
-  'ps': 'پښتو',
-  'pt': 'Português',
+  nn: 'Norsk nynorsk',
+  om: 'Oromoo',
+  pa: 'ਪੰਜਾਬੀ',
+  pl: 'Polski',
+  ps: 'پښتو',
+  pt: 'Português',
   'pt-br': 'Português (Brasil)',
-  'qu': 'Runasimi',
-  'ro': 'Română',
-  'ru': 'Русский',
-  'sd': 'سنڌي',
-  'si': 'සිංහල',
-  'sk': 'Slovenčina',
-  'sl': 'Slovenščina',
-  'sq': 'Shqip',
-  'sr': 'Српски',
-  'su': 'Basa Sunda',
-  'sv': 'Svenska',
-  'sw': 'Kiswahili',
-  'ta': 'தமிழ்',
-  'te': 'తెలుగు',
-  'tg': 'Тоҷикӣ',
-  'th': 'ไทย',
-  'tk': 'Türkmen dili',
-  'tl': 'Filipino',
-  'tr': 'Türkçe',
-  'uk': 'Українська',
-  'ur': 'اردو',
-  'uz': 'O‘zbek',
-  'vi': 'Tiếng Việt',
-  'xh': 'IsiXhosa',
-  'yi': 'ייִדיש',
-  'yo': 'Èdè Yorùbá',
-  'yue': '粵語',
+  qu: 'Runasimi',
+  ro: 'Română',
+  ru: 'Русский',
+  sd: 'سنڌي',
+  si: 'සිංහල',
+  sk: 'Slovenčina',
+  sl: 'Slovenščina',
+  sq: 'Shqip',
+  sr: 'Српски',
+  su: 'Basa Sunda',
+  sv: 'Svenska',
+  sw: 'Kiswahili',
+  ta: 'தமிழ்',
+  te: 'తెలుగు',
+  tg: 'Тоҷикӣ',
+  th: 'ไทย',
+  tk: 'Türkmen dili',
+  tl: 'Filipino',
+  tr: 'Türkçe',
+  uk: 'Українська',
+  ur: 'اردو',
+  uz: 'O‘zbek',
+  vi: 'Tiếng Việt',
+  xh: 'IsiXhosa',
+  yi: 'ייִדיש',
+  yo: 'Èdè Yorùbá',
+  yue: '粵語',
   'zh-hans': '简体中文',
   'zh-hant': '繁體中文',
   'zh-hk': '繁體中文（香港）',
-  'zu': 'IsiZulu',
+  zu: 'IsiZulu',
 }
 
 // Walks the parent chain of `tag` for the closest match in `installed`,
@@ -159,7 +154,11 @@ const nativeNames: Record<string, string> = {
 // shows the tag it was given, while a caller naming the catalogue that will
 // actually load wants 'en'. Passing it keeps that difference at the call site
 // instead of forking the walk.
-export function resolveInstalled(tag: string, installed: Set<string>, fallback?: string): string {
+export function resolveInstalled(
+  tag: string,
+  installed: Set<string>,
+  fallback?: string
+): string {
   let t = tag.toLowerCase()
   while (t !== '') {
     if (installed.has(t)) return t
@@ -186,7 +185,10 @@ export function nativeName(tag: string, displayLocale?: string): string {
   }
   let name = tag
   try {
-    name = new Intl.DisplayNames([displayLocale ?? tag], { type: 'language' }).of(tag) ?? tag
+    name =
+      new Intl.DisplayNames([displayLocale ?? tag], { type: 'language' }).of(
+        tag
+      ) ?? tag
   } catch {
     /* fall back to raw tag */
   }
@@ -206,7 +208,10 @@ function scriptBucket(native: string): number {
 }
 
 export function describeLanguages(tags: string[]): LanguageEntry[] {
-  const out: LanguageEntry[] = tags.map((tag) => ({ tag, native: nativeName(tag) }))
+  const out: LanguageEntry[] = tags.map((tag) => ({
+    tag,
+    native: nativeName(tag),
+  }))
   out.sort((a, b) => {
     const ba = scriptBucket(a.native)
     const bb = scriptBucket(b.native)
@@ -236,7 +241,9 @@ export function LanguagePicker({
     // actually load — we walk the detected tag through the installed-locale
     // fallback chain (mirroring the server-side resolver) so an en-gb
     // browser shows "English (international)" rather than "British English".
-    const installed = new Set((data?.languages ?? ['en']).map((s) => s.toLowerCase()))
+    const installed = new Set(
+      (data?.languages ?? ['en']).map((s) => s.toLowerCase())
+    )
     const resolved = resolveInstalled(detectLanguage(), installed)
     const auto: LanguageEntry = {
       tag: 'auto',

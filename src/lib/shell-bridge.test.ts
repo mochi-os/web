@@ -10,7 +10,10 @@ let parentPostMessage: ReturnType<typeof vi.fn>
 // Stable stub for window.parent. The bridge guards every inbound message on
 // event.source === window.parent, so the stub must keep a stable identity and
 // inbound MessageEvents must carry it as their source (see dispatchFromParent).
-let parentStub: { postMessage: ReturnType<typeof vi.fn>; readonly document: never }
+let parentStub: {
+  postMessage: ReturnType<typeof vi.fn>
+  readonly document: never
+}
 
 beforeEach(() => {
   parentPostMessage = vi.fn()
@@ -44,9 +47,15 @@ afterEach(() => {
 // Dispatch a message as the shell would: stamped with source === window.parent.
 // jsdom's MessageEvent constructor won't accept a non-Window source, so we
 // override the property after construction.
-function dispatchFromParent(data: unknown, origin: string = window.location.origin) {
+function dispatchFromParent(
+  data: unknown,
+  origin: string = window.location.origin
+) {
   const event = new MessageEvent('message', { data, origin })
-  Object.defineProperty(event, 'source', { value: window.parent, configurable: true })
+  Object.defineProperty(event, 'source', {
+    value: window.parent,
+    configurable: true,
+  })
   window.dispatchEvent(event)
 }
 
@@ -67,10 +76,15 @@ describe('shell origin pinning', () => {
     // Same source window, wrong origin. Measured in a sandboxed iframe without
     // allow-same-origin: event.origin on a parent-to-child message reads the
     // real origin, so this IS pinnable - the code used to accept any origin.
-    dispatchFromParent({ type: 'permission-result', id, result: 'granted' }, 'https://evil.example')
+    dispatchFromParent(
+      { type: 'permission-result', id, result: 'granted' },
+      'https://evil.example'
+    )
 
     let settled = false
-    void promise.then(() => { settled = true })
+    void promise.then(() => {
+      settled = true
+    })
     await Promise.resolve()
     expect(settled).toBe(false)
 
@@ -99,7 +113,11 @@ describe('shellRequestPermission', () => {
     expect(parentPostMessage.mock.calls[0][1]).toBe(window.location.origin)
 
     // Simulate shell responding
-    dispatchFromParent({ type: 'permission-result', id: msg.id, result: 'granted' })
+    dispatchFromParent({
+      type: 'permission-result',
+      id: msg.id,
+      result: 'granted',
+    })
 
     expect(await promise).toBe('granted')
   })
@@ -150,7 +168,11 @@ describe('shellRequestPermission', () => {
     expect(await promise2).toBe('denied')
 
     // Then first
-    dispatchFromParent({ type: 'permission-result', id: id1, result: 'granted' })
+    dispatchFromParent({
+      type: 'permission-result',
+      id: id1,
+      result: 'granted',
+    })
     expect(await promise1).toBe('granted')
   })
 
@@ -161,7 +183,11 @@ describe('shellRequestPermission', () => {
     const id = parentPostMessage.mock.calls[0][0].id
 
     // Send unrelated message
-    dispatchFromParent({ type: 'subscribe-notifications-result', id, result: 'accepted' })
+    dispatchFromParent({
+      type: 'subscribe-notifications-result',
+      id,
+      result: 'accepted',
+    })
 
     // Now send the real one
     dispatchFromParent({ type: 'permission-result', id, result: 'granted' })
@@ -180,7 +206,10 @@ describe('shellRequestPermission', () => {
     const spoof = new MessageEvent('message', {
       data: { type: 'permission-result', id, result: 'granted' },
     })
-    Object.defineProperty(spoof, 'source', { value: { notTheParent: true }, configurable: true })
+    Object.defineProperty(spoof, 'source', {
+      value: { notTheParent: true },
+      configurable: true,
+    })
     window.dispatchEvent(spoof)
 
     // The spoofed result must not resolve the promise.
@@ -254,7 +283,9 @@ describe('theme value rules', () => {
     const { resolve } = await import('node:path')
     // vitest runs with lib/web as the working directory.
     const shell = readFileSync(
-      resolve(process.cwd(), '../../apps/menu/web/public/shell.js'), 'utf8')
+      resolve(process.cwd(), '../../apps/menu/web/public/shell.js'),
+      'utf8'
+    )
 
     // The root is installed from the server's declarations, re-read whenever an
     // app reports that the preference changed.
@@ -279,7 +310,10 @@ describe('authenticatedUrl', () => {
 
   // Load the bridge and drive it to the initialised in-shell state, which is
   // the only state in which authenticatedUrl adds anything.
-  async function loadInShell(token = 'test-token', init: Record<string, unknown> = {}) {
+  async function loadInShell(
+    token = 'test-token',
+    init: Record<string, unknown> = {}
+  ) {
     const bridge = await import('./shell-bridge')
     const ready = bridge.initShellBridge()
     dispatchFromParent({ type: 'init', token, inShell: true, ...init })
@@ -317,7 +351,9 @@ describe('authenticatedUrl', () => {
   it('does not add the token to another app on the same origin', async () => {
     const { authenticatedUrl } = await loadInShell()
     expect(authenticatedUrl('/forums/-/list')).toBe('/forums/-/list')
-    expect(authenticatedUrl('/people/abc/-/avatar')).toBe('/people/abc/-/avatar')
+    expect(authenticatedUrl('/people/abc/-/avatar')).toBe(
+      '/people/abc/-/avatar'
+    )
   })
 
   it('does not add the token to a bare entity route', async () => {
@@ -332,7 +368,9 @@ describe('authenticatedUrl', () => {
 
   it('adds the token to a relative path, which resolves under the app', async () => {
     const { authenticatedUrl } = await loadInShell()
-    expect(authenticatedUrl('attachments/1')).toBe('attachments/1?token=test-token')
+    expect(authenticatedUrl('attachments/1')).toBe(
+      'attachments/1?token=test-token'
+    )
   })
 
   it('on a domain route the origin is the entity, so its own resources qualify', async () => {
@@ -340,12 +378,16 @@ describe('authenticatedUrl', () => {
     const { authenticatedUrl } = await loadInShell('test-token', {
       domain: { fingerprint: '9AbCdEfGh' },
     })
-    expect(authenticatedUrl('/-/attachments/1')).toBe('/-/attachments/1?token=test-token')
+    expect(authenticatedUrl('/-/attachments/1')).toBe(
+      '/-/attachments/1?token=test-token'
+    )
   })
 
   it('does not add the token to a protocol-relative URL', async () => {
     const { authenticatedUrl } = await loadInShell()
-    expect(authenticatedUrl('//attacker.example/image')).toBe('//attacker.example/image')
+    expect(authenticatedUrl('//attacker.example/image')).toBe(
+      '//attacker.example/image'
+    )
   })
 
   it('does not add the token to an absolute foreign URL', async () => {
@@ -357,14 +399,21 @@ describe('authenticatedUrl', () => {
 
   it('does not add the token to a non-HTTP scheme', async () => {
     const { authenticatedUrl } = await loadInShell()
-    expect(authenticatedUrl('data:image/png;base64,AAAA')).toBe('data:image/png;base64,AAAA')
+    expect(authenticatedUrl('data:image/png;base64,AAAA')).toBe(
+      'data:image/png;base64,AAAA'
+    )
     expect(authenticatedUrl('javascript:alert(1)')).toBe('javascript:alert(1)')
   })
 
   it('returns the URL unchanged outside the shell', async () => {
-    Object.defineProperty(window, 'parent', { configurable: true, get: () => window })
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => window,
+    })
     const { authenticatedUrl } = await import('./shell-bridge')
-    expect(authenticatedUrl('/chat/abc/-/attachments/1')).toBe('/chat/abc/-/attachments/1')
+    expect(authenticatedUrl('/chat/abc/-/attachments/1')).toBe(
+      '/chat/abc/-/attachments/1'
+    )
   })
 
   it('returns the URL unchanged when the shell supplied no token', async () => {
@@ -382,7 +431,10 @@ describe('bridge relays settle without an answer', () => {
     vi.useFakeTimers()
     // jsdom has no execCommand; the clipboard relay must fall through to the
     // shell rather than copy locally for this test to exercise the relay.
-    Object.defineProperty(document, 'execCommand', { configurable: true, value: () => false })
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: () => false,
+    })
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -391,7 +443,9 @@ describe('bridge relays settle without an answer', () => {
   it('clipboard.write resolves false when the shell never answers', async () => {
     const { shellClipboardWrite } = await import('./shell-bridge')
     const promise = shellClipboardWrite('hello')
-    expect(parentPostMessage.mock.calls.some((c) => c[0]?.type === 'clipboard.write')).toBe(true)
+    expect(
+      parentPostMessage.mock.calls.some((c) => c[0]?.type === 'clipboard.write')
+    ).toBe(true)
     await vi.advanceTimersByTimeAsync(5_000)
     expect(await promise).toBe(false)
   })
@@ -399,7 +453,9 @@ describe('bridge relays settle without an answer', () => {
   it('clipboard.write still takes the shell answer inside the deadline', async () => {
     const { shellClipboardWrite } = await import('./shell-bridge')
     const promise = shellClipboardWrite('hello')
-    const id = parentPostMessage.mock.calls.find((c) => c[0]?.type === 'clipboard.write')?.[0].id
+    const id = parentPostMessage.mock.calls.find(
+      (c) => c[0]?.type === 'clipboard.write'
+    )?.[0].id
     dispatchFromParent({ type: 'clipboard.result', id, ok: true })
     expect(await promise).toBe(true)
   })
@@ -418,7 +474,9 @@ describe('bridge relays settle without an answer', () => {
   it('a passkey ceremony with no server timeout waits a minute, not forever', async () => {
     const { shellWebauthnCreate } = await import('./shell-bridge')
     const promise = shellWebauthnCreate({})
-    const rejected = expect(promise).rejects.toMatchObject({ name: 'TimeoutError' })
+    const rejected = expect(promise).rejects.toMatchObject({
+      name: 'TimeoutError',
+    })
     await vi.advanceTimersByTimeAsync(65_000)
     await rejected
   })
@@ -466,7 +524,10 @@ describe('initShellBridge', () => {
     const { initShellBridge } = await import('./shell-bridge')
     const pending = initShellBridge()
     dispatchFromParent({ type: 'init', token: 'early', inShell: true })
-    await expect(pending).resolves.toMatchObject({ token: 'early', inShell: true })
+    await expect(pending).resolves.toMatchObject({
+      token: 'early',
+      inShell: true,
+    })
   })
 
   it('resolves with an empty token when the shell never answers', async () => {
@@ -484,7 +545,8 @@ describe('initShellBridge', () => {
   it('still applies init that arrives after the timeout', async () => {
     vi.useFakeTimers()
     try {
-      const { initShellBridge, getShellInitData } = await import('./shell-bridge')
+      const { initShellBridge, getShellInitData } =
+        await import('./shell-bridge')
       const pending = initShellBridge()
       vi.advanceTimersByTime(5000)
       const settled = await pending
@@ -506,14 +568,17 @@ describe('initShellBridge', () => {
   it('ignores a late init that did not come from the shell', async () => {
     vi.useFakeTimers()
     try {
-      const { initShellBridge, getShellInitData } = await import('./shell-bridge')
+      const { initShellBridge, getShellInitData } =
+        await import('./shell-bridge')
       const pending = initShellBridge()
       vi.advanceTimersByTime(5000)
       await pending
 
       // Same payload, but not stamped with the parent as its source.
       window.dispatchEvent(
-        new MessageEvent('message', { data: { type: 'init', token: 'injected', inShell: true } }),
+        new MessageEvent('message', {
+          data: { type: 'init', token: 'injected', inShell: true },
+        })
       )
       expect(getShellInitData()?.token).toBe('')
     } finally {

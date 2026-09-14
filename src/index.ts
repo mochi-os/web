@@ -10,12 +10,10 @@
 // UI Components
 export * from './components/ui/alert-dialog'
 export * from './components/ui/alert'
-export * from './components/ui/avatar'
 export * from './components/ui/attachment'
 export * from './components/ui/badge'
 export * from './components/ui/button'
 export * from './components/ui/bubble'
-export * from './components/ui/calendar'
 export * from './components/ui/card'
 export * from './components/ui/copy-button'
 export * from './components/ui/data-chip'
@@ -50,7 +48,6 @@ export * from './components/ui/list-skeleton'
 export * from './components/ui/detail-skeleton'
 export * from './components/ui/loading-content'
 export * from './components/ui/sonner'
-export * from './components/ui/status-badge'
 export * from './components/ui/status-pill'
 export * from './components/ui/slider'
 export * from './components/ui/switch'
@@ -66,7 +63,10 @@ export * from './components/layout/header'
 export * from './components/layout/top-bar'
 // NotificationList's props are Notification[], so the type has to leave the
 // barrel with it - apps/menu imports both.
-export { NotificationList, type Notification } from './components/layout/notification-menu'
+export {
+  NotificationList,
+  type Notification,
+} from './components/layout/notification-menu'
 export * from './components/layout/authenticated-layout'
 export * from './components/layout/page-header'
 export * from './components/layout/page-utility-bar'
@@ -330,7 +330,13 @@ export type {
   MicSessionState,
 } from './lib/shell-mic-session'
 export { cameraOpen } from './lib/shell-camera-session'
-export type { CameraDevice, CameraError, CameraOpen, CameraOptions, CameraSession } from './lib/shell-camera-session'
+export type {
+  CameraDevice,
+  CameraError,
+  CameraOpen,
+  CameraOptions,
+  CameraSession,
+} from './lib/shell-camera-session'
 export * as shellStorage from './lib/shell-storage'
 export { useShellStorage } from './hooks/use-shell-storage'
 export * from './lib/auth-endpoints'
@@ -361,11 +367,7 @@ export * from './lib/safe-navigation'
 export * as push from './lib/push'
 
 // Types
-export type {
-  PlaceData,
-  PostData,
-  PhotonPlace,
-} from './types/places'
+export type { PlaceData, PostData, PhotonPlace } from './types/places'
 export * from './types/settings'
 export * from './types/users'
 export * from './types/entity-object'

@@ -8,7 +8,10 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import { getWebsocketStatusMeta, type WebsocketStatusMeta } from '../lib/chat-ui'
+import {
+  getWebsocketStatusMeta,
+  type WebsocketStatusMeta,
+} from '../lib/chat-ui'
 import type { WebsocketConnectionStatus } from '../lib/realtime-websocket-manager'
 
 // Named GameSidebar rather than Sidebar: the shadcn SidebarProvider in

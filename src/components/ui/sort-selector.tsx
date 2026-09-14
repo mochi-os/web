@@ -38,11 +38,15 @@ export function SortSelector({
 }: SortSelectorProps) {
   const { t } = useLingui()
   const SORT_OPTIONS: SortOption[] = [
-    { value: 'ai', label: t`AI`, icon: <Sparkles className="size-4" /> },
-    { value: 'interests', label: t`Interests`, icon: <Star className="size-4" /> },
-    { value: 'new', label: t`New`, icon: <Clock className="size-4" /> },
-    { value: 'hot', label: t`Hot`, icon: <Flame className="size-4" /> },
-    { value: 'top', label: t`Top`, icon: <Trophy className="size-4" /> },
+    { value: 'ai', label: t`AI`, icon: <Sparkles className='size-4' /> },
+    {
+      value: 'interests',
+      label: t`Interests`,
+      icon: <Star className='size-4' />,
+    },
+    { value: 'new', label: t`New`, icon: <Clock className='size-4' /> },
+    { value: 'hot', label: t`Hot`, icon: <Flame className='size-4' /> },
+    { value: 'top', label: t`Top`, icon: <Trophy className='size-4' /> },
   ]
   const visibleOptions = options
     ? SORT_OPTIONS.filter((opt) => options.includes(opt.value))
@@ -50,7 +54,9 @@ export function SortSelector({
 
   // Map legacy 'relevant' to 'interests' for display
   const effectiveValue = value === 'relevant' ? 'interests' : value
-  const currentOption = visibleOptions.find((opt) => opt.value === effectiveValue) ?? visibleOptions[0]
+  const currentOption =
+    visibleOptions.find((opt) => opt.value === effectiveValue) ??
+    visibleOptions[0]
 
   return (
     <Select
@@ -60,7 +66,7 @@ export function SortSelector({
     >
       <SelectTrigger className={cn('border-0 shadow-none', className)}>
         <SelectValue>
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             {currentOption?.icon}
             <span>{currentOption?.label}</span>
           </div>
@@ -69,7 +75,7 @@ export function SortSelector({
       <SelectContent>
         {visibleOptions.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            <div className="flex items-center gap-2">
+            <div className='flex items-center gap-2'>
               {option.icon}
               <span>{option.label}</span>
             </div>

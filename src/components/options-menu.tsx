@@ -25,7 +25,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { Button } from './ui/button'
 import {
   ResponsiveDialog,
@@ -137,20 +136,15 @@ export function OptionsMenu({
   return (
     <>
       <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <button
-                type='button'
-                aria-label={t`More options`}
-                className='text-muted-foreground hover:bg-hover hover:text-foreground inline-flex items-center justify-center rounded-md p-2 transition-colors'
-              >
-                <MoreHorizontal className='size-4' />
-              </button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{t`More options`}</TooltipContent>
-        </Tooltip>
+        <DropdownMenuTrigger asChild>
+          <button
+            type='button'
+            aria-label={t`More options`}
+            className='text-muted-foreground hover:bg-hover hover:text-foreground inline-flex items-center justify-center rounded-md p-2 transition-colors'
+          >
+            <MoreHorizontal className='size-4' />
+          </button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
           {onSources && (
             <DropdownMenuItem onSelect={onSources}>
@@ -171,7 +165,9 @@ export function OptionsMenu({
                 <Trans>RSS feed</Trans>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onSelect={() => void handleCopyRssUrl('posts')}>
+                <DropdownMenuItem
+                  onSelect={() => void handleCopyRssUrl('posts')}
+                >
                   <Trans>Posts</Trans>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void handleCopyRssUrl('all')}>
@@ -229,7 +225,11 @@ export function OptionsMenu({
               disabled={!link}
               className='shrink-0'
             >
-              {copied ? <Check className='size-4' /> : <Copy className='size-4' />}
+              {copied ? (
+                <Check className='size-4' />
+              ) : (
+                <Copy className='size-4' />
+              )}
             </Button>
           </div>
         </ResponsiveDialogContent>

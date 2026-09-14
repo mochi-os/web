@@ -53,7 +53,11 @@ export interface EntitySettingsApi<TContainer> {
   update: (id: string, updates: EntitySettingsUpdate) => Promise<unknown>
   delete: (id: string) => Promise<unknown>
   getAccessRules: (id: string) => Promise<{ data?: { rules?: unknown } }>
-  setAccessLevel: (id: string, subject: string, level: string) => Promise<unknown>
+  setAccessLevel: (
+    id: string,
+    subject: string,
+    level: string
+  ) => Promise<unknown>
   revokeAccess: (id: string, subject: string) => Promise<unknown>
   searchUsers: (query: string) => Promise<{ data?: { results?: unknown } }>
   listGroups: () => Promise<{ data?: { groups?: unknown } }>
@@ -224,7 +228,7 @@ export function EntitySettingsPage<
       queryClient,
       queryKey,
       containerId,
-    ],
+    ]
   )
 
   if (isLoading) {
@@ -232,18 +236,18 @@ export function EntitySettingsPage<
       <>
         <PageHeader
           title={labels.settings}
-          icon={<Settings className="size-4 md:size-5" />}
+          icon={<Settings className='size-4 md:size-5' />}
           back={{ label: labels.back, onFallback: onBack }}
         />
-        <Main className="space-y-6">
-          <div className="flex gap-1 border-b">
-            <div className="flex items-center gap-2 px-4 py-2 border-b-2 border-transparent">
-              <Skeleton className="h-4 w-4" />
-              <Skeleton className="h-4 w-16" />
+        <Main className='space-y-6'>
+          <div className='flex gap-1 border-b'>
+            <div className='flex items-center gap-2 px-4 py-2 border-b-2 border-transparent'>
+              <Skeleton className='h-4 w-4' />
+              <Skeleton className='h-4 w-16' />
             </div>
           </div>
-          <div className="pt-2">
-            <Skeleton className="h-64 w-full rounded-xl" />
+          <div className='pt-2'>
+            <Skeleton className='h-64 w-full rounded-xl' />
           </div>
         </Main>
       </>
@@ -255,7 +259,7 @@ export function EntitySettingsPage<
       <>
         <PageHeader
           title={labels.settings}
-          icon={<Settings className="size-4 md:size-5" />}
+          icon={<Settings className='size-4 md:size-5' />}
           back={{ label: labels.back, onFallback: onBack }}
         />
         <Main>
@@ -263,7 +267,7 @@ export function EntitySettingsPage<
             <GeneralError
               error={lookupError}
               minimal
-              mode="inline"
+              mode='inline'
               reset={() => {
                 void refetch()
               }}
@@ -291,24 +295,24 @@ export function EntitySettingsPage<
     <>
       <PageHeader
         title={labels.pageTitle(container.name)}
-        icon={<Settings className="size-4 md:size-5" />}
+        icon={<Settings className='size-4 md:size-5' />}
         back={{ label: labels.back, onFallback: onBack }}
       />
-      <Main className="space-y-6">
+      <Main className='space-y-6'>
         {/* Tabs - only show for owners */}
         {isOwner && (
           <Tabs
-            variant="underline"
+            variant='underline'
             value={activeTab}
             onValueChange={(value) => onTabChange(value as EntitySettingsTab)}
           >
             <TabsList>
-              <TabsTrigger value="general" className="gap-2">
-                <Settings className="h-4 w-4" />
+              <TabsTrigger value='general' className='gap-2'>
+                <Settings className='h-4 w-4' />
                 {labels.settings}
               </TabsTrigger>
-              <TabsTrigger value="access" className="gap-2">
-                <Shield className="h-4 w-4" />
+              <TabsTrigger value='access' className='gap-2'>
+                <Shield className='h-4 w-4' />
                 {labels.access}
               </TabsTrigger>
             </TabsList>
@@ -316,11 +320,11 @@ export function EntitySettingsPage<
         )}
 
         {/* Tab content */}
-        <div className="pt-2">
+        <div className='pt-2'>
           {tab === 'general' && (
-            <div className="space-y-6">
+            <div className='space-y-6'>
               <Section title={labels.identity}>
-                <div className="divide-y-0">
+                <div className='divide-y-0'>
                   <EditableFieldRow
                     label={labels.name}
                     value={container.name}
@@ -346,12 +350,15 @@ export function EntitySettingsPage<
                   })}
 
                   <FieldRow label={labels.entityId}>
-                    <DataChip value={container.id} truncate="middle" />
+                    <DataChip value={container.id} truncate='middle' />
                   </FieldRow>
 
                   {container.fingerprint && (
                     <FieldRow label={labels.fingerprint}>
-                      <DataChip value={container.fingerprint} truncate="middle" />
+                      <DataChip
+                        value={container.fingerprint}
+                        truncate='middle'
+                      />
                     </FieldRow>
                   )}
 
@@ -368,12 +375,12 @@ export function EntitySettingsPage<
                   title={labels.deleteSection}
                   action={
                     <Button
-                      variant="outline"
+                      variant='outline'
                       onClick={() => setShowDeleteDialog(true)}
                       disabled={isDeleting}
-                      size="sm"
+                      size='sm'
                     >
-                      <Trash2 className="size-4 me-2" />
+                      <Trash2 className='size-4 me-2' />
                       {labels.delete}
                     </Button>
                   }
@@ -464,16 +471,18 @@ function EntityAccessTab<TDetails>({
   // than a list would otherwise reach the list components as a non-array.
   const rules = useMemo<AccessRule[]>(
     () => coerceObjectArray<AccessRule>(rulesData?.data?.rules),
-    [rulesData],
+    [rulesData]
   )
   const rulesError = rulesErrorRaw ?? null
   const userSearchError =
-    userSearchQuery.length >= 1 && userSearchErrorRaw ? userSearchErrorRaw : null
+    userSearchQuery.length >= 1 && userSearchErrorRaw
+      ? userSearchErrorRaw
+      : null
   const groupsError = groupsErrorRaw ?? null
   const canManageRules = !rulesError && !isLoadingRules && !!rulesData
 
   const userSearchResults = coerceObjectArray<{ id: string; name: string }>(
-    userSearchData?.data?.results,
+    userSearchData?.data?.results
   )
   const groups = coerceObjectArray<{
     id: string
@@ -484,7 +493,7 @@ function EntityAccessTab<TDetails>({
   const handleAdd = async (
     subject: string,
     subjectName: string,
-    level: string,
+    level: string
   ) => {
     if (!canManageRules) return
     await toastAction(api.setAccessLevel(containerId, subject, level), {
@@ -525,14 +534,14 @@ function EntityAccessTab<TDetails>({
 
   return (
     <Section title={labels.accessManagement}>
-      <div className="space-y-4">
-        <div className="flex justify-end">
+      <div className='space-y-4'>
+        <div className='flex justify-end'>
           <Button
             onClick={() => setDialogOpen(true)}
-            size="sm"
+            size='sm'
             disabled={!canManageRules}
           >
-            <Plus className="h-4 w-4 me-2" />
+            <Plus className='h-4 w-4 me-2' />
             {labels.addRule}
           </Button>
         </div>
@@ -542,7 +551,7 @@ function EntityAccessTab<TDetails>({
           onOpenChange={setDialogOpen}
           onAdd={handleAdd}
           levels={accessLevels}
-          defaultLevel="comment"
+          defaultLevel='comment'
           userSearchResults={userSearchResults}
           userSearchLoading={userSearchLoading}
           userSearchError={userSearchError}
@@ -561,7 +570,7 @@ function EntityAccessTab<TDetails>({
           <GeneralError
             error={rulesError}
             minimal
-            mode="inline"
+            mode='inline'
             reset={() => {
               void refetchRules()
             }}

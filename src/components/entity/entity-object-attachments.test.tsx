@@ -13,8 +13,22 @@ vi.mock('../../lib/shell-bridge', async (importOriginal) => ({
 const { EntityObjectAttachments } = await import('./entity-object-attachments')
 
 const files = [
-  { id: 'f1', name: 'brief.pdf', type: 'application/pdf', size: 1024, caption: '', created: 0 },
-  { id: 'f2', name: 'cover.png', type: 'image/png', size: 2048, caption: '', created: 0 },
+  {
+    id: 'f1',
+    name: 'brief.pdf',
+    type: 'application/pdf',
+    size: 1024,
+    caption: '',
+    created: 0,
+  },
+  {
+    id: 'f2',
+    name: 'cover.png',
+    type: 'image/png',
+    size: 2048,
+    caption: '',
+    created: 0,
+  },
 ]
 
 function show(readOnly = false) {
@@ -46,7 +60,9 @@ describe('EntityObjectAttachments', () => {
   it('keeps the image delete control reachable without hover', async () => {
     show(false)
     const removes = await screen.findAllByRole('button', { name: 'Delete' })
-    const overlay = removes.find((el) => el.className.includes('group-hover/item'))
+    const overlay = removes.find((el) =>
+      el.className.includes('group-hover/item')
+    )
     expect(overlay?.className).toContain('[@media(hover:none)]:flex')
   })
 })

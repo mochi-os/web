@@ -113,7 +113,6 @@ export function useCardLabels(): Record<string, string> {
   }
 }
 
-
 export function useFontSizeLabels(): Record<string, string> {
   const { t } = useLingui()
   return {

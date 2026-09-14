@@ -14,7 +14,10 @@ interface UsePlaceSearchOptions {
   limit?: number
 }
 
-export function usePlaceSearch(query: string, options: UsePlaceSearchOptions = {}) {
+export function usePlaceSearch(
+  query: string,
+  options: UsePlaceSearchOptions = {}
+) {
   const { debounceMs = 300, enabled = true, limit = 10 } = options
   const [debouncedQuery, setDebouncedQuery] = useState(query)
 

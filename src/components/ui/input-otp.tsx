@@ -65,8 +65,4 @@ function InputOTPSlot({
   )
 }
 
-export {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-}
+export { InputOTP, InputOTPGroup, InputOTPSlot }

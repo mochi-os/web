@@ -25,7 +25,7 @@ export function sequence() {
     // and it leaves the rejection itself for the caller who owns it.
     tail = next.then(
       () => undefined,
-      () => undefined,
+      () => undefined
     )
     return next
   }

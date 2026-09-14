@@ -40,7 +40,9 @@ export function LoadMore({
         </Button>
       ) : null}
       <p className='text-xs text-muted-foreground'>
-        <Trans>Showing {totalShown} of {total}</Trans>
+        <Trans>
+          Showing {totalShown} of {total}
+        </Trans>
       </p>
     </div>
   )

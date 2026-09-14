@@ -72,7 +72,11 @@ describe('LazyBoundary', () => {
         <Boom />
       </LazyBoundary>
     )
-    expect(reported.mock.calls.some((call: unknown[]) => String(call[0]).includes('subtree failed'))).toBe(true)
+    expect(
+      reported.mock.calls.some((call: unknown[]) =>
+        String(call[0]).includes('subtree failed')
+      )
+    ).toBe(true)
   })
 
   // One failure must not latch for the rest of the session: the boundary holds

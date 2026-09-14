@@ -10,7 +10,10 @@ afterEach(() => {
 
 describe('themeColor', () => {
   it('takes the background token the active theme defines', () => {
-    document.documentElement.style.setProperty('--background', 'oklch(0.2 0.05 250)')
+    document.documentElement.style.setProperty(
+      '--background',
+      'oklch(0.2 0.05 250)'
+    )
     expect(themeColor('light')).toBe('oklch(0.2 0.05 250)')
   })
 

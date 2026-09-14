@@ -121,7 +121,8 @@ export function StepUpDialog({
           if (!cancelled) setSent(true)
         }
       } catch {
-        if (!cancelled) setError(t`Couldn't start re-authentication. Please try again.`)
+        if (!cancelled)
+          setError(t`Couldn't start re-authentication. Please try again.`)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -158,7 +159,7 @@ export function StepUpDialog({
         setRemaining(r.remaining ?? [])
       }
     },
-    [onVerified],
+    [onVerified]
   )
 
   const resend = async () => {
@@ -171,7 +172,10 @@ export function StepUpDialog({
     }
   }
 
-  const verify = async (run: () => Promise<StepUpResult>, reset: () => void) => {
+  const verify = async (
+    run: () => Promise<StepUpResult>,
+    reset: () => void
+  ) => {
     setBusy(true)
     setError('')
     try {
@@ -190,7 +194,10 @@ export function StepUpDialog({
     try {
       const { ceremony, options } = await client.passkeyBegin()
       const assertion = await shellWebauthnGet(options)
-      await apply(await client.passkeyFinish(ceremony, assertion), !!submitLabel)
+      await apply(
+        await client.passkeyFinish(ceremony, assertion),
+        !!submitLabel
+      )
     } catch {
       setError(t`Passkey verification failed. Please try again.`)
     } finally {
@@ -220,9 +227,15 @@ export function StepUpDialog({
   // code inputs' Enter key.
   const submitActive = () => {
     if (remaining.includes('email') && emailCode.trim()) {
-      verify(() => client.verifyEmail(emailCode.trim()), () => setEmailCode(''))
+      verify(
+        () => client.verifyEmail(emailCode.trim()),
+        () => setEmailCode('')
+      )
     } else if (remaining.includes('totp') && totpCode.trim()) {
-      verify(() => client.verifyTotp(totpCode.trim()), () => setTotpCode(''))
+      verify(
+        () => client.verifyTotp(totpCode.trim()),
+        () => setTotpCode('')
+      )
     }
   }
 
@@ -262,7 +275,9 @@ export function StepUpDialog({
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>
           {description ? (
-            <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>
+            <ResponsiveDialogDescription>
+              {description}
+            </ResponsiveDialogDescription>
           ) : null}
         </ResponsiveDialogHeader>
         <div className='space-y-4 py-2'>
@@ -276,7 +291,10 @@ export function StepUpDialog({
                 <div className='space-y-2'>
                   {sent ? (
                     <>
-                      <Label htmlFor='stepup-email' className='text-base font-semibold'>
+                      <Label
+                        htmlFor='stepup-email'
+                        className='text-base font-semibold'
+                      >
                         <Trans>Email code</Trans>
                       </Label>
                       <Input
@@ -285,7 +303,8 @@ export function StepUpDialog({
                         value={emailCode}
                         onChange={(e) => setEmailCode(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !busy && canVerify) submitActive()
+                          if (e.key === 'Enter' && !busy && canVerify)
+                            submitActive()
                         }}
                         placeholder={t`Enter the code from your email`}
                         className='font-mono'
@@ -294,7 +313,12 @@ export function StepUpDialog({
                       />
                     </>
                   ) : (
-                    <Button variant='outline' className='w-full' onClick={resend} disabled={busy}>
+                    <Button
+                      variant='outline'
+                      className='w-full'
+                      onClick={resend}
+                      disabled={busy}
+                    >
                       <Trans>Send email</Trans>
                     </Button>
                   )}
@@ -302,7 +326,10 @@ export function StepUpDialog({
               )}
               {need('totp') && (
                 <div className='space-y-2'>
-                  <Label htmlFor='stepup-totp' className='text-base font-semibold'>
+                  <Label
+                    htmlFor='stepup-totp'
+                    className='text-base font-semibold'
+                  >
                     <Trans>Authenticator code</Trans>
                   </Label>
                   <Input
@@ -310,7 +337,8 @@ export function StepUpDialog({
                     value={totpCode}
                     onChange={(e) => setTotpCode(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !busy && canVerify) submitActive()
+                      if (e.key === 'Enter' && !busy && canVerify)
+                        submitActive()
                     }}
                     placeholder={t`Enter your authenticator code`}
                     className='font-mono'
@@ -324,8 +352,15 @@ export function StepUpDialog({
                   <Label className='text-base font-semibold'>
                     <Trans>Passkey</Trans>
                   </Label>
-                  <Button variant='outline' className='w-full' onClick={usePasskey} disabled={busy}>
-                    {busy ? <Loader2 className='me-2 h-4 w-4 animate-spin' /> : null}
+                  <Button
+                    variant='outline'
+                    className='w-full'
+                    onClick={usePasskey}
+                    disabled={busy}
+                  >
+                    {busy ? (
+                      <Loader2 className='me-2 h-4 w-4 animate-spin' />
+                    ) : null}
                     <Trans>Use your passkey</Trans>
                   </Button>
                 </div>
@@ -347,10 +382,16 @@ export function StepUpDialog({
             </>
           )}
           {children}
-          {error ? <p className='text-destructive text-sm leading-relaxed'>{error}</p> : null}
+          {error ? (
+            <p className='text-destructive text-sm leading-relaxed'>{error}</p>
+          ) : null}
         </div>
         <ResponsiveDialogFooter>
-          <Button variant='outline' onClick={() => handleOpenChange(false)} disabled={busy}>
+          <Button
+            variant='outline'
+            onClick={() => handleOpenChange(false)}
+            disabled={busy}
+          >
             <Trans>Cancel</Trans>
           </Button>
           {sent && need('email') ? (

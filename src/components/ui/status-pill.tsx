@@ -6,20 +6,15 @@ import { Badge } from './badge'
 import { cn } from '../../lib/utils'
 
 export type StatusTone =
-  | 'success'
-  | 'warning'
-  | 'caution'
-  | 'danger'
-  | 'info'
-  | 'accent'
-  | 'neutral'
+  'success' | 'warning' | 'caution' | 'danger' | 'info' | 'accent' | 'neutral'
 
 const toneClasses: Record<StatusTone, string> = {
   success: 'bg-success/15 text-success dark:bg-success/20',
   warning:
     'bg-warning/25 text-warning-foreground dark:bg-warning/15 dark:text-warning',
   // No theme token maps to orange, so this tone stays on the raw palette.
-  caution: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  caution:
+    'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   danger: 'bg-destructive/10 text-destructive dark:bg-destructive/15',
   info: 'bg-info/15 text-info dark:bg-info/20',
   accent: 'bg-primary/10 text-primary dark:bg-primary/20',

@@ -13,13 +13,20 @@ export interface PermissionError {
 
 // Check if an error response is a permission error
 // Backend returns: { error: "permission_required", app: string, permission: string, restricted: boolean }
-export function isPermissionError(responseData: unknown): PermissionError | null {
+export function isPermissionError(
+  responseData: unknown
+): PermissionError | null {
   if (
     responseData &&
     typeof responseData === 'object' &&
     'error' in responseData
   ) {
-    const data = responseData as { error?: string; app?: string; permission?: string; restricted?: boolean }
+    const data = responseData as {
+      error?: string
+      app?: string
+      permission?: string
+      restricted?: boolean
+    }
     if (data.error === 'permission_required' && data.permission) {
       return {
         app: data.app || '',
@@ -52,12 +59,11 @@ export function handlePermissionError(
   }
 
   if (isInShell()) {
-    shellRequestPermission(permError.permission)
-      .then((result) => {
-        if (result === 'granted') {
-          window.location.reload()
-        }
-      })
+    shellRequestPermission(permError.permission).then((result) => {
+      if (result === 'granted') {
+        window.location.reload()
+      }
+    })
     return true
   }
 

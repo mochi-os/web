@@ -48,7 +48,7 @@ export function DataChip({
       className={cn(
         'flex items-center gap-1.5 min-w-0 group/chip',
         truncate === 'none' ? 'flex-wrap' : 'overflow-hidden',
-        className,
+        className
       )}
     >
       <div
@@ -58,12 +58,16 @@ export function DataChip({
         )}
       >
         {icon}
-        {label && <span className='text-muted-foreground font-sans font-normal'>{label}</span>}
+        {label && (
+          <span className='text-muted-foreground font-sans font-normal'>
+            {label}
+          </span>
+        )}
         <span
           className={cn(
             'min-w-0',
             truncate === 'end' && 'truncate',
-            truncate === 'none' && 'break-all',
+            truncate === 'none' && 'break-all'
           )}
           title={value}
         >

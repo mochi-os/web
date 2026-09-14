@@ -7,12 +7,12 @@ import { Building2, MapPin, Mountain } from 'lucide-react'
 export function PlaceIcon({ category }: { category?: string }) {
   switch (category) {
     case 'natural':
-      return <Mountain className="h-4 w-4 text-green-600" />
+      return <Mountain className='h-4 w-4 text-green-600' />
     case 'amenity':
     case 'shop':
     case 'tourism':
-      return <Building2 className="h-4 w-4 text-blue-600" />
+      return <Building2 className='h-4 w-4 text-blue-600' />
     default:
-      return <MapPin className="h-4 w-4 text-red-600" />
+      return <MapPin className='h-4 w-4 text-red-600' />
   }
 }

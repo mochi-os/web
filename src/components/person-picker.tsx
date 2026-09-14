@@ -119,7 +119,8 @@ export function PersonPicker({
   // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const { data: directoryData, isLoading: isLoadingDirectory } = useQuery({
     queryKey: ['person-picker', 'directory', debouncedSearch],
-    queryFn: () => (directoryFn ? directoryFn(debouncedSearch) : Promise.resolve([])),
+    queryFn: () =>
+      directoryFn ? directoryFn(debouncedSearch) : Promise.resolve([]),
     enabled: !!directoryFn && debouncedSearch.length >= 2 && open,
   })
 
@@ -222,10 +223,11 @@ export function PersonPicker({
     if (selectedIds.length === 0) return null
 
     const selectedPeople = selectedIds
-      .map((id) =>
-        allPeople.find((p) => p.id === id) ||
-        local.find((p) => p.id === id) ||
-        selectedPeopleGlobalCache.get(id)
+      .map(
+        (id) =>
+          allPeople.find((p) => p.id === id) ||
+          local.find((p) => p.id === id) ||
+          selectedPeopleGlobalCache.get(id)
       )
       .filter(Boolean) as Person[]
 
@@ -235,15 +237,15 @@ export function PersonPicker({
 
     const names = selectedPeople.map((p) => p.name)
     return { names, count: selectedPeople.length }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds, allPeople, local, cacheVersion])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          role="combobox"
+          variant='outline'
+          role='combobox'
           aria-expanded={open}
           disabled={disabled}
           className={cn(
@@ -253,25 +255,28 @@ export function PersonPicker({
           )}
         >
           {displayInfo ? (
-            <span className="flex items-center gap-1 min-w-0 flex-1">
-              <span className="truncate">
+            <span className='flex items-center gap-1 min-w-0 flex-1'>
+              <span className='truncate'>
                 {displayInfo.names.length > 0
                   ? displayInfo.names.slice(0, 2).join(', ')
-                  : plural(displayInfo.count, { one: '# selected', other: '# selected' })}
+                  : plural(displayInfo.count, {
+                      one: '# selected',
+                      other: '# selected',
+                    })}
               </span>
               {displayInfo.count > 2 && (
-                <span className="shrink-0 text-xs text-muted-foreground">
+                <span className='shrink-0 text-xs text-muted-foreground'>
                   +{displayInfo.count - 2}
                 </span>
               )}
             </span>
           ) : (
-            <span className="truncate">{placeholder}</span>
+            <span className='truncate'>{placeholder}</span>
           )}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className='flex items-center gap-1 shrink-0'>
             {displayInfo && (
               <span
-                role="button"
+                role='button'
                 tabIndex={0}
                 onClick={(e) => {
                   e.preventDefault()
@@ -286,107 +291,118 @@ export function PersonPicker({
                   e.preventDefault()
                   e.stopPropagation()
                 }}
-                className="rounded-sm hover:bg-hover p-0.5"
+                className='rounded-sm hover:bg-hover p-0.5'
               >
-                <X className="size-4 opacity-50 hover:opacity-100" />
+                <X className='size-4 opacity-50 hover:opacity-100' />
               </span>
             )}
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className='w-72 p-0' align='start'>
         {/* Search input */}
-        <div className="p-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <div className='p-2'>
+          <div className='relative'>
+            <Search className='absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
             <Input
               placeholder={t`Search...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="ps-8 h-8"
+              className='ps-8 h-8'
               autoFocus
             />
           </div>
         </div>
 
         {(() => {
-          const showNone = mode === 'single' && selectedIds.length > 0 && !searchQuery
+          const showNone =
+            mode === 'single' && selectedIds.length > 0 && !searchQuery
           const searching = isLoading && !!debouncedSearch
           const hasPeople = filteredPeople.length > 0
           const searchedAndEmpty = !isLoading && !!debouncedSearch && !hasPeople
-          if (!showNone && !searching && !hasPeople && !searchedAndEmpty) return null
+          if (!showNone && !searching && !hasPeople && !searchedAndEmpty)
+            return null
           return (
-        <div className="max-h-64 overflow-y-auto border-t p-1">
-          {showNone && (
-            <div
-              onClick={() => {
-                onChange('')
-                setOpen(false)
-              }}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-hover hover:text-hover-foreground text-muted-foreground"
-            >
-              <div className="size-4 shrink-0" />
-              <span className="text-sm"><Trans>None</Trans></span>
-            </div>
-          )}
-
-          {searching && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {searchedAndEmpty && (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              {emptyMessage}
-            </div>
-          )}
-
-          {!isLoading && groupedPeople.map((group) => (
-            <div key={group.label}>
-              {groupedPeople.length > 1 && (
-                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                  {group.label}
+            <div className='max-h-64 overflow-y-auto border-t p-1'>
+              {showNone && (
+                <div
+                  onClick={() => {
+                    onChange('')
+                    setOpen(false)
+                  }}
+                  className='flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-hover hover:text-hover-foreground text-muted-foreground'
+                >
+                  <div className='size-4 shrink-0' />
+                  <span className='text-sm'>
+                    <Trans>None</Trans>
+                  </span>
                 </div>
               )}
-              {group.people.map((person) => {
-                const isSelected = selectedIds.includes(person.id)
-                return (
-                  <div
-                    key={person.id}
-                    onClick={() => handleSelect(person.id)}
-                    className={cn(
-                      'flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer',
-                      'hover:bg-hover hover:text-hover-foreground',
-                      isSelected && 'bg-selected'
-                    )}
-                  >
-                    {mode === 'multiple' ? (
-                      <Checkbox
-                        checked={isSelected}
-                        className="shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                        onCheckedChange={() => handleSelect(person.id)}
-                      />
-                    ) : (
-                      <div className="size-4 shrink-0 flex items-center justify-center">
-                        {isSelected && <Check className="size-4" />}
+
+              {searching && (
+                <div className='flex items-center justify-center py-6'>
+                  <Loader2 className='size-5 animate-spin text-muted-foreground' />
+                </div>
+              )}
+
+              {searchedAndEmpty && (
+                <div className='py-6 text-center text-sm text-muted-foreground'>
+                  {emptyMessage}
+                </div>
+              )}
+
+              {!isLoading &&
+                groupedPeople.map((group) => (
+                  <div key={group.label}>
+                    {groupedPeople.length > 1 && (
+                      <div className='px-2 py-1.5 text-xs font-medium text-muted-foreground'>
+                        {group.label}
                       </div>
                     )}
-                    <EntityAvatar
-                      src={assetUrl ? assetUrl(person, 'avatar') : undefined}
-                      styleUrl={assetUrl ? assetUrl(person, 'style') : undefined}
-                      seed={person.id}
-                      name={person.name}
-                      size="sm"
-                    />
-                    <span className="truncate text-sm">{person.name}</span>
+                    {group.people.map((person) => {
+                      const isSelected = selectedIds.includes(person.id)
+                      return (
+                        <div
+                          key={person.id}
+                          onClick={() => handleSelect(person.id)}
+                          className={cn(
+                            'flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer',
+                            'hover:bg-hover hover:text-hover-foreground',
+                            isSelected && 'bg-selected'
+                          )}
+                        >
+                          {mode === 'multiple' ? (
+                            <Checkbox
+                              checked={isSelected}
+                              className='shrink-0'
+                              onClick={(e) => e.stopPropagation()}
+                              onCheckedChange={() => handleSelect(person.id)}
+                            />
+                          ) : (
+                            <div className='size-4 shrink-0 flex items-center justify-center'>
+                              {isSelected && <Check className='size-4' />}
+                            </div>
+                          )}
+                          <EntityAvatar
+                            src={
+                              assetUrl ? assetUrl(person, 'avatar') : undefined
+                            }
+                            styleUrl={
+                              assetUrl ? assetUrl(person, 'style') : undefined
+                            }
+                            seed={person.id}
+                            name={person.name}
+                            size='sm'
+                          />
+                          <span className='truncate text-sm'>
+                            {person.name}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
+                ))}
             </div>
-          ))}
-        </div>
           )
         })()}
       </PopoverContent>

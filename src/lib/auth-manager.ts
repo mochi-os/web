@@ -17,7 +17,10 @@ const LOGOUT_REDIRECT_FAILSAFE_MS = 4000
 // when it is on this origin: a post-login redirect to anywhere else is an open
 // redirect, whoever supplied the target. A forced logout (session expired)
 // returns to the page the user was on so they can pick up where they left off.
-export function logoutRedirectTarget(reason?: string, redirectUrl?: string): string {
+export function logoutRedirectTarget(
+  reason?: string,
+  redirectUrl?: string
+): string {
   const loginUrl = getAuthLoginUrl()
   if (redirectUrl) {
     const safe = getSafeNavigationTarget(redirectUrl, window.location.origin)
@@ -56,7 +59,7 @@ class AuthManager {
     }
     this.isLoggingOut = true
     useAuthStore.getState().startLogoutTransition()
-    
+
     if (reason && import.meta.env.DEV) {
       console.warn(`[AuthManager] Logout initiated: ${reason}`)
     }
@@ -121,9 +124,13 @@ class AuthManager {
     try {
       const data = await requestHelpers.get<{
         user?: { email?: string; name?: string }
-        identity?: { id?: string; name?: string; privacy?: 'public' | 'private' }
+        identity?: {
+          id?: string
+          name?: string
+          privacy?: 'public' | 'private'
+        }
       }>(authEndpoints.identity)
-      
+
       if (data.identity) {
         const identityId = data.identity.id ?? ''
         const identityName = data.identity.name ?? ''
@@ -144,7 +151,9 @@ class AuthManager {
     } catch (error) {
       if (requestHelpers.isAuthError(error)) {
         if (import.meta.env.DEV) {
-          console.warn('[AuthManager] Identity check failed (401) -> Logging out')
+          console.warn(
+            '[AuthManager] Identity check failed (401) -> Logging out'
+          )
         }
         await this.logout('Identity check 401')
       } else if (import.meta.env.DEV) {

@@ -51,9 +51,7 @@ export function micFilenameForMime(mimeType: string): string {
   return 'Voice Note.webm'
 }
 
-function pickMicMimeType(
-  isTypeSupported: (type: string) => boolean
-): string {
+function pickMicMimeType(isTypeSupported: (type: string) => boolean): string {
   for (const type of MIC_PREFERRED_MIME_TYPES) {
     if (isTypeSupported(type)) return type
   }
@@ -338,7 +336,9 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
       try {
         if (recorder.state !== 'inactive') {
           active.cancelled = true
-          ;(active as ActiveSession & { pendingError?: MicSessionError }).pendingError = err
+          ;(
+            active as ActiveSession & { pendingError?: MicSessionError }
+          ).pendingError = err
           recorder.stop()
           return
         }
@@ -351,8 +351,9 @@ export function createMicSessionHost(deps: MicSessionHostDeps) {
     recorder.onstop = () => {
       if (active.settled) return
 
-      const pendingError = (active as ActiveSession & { pendingError?: MicSessionError })
-        .pendingError
+      const pendingError = (
+        active as ActiveSession & { pendingError?: MicSessionError }
+      ).pendingError
       if (pendingError) {
         settle(active, { result: { ok: false, error: pendingError } })
         return

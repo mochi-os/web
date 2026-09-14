@@ -21,7 +21,10 @@ class FakeObserver {
   rootMargin: string
   target: Element | null = null
   disconnected = false
-  constructor(public callback: Callback, options?: IntersectionObserverInit) {
+  constructor(
+    public callback: Callback,
+    options?: IntersectionObserverInit
+  ) {
     this.root = options?.root ?? null
     this.rootMargin = options?.rootMargin ?? ''
     FakeObserver.instances.push(this)
@@ -42,7 +45,8 @@ const original = globalThis.IntersectionObserver
 
 beforeEach(() => {
   FakeObserver.instances = []
-  globalThis.IntersectionObserver = FakeObserver as unknown as typeof IntersectionObserver
+  globalThis.IntersectionObserver =
+    FakeObserver as unknown as typeof IntersectionObserver
 })
 
 afterEach(() => {
@@ -59,11 +63,24 @@ function armed() {
 /** A list whose scroll container is handed to the trigger as its root. The
  * key remounts the container, as a page does when it swaps between its
  * empty, loading and populated states. */
-function List({ containerKey = 'a', onLoadMore = () => {}, isLoading = false }) {
+function List({
+  containerKey = 'a',
+  onLoadMore = () => {},
+  isLoading = false,
+}) {
   const scrollRef = useRef<HTMLDivElement>(null)
   return (
-    <div key={containerKey} ref={scrollRef} data-testid={`container-${containerKey}`}>
-      <LoadMoreTrigger hasMore onLoadMore={onLoadMore} isLoading={isLoading} root={scrollRef} />
+    <div
+      key={containerKey}
+      ref={scrollRef}
+      data-testid={`container-${containerKey}`}
+    >
+      <LoadMoreTrigger
+        hasMore
+        onLoadMore={onLoadMore}
+        isLoading={isLoading}
+        root={scrollRef}
+      />
     </div>
   )
 }
@@ -80,7 +97,13 @@ describe('LoadMoreTrigger', () => {
   it('falls back to the viewport when the element is not an ancestor', () => {
     const elsewhere = document.createElement('div')
     document.body.appendChild(elsewhere)
-    render(<LoadMoreTrigger hasMore onLoadMore={() => {}} root={{ current: elsewhere }} />)
+    render(
+      <LoadMoreTrigger
+        hasMore
+        onLoadMore={() => {}}
+        root={{ current: elsewhere }}
+      />
+    )
     expect(armed().root).toBeNull()
     elsewhere.remove()
   })
@@ -91,9 +114,9 @@ describe('LoadMoreTrigger', () => {
   })
 
   it('re-arms on the new container when the list remounts', () => {
-    const { rerender, getByTestId } = render(<List containerKey="a" />)
+    const { rerender, getByTestId } = render(<List containerKey='a' />)
     const first = armed()
-    rerender(<List containerKey="b" />)
+    rerender(<List containerKey='b' />)
     const second = armed()
     expect(first.disconnected).toBe(true)
     expect(second.root).toBe(getByTestId('container-b'))
@@ -101,7 +124,9 @@ describe('LoadMoreTrigger', () => {
   })
 
   it('gives the sentinel a height of its own', () => {
-    const { container } = render(<LoadMoreTrigger hasMore onLoadMore={() => {}} />)
+    const { container } = render(
+      <LoadMoreTrigger hasMore onLoadMore={() => {}} />
+    )
     expect(container.firstElementChild?.className).toContain('min-h-')
   })
 
@@ -116,7 +141,9 @@ describe('LoadMoreTrigger', () => {
   })
 
   it('renders nothing and observes nothing when there are no more pages', () => {
-    const { container } = render(<LoadMoreTrigger hasMore={false} onLoadMore={() => {}} />)
+    const { container } = render(
+      <LoadMoreTrigger hasMore={false} onLoadMore={() => {}} />
+    )
     expect(container.firstElementChild).toBeNull()
     expect(FakeObserver.instances).toHaveLength(0)
   })

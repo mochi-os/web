@@ -56,8 +56,12 @@ describe('entity path translation', () => {
   })
 
   it('leaves paths outside the route base alone', () => {
-    expect(entityRouterPath('/other/thing', '/feed/', FINGERPRINT)).toBe('/other/thing')
-    expect(entityBrowserPath('/other/thing', '/feed/', FINGERPRINT)).toBe('/other/thing')
+    expect(entityRouterPath('/other/thing', '/feed/', FINGERPRINT)).toBe(
+      '/other/thing'
+    )
+    expect(entityBrowserPath('/other/thing', '/feed/', FINGERPRINT)).toBe(
+      '/other/thing'
+    )
   })
 
   it('round-trips every browser path', () => {
@@ -70,13 +74,21 @@ describe('entity path translation', () => {
 
 describe('getAppBasepath', () => {
   it('uses the domain route path when the page is entity-routed', () => {
-    metas({ 'mochi:app': 'feeds', 'mochi:domain': '/feed/', 'mochi:fingerprint': FINGERPRINT })
+    metas({
+      'mochi:app': 'feeds',
+      'mochi:domain': '/feed/',
+      'mochi:fingerprint': FINGERPRINT,
+    })
     at('/feed/')
     expect(getAppBasepath()).toBe('/feed/')
   })
 
   it('uses the whole-domain route path', () => {
-    metas({ 'mochi:app': 'feeds', 'mochi:domain': '/', 'mochi:fingerprint': FINGERPRINT })
+    metas({
+      'mochi:app': 'feeds',
+      'mochi:domain': '/',
+      'mochi:fingerprint': FINGERPRINT,
+    })
     at('/')
     expect(getAppBasepath()).toBe('/')
   })
@@ -130,14 +142,22 @@ describe('createAppHistory', () => {
     ['/feed/' + POST, `/feed/${FINGERPRINT}/${POST}`],
     [`/feed/${FINGERPRINT}/${POST}`, `/feed/${FINGERPRINT}/${POST}`],
   ])('shows the router %s as %s', (browser, expected) => {
-    metas({ 'mochi:app': 'feeds', 'mochi:domain': '/feed/', 'mochi:fingerprint': FINGERPRINT })
+    metas({
+      'mochi:app': 'feeds',
+      'mochi:domain': '/feed/',
+      'mochi:fingerprint': FINGERPRINT,
+    })
     at(browser)
     history = createAppHistory()
     expect(history?.location.pathname).toBe(expected)
   })
 
   it('preserves search and hash', () => {
-    metas({ 'mochi:app': 'feeds', 'mochi:domain': '/feed/', 'mochi:fingerprint': FINGERPRINT })
+    metas({
+      'mochi:app': 'feeds',
+      'mochi:domain': '/feed/',
+      'mochi:fingerprint': FINGERPRINT,
+    })
     at(`/feed/${POST}?sort=new#comments`)
     history = createAppHistory()
     expect(history?.location.pathname).toBe(`/feed/${FINGERPRINT}/${POST}`)
@@ -146,10 +166,16 @@ describe('createAppHistory', () => {
   })
 
   it('writes the short form back to the address bar', () => {
-    metas({ 'mochi:app': 'feeds', 'mochi:domain': '/feed/', 'mochi:fingerprint': FINGERPRINT })
+    metas({
+      'mochi:app': 'feeds',
+      'mochi:domain': '/feed/',
+      'mochi:fingerprint': FINGERPRINT,
+    })
     at('/feed/')
     history = createAppHistory()
-    expect(history?.createHref(`/feed/${FINGERPRINT}/${POST}`)).toBe('/feed/' + POST)
+    expect(history?.createHref(`/feed/${FINGERPRINT}/${POST}`)).toBe(
+      '/feed/' + POST
+    )
     expect(history?.createHref(`/feed/${FINGERPRINT}`)).toBe('/feed/')
     expect(history?.createHref(`/feed/${FINGERPRINT}/${POST}?sort=new`)).toBe(
       '/feed/' + POST + '?sort=new'

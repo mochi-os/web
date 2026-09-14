@@ -25,13 +25,21 @@ describe('error pages go back through the shell bridge', () => {
   })
 
   it('not found', () => {
-    render(<I18nProvider i18n={i18n}><NotFoundError /></I18nProvider>)
+    render(
+      <I18nProvider i18n={i18n}>
+        <NotFoundError />
+      </I18nProvider>
+    )
     fireEvent.click(screen.getByRole('button', { name: /go back/i }))
     expect(shellNavigateBack).toHaveBeenCalledTimes(1)
   })
 
   it('access denied', () => {
-    render(<I18nProvider i18n={i18n}><AccessDeniedError /></I18nProvider>)
+    render(
+      <I18nProvider i18n={i18n}>
+        <AccessDeniedError />
+      </I18nProvider>
+    )
     expect(screen.getByText('Access denied')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /go back/i }))
     expect(shellNavigateBack).toHaveBeenCalledTimes(1)

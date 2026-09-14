@@ -8,7 +8,17 @@ import { EntityCommentThread } from './entity-comment-thread'
 import type { EntityComment } from '../../types/entity-object'
 
 function comment(id: string, children: EntityComment[] = []): EntityComment {
-  return { id, parent: '', author: 'u1', name: 'Ada', content: `body ${id}`, created: 1, edited: 0, children, attachments: [] }
+  return {
+    id,
+    parent: '',
+    author: 'u1',
+    name: 'Ada',
+    content: `body ${id}`,
+    created: 1,
+    edited: 0,
+    children,
+    attachments: [],
+  }
 }
 
 function show(root: EntityComment) {
@@ -37,11 +47,14 @@ describe('EntityCommentThread', () => {
     // below can only come from plural().
     const original = i18n._.bind(i18n)
     const spy = vi.spyOn(i18n, '_').mockImplementation((...args: unknown[]) => {
-      const descriptor = (typeof args[0] === 'object' ? args[0] : { id: args[0], values: args[1] }) as {
+      const descriptor = (
+        typeof args[0] === 'object' ? args[0] : { id: args[0], values: args[1] }
+      ) as {
         message?: string
         values?: Record<string, unknown>
       }
-      if (descriptor.message?.includes('plural')) return `PLURAL(${String(Object.values(descriptor.values ?? {})[0])})`
+      if (descriptor.message?.includes('plural'))
+        return `PLURAL(${String(Object.values(descriptor.values ?? {})[0])})`
       return original(...(args as [string]))
     })
     show(comment('root', [comment('a'), comment('b', [comment('c')])]))

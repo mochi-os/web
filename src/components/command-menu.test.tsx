@@ -34,7 +34,14 @@ describe('CommandMenu', () => {
   })
 
   it('leaves the iframe through the shell for an external destination', () => {
-    show({ navGroups: [{ title: 'Apps', items: [{ title: 'People', url: '/people/', external: true }] }] })
+    show({
+      navGroups: [
+        {
+          title: 'Apps',
+          items: [{ title: 'People', url: '/people/', external: true }],
+        },
+      ],
+    })
     fireEvent.click(screen.getByText('People'))
     expect(shellNavigateExternal).toHaveBeenCalledWith('/people/')
   })
@@ -51,7 +58,9 @@ describe('CommandMenu', () => {
     })
     expect(screen.getByText('First')).toBeInTheDocument()
     expect(screen.getByText('Second')).toBeInTheDocument()
-    expect(errors.mock.calls.some((call) => String(call[0]).includes('same key'))).toBe(false)
+    expect(
+      errors.mock.calls.some((call) => String(call[0]).includes('same key'))
+    ).toBe(false)
     errors.mockRestore()
   })
 })

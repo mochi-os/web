@@ -107,7 +107,8 @@ export function AuditTimeline({
             const actor =
               entry.actor === 'system'
                 ? t`System`
-                : entry.actor_name || formatFingerprint(entry.actor_fingerprint ?? '')
+                : entry.actor_name ||
+                  formatFingerprint(entry.actor_fingerprint ?? '')
             return {
               id: entry.id,
               primary: (

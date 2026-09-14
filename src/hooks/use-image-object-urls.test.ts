@@ -99,8 +99,12 @@ describe('useImageObjectUrls', () => {
 
     // Revoking during render puts the revoke first; revoking in effect cleanup
     // puts it after the replacement has been created and committed.
-    const creates = calls.map((c, i) => ({ ...c, i })).filter((c) => c.kind === 'create')
-    const revokes = calls.map((c, i) => ({ ...c, i })).filter((c) => c.kind === 'revoke')
+    const creates = calls
+      .map((c, i) => ({ ...c, i }))
+      .filter((c) => c.kind === 'create')
+    const revokes = calls
+      .map((c, i) => ({ ...c, i }))
+      .filter((c) => c.kind === 'revoke')
 
     expect(creates.map((c) => c.url)).toEqual(['blob:test/1', 'blob:test/2'])
     expect(revokes.map((c) => c.url)).toEqual(['blob:test/1'])
@@ -109,9 +113,12 @@ describe('useImageObjectUrls', () => {
 
   it('does not recreate URLs when handed the same files array', () => {
     const files = [image('a.png')]
-    const { rerender, result } = renderHook(({ files }) => useImageObjectUrls(files), {
-      initialProps: { files },
-    })
+    const { rerender, result } = renderHook(
+      ({ files }) => useImageObjectUrls(files),
+      {
+        initialProps: { files },
+      }
+    )
 
     rerender({ files })
     rerender({ files })

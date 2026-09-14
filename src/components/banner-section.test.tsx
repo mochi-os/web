@@ -38,9 +38,7 @@ describe('BannerSection', () => {
     }
     renderSection(api)
 
-    expect(
-      await screen.findByText(/directory unreachable/)
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/directory unreachable/)).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
   })
 

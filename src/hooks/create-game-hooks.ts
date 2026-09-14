@@ -34,7 +34,7 @@ export interface GameApiShape {
   detail: (gameId: string) => Promise<unknown>
   messages: (
     gameId: string,
-    options: { before?: string; limit?: number },
+    options: { before?: string; limit?: number }
   ) => Promise<GameMessagesPage>
   sendMessage: (gameId: string, payload: never) => Promise<unknown>
   move: (gameId: string, payload: never) => Promise<unknown>
@@ -77,7 +77,7 @@ type Payload<F> = F extends (id: string, payload: infer P) => unknown
 
 export function createGameHooks<A extends GameApiShape>(
   gamesApi: A,
-  { extraMoveKeys }: CreateGameHooksOptions = {},
+  { extraMoveKeys }: CreateGameHooksOptions = {}
 ) {
   type GamesResponse = Result<A['list']>
   type ViewResponse = Result<A['detail']>
@@ -105,14 +105,13 @@ export function createGameHooks<A extends GameApiShape>(
         ReturnType<typeof gameQueryKeys.detail>
       >,
       'queryKey' | 'queryFn'
-    >,
+    >
   ) =>
     useQueryWithError({
       queryKey: gameQueryKeys.detail(gameId ?? 'unknown'),
       enabled: Boolean(gameId) && (options?.enabled ?? true),
       queryFn: () => {
         if (!gameId) {
-          // eslint-disable-next-line lingui/no-unlocalized-strings -- thrown to the query's error boundary, never rendered
           throw new Error('Game ID is required')
         }
         return gamesApi.detail(gameId) as Promise<ViewResponse>
@@ -129,7 +128,7 @@ export function createGameHooks<A extends GameApiShape>(
         ReturnType<typeof gameQueryKeys.all>
       >,
       'enabled' | 'staleTime' | 'gcTime'
-    >,
+    >
   ) =>
     useQueryWithError({
       queryKey: gameQueryKeys.all(),
@@ -140,7 +139,7 @@ export function createGameHooks<A extends GameApiShape>(
 
   const useInfiniteMessagesQuery = (
     gameId?: string,
-    options?: { enabled?: boolean },
+    options?: { enabled?: boolean }
   ) =>
     useInfiniteQueryWithError<
       MessagesResponse,
@@ -161,7 +160,12 @@ export function createGameHooks<A extends GameApiShape>(
           limit: DEFAULT_PAGE_SIZE,
         }) as Promise<MessagesResponse>
       },
-      getNextPageParam: (lastPage, _allPages, _lastPageParam, allPageParams) => {
+      getNextPageParam: (
+        lastPage,
+        _allPages,
+        _lastPageParam,
+        allPageParams
+      ) => {
         if (!lastPage.more) {
           return undefined
         }
@@ -181,7 +185,7 @@ export function createGameHooks<A extends GameApiShape>(
       Error,
       Payload<A['sendMessage']> & { gameId: string },
       unknown
-    >,
+    >
   ) => {
     const queryClient = useQueryClient()
     const { onSuccess, ...restOptions } = options ?? {}
@@ -204,7 +208,7 @@ export function createGameHooks<A extends GameApiShape>(
       Error,
       Payload<A['move']> & { gameId: string },
       unknown
-    >,
+    >
   ) => {
     const queryClient = useQueryClient()
     const { onSuccess, onError, ...restOptions } = options ?? {}
@@ -250,7 +254,7 @@ export function createGameHooks<A extends GameApiShape>(
         ReturnType<typeof gameQueryKeys.newGame>
       >,
       'queryKey' | 'queryFn'
-    >,
+    >
   ) =>
     useQueryWithError({
       queryKey: gameQueryKeys.newGame(),
@@ -265,10 +269,10 @@ export function createGameHooks<A extends GameApiShape>(
    */
   const gameAction = <R>(
     call: (gameId: string) => Promise<unknown>,
-    invalidatesList: boolean,
+    invalidatesList: boolean
   ) =>
     function useGameAction(
-      options?: UseMutationOptions<R, Error, { gameId: string }, unknown>,
+      options?: UseMutationOptions<R, Error, { gameId: string }, unknown>
     ) {
       const queryClient = useQueryClient()
       const { onSuccess, ...restOptions } = options ?? {}
@@ -294,7 +298,7 @@ export function createGameHooks<A extends GameApiShape>(
 
   const useResignMutation = gameAction<ResignResponse>(
     (gameId) => gamesApi.resign(gameId),
-    true,
+    true
   )
 
   // Narrowed rather than required, so an api without the three still satisfies
@@ -309,15 +313,15 @@ export function createGameHooks<A extends GameApiShape>(
   const drawHooks = {
     useDrawOfferMutation: gameAction<DrawResponse>(
       (gameId) => draws.drawOffer!(gameId),
-      false,
+      false
     ),
     useDrawAcceptMutation: gameAction<DrawResponse>(
       (gameId) => draws.drawAccept!(gameId),
-      true,
+      true
     ),
     useDrawDeclineMutation: gameAction<DrawResponse>(
       (gameId) => draws.drawDecline!(gameId),
-      false,
+      false
     ),
   }
 
@@ -327,7 +331,7 @@ export function createGameHooks<A extends GameApiShape>(
       Error,
       { gameId: string },
       unknown
-    >,
+    >
   ) => {
     const queryClient = useQueryClient()
     const { onSuccess, ...restOptions } = options ?? {}

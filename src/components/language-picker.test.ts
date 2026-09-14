@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect } from 'vitest'
-import { nativeName, describeLanguages, resolveInstalled } from './language-picker'
+import {
+  nativeName,
+  describeLanguages,
+  resolveInstalled,
+} from './language-picker'
 
 // Measured with node's full-icu build: these three resolve their display
 // locale to en-GB, so Intl answers with the English exonym. Browsers ship
@@ -15,11 +19,16 @@ const NO_CLDR_DATA = [
 ] as const
 
 describe('nativeName', () => {
-  it.each(NO_CLDR_DATA)('gives %s its autonym where Intl gives the English exonym', (tag, autonym) => {
-    expect(nativeName(tag)).toBe(autonym)
-    // The reason the table exists: Intl alone would answer in English here.
-    expect(new Intl.DisplayNames([tag], { type: 'language' }).of(tag)).not.toBe(autonym) // i18n-format-ok: the assertion IS that bare Intl is wrong here
-  })
+  it.each(NO_CLDR_DATA)(
+    'gives %s its autonym where Intl gives the English exonym',
+    (tag, autonym) => {
+      expect(nativeName(tag)).toBe(autonym)
+      // The reason the table exists: Intl alone would answer in English here.
+      expect(
+        new Intl.DisplayNames([tag], { type: 'language' }).of(tag) // i18n-format-ok: the assertion IS that bare Intl is wrong here
+      ).not.toBe(autonym)
+    }
+  )
 
   it('keeps Mochi wording where it differs from CLDR', () => {
     // `en` is neutral English, not UK or US, and the Spanish pair names its
@@ -51,14 +60,24 @@ describe('nativeName', () => {
 describe('describeLanguages', () => {
   it('returns every tag it was given', () => {
     const tags = ['ja', 'en', 'ar', 'fr', 'ay']
-    expect(describeLanguages(tags).map((e) => e.tag).sort()).toEqual([...tags].sort())
+    expect(
+      describeLanguages(tags)
+        .map((e) => e.tag)
+        .sort()
+    ).toEqual([...tags].sort())
   })
 
   it('puts Latin-script names before the rest', () => {
     const entries = describeLanguages(['ja', 'ar', 'fr', 'en', 'he'])
     const natives = entries.map((e) => e.native)
-    const lastLatin = Math.max(natives.indexOf('Français'), natives.indexOf('English (international)'))
-    const firstOther = Math.min(natives.indexOf('日本語'), natives.indexOf('العربية'))
+    const lastLatin = Math.max(
+      natives.indexOf('Français'),
+      natives.indexOf('English (international)')
+    )
+    const firstOther = Math.min(
+      natives.indexOf('日本語'),
+      natives.indexOf('العربية')
+    )
     expect(lastLatin).toBeLessThan(firstOther)
   })
 

@@ -102,7 +102,11 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
           className='font-mono text-sm'
         />
         <div className='flex items-center gap-2'>
-          <Button size='sm' onClick={() => void handleSave()} disabled={saving || !dirty}>
+          <Button
+            size='sm'
+            onClick={() => void handleSave()}
+            disabled={saving || !dirty}
+          >
             {saving ? (
               <Loader2 className='size-4 animate-spin' />
             ) : (

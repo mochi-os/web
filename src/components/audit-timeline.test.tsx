@@ -15,7 +15,16 @@ describe('AuditTimeline', () => {
           kind='listing'
           object='l1'
           fetchAudit={async () => ({
-            audit: [{ id: 'a1', action: 'weird.key', data: '{}', actor: 'system', actor_name: '', timestamp: 1700000000 }],
+            audit: [
+              {
+                id: 'a1',
+                action: 'weird.key',
+                data: '{}',
+                actor: 'system',
+                actor_name: '',
+                timestamp: 1700000000,
+              },
+            ],
           })}
           actionLabels={{}}
           formatFingerprint={(actor) => actor}
@@ -33,15 +42,17 @@ describe('AuditTimeline', () => {
           kind='listing'
           object='l1'
           fetchAudit={async () => ({
-            audit: [{
-              id: 'a1',
-              action: 'listing.created',
-              data: '{}',
-              actor: 'ENTITYID000000000000',
-              actor_name: '',
-              actor_fingerprint: 'abc123def',
-              timestamp: 1700000000,
-            }],
+            audit: [
+              {
+                id: 'a1',
+                action: 'listing.created',
+                data: '{}',
+                actor: 'ENTITYID000000000000',
+                actor_name: '',
+                actor_fingerprint: 'abc123def',
+                timestamp: 1700000000,
+              },
+            ],
           })}
           actionLabels={{ 'listing.created': 'Created' }}
           formatFingerprint={(fingerprint) => `fp:${fingerprint}`}

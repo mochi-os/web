@@ -28,7 +28,8 @@ function sourceOrigin(source: string): string | null {
   if (!URL.canParse(source)) return null
   const url = new URL(source)
   if (url.protocol !== 'https:' || url.username || url.password) return null
-  if ((url.pathname !== '/' && url.pathname !== '') || url.search || url.hash) return null
+  if ((url.pathname !== '/' && url.pathname !== '') || url.search || url.hash)
+    return null
   return url.origin
 }
 
@@ -90,14 +91,19 @@ export function RestoreBanner() {
       </h2>
       <p className='text-muted-foreground mb-3 text-sm'>
         <Trans>
-          Your account was moved here from {source}. Until you delete it there, messages and
-          notifications may reach both servers, some of your content keeps being served from the
-          old server, and followers may take a few minutes to find you here.
+          Your account was moved here from {source}. Until you delete it there,
+          messages and notifications may reach both servers, some of your
+          content keeps being served from the old server, and followers may take
+          a few minutes to find you here.
         </Trans>
       </p>
       {origin && (
         <Button asChild variant='outline' size='sm'>
-          <a href={`${origin}/settings`} target='_blank' rel='noopener noreferrer'>
+          <a
+            href={`${origin}/settings`}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
             <Trans>Delete your account on the old server</Trans>
             <ExternalLink className='ml-1 h-3 w-3' />
           </a>

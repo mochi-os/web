@@ -8,7 +8,13 @@
 
 import { useCallback, useRef, useState, type JSX, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Loader2, MoreHorizontal, Settings2, Upload } from 'lucide-react'
+import {
+  Download,
+  Loader2,
+  MoreHorizontal,
+  Settings2,
+  Upload,
+} from 'lucide-react'
 import { Main } from '../layout/main'
 import { PageHeader } from '../layout/page-header'
 import { Button } from '../ui/button'
@@ -51,7 +57,7 @@ export interface EntityDesignApi<TDetails> {
     id: string,
     data: Record<string, unknown>,
     template?: string,
-    templateVersion?: number,
+    templateVersion?: number
   ) => Promise<unknown>
 }
 
@@ -108,7 +114,10 @@ export interface EntityDesignPageProps<
   renderTemplates?: (select: (choice: EntityDesignImport) => void) => ReactNode
 }
 
-export function EntityDesignPage<TContainer extends { name: string }, TDetails>({
+export function EntityDesignPage<
+  TContainer extends { name: string },
+  TDetails,
+>({
   containerId,
   selectContainer,
   queryKey,
@@ -142,7 +151,7 @@ export function EntityDesignPage<TContainer extends { name: string }, TDetails>(
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [importing, setImporting] = useState(false)
   const [pendingImport, setPendingImport] = useState<EntityDesignImport | null>(
-    null,
+    null
   )
 
   const handleExport = useCallback(async () => {
@@ -172,7 +181,7 @@ export function EntityDesignPage<TContainer extends { name: string }, TDetails>(
         containerId,
         pendingImport.data,
         pendingImport.template,
-        pendingImport.templateVersion,
+        pendingImport.templateVersion
       )
       queryClient.invalidateQueries({ queryKey: [queryKey, containerId] })
       toast.success(labels.imported)
@@ -199,14 +208,14 @@ export function EntityDesignPage<TContainer extends { name: string }, TDetails>(
       <>
         <PageHeader
           title={labels.design}
-          icon={<Settings2 className="size-4 md:size-5" />}
+          icon={<Settings2 className='size-4 md:size-5' />}
           back={{ label: labels.back, onFallback: onBack }}
         />
         <Main>
           <GeneralError
             error={error ?? new Error(labels.loadFailed)}
             minimal
-            mode="inline"
+            mode='inline'
             reset={() => {
               void refetch()
             }}
@@ -224,33 +233,33 @@ export function EntityDesignPage<TContainer extends { name: string }, TDetails>(
     <>
       <PageHeader
         title={labels.pageTitle(container.name)}
-        icon={<Settings2 className="size-4 md:size-5" />}
+        icon={<Settings2 className='size-4 md:size-5' />}
         back={{ label: labels.back, onFallback: onBack }}
         menuAction={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <IconButton
-                variant="ghost"
-                className="size-8"
+                variant='ghost'
+                className='size-8'
                 label={labels.pageActions}
               >
-                <MoreHorizontal className="size-4" />
+                <MoreHorizontal className='size-4' />
               </IconButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align='end'>
               <DropdownMenuItem onClick={handleExport}>
-                <Download className="size-4 me-2" />
+                <Download className='size-4 me-2' />
                 {labels.exportAction}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setImportOpen(true)}>
-                <Upload className="size-4 me-2" />
+                <Upload className='size-4 me-2' />
                 {labels.importAction}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         }
       />
-      <Main fixed fluid className="flex-1 !py-0">
+      <Main fixed fluid className='flex-1 !py-0'>
         {renderEditor(details)}
       </Main>
 
@@ -275,7 +284,7 @@ export function EntityDesignPage<TContainer extends { name: string }, TDetails>(
         confirmText={
           importing ? (
             <>
-              <Loader2 className="size-4 me-1.5 animate-spin" />
+              <Loader2 className='size-4 me-1.5 animate-spin' />
               {labels.replacing}
             </>
           ) : (
@@ -286,12 +295,12 @@ export function EntityDesignPage<TContainer extends { name: string }, TDetails>(
         isLoading={importing}
       >
         <Button
-          variant="outline"
-          className="w-full"
+          variant='outline'
+          className='w-full'
           onClick={handleExport}
           disabled={importing}
         >
-          <Download className="size-4 me-1.5" />
+          <Download className='size-4 me-1.5' />
           {labels.downloadBackup}
         </Button>
       </ConfirmDialog>
@@ -342,39 +351,39 @@ function EntityDesignImportDialog({
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>{labels.importTitle}</ResponsiveDialogTitle>
           {labels.importDescription && (
-            <ResponsiveDialogDescription className="sr-only">
+            <ResponsiveDialogDescription className='sr-only'>
               {labels.importDescription}
             </ResponsiveDialogDescription>
           )}
         </ResponsiveDialogHeader>
 
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {renderTemplates?.(onSelect)}
 
-          <div className="space-y-2">
+          <div className='space-y-2'>
             {labels.fileSection && (
-              <p className="text-sm font-medium">{labels.fileSection}</p>
+              <p className='text-sm font-medium'>{labels.fileSection}</p>
             )}
             <input
               ref={fileInputRef}
-              type="file"
-              accept=".json"
+              type='file'
+              accept='.json'
               onChange={handleFileChange}
-              className="hidden"
+              className='hidden'
             />
             <Button
-              variant="outline"
-              className="w-full"
+              variant='outline'
+              className='w-full'
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="size-4 me-1.5" />
+              <Upload className='size-4 me-1.5' />
               {labels.uploadFile}
             </Button>
           </div>
         </div>
 
         <ResponsiveDialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>
             {labels.cancel}
           </Button>
         </ResponsiveDialogFooter>

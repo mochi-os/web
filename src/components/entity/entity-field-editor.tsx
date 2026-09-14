@@ -144,7 +144,8 @@ export function EntityFieldEditor({
     switch (field.fieldtype) {
       case 'enumerated': {
         const opt = options.find((o) => o.id === value)
-        if (!opt) return <span className='text-sm text-muted-foreground'>—</span>
+        if (!opt)
+          return <span className='text-sm text-muted-foreground'>—</span>
         return (
           <div className='flex items-center gap-2 h-9 text-sm'>
             {opt.colour && (
@@ -177,7 +178,9 @@ export function EntityFieldEditor({
         const numeric = Number(value)
         return (
           <span className='text-sm h-9 flex items-center'>
-            {Number.isFinite(numeric) ? formatNumber(numeric, decimalPlaces(value)) : value}
+            {Number.isFinite(numeric)
+              ? formatNumber(numeric, decimalPlaces(value))
+              : value}
           </span>
         )
       }
@@ -190,7 +193,6 @@ export function EntityFieldEditor({
           )
         return (
           <span className='text-sm h-9 flex items-center'>
-            {/* eslint-disable-next-line lingui/no-unlocalized-strings */}
             {formatDate(new Date(value + 'T00:00:00'))}
           </span>
         )

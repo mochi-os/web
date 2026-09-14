@@ -161,7 +161,8 @@ export function shellOrigin(): string {
  * channel carries the session token inbound and Blob bytes outbound.
  */
 export function fromShell(event: MessageEvent): boolean {
-  if (typeof window === 'undefined' || event.source !== window.parent) return false
+  if (typeof window === 'undefined' || event.source !== window.parent)
+    return false
   const origin = shellOrigin()
   return origin === '*' || event.origin === origin
 }
@@ -223,7 +224,6 @@ export function initShellBridge(): Promise<ShellInitData> {
 export function getShellInitData(): ShellInitData | null {
   return shellInitData
 }
-
 
 /**
  * Ask the shell to navigate back. history.back() silently no-ops in the
@@ -289,7 +289,10 @@ export function shellSetSidebarState(open: boolean): void {
  * persisted collapse state. */
 export function shellSetSidebarPresent(present: boolean): void {
   if (isInShell()) {
-    window.parent.postMessage({ type: 'sidebar-present', present }, shellOrigin())
+    window.parent.postMessage(
+      { type: 'sidebar-present', present },
+      shellOrigin()
+    )
   }
 }
 
@@ -326,7 +329,10 @@ export function shellSetLanguage(language: string): void {
  * outside the shell too, where window.parent is the window itself.
  */
 export function shellSetAvatar(person: string, version: string): void {
-  window.parent.postMessage({ type: 'avatar-set', person, version }, shellOrigin())
+  window.parent.postMessage(
+    { type: 'avatar-set', person, version },
+    shellOrigin()
+  )
 }
 
 /** Write text to the clipboard. Uses the shell proxy when sandboxed. */
@@ -339,12 +345,15 @@ function fallbackExecCommandCopy(text: string): boolean {
   if (typeof document.execCommand !== 'function') return false
 
   const textArea = document.createElement('textarea')
-  const activeElement = document.activeElement instanceof HTMLElement
-    ? document.activeElement
-    : null
+  const activeElement =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
   const selection = document.getSelection()
   const selectedRange =
-    selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null
+    selection && selection.rangeCount > 0
+      ? selection.getRangeAt(0).cloneRange()
+      : null
 
   textArea.value = text
   textArea.setAttribute('readonly', '')
@@ -388,7 +397,10 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
   // Outside shell, use native API directly
   if (!isInShell()) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text).then(() => true, () => fallbackExecCommandCopy(text))
+      return navigator.clipboard.writeText(text).then(
+        () => true,
+        () => fallbackExecCommandCopy(text)
+      )
     }
     return Promise.resolve(fallbackExecCommandCopy(text))
   }
@@ -411,7 +423,10 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage({ type: 'clipboard.write', text, id }, shellOrigin())
+    window.parent.postMessage(
+      { type: 'clipboard.write', text, id },
+      shellOrigin()
+    )
   })
 }
 
@@ -476,7 +491,10 @@ export function shellDownload(url: string, name: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage({ type: 'download', url: absolute, name, id }, shellOrigin())
+    window.parent.postMessage(
+      { type: 'download', url: absolute, name, id },
+      shellOrigin()
+    )
   })
 }
 
@@ -503,7 +521,10 @@ export function shellSaveBlob(blob: Blob, name: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage({ type: 'download.content', blob, name, id }, shellOrigin())
+    window.parent.postMessage(
+      { type: 'download.content', blob, name, id },
+      shellOrigin()
+    )
   })
 }
 
@@ -527,7 +548,8 @@ export function installShellClipboardProxy(): void {
 
   navigator.clipboard.writeText = function (text: string): Promise<void> {
     return shellClipboardWrite(text).then((ok) => {
-      if (!ok) throw new DOMException('Clipboard write failed', 'NotAllowedError')
+      if (!ok)
+        throw new DOMException('Clipboard write failed', 'NotAllowedError')
     })
   }
 }
@@ -554,19 +576,32 @@ function webauthnFailure(name: string): WebauthnError {
   return err
 }
 
-async function webauthnLocal(create: boolean, optionsJSON: unknown): Promise<unknown> {
-  const pk = window.PublicKeyCredential as unknown as {
-    parseCreationOptionsFromJSON?: (opts: unknown) => PublicKeyCredentialCreationOptions
-    parseRequestOptionsFromJSON?: (opts: unknown) => PublicKeyCredentialRequestOptions
-  } | undefined
+async function webauthnLocal(
+  create: boolean,
+  optionsJSON: unknown
+): Promise<unknown> {
+  const pk = window.PublicKeyCredential as unknown as
+    | {
+        parseCreationOptionsFromJSON?: (
+          opts: unknown
+        ) => PublicKeyCredentialCreationOptions
+        parseRequestOptionsFromJSON?: (
+          opts: unknown
+        ) => PublicKeyCredentialRequestOptions
+      }
+    | undefined
   if (!pk) throw webauthnFailure('NotSupportedError')
   const publicKey = create
     ? pk.parseCreationOptionsFromJSON?.(optionsJSON)
     : pk.parseRequestOptionsFromJSON?.(optionsJSON)
   if (!publicKey) throw webauthnFailure('NotSupportedError')
   const cred = create
-    ? await navigator.credentials.create({ publicKey: publicKey as PublicKeyCredentialCreationOptions })
-    : await navigator.credentials.get({ publicKey: publicKey as PublicKeyCredentialRequestOptions })
+    ? await navigator.credentials.create({
+        publicKey: publicKey as PublicKeyCredentialCreationOptions,
+      })
+    : await navigator.credentials.get({
+        publicKey: publicKey as PublicKeyCredentialRequestOptions,
+      })
   const withToJSON = cred as unknown as { toJSON?: () => unknown }
   if (!cred || typeof withToJSON.toJSON !== 'function') {
     throw webauthnFailure('NotSupportedError')
@@ -586,7 +621,10 @@ function webauthnDeadline(optionsJSON: unknown): number {
   return base + SHELL_WEBAUTHN_GRACE_MS
 }
 
-function webauthnThroughShell(create: boolean, optionsJSON: unknown): Promise<unknown> {
+function webauthnThroughShell(
+  create: boolean,
+  optionsJSON: unknown
+): Promise<unknown> {
   const id = ++webauthnIdCounter
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -603,18 +641,26 @@ function webauthnThroughShell(create: boolean, optionsJSON: unknown): Promise<un
       resolve(result.credential)
     })
     window.parent.postMessage(
-      { type: create ? 'webauthn.create' : 'webauthn.get', requestId: id, optionsJSON },
+      {
+        type: create ? 'webauthn.create' : 'webauthn.get',
+        requestId: id,
+        optionsJSON,
+      },
       shellOrigin()
     )
   })
 }
 
 export function shellWebauthnCreate(optionsJSON: unknown): Promise<unknown> {
-  return isInShell() ? webauthnThroughShell(true, optionsJSON) : webauthnLocal(true, optionsJSON)
+  return isInShell()
+    ? webauthnThroughShell(true, optionsJSON)
+    : webauthnLocal(true, optionsJSON)
 }
 
 export function shellWebauthnGet(optionsJSON: unknown): Promise<unknown> {
-  return isInShell() ? webauthnThroughShell(false, optionsJSON) : webauthnLocal(false, optionsJSON)
+  return isInShell()
+    ? webauthnThroughShell(false, optionsJSON)
+    : webauthnLocal(false, optionsJSON)
 }
 
 /**
@@ -723,9 +769,7 @@ export function shellMicProbe(): Promise<boolean> {
 /** Start shell-side microphone recording. Resolves with shell requestId. */
 export function shellMicStart(): Promise<number> {
   if (!isInShell()) {
-    return Promise.reject(
-      shellMicFailure('InvalidStateError')
-    )
+    return Promise.reject(shellMicFailure('InvalidStateError'))
   }
 
   const requestId = ++micIdCounter
@@ -734,7 +778,10 @@ export function shellMicStart(): Promise<number> {
       micStartCallbacks.delete(requestId)
       // Best-effort cancel so the shell discards a still-pending permission
       // request. Do not await shellMicCancel() — that adds another timeout.
-      window.parent.postMessage({ type: 'mic.cancel', requestId }, shellOrigin())
+      window.parent.postMessage(
+        { type: 'mic.cancel', requestId },
+        shellOrigin()
+      )
       reject(shellMicFailure('TimeoutError'))
     }, SHELL_MIC_START_TIMEOUT_MS)
 
@@ -746,9 +793,7 @@ export function shellMicStart(): Promise<number> {
 /** Stop shell-side recording and receive the Blob result. */
 export function shellMicStop(requestId: number): Promise<ShellMicResult> {
   if (!isInShell()) {
-    return Promise.reject(
-      shellMicFailure('InvalidStateError')
-    )
+    return Promise.reject(shellMicFailure('InvalidStateError'))
   }
 
   return new Promise((resolve, reject) => {
@@ -796,7 +841,9 @@ export function onShellMicLevel(listener: MicLevelListener): () => void {
 }
 
 /** Listen for messages from the shell */
-export function onShellMessage(listener: (msg: ShellMessage) => void): () => void {
+export function onShellMessage(
+  listener: (msg: ShellMessage) => void
+): () => void {
   messageListeners.push(listener)
 
   return () => {
@@ -833,34 +880,44 @@ export function installShellLinkInterceptor(): void {
 
   const currentApp = window.location.pathname.match(/^\/([^/]+)/)?.[1] || ''
 
-  document.addEventListener('click', (event) => {
-    // Find the nearest <a> element
-    const target = (event.target as HTMLElement).closest?.('a')
-    if (!target) return
+  document.addEventListener(
+    'click',
+    (event) => {
+      // Find the nearest <a> element
+      const target = (event.target as HTMLElement).closest?.('a')
+      if (!target) return
 
-    const href = target.getAttribute('href')
-    if (!href) return
+      const href = target.getAttribute('href')
+      if (!href) return
 
-    // External links — force new tab so they don't load inside the shell iframe
-    if (href.startsWith('http://') || href.startsWith('https://')) {
-      target.setAttribute('target', '_blank')
-      target.setAttribute('rel', 'noopener noreferrer')
-      return
-    }
+      // External links — force new tab so they don't load inside the shell iframe
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        target.setAttribute('target', '_blank')
+        target.setAttribute('rel', 'noopener noreferrer')
+        return
+      }
 
-    // Only intercept absolute-path links to other apps
-    if (!href.startsWith('/')) return
+      // Only intercept absolute-path links to other apps
+      if (!href.startsWith('/')) return
 
-    const linkApp = href.match(/^\/([^/]+)/)?.[1] || ''
-    if (!linkApp || linkApp === currentApp || linkApp.startsWith('_')) return
+      const linkApp = href.match(/^\/([^/]+)/)?.[1] || ''
+      if (!linkApp || linkApp === currentApp || linkApp.startsWith('_')) return
 
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.button !== 0
+      )
+        return
 
-    // Cross-app link — route through shell
-    event.preventDefault()
-    event.stopPropagation()
-    shellNavigateExternal(href)
-  }, true) // capture phase to intercept before app handlers
+      // Cross-app link — route through shell
+      event.preventDefault()
+      event.stopPropagation()
+      shellNavigateExternal(href)
+    },
+    true
+  ) // capture phase to intercept before app handlers
 }
 
 /**
@@ -885,8 +942,13 @@ export function installShellNavigationSync(): void {
     params.delete('_shell')
     const query = params.toString()
     const path =
-      window.location.pathname + (query ? `?${query}` : '') + window.location.hash
-    window.parent.postMessage({ type: 'navigate', path, replace }, shellOrigin())
+      window.location.pathname +
+      (query ? `?${query}` : '') +
+      window.location.hash
+    window.parent.postMessage(
+      { type: 'navigate', path, replace },
+      shellOrigin()
+    )
   }
 
   // Mirror both push and replace locally with origReplaceState: the iframe must
@@ -898,7 +960,9 @@ export function installShellNavigationSync(): void {
     notifyShell(false)
   }
 
-  history.replaceState = function (...args: Parameters<typeof history.replaceState>) {
+  history.replaceState = function (
+    ...args: Parameters<typeof history.replaceState>
+  ) {
     origReplaceState(...args)
     notifyShell(true)
   }
@@ -926,7 +990,8 @@ export function authenticatedUrl(url: string): string {
   // markdown image source, say - would otherwise carry this reader's token
   // to it. Only this app's own route gets the token.
   const prefix = ownResourcePrefix()
-  if (!prefix || !new URL(url, document.baseURI).pathname.startsWith(prefix)) return url
+  if (!prefix || !new URL(url, document.baseURI).pathname.startsWith(prefix))
+    return url
 
   const token = shellInitData.token
   if (!token) return url
@@ -949,7 +1014,9 @@ function ownResourcePrefix(): string {
 let permissionIdCounter = 0
 const permissionCallbacks = new Map<number, (result: string) => void>()
 
-export function shellRequestPermission(permission: string): Promise<'granted' | 'denied'> {
+export function shellRequestPermission(
+  permission: string
+): Promise<'granted' | 'denied'> {
   // Only the shell can show this dialog. In the top window window.parent is
   // window itself, so the message would be posted to a document with no
   // handler and the promise would never settle - denied is both the honest
@@ -973,7 +1040,10 @@ export function shellRequestPermission(permission: string): Promise<'granted' | 
     // app from __mochi_shell.appId and looks `restricted` up on the server. It
     // must never be the caller that names which app is being granted, and a
     // parameter the receiver discards implies otherwise.
-    window.parent.postMessage({ type: 'request-permission', id, permission }, shellOrigin())
+    window.parent.postMessage(
+      { type: 'request-permission', id, permission },
+      shellOrigin()
+    )
   })
 }
 
@@ -1020,7 +1090,10 @@ if (typeof window !== 'undefined') {
     }
 
     // Handle WebAuthn ceremony result
-    if (data.type === 'webauthn.create.result' || data.type === 'webauthn.get.result') {
+    if (
+      data.type === 'webauthn.create.result' ||
+      data.type === 'webauthn.get.result'
+    ) {
       const cb = webauthnCallbacks.get(data.requestId as number)
       if (cb) {
         webauthnCallbacks.delete(data.requestId as number)
@@ -1068,9 +1141,12 @@ if (typeof window !== 'undefined') {
       if (startCb) {
         micStartCallbacks.delete(requestId)
         clearMicTimer(startCb)
-        const err = data.error as { name?: string; message?: string } | undefined
+        const err = data.error as
+          { name?: string; message?: string } | undefined
         startCb.reject(
-          shellMicFailure(err?.name || (data.cancelled ? 'AbortError' : 'Error'))
+          shellMicFailure(
+            err?.name || (data.cancelled ? 'AbortError' : 'Error')
+          )
         )
       }
 
@@ -1084,12 +1160,18 @@ if (typeof window !== 'undefined') {
             mimeType: String(data.mimeType || 'audio/webm'),
             filename: String(data.filename || 'Voice Note.webm'),
             // Shells older than 2026-09 send durationSecs; drop after one release.
-            duration: Number(data.duration !== undefined ? data.duration : data.durationSecs) || 1,
+            duration:
+              Number(
+                data.duration !== undefined ? data.duration : data.durationSecs
+              ) || 1,
           })
         } else {
-          const err = data.error as { name?: string; message?: string } | undefined
+          const err = data.error as
+            { name?: string; message?: string } | undefined
           stopCb.reject(
-            shellMicFailure(err?.name || (data.cancelled ? 'AbortError' : 'Error'))
+            shellMicFailure(
+              err?.name || (data.cancelled ? 'AbortError' : 'Error')
+            )
           )
         }
       }

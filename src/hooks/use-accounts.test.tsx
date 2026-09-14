@@ -23,7 +23,9 @@ vi.mock('../lib/permission-utils', () => ({ handlePermissionError: vi.fn() }))
 import { useAccounts } from './use-accounts'
 
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return createElement(QueryClientProvider, { client }, children)
 }
 

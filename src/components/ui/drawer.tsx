@@ -4,13 +4,20 @@
 import * as React from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
 import { cn } from '../../lib/utils'
+import { insideToaster } from '../../lib/toast-utils'
 
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
   // Disable vaul's built-in input repositioning; we handle keyboard offset
   // ourselves via visualViewport in DrawerContent to avoid conflicting scrolls.
-  return <DrawerPrimitive.Root data-slot='drawer' repositionInputs={false} {...props} />
+  return (
+    <DrawerPrimitive.Root
+      data-slot='drawer'
+      repositionInputs={false}
+      {...props}
+    />
+  )
 }
 
 function DrawerTrigger({
@@ -50,9 +57,11 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  onPointerDownOutside,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
-  const ref = React.useRef<React.ComponentRef<typeof DrawerPrimitive.Content>>(null)
+  const ref =
+    React.useRef<React.ComponentRef<typeof DrawerPrimitive.Content>>(null)
 
   React.useEffect(() => {
     const vv = window.visualViewport
@@ -62,7 +71,10 @@ function DrawerContent({
       if (!ref.current) return
       // Keyboard height = layout viewport height minus the visible area height
       // (offsetTop accounts for any top-level page scroll on desktop)
-      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - vv.height - vv.offsetTop
+      )
       ref.current.style.bottom = keyboardHeight > 0 ? `${keyboardHeight}px` : ''
     }
 
@@ -90,6 +102,11 @@ function DrawerContent({
           'data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:border-e data-[vaul-drawer-direction=left]:sm:max-w-sm',
           className
         )}
+        onPointerDownOutside={(event) => {
+          if (insideToaster(event.detail.originalEvent.target))
+            event.preventDefault()
+          onPointerDownOutside?.(event)
+        }}
         {...props}
       >
         <div className='bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block' />

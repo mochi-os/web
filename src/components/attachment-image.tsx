@@ -24,7 +24,12 @@ export interface AttachmentImageProps {
  * click stops propagation, so a surrounding lightbox trigger never opens onto
  * the same failure.
  */
-export function AttachmentImage({ src, alt, className, onLoad }: AttachmentImageProps) {
+export function AttachmentImage({
+  src,
+  alt,
+  className,
+  onLoad,
+}: AttachmentImageProps) {
   const { t } = useLingui()
   const [failure, setFailure] = useState<'unavailable' | 'missing' | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -47,7 +52,9 @@ export function AttachmentImage({ src, alt, className, onLoad }: AttachmentImage
         ) : (
           <ImageOff className='size-6' />
         )}
-        <span className='text-xs'>{failure === 'unavailable' ? t`Unavailable` : t`Not found`}</span>
+        <span className='text-xs'>
+          {failure === 'unavailable' ? t`Unavailable` : t`Not found`}
+        </span>
       </div>
     )
   }

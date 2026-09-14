@@ -144,19 +144,19 @@ export function GameChatMessageList<M extends GameChatMessage>({
 
   if (isLoadingMessages) {
     return (
-      <div className="flex flex-1 w-full flex-col justify-end gap-3 p-3">
+      <div className='flex flex-1 w-full flex-col justify-end gap-3 p-3'>
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
             className={cn(
               'flex w-full flex-col gap-1',
-              i % 2 === 0 ? 'items-start' : 'items-end',
+              i % 2 === 0 ? 'items-start' : 'items-end'
             )}
           >
             <Skeleton
               className={cn(
                 'h-8 w-[70%] rounded-[12px]',
-                i % 2 === 0 ? 'rounded-es-[4px]' : 'rounded-ee-[4px]',
+                i % 2 === 0 ? 'rounded-es-[4px]' : 'rounded-ee-[4px]'
               )}
             />
           </div>
@@ -167,13 +167,13 @@ export function GameChatMessageList<M extends GameChatMessage>({
 
   if (messagesError) {
     return (
-      <div className="flex w-full flex-1 flex-col items-center justify-center py-4">
+      <div className='flex w-full flex-1 flex-col items-center justify-center py-4'>
         <GeneralError
           error={messagesError}
           minimal
-          mode="inline"
+          mode='inline'
           reset={messagesQuery.refetch}
-          className="w-full max-w-md"
+          className='w-full max-w-md'
         />
       </div>
     )
@@ -181,8 +181,8 @@ export function GameChatMessageList<M extends GameChatMessage>({
 
   if (chatMessages.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-        <p className="text-muted-foreground text-xs">{emptyLabel}</p>
+      <div className='flex flex-1 flex-col items-center justify-center py-4 text-center'>
+        <p className='text-muted-foreground text-xs'>{emptyLabel}</p>
       </div>
     )
   }
@@ -190,20 +190,19 @@ export function GameChatMessageList<M extends GameChatMessage>({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex w-full flex-1 flex-col justify-start gap-2 overflow-y-auto py-2 px-3 pb-3"
+      className='flex w-full flex-1 flex-col justify-start gap-2 overflow-y-auto py-2 px-3 pb-3'
     >
       <LoadMoreTrigger
         onLoadMore={handleLoadMore}
         hasMore={messagesQuery.hasNextPage ?? false}
         isLoading={messagesQuery.isFetchingNextPage}
-        rootMargin="100px"
+        rootMargin='100px'
       />
 
       {Object.keys(groupedMessages).map((key) => (
         <Fragment key={key}>
-          <div className="my-2 flex items-center justify-center">
-            {/* eslint-disable-next-line lingui/no-unlocalized-strings -- 'T00:00:00' is an ISO-8601 time component, not a UI label */}
-            <div className="text-muted-foreground text-[10px]">
+          <div className='my-2 flex items-center justify-center'>
+            <div className='text-muted-foreground text-[10px]'>
               {formatDate(new Date(key + 'T00:00:00'))}
             </div>
           </div>
@@ -233,9 +232,9 @@ export function GameChatMessageList<M extends GameChatMessage>({
               return (
                 <div
                   key={`${message.id}-${index}`}
-                  className="flex justify-center py-1"
+                  className='flex justify-center py-1'
                 >
-                  <span className="text-muted-foreground text-[11px] italic">
+                  <span className='text-muted-foreground text-[11px] italic'>
                     {text}
                   </span>
                 </div>
@@ -243,16 +242,16 @@ export function GameChatMessageList<M extends GameChatMessage>({
             }
 
             const isSent = Boolean(
-              currentUserIdentity && message.member === currentUserIdentity,
+              currentUserIdentity && message.member === currentUserIdentity
             )
 
             if (message.type === 'move') {
               return (
                 <div
                   key={`${message.id}-${index}`}
-                  className="flex justify-center py-0.5"
+                  className='flex justify-center py-0.5'
                 >
-                  <span className="text-[11px] text-muted-foreground/60">
+                  <span className='text-[11px] text-muted-foreground/60'>
                     {renderMove(message, isSent)}
                   </span>
                 </div>
@@ -264,12 +263,12 @@ export function GameChatMessageList<M extends GameChatMessage>({
                 key={`${message.id}-${index}`}
                 className={cn(
                   'group mb-1 flex w-full flex-col gap-0.5',
-                  isSent ? 'items-end' : 'items-start',
+                  isSent ? 'items-end' : 'items-start'
                 )}
               >
-                <div className="flex items-end gap-1.5">
+                <div className='flex items-end gap-1.5'>
                   {isSent && (
-                    <span className="text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 text-[9px]">
+                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 text-[9px]'>
                       {formatDateTime(new Date(message.created * 1000))}
                     </span>
                   )}
@@ -277,16 +276,16 @@ export function GameChatMessageList<M extends GameChatMessage>({
                   <div
                     className={cn(
                       'relative max-w-[85%] px-2.5 py-1.5 text-sm wrap-break-word',
-                      getChatBubbleToneClass(isSent),
+                      getChatBubbleToneClass(isSent)
                     )}
                   >
-                    <p className="leading-relaxed whitespace-pre-wrap">
+                    <p className='leading-relaxed whitespace-pre-wrap'>
                       {message.body}
                     </p>
                   </div>
 
                   {!isSent && (
-                    <span className="text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 text-[9px]">
+                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 text-[9px]'>
                       {formatDateTime(new Date(message.created * 1000))}
                     </span>
                   )}

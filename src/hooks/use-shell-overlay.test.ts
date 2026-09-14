@@ -22,7 +22,9 @@ let posted: Message[]
 beforeEach(() => {
   vi.useFakeTimers()
   posted = []
-  vi.spyOn(window.parent, 'postMessage').mockImplementation(((message: unknown) => {
+  vi.spyOn(window.parent, 'postMessage').mockImplementation(((
+    message: unknown
+  ) => {
     posted.push(message as Message)
   }) as typeof window.parent.postMessage)
 })
@@ -37,20 +39,20 @@ describe('useShellOverlay', () => {
     const { unmount } = renderHook(() => useShellOverlay(true))
     expect(posted).toEqual([{ type: 'overlay', open: true }])
     vi.advanceTimersByTime(11000)
-    expect(posted.filter(m => m.open)).toHaveLength(3)
+    expect(posted.filter((m) => m.open)).toHaveLength(3)
     unmount()
     expect(posted.at(-1)).toEqual({ type: 'overlay', open: false })
     vi.advanceTimersByTime(20000)
-    expect(posted.filter(m => m.open)).toHaveLength(3)
+    expect(posted.filter((m) => m.open)).toHaveLength(3)
   })
 
   it('keeps one heartbeat for several users and closes only after the last', () => {
     const first = renderHook(() => useShellOverlay(true))
     const second = renderHook(() => useShellOverlay(true))
     vi.advanceTimersByTime(5000)
-    expect(posted.filter(m => m.open)).toHaveLength(2)
+    expect(posted.filter((m) => m.open)).toHaveLength(2)
     first.unmount()
-    expect(posted.some(m => !m.open)).toBe(false)
+    expect(posted.some((m) => !m.open)).toBe(false)
     second.unmount()
     expect(posted.at(-1)).toEqual({ type: 'overlay', open: false })
   })

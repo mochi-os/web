@@ -7,7 +7,11 @@ import { useTheme } from '../../context/theme-provider'
 // Default durations (in ms): success/info 6s, error 10s
 const DEFAULT_DURATION = 6000
 
-export function Toaster({ duration = DEFAULT_DURATION, closeButton = true, ...props }: ToasterProps) {
+export function Toaster({
+  duration = DEFAULT_DURATION,
+  closeButton = true,
+  ...props
+}: ToasterProps) {
   const { theme = 'system' } = useTheme()
 
   return (
@@ -15,13 +19,17 @@ export function Toaster({ duration = DEFAULT_DURATION, closeButton = true, ...pr
       theme={theme as ToasterProps['theme']}
       duration={duration}
       closeButton={closeButton}
-      position="bottom-right"
+      position='bottom-right'
       className='toaster group'
       style={
         {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
+          // A modal dialog sets pointer-events: none on the body while it is
+          // open; without this the toasts inherit it and their copy and
+          // close buttons ignore every click.
+          pointerEvents: 'auto',
         } as React.CSSProperties
       }
       {...props}

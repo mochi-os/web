@@ -120,7 +120,9 @@ export function EntityBoardCard<TObject extends EntityObject>({
   if (borderField) {
     const value = object.values[borderField]
     if (value) {
-      const match = options[borderField]?.find((o) => o.id === value && o.colour)
+      const match = options[borderField]?.find(
+        (o) => o.id === value && o.colour
+      )
       if (match) {
         borderColor = match.colour
       }
@@ -190,7 +192,6 @@ export function EntityBoardCard<TObject extends EntityObject>({
       case 'date':
         return (
           <span key={field.id} className='text-[10px] text-muted-foreground'>
-            {/* eslint-disable-next-line lingui/no-unlocalized-strings */}
             {formatDate(new Date(value + 'T00:00:00'))}
           </span>
         )
@@ -242,7 +243,9 @@ export function EntityBoardCard<TObject extends EntityObject>({
         const numeric = Number(value)
         return (
           <span key={field.id} className='text-[10px] text-muted-foreground'>
-            {Number.isFinite(numeric) ? formatNumber(numeric, decimalPlaces(value)) : value}
+            {Number.isFinite(numeric)
+              ? formatNumber(numeric, decimalPlaces(value))
+              : value}
           </span>
         )
       }
@@ -418,7 +421,11 @@ export function EntityBoardCard<TObject extends EntityObject>({
         <div className='space-y-1.5 border-t pt-1.5'>
           {atDepthCap ? (
             <span className='text-[10px] text-muted-foreground'>
-              <Plural value={countDeepChildren(object.id)} one="+# nested" other="+# nested" />
+              <Plural
+                value={countDeepChildren(object.id)}
+                one='+# nested'
+                other='+# nested'
+              />
             </span>
           ) : (
             renderChildrenWithGap()

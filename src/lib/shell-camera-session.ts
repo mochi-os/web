@@ -44,13 +44,17 @@ let sequence = 0
  * Open the camera and stream frames until stop(); frames start after an ok. One
  * session at a time - the shell enforces it, the direct path assumes it.
  */
-export function cameraOpen(options: CameraOptions): Promise<{ session: CameraSession; opened: CameraOpen }> {
+export function cameraOpen(
+  options: CameraOptions
+): Promise<{ session: CameraSession; opened: CameraOpen }> {
   return isInShell() ? shellOpen(options) : directOpen(options)
 }
 
 // ---------------------------------------------------------------- in shell
 
-function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; opened: CameraOpen }> {
+function shellOpen(
+  options: CameraOptions
+): Promise<{ session: CameraSession; opened: CameraOpen }> {
   const requestId = ++sequence
   let live = true
 
@@ -72,7 +76,10 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       retire()
       // Tell the shell too: a consent prompt answered after this point would
       // otherwise start a camera that nothing owns or ever stops.
-      window.parent.postMessage({ type: 'camera.stop', requestId }, shellOrigin())
+      window.parent.postMessage(
+        { type: 'camera.stop', requestId },
+        shellOrigin()
+      )
       finish({ ok: false, error: cameraFailure('TimeoutError') })
     }, 30000)
     // The listener outlives the session by a moment: a frame already in
@@ -85,7 +92,10 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       if (!live) return
       live = false
       retire()
-      window.parent.postMessage({ type: 'camera.stop', requestId }, shellOrigin())
+      window.parent.postMessage(
+        { type: 'camera.stop', requestId },
+        shellOrigin()
+      )
     }
     function onMessage(event: MessageEvent) {
       // Only the shell (our direct parent) may drive the session — the same
@@ -94,7 +104,12 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       const data = event.data as { type?: string; requestId?: number } | null
       if (!data || data.requestId !== requestId) return
       if (data.type === 'camera.result') {
-        const result = data as unknown as { ok: boolean; devices?: CameraDevice[]; cancelled?: boolean; error?: CameraError }
+        const result = data as unknown as {
+          ok: boolean
+          devices?: CameraDevice[]
+          cancelled?: boolean
+          error?: CameraError
+        }
         if (result.ok) {
           finish({ ok: true, devices: result.devices ?? [] })
         } else {
@@ -112,14 +127,19 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       if (data.type === 'camera.frame') {
         const frame = (data as unknown as { frame: ImageBitmap }).frame
         if (!live) {
-          try { frame.close() } catch { /* already closed */ }
+          try {
+            frame.close()
+          } catch {
+            /* already closed */
+          }
           return
         }
         options.frame(frame)
         return
       }
       if (data.type === 'camera.end') {
-        const reason = (data as unknown as { reason?: string }).reason ?? 'ended'
+        const reason =
+          (data as unknown as { reason?: string }).reason ?? 'ended'
         const wasLive = live
         live = false
         retire()
@@ -127,25 +147,43 @@ function shellOpen(options: CameraOptions): Promise<{ session: CameraSession; op
       }
     }
     window.addEventListener('message', onMessage)
-    window.parent.postMessage({ type: 'camera.start', requestId, device: options.device ?? '' }, shellOrigin())
+    window.parent.postMessage(
+      { type: 'camera.start', requestId, device: options.device ?? '' },
+      shellOrigin()
+    )
   })
 }
 
 // ---------------------------------------------------------------- top window
 
-function directOpen(options: CameraOptions): Promise<{ session: CameraSession; opened: CameraOpen }> {
-  const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined
-  const stop = { closed: false, stream: null as MediaStream | null, video: null as HTMLVideoElement | null }
+function directOpen(
+  options: CameraOptions
+): Promise<{ session: CameraSession; opened: CameraOpen }> {
+  const media =
+    typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined
+  const stop = {
+    closed: false,
+    stream: null as MediaStream | null,
+    video: null as HTMLVideoElement | null,
+  }
 
   function close(reason: string | null) {
     if (stop.closed) return
     stop.closed = true
     if (stop.video) {
-      try { stop.video.srcObject = null } catch { /* detached */ }
+      try {
+        stop.video.srcObject = null
+      } catch {
+        /* detached */
+      }
       stop.video = null
     }
     stop.stream?.getTracks().forEach((track) => {
-      try { track.stop() } catch { /* already stopped */ }
+      try {
+        track.stop()
+      } catch {
+        /* already stopped */
+      }
     })
     stop.stream = null
     if (reason) options.end?.(reason)
@@ -169,43 +207,63 @@ function directOpen(options: CameraOptions): Promise<{ session: CameraSession; o
     },
   }
 
-  const open = (wanted: MediaStreamConstraints, retried: boolean): Promise<{ session: CameraSession; opened: CameraOpen }> =>
+  const open = (
+    wanted: MediaStreamConstraints,
+    retried: boolean
+  ): Promise<{ session: CameraSession; opened: CameraOpen }> =>
     media.getUserMedia(wanted).then(
       (stream) => {
         if (stop.closed) {
           stream.getTracks().forEach((track) => track.stop())
-          return { session, opened: { ok: false, cancelled: true } as CameraOpen }
+          return {
+            session,
+            opened: { ok: false, cancelled: true } as CameraOpen,
+          }
         }
         stop.stream = stream
         const track = stream.getVideoTracks()[0]
         if (track) track.onended = () => close('ended')
         pump(stream)
-        return media.enumerateDevices?.().then(
-          (all) => ({
-            session,
-            opened: {
-              ok: true as const,
-              devices: all
-                .filter((d) => d.kind === 'videoinput')
-                .map((d) => ({ id: d.deviceId || '', label: d.label || '' })),
-            },
-          }),
-          () => ({ session, opened: { ok: true as const, devices: [] } })
-        ) ?? { session, opened: { ok: true as const, devices: [] } }
+        return (
+          media.enumerateDevices?.().then(
+            (all) => ({
+              session,
+              opened: {
+                ok: true as const,
+                devices: all
+                  .filter((d) => d.kind === 'videoinput')
+                  .map((d) => ({ id: d.deviceId || '', label: d.label || '' })),
+              },
+            }),
+            () => ({ session, opened: { ok: true as const, devices: [] } })
+          ) ?? { session, opened: { ok: true as const, devices: [] } }
+        )
       },
       (err: unknown) => {
         // A remembered device that has since been unplugged must not fail the
         // whole open — retry once unconstrained.
         if (!retried && options.device) {
-          return open({ video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } } }, true)
+          return open(
+            {
+              video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                frameRate: { ideal: 30 },
+              },
+            },
+            true
+          )
         }
         const e = err as { name?: string; message?: string } | null
         return {
           session,
           opened: {
             ok: false as const,
-            // eslint-disable-next-line lingui/no-unlocalized-strings -- 'Error' is the DOMException name fallback, not a label: the message beside it comes from the browser
-            error: { name: e?.name ?? 'Error', message: e?.message ?? String(err) },
+            error: {
+              // eslint-disable-next-line lingui/no-unlocalized-strings -- 'Error' is the DOMException name fallback, not a label: the message beside it comes from the browser
+              name: e?.name ?? 'Error',
+              message: e?.message ?? String(err),
+            },
           },
         }
       }
@@ -217,7 +275,9 @@ function directOpen(options: CameraOptions): Promise<{ session: CameraSession; o
     video.playsInline = true
     video.srcObject = stream
     stop.video = video
-    video.play()?.catch(() => { /* muted local streams do not meaningfully fail */ })
+    video.play()?.catch(() => {
+      /* muted local streams do not meaningfully fail */
+    })
     let pending = false
     const grab = () => {
       if (stop.closed) return
@@ -227,19 +287,29 @@ function directOpen(options: CameraOptions): Promise<{ session: CameraSession; o
           (bitmap) => {
             pending = false
             if (stop.closed) {
-              try { bitmap.close() } catch { /* already closed */ }
+              try {
+                bitmap.close()
+              } catch {
+                /* already closed */
+              }
               return
             }
             options.frame(bitmap)
           },
-          () => { pending = false }
+          () => {
+            pending = false
+          }
         )
       }
       schedule()
     }
     const schedule = () => {
       if (stop.closed) return
-      const rvfc = (video as HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => void }).requestVideoFrameCallback
+      const rvfc = (
+        video as HTMLVideoElement & {
+          requestVideoFrameCallback?: (cb: () => void) => void
+        }
+      ).requestVideoFrameCallback
       if (rvfc) rvfc.call(video, grab)
       else setTimeout(grab, 33)
     }

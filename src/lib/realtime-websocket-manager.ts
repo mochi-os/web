@@ -6,11 +6,7 @@
 const devConsole = globalThis.console
 
 export type WebsocketConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'ready'
-  | 'closing'
-  | 'error'
+  'idle' | 'connecting' | 'ready' | 'closing' | 'error'
 
 export interface WebsocketConnectionSnapshot {
   chat: string
@@ -104,7 +100,8 @@ export class ChatWebsocketManager {
   private online: boolean
 
   constructor(options: ChatWebsocketManagerOptions = {}) {
-    this.base = options.base ?? import.meta.env.VITE_WEBSOCKET_URL ?? defaultBase()
+    this.base =
+      options.base ?? import.meta.env.VITE_WEBSOCKET_URL ?? defaultBase()
     this.idle = options.idle ?? DEFAULT_IDLE_DISCONNECT
     this.delay = {
       base: options.delay?.base ?? DEFAULT_BASE_DELAY,
@@ -589,4 +586,3 @@ export class ChatWebsocketManager {
     })
   }
 }
-

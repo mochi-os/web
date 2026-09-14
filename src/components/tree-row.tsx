@@ -92,14 +92,20 @@ function isPastDue(dateStr: string): boolean {
   return due < today
 }
 
-function withTruncationTooltip(fullText: string, maxLength: number, className?: string) {
+function withTruncationTooltip(
+  fullText: string,
+  maxLength: number,
+  className?: string
+) {
   const display = truncate(fullText, maxLength)
-  const node = <span className={cn('truncate block', className)}>{display}</span>
+  const node = (
+    <span className={cn('truncate block', className)}>{display}</span>
+  )
   if (fullText.length <= maxLength) return node
   return (
     <Tooltip>
       <TooltipTrigger asChild>{node}</TooltipTrigger>
-      <TooltipContent className="max-w-sm whitespace-pre-wrap break-words">
+      <TooltipContent className='max-w-sm whitespace-pre-wrap break-words'>
         {fullText}
       </TooltipContent>
     </Tooltip>
@@ -157,31 +163,37 @@ export function TreeRow({
   if (borderField) {
     const value = object.values[borderField]
     if (value) {
-      const match = options[borderField]?.find((o) => o.id === value && o.colour)
+      const match = options[borderField]?.find(
+        (o) => o.id === value && o.colour
+      )
       if (match) borderColor = match.colour
     }
   }
 
-  const renderFieldValue = (field: TreeRowField, value: string, isTitleField: boolean) => {
+  const renderFieldValue = (
+    field: TreeRowField,
+    value: string,
+    isTitleField: boolean
+  ) => {
     if (!value) {
       if (field.fieldtype === 'date') {
         return (
           <span
-            className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 text-muted-foreground/45"
-            aria-hidden="true"
+            className='inline-flex size-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 text-muted-foreground/45'
+            aria-hidden='true'
           >
-            <Calendar className="size-3.5" />
+            <Calendar className='size-3.5' />
           </span>
         )
       }
       if (field.fieldtype === 'user') {
         return (
-          <span className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 text-muted-foreground/45 text-xs">
+          <span className='inline-flex size-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 text-muted-foreground/45 text-xs'>
             —
           </span>
         )
       }
-      return <span className="text-muted-foreground">—</span>
+      return <span className='text-muted-foreground'>—</span>
     }
 
     switch (field.fieldtype) {
@@ -190,18 +202,18 @@ export function TreeRow({
         const option = fieldOptions.find((o) => o.id === value)
         if (option) {
           return (
-            <span className="inline-flex items-center gap-1.5 max-w-full">
+            <span className='inline-flex items-center gap-1.5 max-w-full'>
               {option.colour ? (
                 <span
-                  className="size-2 rounded-full shrink-0"
+                  className='size-2 rounded-full shrink-0'
                   style={{ backgroundColor: option.colour }}
                 />
               ) : null}
-              <span className="truncate">{option.name}</span>
+              <span className='truncate'>{option.name}</span>
             </span>
           )
         }
-        return <span className="truncate">{value}</span>
+        return <span className='truncate'>{value}</span>
       }
 
       case 'date': {
@@ -209,7 +221,12 @@ export function TreeRow({
         const overdue = isPastDue(value)
         const label = formatDate(date)
         return (
-          <span className={cn('truncate tabular-nums', overdue && 'text-destructive font-medium')}>
+          <span
+            className={cn(
+              'truncate tabular-nums',
+              overdue && 'text-destructive font-medium'
+            )}
+          >
             {label}
           </span>
         )
@@ -224,16 +241,16 @@ export function TreeRow({
           ? `${getAppPath()}/${resourceId}/-/user/${value}/asset/style`
           : undefined
         return (
-          <span className="inline-flex items-center gap-2 truncate max-w-full">
+          <span className='inline-flex items-center gap-2 truncate max-w-full'>
             <EntityAvatar
               src={avatarSrc}
               styleUrl={styleUrl}
               fingerprint={resourceId ? undefined : value}
               seed={value}
               name={name}
-              size="xs"
+              size='xs'
             />
-            <span className="truncate text-sm">{truncate(name, 22)}</span>
+            <span className='truncate text-sm'>{truncate(name, 22)}</span>
           </span>
         )
       }
@@ -242,7 +259,7 @@ export function TreeRow({
         try {
           const items: TreeRowChecklistItem[] = JSON.parse(value)
           if (items.length === 0) {
-            return <span className="text-muted-foreground">—</span>
+            return <span className='text-muted-foreground'>—</span>
           }
           const doneCount = items.filter((item) => item.done).length
           const allDone = doneCount === items.length
@@ -252,15 +269,15 @@ export function TreeRow({
                 'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset',
                 allDone
                   ? 'bg-success/10 text-success ring-success/30'
-                  : 'bg-muted text-muted-foreground ring-border',
+                  : 'bg-muted text-muted-foreground ring-border'
               )}
             >
-              <CheckSquare className="size-3" />
+              <CheckSquare className='size-3' />
               {doneCount}/{items.length}
             </span>
           )
         } catch {
-          return <span className="text-muted-foreground">—</span>
+          return <span className='text-muted-foreground'>—</span>
         }
       }
 
@@ -270,7 +287,7 @@ export function TreeRow({
         return withTruncationTooltip(
           value,
           maxLen,
-          isTitleField ? 'font-medium text-foreground' : 'text-muted-foreground',
+          isTitleField ? 'font-medium text-foreground' : 'text-muted-foreground'
         )
       }
     }
@@ -278,8 +295,13 @@ export function TreeRow({
 
   const indentPx = depth * 20
   const hasId = prefix !== undefined && showId
-  const firstContentCol = showClass ? 'class' : hasId ? 'id' : fields[0]?.id || ''
-  const indentStyle = indentPx > 0 ? { paddingInlineStart: indentPx } : undefined
+  const firstContentCol = showClass
+    ? 'class'
+    : hasId
+      ? 'id'
+      : fields[0]?.id || ''
+  const indentStyle =
+    indentPx > 0 ? { paddingInlineStart: indentPx } : undefined
 
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
@@ -309,9 +331,10 @@ export function TreeRow({
       data-card-id={object.id}
       className={cn(
         'hover:bg-hover transition-colors cursor-pointer text-sm group relative border-b border-border/60',
-        isSelected && 'bg-primary/10 hover:bg-primary/10 ring-1 ring-inset ring-primary/20',
+        isSelected &&
+          'bg-primary/10 hover:bg-primary/10 ring-1 ring-inset ring-primary/20',
         isDragOver && 'bg-primary/20 ring-2 ring-inset ring-primary/50',
-        borderColor && 'border-s-[3px]',
+        borderColor && 'border-s-[3px]'
       )}
       style={borderColor ? { borderInlineStartColor: borderColor } : undefined}
       onClick={onClick}
@@ -326,50 +349,55 @@ export function TreeRow({
       onDragEnd={onDragEnd}
     >
       {isDragBefore ? (
-        <td colSpan={100} className="absolute -top-px left-0 right-0 pointer-events-none">
-          <div className="relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50">
-            <div className="absolute -start-1 -top-[3px] size-2 rounded-full bg-primary" />
+        <td
+          colSpan={100}
+          className='absolute -top-px left-0 right-0 pointer-events-none'
+        >
+          <div className='relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50'>
+            <div className='absolute -start-1 -top-[3px] size-2 rounded-full bg-primary' />
           </div>
         </td>
       ) : null}
 
-      <td className="whitespace-nowrap py-2 ps-2 pe-2 w-10 min-w-10">
-        <div className="flex items-center gap-0.5">
-          <div className="w-5 shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab">
-            <GripVertical className="size-3" />
+      <td className='whitespace-nowrap py-2 ps-2 pe-2 w-10 min-w-10'>
+        <div className='flex items-center gap-0.5'>
+          <div className='w-5 shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab'>
+            <GripVertical className='size-3' />
           </div>
           {hasChildren ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   aria-label={isExpanded ? t`Collapse` : t`Expand`}
-                  className="size-5 flex items-center justify-center hover:bg-hover transition-colors rounded"
+                  className='size-5 flex items-center justify-center hover:bg-hover transition-colors rounded'
                   onClick={(e) => {
                     e.stopPropagation()
                     onToggleExpand()
                   }}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="size-4" />
+                    <ChevronDown className='size-4' />
                   ) : (
-                    <ChevronRight className="size-4 rtl:rotate-180" />
+                    <ChevronRight className='size-4 rtl:rotate-180' />
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{isExpanded ? t`Collapse` : t`Expand`}</TooltipContent>
+              <TooltipContent>
+                {isExpanded ? t`Collapse` : t`Expand`}
+              </TooltipContent>
             </Tooltip>
           ) : anySiblingHasChildren ? (
-            <div className="size-5" />
+            <div className='size-5' />
           ) : null}
         </div>
       </td>
 
       {showClass ? (
         <td
-          className="whitespace-nowrap ps-1 pe-2 py-2 w-24 shrink-0"
+          className='whitespace-nowrap ps-1 pe-2 py-2 w-24 shrink-0'
           style={firstContentCol === 'class' ? indentStyle : undefined}
         >
-          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          <span className='text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded'>
             {classMap[object.class] || t`Unknown`}
           </span>
         </td>
@@ -377,7 +405,7 @@ export function TreeRow({
 
       {hasId ? (
         <td
-          className="whitespace-nowrap ps-1 pe-2 py-2 text-xs text-muted-foreground font-mono w-20 shrink-0"
+          className='whitespace-nowrap ps-1 pe-2 py-2 text-xs text-muted-foreground font-mono w-20 shrink-0'
           style={firstContentCol === 'id' ? indentStyle : undefined}
         >
           {prefix}-{object.number}
@@ -393,7 +421,7 @@ export function TreeRow({
             className={cn(
               'px-2 py-2',
               columnWidthClass(field, isTitleField),
-              firstContentCol === field.id && 'ps-3',
+              firstContentCol === field.id && 'ps-3'
             )}
             style={firstContentCol === field.id ? indentStyle : undefined}
           >
@@ -403,9 +431,12 @@ export function TreeRow({
       })}
 
       {isDragAfter ? (
-        <td colSpan={100} className="absolute -bottom-px left-0 right-0 pointer-events-none">
-          <div className="relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50">
-            <div className="absolute -start-1 -top-[3px] size-2 rounded-full bg-primary" />
+        <td
+          colSpan={100}
+          className='absolute -bottom-px left-0 right-0 pointer-events-none'
+        >
+          <div className='relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50'>
+            <div className='absolute -start-1 -top-[3px] size-2 rounded-full bg-primary' />
           </div>
         </td>
       ) : null}

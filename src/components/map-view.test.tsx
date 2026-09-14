@@ -41,12 +41,19 @@ describe('MapView tiles', () => {
       MAP_TILES_DEFAULT.url,
       expect.objectContaining({ attribution: '© OpenStreetMap contributors' })
     )
-    expect(MAP_TILES_DEFAULT.url).toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+    expect(MAP_TILES_DEFAULT.url).toBe(
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+    )
   })
 
   it("renders the server's tile source and shows its credit as text", () => {
     render(
-      <MapTilesProvider tiles={{ url: 'https://tiles.example/{z}/{x}/{y}.png', attribution: '© <b>Provider</b>' }}>
+      <MapTilesProvider
+        tiles={{
+          url: 'https://tiles.example/{z}/{x}/{y}.png',
+          attribution: '© <b>Provider</b>',
+        }}
+      >
         <MapView lat={1} lon={2} />
       </MapTilesProvider>
     )
@@ -62,6 +69,9 @@ describe('MapView tiles', () => {
         <MapView lat={1} lon={2} />
       </MapTilesProvider>
     )
-    expect(L.tileLayer).toHaveBeenCalledWith(MAP_TILES_DEFAULT.url, expect.anything())
+    expect(L.tileLayer).toHaveBeenCalledWith(
+      MAP_TILES_DEFAULT.url,
+      expect.anything()
+    )
   })
 })

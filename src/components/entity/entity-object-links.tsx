@@ -46,19 +46,19 @@ export interface EntityObjectLinksProps<TObject extends EntityObject> {
   classes: EntityClass[]
   readOnly: boolean
   listObjects: (
-    containerId: string,
+    containerId: string
   ) => Promise<{ data: { objects: TObject[] } }>
   createLink: (
     containerId: string,
     source: string,
     target: string,
-    linktype: string,
+    linktype: string
   ) => Promise<unknown>
   deleteLink: (
     containerId: string,
     source: string,
     target: string,
-    linktype: string,
+    linktype: string
   ) => Promise<unknown>
 }
 
@@ -71,7 +71,7 @@ function useLinkTypeLabels(): Record<string, string> {
       duplicates: t`Duplicates`,
       'blocked by': t`Blocked by`,
     }),
-    [t],
+    [t]
   )
 }
 
@@ -96,7 +96,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
 
   const objectTitle = useCallback(
     (obj: EntityTitleObject) => entityObjectTitle(obj, classes, prefix),
-    [classes, prefix],
+    [classes, prefix]
   )
 
   const { data: objectListData } = useQuery({
@@ -177,7 +177,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
       }
       return t`Untitled`
     },
-    [objectsMap, objectTitle, prefix, t],
+    [objectsMap, objectTitle, prefix, t]
   )
 
   const displayLinks = useMemo(() => {
@@ -267,27 +267,30 @@ export function EntityObjectLinks<TObject extends EntityObject>({
   }
 
   return (
-    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
-      <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
-        <Link2 className="size-3.5" />
+    <div className='grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start'>
+      <label className='text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5'>
+        <Link2 className='size-3.5' />
         <Trans>Links</Trans>
       </label>
-      <div className="space-y-1.5 pt-1">
+      <div className='space-y-1.5 pt-1'>
         {displayLinks.map((link) => (
-          <div key={link.id} className="group flex min-w-0 items-center gap-1.5 text-xs">
+          <div
+            key={link.id}
+            className='group flex min-w-0 items-center gap-1.5 text-xs'
+          >
             <Badge
-              variant="secondary"
-              className="text-[10px] px-1.5 py-0 h-4 font-normal"
+              variant='secondary'
+              className='text-[10px] px-1.5 py-0 h-4 font-normal'
             >
               {link.label}
             </Badge>
-            <span className="truncate">{link.displayName}</span>
+            <span className='truncate'>{link.displayName}</span>
             {!readOnly && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    type="button"
-                    className="hidden group-hover:inline-flex [@media(hover:none)]:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0"
+                    type='button'
+                    className='hidden group-hover:inline-flex [@media(hover:none)]:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0'
                     onClick={() =>
                       deleteLinkMutation.mutate({
                         source: link.source,
@@ -297,7 +300,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
                     }
                     aria-label={t`Remove link`}
                   >
-                    <X className="size-3" />
+                    <X className='size-3' />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>{t`Remove link`}</TooltipContent>
@@ -309,19 +312,19 @@ export function EntityObjectLinks<TObject extends EntityObject>({
         {!readOnly && (
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 text-xs">
-                <Plus className="size-3 me-1.5" />
+              <Button variant='outline' size='sm' className='h-7 text-xs'>
+                <Plus className='size-3 me-1.5' />
                 <Trans>Add link</Trans>
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-72 p-3 space-y-3">
+            <PopoverContent align='start' className='w-72 p-3 space-y-3'>
               <Select value={linkType} onValueChange={setLinkType}>
-                <SelectTrigger className="w-full h-8 text-xs">
+                <SelectTrigger className='w-full h-8 text-xs'>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(linkTypeLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value} className="text-xs">
+                    <SelectItem key={value} value={value} className='text-xs'>
                       {label}
                     </SelectItem>
                   ))}
@@ -331,26 +334,26 @@ export function EntityObjectLinks<TObject extends EntityObject>({
                 placeholder={t`Search objects...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 text-xs"
+                className='h-8 text-xs'
                 autoFocus
               />
               {searchResults.length > 0 && (
-                <div className="max-h-48 overflow-y-auto space-y-0.5">
+                <div className='max-h-48 overflow-y-auto space-y-0.5'>
                   {searchResults.map((obj) => (
                     <button
                       key={obj.id}
-                      type="button"
-                      className="w-full text-start px-2 py-1.5 text-xs rounded hover:bg-hover flex items-center gap-1.5"
+                      type='button'
+                      className='w-full text-start px-2 py-1.5 text-xs rounded hover:bg-hover flex items-center gap-1.5'
                       onClick={() => handleAddLink(obj)}
                       disabled={createLinkMutation.isPending}
                     >
-                      <span className="truncate">{objectTitle(obj)}</span>
+                      <span className='truncate'>{objectTitle(obj)}</span>
                     </button>
                   ))}
                 </div>
               )}
               {search.trim() && searchResults.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-2">
+                <p className='text-xs text-muted-foreground text-center py-2'>
                   <Trans>No matching objects</Trans>
                 </p>
               )}

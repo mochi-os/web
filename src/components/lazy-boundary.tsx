@@ -50,6 +50,8 @@ export class LazyBoundary extends Component<Props, State> {
   }
 
   render() {
-    return this.state.failed ? (this.props.fallback ?? null) : this.props.children
+    return this.state.failed
+      ? (this.props.fallback ?? null)
+      : this.props.children
   }
 }

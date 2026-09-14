@@ -5,10 +5,16 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
-import { SidebarProvider, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarRail } from './sidebar'
+import {
+  SidebarProvider,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+} from './sidebar'
 
 describe('Sidebar', () => {
-  it('trims the active item\'s start padding, whichever side that is', () => {
+  it("trims the active item's start padding, whichever side that is", () => {
     render(
       <I18nProvider i18n={i18n}>
         <SidebarProvider>
@@ -33,6 +39,8 @@ describe('Sidebar', () => {
         </SidebarProvider>
       </I18nProvider>
     )
-    expect(screen.getByRole('button', { name: 'Toggle sidebar' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Toggle sidebar' })
+    ).toBeInTheDocument()
   })
 })

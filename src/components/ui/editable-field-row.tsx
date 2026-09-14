@@ -84,7 +84,12 @@ export function EditableFieldRow({
     <FieldRow label={label} description={description} className={className}>
       {canEdit && isEditing ? (
         <div className='flex w-full flex-col gap-1'>
-          <div className={cn('flex w-full gap-2', multiline ? 'items-start' : 'items-center')}>
+          <div
+            className={cn(
+              'flex w-full gap-2',
+              multiline ? 'items-start' : 'items-center'
+            )}
+          >
             {multiline ? (
               <Textarea
                 maxLength={maxLength}
@@ -125,7 +130,11 @@ export function EditableFieldRow({
               className='size-8 shrink-0 p-0'
               aria-label={t`Save`}
             >
-              {saving ? <Loader2 className='size-4 animate-spin' /> : <Check className='size-4' />}
+              {saving ? (
+                <Loader2 className='size-4 animate-spin' />
+              ) : (
+                <Check className='size-4' />
+              )}
             </Button>
             <Button
               size='sm'
@@ -143,11 +152,18 @@ export function EditableFieldRow({
       ) : (
         <div className='flex w-full items-center gap-2'>
           {value ? (
-            <span className={cn('min-w-0 break-words', emphasize && 'text-foreground text-base font-semibold')}>
+            <span
+              className={cn(
+                'min-w-0 break-words',
+                emphasize && 'text-foreground text-base font-semibold'
+              )}
+            >
               {value}
             </span>
           ) : (
-            <span className='text-muted-foreground italic'>{placeholder ?? t`Not set`}</span>
+            <span className='text-muted-foreground italic'>
+              {placeholder ?? t`Not set`}
+            </span>
           )}
           {canEdit && (
             <Button

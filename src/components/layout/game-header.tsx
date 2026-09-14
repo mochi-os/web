@@ -74,7 +74,7 @@ export function GameHeader({
               src={avatarUrl}
               styleUrl={styleUrl}
               name={opponentName}
-              size="md"
+              size='md'
               className='shrink-0'
             />
           ) : null}
@@ -98,7 +98,9 @@ export function GameHeader({
               {status}
             </p>
             {meta ? (
-              <p className='text-sm leading-tight text-muted-foreground'>{meta}</p>
+              <p className='text-sm leading-tight text-muted-foreground'>
+                {meta}
+              </p>
             ) : null}
           </div>
         </div>
@@ -125,7 +127,9 @@ export function GameHeader({
         ) : null}
 
         {banner ? (
-          <div className='col-span-2 @[640px]/game-header:col-span-3'>{banner}</div>
+          <div className='col-span-2 @[640px]/game-header:col-span-3'>
+            {banner}
+          </div>
         ) : null}
       </section>
     </div>

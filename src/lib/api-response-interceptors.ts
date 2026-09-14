@@ -191,7 +191,6 @@ function makeHandleApiResponseSuccess(
   }
 }
 
-
 function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
   return async function handleApiResponseError(
     error: AxiosError
@@ -205,7 +204,9 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
         // Path segments, not substrings: '/author/…', '/authorize/…' and
         // '/login-methods' all contain these and would silently suppress the
         // expired-session logout on a 401.
-        const isAuthEndpoint = /(^|\/)(login|auth|verify)(\/|$|\?)/.test(error.config?.url ?? '')
+        const isAuthEndpoint = /(^|\/)(login|auth|verify)(\/|$|\?)/.test(
+          error.config?.url ?? ''
+        )
 
         // Only redirect if user had a session that expired
         // Don't redirect if user was never authenticated (anonymous access)
@@ -239,10 +240,9 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
       case 409: {
         logDevError('[API] 409 Conflict', error)
         const responseData = error.response?.data as
-          | { error?: string; message?: string }
-          | undefined
+          { error?: string; message?: string } | undefined
         const serverMessage = responseData?.message ?? responseData?.error
-        
+
         if (serverMessage) {
           maybeToastGlobalError({
             config: error.config,
@@ -258,8 +258,7 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
       case 500: {
         logDevError('[API] Server error', error)
         const responseData = error.response?.data as
-          | { error?: string; message?: string }
-          | undefined
+          { error?: string; message?: string } | undefined
         const errorMessage =
           responseData?.error ??
           responseData?.message ??
@@ -284,8 +283,7 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
       case 503: {
         logDevError('[API] Server error', error)
         const responseData = error.response?.data as
-          | { error?: string; message?: string }
-          | undefined
+          { error?: string; message?: string } | undefined
         const errorMessage =
           responseData?.error ??
           responseData?.message ??
@@ -338,4 +336,3 @@ export function attachApiResponseInterceptors(
     makeHandleApiResponseError(opts)
   )
 }
-

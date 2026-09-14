@@ -1,7 +1,13 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useCallback, useEffect, useState, type ReactNode, type SyntheticEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react'
 import { Loader2, Play } from 'lucide-react'
 import { useLingui } from '@lingui/react/macro'
 import { ImageLightbox, type LightboxMedia } from './ui/image-lightbox'
@@ -14,7 +20,10 @@ import {
   AttachmentTrigger,
 } from './ui/attachment'
 import { useLightboxHash } from '../hooks/use-lightbox-hash'
-import { formatVideoDuration, useVideoThumbnailCached } from '../hooks/use-video-thumbnail'
+import {
+  formatVideoDuration,
+  useVideoThumbnailCached,
+} from '../hooks/use-video-thumbnail'
 import { AttachmentImage } from './attachment-image'
 import { getFileIcon, isMedia, isVideo } from '../lib/attachment-utils'
 import { useFormat } from '../hooks/use-format'
@@ -69,9 +78,20 @@ export interface AttachmentGalleryProps {
 
 const DEFAULT_ASPECT = 1.5
 
-function VideoTile({ url, onAspect }: { url: string; onAspect: (ratio: number) => void }) {
+function VideoTile({
+  url,
+  onAspect,
+}: {
+  url: string
+  onAspect: (ratio: number) => void
+}) {
   const { t } = useLingui()
-  const { url: thumbnailUrl, loading, error, duration } = useVideoThumbnailCached(url)
+  const {
+    url: thumbnailUrl,
+    loading,
+    error,
+    duration,
+  } = useVideoThumbnailCached(url)
 
   if (loading) {
     return (
@@ -139,7 +159,8 @@ export function AttachmentGallery({
   }, [])
 
   const resolveUrl = useCallback(
-    (att: GalleryAttachment): string => getUrl ? getUrl(att) : (att.url ?? ''),
+    (att: GalleryAttachment): string =>
+      getUrl ? getUrl(att) : (att.url ?? ''),
     [getUrl]
   )
 
@@ -157,7 +178,8 @@ export function AttachmentGallery({
   // automatic fallback stays on the thumbnail chain so small galleries never
   // silently upgrade to the heavier variant.
   const resolveTile = useCallback(
-    (att: GalleryAttachment): string => getPreviewUrl ? getPreviewUrl(att) : resolveThumb(att),
+    (att: GalleryAttachment): string =>
+      getPreviewUrl ? getPreviewUrl(att) : resolveThumb(att),
     [getPreviewUrl, resolveThumb]
   )
 
@@ -212,7 +234,8 @@ export function AttachmentGallery({
     // face; when both apply, the count wins — the caption is still in the
     // lightbox, the count is nowhere else.
     const overflowTile = index === visibleMedia.length - 1 && extraCount > 0
-    const caption = showCaptions && !overflowTile ? attachment.caption : undefined
+    const caption =
+      showCaptions && !overflowTile ? attachment.caption : undefined
     return (
       <div
         key={attachment.id}
@@ -268,7 +291,9 @@ export function AttachmentGallery({
           )}
           {overflowTile && (
             <div className='absolute inset-0 flex items-center justify-center bg-black/50'>
-              <span className='text-2xl font-bold text-white'>+{extraCount}</span>
+              <span className='text-2xl font-bold text-white'>
+                +{extraCount}
+              </span>
             </div>
           )}
         </button>
@@ -280,47 +305,48 @@ export function AttachmentGallery({
   // Chips wrap rather than stack: they size to their own content, so several
   // documents pack across a line. Not tiles - a document has no thumbnail, and
   // a tile narrow enough to grid cuts the name off.
-  const fileLinks = !hideFiles && files.length > 0 ? (
-    <div className="flex flex-wrap gap-1">
-      {files.map((attachment) => {
-        const FileIcon = getFileIcon(attachment.type)
-        return (
-          <Attachment
-            key={attachment.id}
-            size="sm"
-            // Without a ceiling one long filename takes the whole line and the
-            // wrapping buys nothing on that row. min() keeps the narrow-screen
-            // clamp that the base max-w-full was providing.
-            className="max-w-[min(100%,20rem)]"
-          >
-            <AttachmentTrigger asChild>
-              {/* A button, not an <a href>: the resolved URL carries the app
+  const fileLinks =
+    !hideFiles && files.length > 0 ? (
+      <div className='flex flex-wrap gap-1'>
+        {files.map((attachment) => {
+          const FileIcon = getFileIcon(attachment.type)
+          return (
+            <Attachment
+              key={attachment.id}
+              size='sm'
+              // Without a ceiling one long filename takes the whole line and the
+              // wrapping buys nothing on that row. min() keeps the narrow-screen
+              // clamp that the base max-w-full was providing.
+              className='max-w-[min(100%,20rem)]'
+            >
+              <AttachmentTrigger asChild>
+                {/* A button, not an <a href>: the resolved URL carries the app
                   token, which must not sit in the DOM or the status bar, and
                   a download link is inert inside the shell anyway. */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  void shellDownload(resolveUrl(attachment), attachment.name)
-                }}
-              >
-                <span className="sr-only">{attachment.name}</span>
-              </button>
-            </AttachmentTrigger>
-            <AttachmentMedia>
-              <FileIcon />
-            </AttachmentMedia>
-            <AttachmentContent>
-              <AttachmentTitle>{attachment.name}</AttachmentTitle>
-              <AttachmentDescription>
-                {formatFileSize(attachment.size)}
-              </AttachmentDescription>
-            </AttachmentContent>
-          </Attachment>
-        )
-      })}
-    </div>
-  ) : null
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void shellDownload(resolveUrl(attachment), attachment.name)
+                  }}
+                >
+                  <span className='sr-only'>{attachment.name}</span>
+                </button>
+              </AttachmentTrigger>
+              <AttachmentMedia>
+                <FileIcon />
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{attachment.name}</AttachmentTitle>
+                <AttachmentDescription>
+                  {formatFileSize(attachment.size)}
+                </AttachmentDescription>
+              </AttachmentContent>
+            </Attachment>
+          )
+        })}
+      </div>
+    ) : null
 
   const spacer = <span aria-hidden className='block h-0 grow-[999] basis-0' />
 

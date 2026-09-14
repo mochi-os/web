@@ -4,7 +4,14 @@
 // Map display component using Leaflet
 
 import { t } from '@lingui/core/macro'
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -25,7 +32,13 @@ export const MAP_TILES_DEFAULT: MapTiles = {
 const MapTilesContext = createContext<MapTiles>(MAP_TILES_DEFAULT)
 
 /** Supplies every MapView below it with the server's tile source. */
-export function MapTilesProvider({ tiles, children }: { tiles?: MapTiles | null; children: ReactNode }) {
+export function MapTilesProvider({
+  tiles,
+  children,
+}: {
+  tiles?: MapTiles | null
+  children: ReactNode
+}) {
   return (
     <MapTilesContext.Provider value={tiles?.url ? tiles : MAP_TILES_DEFAULT}>
       {children}
@@ -39,7 +52,11 @@ export function useMapTiles(): MapTiles {
 
 // Leaflet assigns the attribution with innerHTML; the credit is shown as text.
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 // Blue marker icon as inline SVG (origin/checkin)
@@ -75,12 +92,14 @@ const greenMarkerIcon = L.divIcon({
 // Returns { points, destLon } where destLon is the unwrapped destination longitude
 // (may be outside -180 to 180 range when crossing date line)
 function greatCircleArc(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
   numPoints = 300
 ): { points: [number, number][]; destLon: number } {
-  const toRad = (deg: number) => deg * Math.PI / 180
-  const toDeg = (rad: number) => rad * 180 / Math.PI
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const toDeg = (rad: number) => (rad * 180) / Math.PI
 
   const φ1 = toRad(lat1)
   const λ1 = toRad(lon1)
@@ -88,14 +107,24 @@ function greatCircleArc(
   const λ2 = toRad(lon2)
 
   // Calculate angular distance (in radians, Earth's surface)
-  const d = 2 * Math.asin(Math.sqrt(
-    Math.sin((φ2 - φ1) / 2) ** 2 +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin((λ2 - λ1) / 2) ** 2
-  ))
+  const d =
+    2 *
+    Math.asin(
+      Math.sqrt(
+        Math.sin((φ2 - φ1) / 2) ** 2 +
+          Math.cos(φ1) * Math.cos(φ2) * Math.sin((λ2 - λ1) / 2) ** 2
+      )
+    )
 
   // If points are very close, just return straight line
   if (d < 0.0001) {
-    return { points: [[lat1, lon1], [lat2, lon2]], destLon: lon2 }
+    return {
+      points: [
+        [lat1, lon1],
+        [lat2, lon2],
+      ],
+      destLon: lon2,
+    }
   }
 
   // For short distances (< ~500km), use a gentle quadratic bezier curve
@@ -122,8 +151,10 @@ function greatCircleArc(
     const points: [number, number][] = []
     for (let i = 0; i <= numPoints; i++) {
       const t = i / numPoints
-      const lat = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * ctrlLat + t * t * lat2
-      const lon = (1 - t) * (1 - t) * lon1 + 2 * (1 - t) * t * ctrlLon + t * t * lon2
+      const lat =
+        (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * ctrlLat + t * t * lat2
+      const lon =
+        (1 - t) * (1 - t) * lon1 + 2 * (1 - t) * t * ctrlLon + t * t * lon2
       points.push([lat, lon])
     }
     return { points, destLon: lon2 }
@@ -222,7 +253,10 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const tiles = useMapTiles()
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lon: number } | null>(null)
+  const [currentLocation, setCurrentLocation] = useState<{
+    lat: number
+    lon: number
+  } | null>(null)
 
   // Get current location if requested
   useEffect(() => {
@@ -244,9 +278,13 @@ export function MapView({
 
   // Determine the origin point (explicit origin or current location)
   // Use primitive values for stable dependencies
-  const originLat = origin?.lat ?? (showCurrentLocation ? currentLocation?.lat : undefined)
-  const originLon = origin?.lon ?? (showCurrentLocation ? currentLocation?.lon : undefined)
-  const originName = origin?.name ?? (showCurrentLocation && currentLocation ? t`Current location` : undefined)
+  const originLat =
+    origin?.lat ?? (showCurrentLocation ? currentLocation?.lat : undefined)
+  const originLon =
+    origin?.lon ?? (showCurrentLocation ? currentLocation?.lon : undefined)
+  const originName =
+    origin?.name ??
+    (showCurrentLocation && currentLocation ? t`Current location` : undefined)
   const hasOrigin = originLat != null && originLon != null
 
   // Calculate effective zoom
@@ -276,7 +314,9 @@ export function MapView({
     }).addTo(map)
 
     // Style the attribution to be more subtle
-    const attrib = map.getContainer().querySelector('.leaflet-control-attribution')
+    const attrib = map
+      .getContainer()
+      .querySelector('.leaflet-control-attribution')
     if (attrib instanceof HTMLElement) {
       attrib.style.fontSize = '9px'
       attrib.style.opacity = '0.6'
@@ -286,22 +326,38 @@ export function MapView({
     if (hasOrigin && originLat != null && originLon != null) {
       // Two-point display: show origin, destination, and line
       // Calculate arc first to get unwrapped destination longitude (for date line crossing)
-      const { points: arcPoints, destLon } = greatCircleArc(originLat, originLon, lat, lon)
+      const { points: arcPoints, destLon } = greatCircleArc(
+        originLat,
+        originLon,
+        lat,
+        lon
+      )
 
       // Add origin marker
-      const originMarker = L.marker([originLat, originLon], { icon: blueMarkerIcon, interactive }).addTo(map)
+      const originMarker = L.marker([originLat, originLon], {
+        icon: blueMarkerIcon,
+        interactive,
+      }).addTo(map)
       if (originName && interactive) {
         originMarker.bindPopup(textPopup(originName))
       }
 
       // Add destination marker at unwrapped longitude (consistent with arc)
-      const destMarker = L.marker([lat, destLon], { icon: greenMarkerIcon, interactive }).addTo(map)
+      const destMarker = L.marker([lat, destLon], {
+        icon: greenMarkerIcon,
+        interactive,
+      }).addTo(map)
       if (name && interactive) {
         destMarker.bindPopup(textPopup(name))
       }
 
       // Draw great circle arc
-      L.polyline(arcPoints, { color: '#3b82f6', weight: 2, opacity: 0.7, smoothFactor: 0 }).addTo(map)
+      L.polyline(arcPoints, {
+        color: '#3b82f6',
+        weight: 2,
+        opacity: 0.7,
+        smoothFactor: 0,
+      }).addTo(map)
 
       // Fit map to show both points (using unwrapped destination)
       const bounds = L.latLngBounds([
@@ -311,7 +367,10 @@ export function MapView({
       map.fitBounds(bounds, { padding: [30, 30] })
     } else {
       // Single point display
-      const destMarker = L.marker([lat, lon], { icon: blueMarkerIcon, interactive }).addTo(map)
+      const destMarker = L.marker([lat, lon], {
+        icon: blueMarkerIcon,
+        interactive,
+      }).addTo(map)
       if (name && interactive) {
         destMarker.bindPopup(textPopup(name))
       }
@@ -324,7 +383,19 @@ export function MapView({
       map.remove()
       mapRef.current = null
     }
-  }, [lat, lon, effectiveZoom, name, interactive, hasOrigin, originLat, originLon, originName, tiles.url, tiles.attribution])
+  }, [
+    lat,
+    lon,
+    effectiveZoom,
+    name,
+    interactive,
+    hasOrigin,
+    originLat,
+    originLon,
+    originName,
+    tiles.url,
+    tiles.attribution,
+  ])
 
   // Update map when position changes (single point mode only)
   useEffect(() => {

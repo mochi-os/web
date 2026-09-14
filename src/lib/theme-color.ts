@@ -7,7 +7,9 @@
  * light/dark pair is only for a document that has no theme applied yet.
  */
 export function themeColor(resolvedTheme: string | undefined): string {
-  const background = getComputedStyle(document.documentElement).getPropertyValue('--background').trim()
+  const background = getComputedStyle(document.documentElement)
+    .getPropertyValue('--background')
+    .trim()
   if (background) return background
   return resolvedTheme === 'dark' ? '#1a1a1a' : '#fff'
 }

@@ -47,8 +47,8 @@ const mergeProfile = (
   current: ProfileCookieData,
   patch: ProfileCookiePatch
 ): ProfileCookieData => ({
-  email: patch.email === null ? undefined : patch.email ?? current.email,
-  name: patch.name === null ? undefined : patch.name ?? current.name,
+  email: patch.email === null ? undefined : (patch.email ?? current.email),
+  name: patch.name === null ? undefined : (patch.name ?? current.name),
 })
 
 export const mergeProfileCookie = (

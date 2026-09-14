@@ -35,7 +35,8 @@ function setColorScheme(dark: boolean) {
           matches: text.includes('dark') ? dark : !dark,
           media: text,
           handlers: [],
-          addEventListener: (_event: string, handler: () => void) => query!.handlers.push(handler),
+          addEventListener: (_event: string, handler: () => void) =>
+            query!.handlers.push(handler),
           removeEventListener: () => {},
         }
         queries.set(text, query)

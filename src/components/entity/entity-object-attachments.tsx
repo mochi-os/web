@@ -5,12 +5,11 @@
 // apps. Images and videos go in the gallery, everything else in the file list.
 // The three API calls arrive as props; the module behind them is per-app.
 
-
-import { useState, useRef } from "react";
+import { useState, useRef } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Loader2, Paperclip, Trash2, Upload } from "lucide-react";
-import type { AxiosProgressEvent } from "axios";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Download, Loader2, Paperclip, Trash2, Upload } from 'lucide-react'
+import type { AxiosProgressEvent } from 'axios'
 import {
   Attachment,
   AttachmentAction,
@@ -21,48 +20,48 @@ import {
   AttachmentMedia,
   AttachmentTitle,
   AttachmentTrigger,
-} from "../ui/attachment";
-import { AttachmentComposer } from "../attachment-composer";
-import { AttachmentGallery } from "../attachment-gallery";
-import { Button } from "../ui/button";
-import { ConfirmDialog } from "../confirm-dialog";
-import { UploadProgress } from "../ui/upload-progress";
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
-import { getAppPath } from "../../lib/app-path";
-import { useFormat } from "../../hooks/use-format";
-import { useImageObjectUrls } from "../../hooks/use-image-object-urls";
+} from '../ui/attachment'
+import { AttachmentComposer } from '../attachment-composer'
+import { AttachmentGallery } from '../attachment-gallery'
+import { Button } from '../ui/button'
+import { ConfirmDialog } from '../confirm-dialog'
+import { UploadProgress } from '../ui/upload-progress'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
+import { getAppPath } from '../../lib/app-path'
+import { useFormat } from '../../hooks/use-format'
+import { useImageObjectUrls } from '../../hooks/use-image-object-urls'
 import {
   isImage,
   isVideo,
   getFileIcon,
   pendingFileKey,
-} from "../../lib/attachment-utils";
-import { getErrorMessage } from "../../lib/handle-server-error";
-import { useAttachmentError } from "../../hooks/use-attachment-error";
-import { authenticatedUrl, shellDownload } from "../../lib/shell-bridge";
-import { toast } from "../../lib/toast-utils";
-import { useUploadProgress } from "../../hooks/use-upload-progress";
-import type { EntityAttachment as AttachmentData } from "../../types/entity-object";
+} from '../../lib/attachment-utils'
+import { getErrorMessage } from '../../lib/handle-server-error'
+import { useAttachmentError } from '../../hooks/use-attachment-error'
+import { authenticatedUrl, shellDownload } from '../../lib/shell-bridge'
+import { toast } from '../../lib/toast-utils'
+import { useUploadProgress } from '../../hooks/use-upload-progress'
+import type { EntityAttachment as AttachmentData } from '../../types/entity-object'
 
 export interface EntityObjectAttachmentsProps {
-  containerId: string;
-  objectId: string;
-  readOnly: boolean;
+  containerId: string
+  objectId: string
+  readOnly: boolean
   listAttachments: (
     containerId: string,
-    objectId: string,
-  ) => Promise<{ data: { attachments: AttachmentData[] } }>;
+    objectId: string
+  ) => Promise<{ data: { attachments: AttachmentData[] } }>
   uploadAttachments: (
     containerId: string,
     objectId: string,
     files: File[],
-    onProgress?: (event: AxiosProgressEvent) => void,
-  ) => Promise<unknown>;
+    onProgress?: (event: AxiosProgressEvent) => void
+  ) => Promise<unknown>
   deleteAttachment: (
     containerId: string,
     objectId: string,
-    attachmentId: string,
-  ) => Promise<unknown>;
+    attachmentId: string
+  ) => Promise<unknown>
 }
 
 export function EntityObjectAttachments({
@@ -74,117 +73,118 @@ export function EntityObjectAttachments({
   deleteAttachment,
 }: EntityObjectAttachmentsProps) {
   const { t } = useLingui()
-  const [deleteTarget, setDeleteTarget] = useState<AttachmentData | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AttachmentData | null>(null)
   // This field has no staging step — the picker uploads straight away — so the
   // files being sent are held here for the life of the request, purely to have
   // something to draw the per-file progress on.
-  const [inFlight, setInFlight] = useState<File[]>([]);
-  const inFlightPreviews = useImageObjectUrls(inFlight);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
-  const { formatFileSize } = useFormat();
-  const { progress: uploadProgress, upload } = useUploadProgress();
-  const attachmentError = useAttachmentError();
+  const [inFlight, setInFlight] = useState<File[]>([])
+  const inFlightPreviews = useImageObjectUrls(inFlight)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
+  const { formatFileSize } = useFormat()
+  const { progress: uploadProgress, upload } = useUploadProgress()
+  const attachmentError = useAttachmentError()
 
   const { data, isLoading } = useQuery({
-    queryKey: ["attachments", containerId, objectId],
+    queryKey: ['attachments', containerId, objectId],
     queryFn: async () => {
-      const response = await listAttachments(containerId, objectId);
-      return response.data.attachments;
+      const response = await listAttachments(containerId, objectId)
+      return response.data.attachments
     },
-  });
+  })
 
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
       return upload(
         (onProgress) =>
           uploadAttachments(containerId, objectId, files, onProgress),
-        { sizes: files.map((file) => file.size) },
-      );
+        { sizes: files.map((file) => file.size) }
+      )
     },
     // Awaited, so the in-flight tiles stay up until the refreshed gallery is in
     // the cache. Clearing them the moment the response lands would blank the
     // field for as long as the refetch takes.
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["attachments", containerId, objectId],
-      });
+        queryKey: ['attachments', containerId, objectId],
+      })
     },
     onError: (error) => {
-      toast.error(attachmentError(error, t`Failed to upload attachment`));
+      toast.error(attachmentError(error, t`Failed to upload attachment`))
     },
     onSettled: () => setInFlight([]),
-  });
+  })
 
   const deleteMutation = useMutation({
     mutationFn: async (attachmentId: string) => {
-      return deleteAttachment(containerId, objectId, attachmentId);
+      return deleteAttachment(containerId, objectId, attachmentId)
     },
     onSuccess: () => {
-      setDeleteTarget(null);
+      setDeleteTarget(null)
       queryClient.invalidateQueries({
-        queryKey: ["attachments", containerId, objectId],
-      });
+        queryKey: ['attachments', containerId, objectId],
+      })
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, t`Failed to delete attachment`));
+      toast.error(getErrorMessage(error, t`Failed to delete attachment`))
     },
-  });
+  })
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    const files = e.target.files
     if (files && files.length > 0) {
-      const picked = Array.from(files);
-      setInFlight(picked);
-      uploadMutation.mutate(picked);
+      const picked = Array.from(files)
+      setInFlight(picked)
+      uploadMutation.mutate(picked)
     }
-    e.target.value = "";
-  };
+    e.target.value = ''
+  }
 
-  const basePath = `${getAppPath()}/${containerId}/-/attachments/`;
-  const attUrl = (id: string, suffix = "") => authenticatedUrl(`${basePath}${id}${suffix}`);
+  const basePath = `${getAppPath()}/${containerId}/-/attachments/`
+  const attUrl = (id: string, suffix = '') =>
+    authenticatedUrl(`${basePath}${id}${suffix}`)
   // The shell sandbox ignores <a download>; the parent window saves it instead.
   const download = async (file: AttachmentData) => {
-    const ok = await shellDownload(attUrl(file.id), file.name);
-    if (!ok) toast.error(t`Download failed`);
-  };
-  const attachments: AttachmentData[] = data || [];
-  const images = attachments.filter((a) => isImage(a.type) || isVideo(a.type));
-  const files = attachments.filter((a) => !isImage(a.type) && !isVideo(a.type));
+    const ok = await shellDownload(attUrl(file.id), file.name)
+    if (!ok) toast.error(t`Download failed`)
+  }
+  const attachments: AttachmentData[] = data || []
+  const images = attachments.filter((a) => isImage(a.type) || isVideo(a.type))
+  const files = attachments.filter((a) => !isImage(a.type) && !isVideo(a.type))
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
-        <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
-          <Paperclip className="size-3.5" />
+      <div className='grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start'>
+        <label className='text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5'>
+          <Paperclip className='size-3.5' />
           <Trans>Files</Trans>
         </label>
-        <div className="flex items-center gap-2 pt-2">
-          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        <div className='flex items-center gap-2 pt-2'>
+          <Loader2 className='size-4 animate-spin text-muted-foreground' />
         </div>
       </div>
-    );
+    )
   }
 
   if (attachments.length === 0 && readOnly) {
-    return null;
+    return null
   }
 
   // minmax(0,1fr): a plain 1fr floors at the column's min-content width, so a
   // wide gallery row or a long file name pushes the whole panel sideways
   // instead of wrapping inside the column.
   return (
-    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start">
-      <label className="text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5">
-        <Paperclip className="size-3.5" />
+    <div className='grid grid-cols-[120px_minmax(0,1fr)] gap-4 items-start'>
+      <label className='text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5'>
+        <Paperclip className='size-3.5' />
         <Trans>Files</Trans>
       </label>
-      <div className="min-w-0 space-y-2 pt-1">
+      <div className='min-w-0 space-y-2 pt-1'>
         {images.length > 0 && (
           <AttachmentGallery
             attachments={images}
             getUrl={(att) => attUrl(att.id)}
-            getThumbnailUrl={(att) => attUrl(att.id, "/thumbnail")}
+            getThumbnailUrl={(att) => attUrl(att.id, '/thumbnail')}
             rowHeight={80}
             hideFiles
             renderMediaOverlay={
@@ -194,15 +194,15 @@ export function EntityObjectAttachments({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          type="button"
-                          className="absolute -top-1.5 -right-1.5 hidden group-hover/item:flex [@media(hover:none)]:flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm"
+                          type='button'
+                          className='absolute -top-1.5 -right-1.5 hidden group-hover/item:flex [@media(hover:none)]:flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm'
                           onClick={(e) => {
                             e.stopPropagation()
                             setDeleteTarget(att as AttachmentData)
                           }}
                           aria-label={t`Delete`}
                         >
-                          <Trash2 className="size-3" />
+                          <Trash2 className='size-3' />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>{t`Delete`}</TooltipContent>
@@ -212,14 +212,14 @@ export function EntityObjectAttachments({
           />
         )}
         {files.length > 0 && (
-          <AttachmentGroup layout="grid">
+          <AttachmentGroup layout='grid'>
             {files.map((file) => {
-              const FileIcon = getFileIcon(file.type);
+              const FileIcon = getFileIcon(file.type)
               return (
-                <Attachment key={file.id} size="sm">
+                <Attachment key={file.id} size='sm'>
                   <AttachmentTrigger asChild>
-                    <button type="button" onClick={() => void download(file)}>
-                      <span className="sr-only">{file.name}</span>
+                    <button type='button' onClick={() => void download(file)}>
+                      <span className='sr-only'>{file.name}</span>
                     </button>
                   </AttachmentTrigger>
                   <AttachmentMedia>
@@ -233,32 +233,32 @@ export function EntityObjectAttachments({
                   </AttachmentContent>
                   <AttachmentActions>
                     <AttachmentAction
-                      variant="ghost"
-                      size="icon"
-                      className="opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-foreground"
+                      variant='ghost'
+                      size='icon'
+                      className='opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-foreground'
                       onClick={() => void download(file)}
                     >
-                      <Download className="size-3" />
-                      <span className="sr-only">
+                      <Download className='size-3' />
+                      <span className='sr-only'>
                         <Trans>Download</Trans>
                       </span>
                     </AttachmentAction>
                     {!readOnly && (
                       <AttachmentAction
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-destructive"
+                        variant='ghost'
+                        size='icon'
+                        className='opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-destructive'
                         onClick={() => setDeleteTarget(file)}
                       >
-                        <Trash2 className="size-3" />
-                        <span className="sr-only">
+                        <Trash2 className='size-3' />
+                        <span className='sr-only'>
                           <Trans>Delete</Trans>
                         </span>
                       </AttachmentAction>
                     )}
                   </AttachmentActions>
                 </Attachment>
-              );
+              )
             })}
           </AttachmentGroup>
         )}
@@ -266,9 +266,9 @@ export function EntityObjectAttachments({
           <>
             <input
               ref={fileInputRef}
-              type="file"
+              type='file'
               multiple
-              className="hidden"
+              className='hidden'
               onChange={handleFileChange}
             />
             {/* Neither removable nor reorderable: the bytes are already going. */}
@@ -280,26 +280,26 @@ export function EntityObjectAttachments({
                 type: file.type,
                 previewUrl: inFlightPreviews[i],
                 previewKind: isVideo(file.type)
-                  ? ("video" as const)
-                  : ("image" as const),
+                  ? ('video' as const)
+                  : ('image' as const),
                 progress: uploadProgress?.slices?.[i],
               }))}
-              layout="grid"
-              preview="tile"
-              state="uploading"
+              layout='grid'
+              preview='tile'
+              state='uploading'
             />
             <UploadProgress progress={uploadProgress} />
             <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
+              variant='outline'
+              size='sm'
+              className='h-7 text-xs'
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadMutation.isPending}
             >
               {uploadMutation.isPending ? (
-                <Loader2 className="size-3 me-1.5 animate-spin" />
+                <Loader2 className='size-3 me-1.5 animate-spin' />
               ) : (
-                <Upload className="size-3 me-1.5" />
+                <Upload className='size-3 me-1.5' />
               )}
               <Trans>Upload</Trans>
             </Button>
@@ -310,7 +310,7 @@ export function EntityObjectAttachments({
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
+          if (!open) setDeleteTarget(null)
         }}
         title={t`Delete attachment`}
         desc={t`Are you sure you want to delete "${deleteTarget?.name}"?`}
@@ -318,9 +318,9 @@ export function EntityObjectAttachments({
         destructive
         isLoading={deleteMutation.isPending}
         handleConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
         }}
       />
     </div>
-  );
+  )
 }

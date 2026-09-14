@@ -62,13 +62,13 @@ function SheetContent({
         className={cn(
           'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[55] flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           side === 'right' &&
-          'data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end top-[var(--sheet-top-offset,0rem)] bottom-0 end-0 h-[calc(100dvh-var(--sheet-top-offset,0rem))] w-3/4 border-s sm:max-w-sm md:top-0 md:h-screen',
+            'data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end top-[var(--sheet-top-offset,0rem)] bottom-0 end-0 h-[calc(100dvh-var(--sheet-top-offset,0rem))] w-3/4 border-s sm:max-w-sm md:top-0 md:h-screen',
           side === 'left' &&
-          'data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start top-[var(--sheet-top-offset,3rem)] bottom-0 start-0 h-[calc(100dvh-var(--sheet-top-offset,3rem))] w-3/4 border-e sm:max-w-sm md:top-0 md:h-screen',
+            'data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start top-[var(--sheet-top-offset,3rem)] bottom-0 start-0 h-[calc(100dvh-var(--sheet-top-offset,3rem))] w-3/4 border-e sm:max-w-sm md:top-0 md:h-screen',
           side === 'top' &&
-          'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
+            'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
           side === 'bottom' &&
-          'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
+            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
           className
         )}
         {...props}
@@ -76,7 +76,9 @@ function SheetContent({
         {children}
         <SheetPrimitive.Close className='ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute end-4 top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none'>
           <XIcon className='size-4' />
-          <span className='sr-only'><Trans>Close</Trans></span>
+          <span className='sr-only'>
+            <Trans>Close</Trans>
+          </span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

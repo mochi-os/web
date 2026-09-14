@@ -8,7 +8,11 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { i18n, type Messages } from '@lingui/core'
 import { I18nProvider as LinguiProvider } from '@lingui/react'
-import { getShellInitData, initShellBridge, onShellMessage } from '../lib/shell-bridge'
+import {
+  getShellInitData,
+  initShellBridge,
+  onShellMessage,
+} from '../lib/shell-bridge'
 import { applyDocumentDir, isRtlLocale } from '../lib/rtl'
 import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
 import {
@@ -61,7 +65,8 @@ function registerCustomFormatters(): void {
   // i18n.formats is read by the message compiler at activation time.
   // Custom formatters appear as functions on i18n.formats.<name>.
   type FormatFn = (value: unknown) => string
-  const formats = (i18n as unknown as { formats?: Record<string, FormatFn> }).formats ?? {}
+  const formats =
+    (i18n as unknown as { formats?: Record<string, FormatFn> }).formats ?? {}
   formats.mochiDate = (v: unknown) => {
     const d = v instanceof Date ? v : new Date(v as string | number)
     return fmtDate(d, activeLocale.dateFormat, activeLocale.timezone)
@@ -72,13 +77,24 @@ function registerCustomFormatters(): void {
   }
   formats.mochiDateTime = (v: unknown) => {
     const d = v instanceof Date ? v : new Date(v as string | number)
-    return fmtDateTime(d, activeLocale.dateFormat, activeLocale.timeFormat, activeLocale.timezone)
+    return fmtDateTime(
+      d,
+      activeLocale.dateFormat,
+      activeLocale.timeFormat,
+      activeLocale.timezone
+    )
   }
   formats.mochiNumber = (v: unknown) => {
-    return fmtNumber(typeof v === 'number' ? v : Number(v), activeLocale.numberFormat)
+    return fmtNumber(
+      typeof v === 'number' ? v : Number(v),
+      activeLocale.numberFormat
+    )
   }
   formats.mochiFileSize = (v: unknown) => {
-    return fmtFileSize(typeof v === 'number' ? v : Number(v), activeLocale.numberFormat)
+    return fmtFileSize(
+      typeof v === 'number' ? v : Number(v),
+      activeLocale.numberFormat
+    )
   }
   formats.mochiTimestamp = (v: unknown) => {
     return fmtTimestamp(typeof v === 'number' ? v : Number(v), activeLocale)
@@ -90,7 +106,9 @@ registerCustomFormatters()
 
 function readStoredLanguage(): string | null {
   try {
-    return typeof localStorage !== 'undefined' ? localStorage.getItem(LANGUAGE_STORAGE_KEY) : null
+    return typeof localStorage !== 'undefined'
+      ? localStorage.getItem(LANGUAGE_STORAGE_KEY)
+      : null
   } catch {
     return null
   }
@@ -135,7 +153,10 @@ export function setStoredLanguage(language: string): void {
 const PSEUDO_LOCALES = new Set(['en-x-pseudo-rtl', 'en-x-pseudo'])
 
 function isAcceptedLocale(catalogs: Catalogs, language: string): boolean {
-  return PSEUDO_LOCALES.has(language.toLowerCase()) || hasMatchingCatalog(catalogs, language)
+  return (
+    PSEUDO_LOCALES.has(language.toLowerCase()) ||
+    hasMatchingCatalog(catalogs, language)
+  )
 }
 
 function pickInitialLanguage(catalogs: Catalogs): string {

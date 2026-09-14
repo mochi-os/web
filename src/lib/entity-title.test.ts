@@ -37,12 +37,35 @@ describe('entityObjectTitle', () => {
   })
 
   it("prefers the server's own readable id over one rebuilt from the prefix", () => {
-    const obj = { class: 'task', number: 14, readable: 'PROJ-0014', values: { name: '' } }
+    const obj = {
+      class: 'task',
+      number: 14,
+      readable: 'PROJ-0014',
+      values: { name: '' },
+    }
     expect(entityObjectTitle(obj, classes, 'PROJ')).toBe('PROJ-0014')
   })
 
   it('falls back when the class is unknown', () => {
     const obj = { class: 'gone', values: { name: 'ignored' } }
     expect(entityObjectTitle(obj, classes)).toBe('Untitled')
+  })
+
+  // The type requires `values`, so the panel merges the detail response's
+  // sibling `values` key in before it calls. These two cover the runtime hole
+  // the compiler cannot: apps pass server data the types never checked, and
+  // reading the title field off `undefined` crashed the whole detail view.
+  it('does not throw when the object carries no values map', () => {
+    const obj = { class: 'task' } as unknown as Parameters<
+      typeof entityObjectTitle
+    >[0]
+    expect(entityObjectTitle(obj, classes, 'PROJ')).toBe('Untitled')
+  })
+
+  it('still uses the readable id when the values map is absent', () => {
+    const obj = { class: 'task', readable: 'CRM-7' } as unknown as Parameters<
+      typeof entityObjectTitle
+    >[0]
+    expect(entityObjectTitle(obj, classes)).toBe('CRM-7')
   })
 })

@@ -7,7 +7,9 @@ import { NotificationSourceIcon } from './notification-source-icon'
 
 describe('NotificationSourceIcon', () => {
   it('is decorative when no display name is known', () => {
-    const { container } = render(<NotificationSourceIcon app='feeds' isUnread={false} />)
+    const { container } = render(
+      <NotificationSourceIcon app='feeds' isUnread={false} />
+    )
     const image = container.querySelector('img')!
     expect(image.getAttribute('alt')).toBe('')
     fireEvent.error(image)
@@ -17,7 +19,9 @@ describe('NotificationSourceIcon', () => {
   })
 
   it('uses the display name for the alt text and the fallback glyph', () => {
-    const { container } = render(<NotificationSourceIcon app='feeds' name='Feeds' isUnread={false} />)
+    const { container } = render(
+      <NotificationSourceIcon app='feeds' name='Feeds' isUnread={false} />
+    )
     const image = container.querySelector('img')!
     expect(image.getAttribute('alt')).toBe('Feeds')
     fireEvent.error(image)

@@ -28,12 +28,19 @@ export function GameHeaderStat({
       {icon}
       {srLabel ? <span className='sr-only'>{srLabel}</span> : null}
       {label != null ? (
-        <span className={cn('max-w-[7.5rem] truncate text-sm font-medium', labelClassName)}>
+        <span
+          className={cn(
+            'max-w-[7.5rem] truncate text-sm font-medium',
+            labelClassName
+          )}
+        >
           {label}
         </span>
       ) : null}
       {value != null ? (
-        <span className={cn('text-sm font-semibold', valueClassName)}>{value}</span>
+        <span className={cn('text-sm font-semibold', valueClassName)}>
+          {value}
+        </span>
       ) : null}
     </span>
   )
@@ -44,7 +51,10 @@ interface GameHeaderStoneDotProps {
   className?: string
 }
 
-export function GameHeaderStoneDot({ color, className }: GameHeaderStoneDotProps) {
+export function GameHeaderStoneDot({
+  color,
+  className,
+}: GameHeaderStoneDotProps) {
   return (
     <span
       aria-hidden='true'

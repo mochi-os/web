@@ -142,7 +142,10 @@ describe('ChatWebsocketManager close races', () => {
   })
 
   it('a server-initiated clean close with no subscribers left stays closed', async () => {
-    const unsubscribe = manager.subscribe('c5', { chatKey: 'k5', onMessage: () => {} })
+    const unsubscribe = manager.subscribe('c5', {
+      chatKey: 'k5',
+      onMessage: () => {},
+    })
     await flush()
     const [first] = MockWebSocket.instances
     first.open()
@@ -204,7 +207,9 @@ describe('ChatWebsocketManager token scoping', () => {
   it('defaults to the socket route core serves', async () => {
     // Every app used to carry VITE_WEBSOCKET_URL=./_/ because the default
     // derived /websocket, which core does not serve.
-    const manager = new ChatWebsocketManager({ token: () => 'Bearer secret-jwt' })
+    const manager = new ChatWebsocketManager({
+      token: () => 'Bearer secret-jwt',
+    })
     manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
     await vi.advanceTimersByTimeAsync(0)
     const url = new URL(MockWebSocket.instances[0]?.url ?? 'ws://unset/')
@@ -231,7 +236,9 @@ describe('ChatWebsocketManager token scoping', () => {
   it('withholds the token from another port on this host', async () => {
     // A port is part of an origin, and this is the case a host-only check
     // would wave through.
-    const url = await connect(`${window.location.protocol}//${window.location.hostname}:8443`)
+    const url = await connect(
+      `${window.location.protocol}//${window.location.hostname}:8443`
+    )
     expect(url).not.toContain('secret-jwt')
   })
 })

@@ -149,7 +149,9 @@ describe('uploadSlices', () => {
           })
 
           // At most one file is on the wire at a time.
-          expect(seen.filter((s) => s === 'uploading').length).toBeLessThanOrEqual(1)
+          expect(
+            seen.filter((s) => s === 'uploading').length
+          ).toBeLessThanOrEqual(1)
           // Ordered sent… uploading… waiting, with no interleaving.
           if (firstWaiting !== -1) expect(lastSent).toBeLessThan(firstWaiting)
 

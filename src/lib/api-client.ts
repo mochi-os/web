@@ -2,10 +2,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import axios, {
-  type AxiosError,
-  type InternalAxiosRequestConfig,
-} from 'axios'
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '../stores/auth-store'
 import { getApiBasepath } from './app-path'
 import { isInShell } from './shell-bridge'
@@ -87,7 +84,5 @@ export function isAuthError(error: unknown): boolean {
     (error as AxiosError).response?.status === 401
   )
 }
-
-
 
 export default apiClient

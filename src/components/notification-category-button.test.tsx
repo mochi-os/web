@@ -28,7 +28,9 @@ const TOPIC: NotificationTopic = {
   category: '1',
 }
 
-function renderButton(props: Partial<React.ComponentProps<typeof NotificationCategoryButton>> = {}) {
+function renderButton(
+  props: Partial<React.ComponentProps<typeof NotificationCategoryButton>> = {}
+) {
   const onOpenChange = vi.fn()
   const onCategoryChange = vi.fn().mockResolvedValue(undefined)
   render(
@@ -102,7 +104,9 @@ describe('NotificationCategoryButton', () => {
     // one: against the number 0 it never matched and the row sorted by name.
     renderButton({ open: true })
     fireEvent.click(await screen.findByRole('combobox'))
-    const labels = (await screen.findAllByRole('option')).map((o) => o.textContent)
+    const labels = (await screen.findAllByRole('option')).map(
+      (o) => o.textContent
+    )
     expect(labels[labels.length - 1]).toBe('No notifications')
   })
 

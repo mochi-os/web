@@ -42,7 +42,7 @@ function AllProviders({ children }: { children: React.ReactNode }) {
 
 export function renderWithProviders(
   ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>,
+  options?: Omit<RenderOptions, 'wrapper'>
 ) {
   return render(ui, { wrapper: AllProviders, ...options })
 }
@@ -53,7 +53,7 @@ export { renderWithProviders as render }
 // ============= Mock data factories =============
 
 export function createMockEntityField(
-  overrides?: Partial<EntityField>,
+  overrides?: Partial<EntityField>
 ): EntityField {
   return {
     id: 'field-1',
@@ -70,7 +70,7 @@ export function createMockEntityField(
 }
 
 export function createMockEntityOption(
-  overrides?: Partial<EntityFieldOption>,
+  overrides?: Partial<EntityFieldOption>
 ): EntityFieldOption {
   return {
     id: 'opt-1',
@@ -83,7 +83,7 @@ export function createMockEntityOption(
 }
 
 export function createMockEntityView(
-  overrides?: Partial<EntityView>,
+  overrides?: Partial<EntityView>
 ): EntityView {
   return {
     id: 'view-1',
@@ -103,7 +103,7 @@ export function createMockEntityView(
 }
 
 export function createMockEntityClass(
-  overrides?: Partial<EntityClass>,
+  overrides?: Partial<EntityClass>
 ): EntityClass {
   return {
     id: 'task',
@@ -115,7 +115,7 @@ export function createMockEntityClass(
 }
 
 export function createMockEntityObject(
-  overrides?: Partial<EntityObject>,
+  overrides?: Partial<EntityObject>
 ): EntityObject {
   return {
     id: 'obj-1',
@@ -142,7 +142,7 @@ export function createMockEntityObjects(count: number): EntityObject[] {
         status: ['todo', 'in_progress', 'done'][i % 3],
         priority: ['high', 'medium', 'low'][i % 3],
       },
-    }),
+    })
   )
 }
 
@@ -151,7 +151,7 @@ export function createMockEntityObjects(count: number): EntityObject[] {
  * ...createMockEntityDesign() }`.
  */
 export function createMockEntityDesign(
-  overrides?: Partial<EntityDesign>,
+  overrides?: Partial<EntityDesign>
 ): EntityDesign {
   const statusOptions: EntityFieldOption[] = [
     createMockEntityOption({ id: 'todo', name: 'To Do', colour: '#6b7280' }),
@@ -173,7 +173,11 @@ export function createMockEntityDesign(
     classes: [createMockEntityClass()],
     fields: {
       task: [
-        createMockEntityField({ id: 'title', name: 'Title', fieldtype: 'text' }),
+        createMockEntityField({
+          id: 'title',
+          name: 'Title',
+          fieldtype: 'text',
+        }),
         createMockEntityField({
           id: 'status',
           name: 'Status',

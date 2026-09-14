@@ -27,7 +27,13 @@ vi.mock('../../lib/shell-storage', () => ({
 
 const media: LightboxMedia[] = [
   { id: 'a', name: 'a.png', url: 'blob:a', type: 'image' },
-  { id: 'b', name: 'b.png', url: 'blob:b', type: 'image', caption: 'The harbour' },
+  {
+    id: 'b',
+    name: 'b.png',
+    url: 'blob:b',
+    type: 'image',
+    caption: 'The harbour',
+  },
 ]
 
 function show(props: Partial<React.ComponentProps<typeof ImageLightbox>> = {}) {
@@ -101,7 +107,9 @@ describe('ImageLightbox comments slot', () => {
 
   it('leaves the count off when the image has none', () => {
     show({ renderComments: () => null, commentCount: () => 0 })
-    expect(screen.getByRole('button', { name: 'Comments' })).not.toHaveTextContent('0')
+    expect(
+      screen.getByRole('button', { name: 'Comments' })
+    ).not.toHaveTextContent('0')
   })
 
   // The panel follows the image: the slot is asked for the current media id.
@@ -128,7 +136,10 @@ describe('ImageLightbox comments slot', () => {
   })
 
   it('opens with the panel showing when asked to (a comment chip was clicked)', () => {
-    show({ renderComments: () => <div>anchored thread</div>, commentsInitiallyOpen: true })
+    show({
+      renderComments: () => <div>anchored thread</div>,
+      commentsInitiallyOpen: true,
+    })
     expect(screen.getByText('anchored thread')).toBeInTheDocument()
   })
 
@@ -140,29 +151,50 @@ describe('ImageLightbox comments slot', () => {
       expect(screen.queryByText('thread')).toBeNull()
       fireEvent.click(screen.getByRole('button', { name: 'Comments' }))
       expect(screen.getByText('thread')).toBeInTheDocument()
-      await vi.waitFor(() => expect(shellStore.get('lightbox.comments')).toBe('true'))
+      await vi.waitFor(() =>
+        expect(shellStore.get('lightbox.comments')).toBe('true')
+      )
     })
 
     it('opens with the panel showing when the preference says so', async () => {
       shellStore.set('lightbox.comments', 'true')
       const { rerender } = render(
         <I18nProvider i18n={i18n}>
-          <ImageLightbox images={media} currentIndex={0} open={false} onOpenChange={() => {}} onIndexChange={() => {}} renderComments={() => <div>thread</div>} />
+          <ImageLightbox
+            images={media}
+            currentIndex={0}
+            open={false}
+            onOpenChange={() => {}}
+            onIndexChange={() => {}}
+            renderComments={() => <div>thread</div>}
+          />
         </I18nProvider>
       )
       // Let the async read land while closed, then open.
-      await vi.waitFor(() => expect(shellStore.get('lightbox.comments')).toBe('true'))
+      await vi.waitFor(() =>
+        expect(shellStore.get('lightbox.comments')).toBe('true')
+      )
       await new Promise((resolve) => setTimeout(resolve, 0))
       rerender(
         <I18nProvider i18n={i18n}>
-          <ImageLightbox images={media} currentIndex={0} open onOpenChange={() => {}} onIndexChange={() => {}} renderComments={() => <div>thread</div>} />
+          <ImageLightbox
+            images={media}
+            currentIndex={0}
+            open
+            onOpenChange={() => {}}
+            onIndexChange={() => {}}
+            renderComments={() => <div>thread</div>}
+          />
         </I18nProvider>
       )
       expect(screen.getByText('thread')).toBeInTheDocument()
     })
 
     it('does not move the preference when a comment chip opened the panel', async () => {
-      show({ renderComments: () => <div>thread</div>, commentsInitiallyOpen: true })
+      show({
+        renderComments: () => <div>thread</div>,
+        commentsInitiallyOpen: true,
+      })
       expect(screen.getByText('thread')).toBeInTheDocument()
       await new Promise((resolve) => setTimeout(resolve, 0))
       expect(shellStore.has('lightbox.comments')).toBe(false)
@@ -217,7 +249,10 @@ describe('ImageLightbox comments slot', () => {
   it('holds the chrome while the panel is open', () => {
     vi.useFakeTimers()
     show({ renderComments: () => <div>thread</div> })
-    const bar = () => screen.getByRole('button', { name: 'Comments' }).closest('div[class*="absolute"]')!
+    const bar = () =>
+      screen
+        .getByRole('button', { name: 'Comments' })
+        .closest('div[class*="absolute"]')!
 
     // Closed panel: the chrome fades after the delay.
     act(() => {

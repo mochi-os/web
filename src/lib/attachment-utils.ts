@@ -91,7 +91,11 @@ export async function classifyAttachmentFailure(
 ): Promise<'unavailable' | 'missing'> {
   try {
     const response = await fetch(url, { credentials: 'same-origin' })
-    if (response.status === 502 || response.status === 503 || response.status === 504) {
+    if (
+      response.status === 502 ||
+      response.status === 503 ||
+      response.status === 504
+    ) {
       return 'unavailable'
     }
     return 'missing'

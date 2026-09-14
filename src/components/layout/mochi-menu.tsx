@@ -3,10 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { Trans } from '@lingui/react/macro'
-import {
-  LogOut,
-  Settings,
-} from 'lucide-react'
+import { LogOut, Settings } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { onShellMessage } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
@@ -67,7 +64,12 @@ function UserIcon({
 }) {
   return (
     <div className='relative'>
-      <EntityAvatar fingerprint={identity || undefined} version={version} name={name} size="sm" />
+      <EntityAvatar
+        fingerprint={identity || undefined}
+        version={version}
+        name={name}
+        size='sm'
+      />
       {!!unreadCount && (
         <span className='absolute -right-0.5 -top-0.5 z-10 h-3 w-3 rounded-full bg-notification' />
       )}
@@ -108,7 +110,12 @@ export function MochiMenu({
       <DropdownMenuLabel className='p-0 font-normal'>
         <div className='flex items-center justify-between px-2 py-1.5'>
           <div className='flex items-center gap-2 text-sm'>
-            <EntityAvatar fingerprint={identity || undefined} version={avatar || undefined} name={name} size="md" />
+            <EntityAvatar
+              fingerprint={identity || undefined}
+              version={avatar || undefined}
+              name={name}
+              size='md'
+            />
             <span className='font-semibold'>{name || t`User`}</span>
           </div>
           <div className='flex items-center gap-1 ms-4'>
@@ -154,9 +161,13 @@ export function MochiMenu({
     </>
   )
 
-  const triggerLabel = unreadCount > 0
-    ? plural(unreadCount, { one: 'Open menu (# unread notification)', other: 'Open menu (# unread notifications)' })
-    : t`Open menu`
+  const triggerLabel =
+    unreadCount > 0
+      ? plural(unreadCount, {
+          one: 'Open menu (# unread notification)',
+          other: 'Open menu (# unread notifications)',
+        })
+      : t`Open menu`
 
   const trigger = (
     <button
@@ -188,7 +199,7 @@ export function MochiMenu({
         )}
 
         {isMobile ? (
-          <Drawer open={menuOpen} onOpenChange={setMenuOpen} direction="bottom">
+          <Drawer open={menuOpen} onOpenChange={setMenuOpen} direction='bottom'>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DrawerTrigger asChild>{trigger}</DrawerTrigger>
@@ -197,7 +208,9 @@ export function MochiMenu({
             </Tooltip>
             <DrawerContent>
               <DrawerHeader>
-                <DrawerTitle className='sr-only'><Trans>Menu</Trans></DrawerTitle>
+                <DrawerTitle className='sr-only'>
+                  <Trans>Menu</Trans>
+                </DrawerTitle>
               </DrawerHeader>
               <div className='px-4 pb-4'>{menuContent}</div>
             </DrawerContent>

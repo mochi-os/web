@@ -41,11 +41,11 @@ class EntityWebsocketManager {
   private reconnectFailures = new Map<string, number>()
   // Keys whose reconnect was deferred because the browser reported offline.
   private pendingReconnect = new Set<string>()
-  private onlineListener = false
+  private wakeListeners = false
 
   /** Subscribe to `key`. Returns the unsubscribe function. */
   subscribe(key: string, callback: EntityWebsocketListener): () => void {
-    this.watchOnline()
+    this.watchWake()
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, new Set())
     }
@@ -130,11 +130,12 @@ class EntityWebsocketManager {
     }
   }
 
-  // Reconnect everything that was waiting the moment the network returns,
-  // rather than leaving each key to discover it on its own timer.
-  private watchOnline() {
-    if (this.onlineListener || typeof window === 'undefined') return
-    this.onlineListener = true
+  // Reconnect everything that was waiting the moment the network returns, or
+  // the moment the tab is shown, rather than leaving each key to discover it
+  // on its own timer.
+  private watchWake() {
+    if (this.wakeListeners || typeof window === 'undefined') return
+    this.wakeListeners = true
     window.addEventListener('online', () => {
       const waiting = [...this.pendingReconnect]
       this.pendingReconnect.clear()
@@ -144,6 +145,42 @@ class EntityWebsocketManager {
         if (this.subscribers.get(key)?.size) this.connect(key)
       }
     })
+    // A hidden tab throttles setTimeout to a minute or worse, so a socket that
+    // dropped in the background is still down when the user returns and the
+    // pending retry is whatever the browser stretched it to. Retry on show
+    // instead of waiting that out. Ported from the menu app, which has carried
+    // this since its notification bell sat dead on a backgrounded tab.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return
+        this.reconnectIdleKeys()
+      })
+    }
+  }
+
+  /** Reconnect every subscribed key that has no live socket, now. */
+  private reconnectIdleKeys() {
+    // Being shown is no evidence the network is back, and retrying into a dead
+    // one is exactly what the offline guard exists to prevent.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+    for (const [key, subs] of this.subscribers) {
+      if (subs.size === 0) continue
+      const existing = this.connections.get(key)
+      if (
+        existing &&
+        (existing.readyState === WebSocket.OPEN ||
+          existing.readyState === WebSocket.CONNECTING)
+      ) {
+        continue
+      }
+      if (this.connectionAttempts.get(key)) continue
+      // Returning to the tab is not a failure: drop the backoff the throttled
+      // timer already stretched rather than inheriting it. connect() clears
+      // the key's pending timer itself, so this cannot double up.
+      this.reconnectFailures.delete(key)
+      this.pendingReconnect.delete(key)
+      this.connect(key)
+    }
   }
 
   private scheduleReconnect(key: string) {
@@ -157,7 +194,10 @@ class EntityWebsocketManager {
     }
     const failures = this.reconnectFailures.get(key) ?? 0
     this.reconnectFailures.set(key, failures + 1)
-    const base = Math.min(RECONNECT_DELAY_MINIMUM * 2 ** failures, RECONNECT_DELAY_MAXIMUM)
+    const base = Math.min(
+      RECONNECT_DELAY_MINIMUM * 2 ** failures,
+      RECONNECT_DELAY_MAXIMUM
+    )
     // Full jitter: without it every tab that dropped together retries
     // together, and the reconnect storm is what finished off the server.
     const delay = Math.round(base / 2 + Math.random() * (base / 2))

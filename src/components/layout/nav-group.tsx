@@ -50,8 +50,17 @@ import {
 } from './types'
 
 // Type guards
-function isNavAction(item: NavItem | NavSubCollapsible | { url?: string; onClick?: () => void; items?: unknown[] }): item is NavAction {
-  return 'onClick' in item && typeof item.onClick === 'function' && !('items' in item && item.items)
+function isNavAction(
+  item:
+    | NavItem
+    | NavSubCollapsible
+    | { url?: string; onClick?: () => void; items?: unknown[] }
+): item is NavAction {
+  return (
+    'onClick' in item &&
+    typeof item.onClick === 'function' &&
+    !('items' in item && item.items)
+  )
 }
 
 function isNavLink(item: NavItem): item is NavLink {
@@ -59,7 +68,12 @@ function isNavLink(item: NavItem): item is NavLink {
 }
 
 function isNavSubCollapsible(item: unknown): item is NavSubCollapsible {
-  return typeof item === 'object' && item !== null && 'items' in item && Array.isArray((item as NavSubCollapsible).items)
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    'items' in item &&
+    Array.isArray((item as NavSubCollapsible).items)
+  )
 }
 
 // A sub-item's link. An external destination (another app) gets a plain
@@ -91,8 +105,15 @@ const SubItemLink = forwardRef<
 // Aggregate ("All <items>") entries reuse the same glyph as their members,
 // marked with a small hollow ring at the corner so they stay distinct even when
 // the sidebar collapses to icons and the text label is hidden.
-function ItemIcon({ icon: Icon, aggregate }: { icon?: React.ElementType; aggregate?: boolean }) {
-  if (!Icon) return <Circle className='hidden group-data-[collapsible=icon]:block' />
+function ItemIcon({
+  icon: Icon,
+  aggregate,
+}: {
+  icon?: React.ElementType
+  aggregate?: boolean
+}) {
+  if (!Icon)
+    return <Circle className='hidden group-data-[collapsible=icon]:block' />
   if (!aggregate) return <Icon />
   // The menu button hides direct <span> children in icon-collapsed mode to hide
   // the text label, and this wrapper is a <span>. The ! override forces it back
@@ -138,40 +159,59 @@ export function NavGroup({
     <>
       {separator && <SidebarSeparator className='mx-2' />}
       <SidebarGroup>
-      {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
-      <SidebarMenu ref={animateList ? menuRef : undefined}>
-        {items.map((item) => {
-          const key = getNavItemKey(item)
+        {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
+        <SidebarMenu ref={animateList ? menuRef : undefined}>
+          {items.map((item) => {
+            const key = getNavItemKey(item)
 
-          if (isNavAction(item)) {
-            return <SidebarMenuAction key={key} item={item} />
-          }
+            if (isNavAction(item)) {
+              return <SidebarMenuAction key={key} item={item} />
+            }
 
-          if (isNavLink(item)) {
-            return <SidebarMenuLink key={key} item={item} pathname={pathname} />
-          }
+            if (isNavLink(item)) {
+              return (
+                <SidebarMenuLink key={key} item={item} pathname={pathname} />
+              )
+            }
 
-          if (state === 'collapsed' && !isMobile)
+            if (state === 'collapsed' && !isMobile)
+              return (
+                <SidebarMenuCollapsedDropdown
+                  key={key}
+                  item={item}
+                  pathname={pathname}
+                />
+              )
+
             return (
-              <SidebarMenuCollapsedDropdown
+              <SidebarMenuCollapsible
                 key={key}
                 item={item}
                 pathname={pathname}
               />
             )
-
-          return (
-            <SidebarMenuCollapsible key={key} item={item} pathname={pathname} />
-          )
-        })}
-      </SidebarMenu>
-    </SidebarGroup>
+          })}
+        </SidebarMenu>
+      </SidebarGroup>
     </>
   )
 }
 
-function NavBadge({ children, className }: { children: ReactNode; className?: string }) {
-  return <Badge variant='destructive' className={cn('rounded-full px-1 py-0 text-xs', className)}>{children}</Badge>
+function NavBadge({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <Badge
+      variant='destructive'
+      className={cn('rounded-full px-1 py-0 text-xs', className)}
+    >
+      {children}
+    </Badge>
+  )
 }
 
 function NavTitle({ title, meta }: { title: string; meta?: string }) {
@@ -187,7 +227,9 @@ function NavTitle({ title, meta }: { title: string; meta?: string }) {
   )
 }
 
-function navLinkTooltip(item: NavLink): string | { children: string; hidden: boolean } {
+function navLinkTooltip(
+  item: NavLink
+): string | { children: string; hidden: boolean } {
   if (item.tooltipAlways) {
     return { children: item.title, hidden: false }
   }
@@ -221,16 +263,11 @@ function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
 
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <SidebarItemAction showOnHover aria-label={t`Open actions`}>
-              <MoreHorizontal />
-            </SidebarItemAction>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{t`Open actions`}</TooltipContent>
-      </Tooltip>
+      <DropdownMenuTrigger asChild>
+        <SidebarItemAction showOnHover aria-label={t`Open actions`}>
+          <MoreHorizontal />
+        </SidebarItemAction>
+      </DropdownMenuTrigger>
       <DropdownMenuContent side='right' align='start' sideOffset={4}>
         {menu.map((menuItem) => (
           <DropdownMenuItem
@@ -272,7 +309,9 @@ function SidebarMenuAction({ item }: { item: NavAction }) {
         className={item.className}
       >
         <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-        <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
+        <span className='group-data-[collapsible=icon]:hidden'>
+          {item.title}
+        </span>
         {item.badge && <NavBadge>{item.badge}</NavBadge>}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -292,7 +331,12 @@ function SidebarMenuLink({
     const isActive = item.isActive ?? checkIsActive(pathname, item)
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={isActive} tooltip={navLinkTooltip(item)} className={item.className}>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive}
+          tooltip={navLinkTooltip(item)}
+          className={item.className}
+        >
           <a href={item.url as string} onClick={() => setOpenMobile(false)}>
             <ItemIcon icon={item.icon} aggregate={item.aggregate} />
             <span className='min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden'>
@@ -315,7 +359,11 @@ function SidebarMenuLink({
         tooltip={navLinkTooltip(item)}
         className={item.className}
       >
-        <Link preload={false} to={item.url} onClick={() => setOpenMobile(false)}>
+        <Link
+          preload={false}
+          to={item.url}
+          onClick={() => setOpenMobile(false)}
+        >
           <ItemIcon icon={item.icon} aggregate={item.aggregate} />
           <span className='min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden'>
             <NavTitle title={item.title} meta={item.meta} />
@@ -350,14 +398,10 @@ function SidebarMenuCollapsible({
     : checkIsActive(pathname, item)
 
   return (
-    <Collapsible
-      asChild
-      {...collapsibleProps}
-      className='group/collapsible'
-    >
+    <Collapsible asChild {...collapsibleProps} className='group/collapsible'>
       <SidebarMenuItem>
         {item.url ? (
-           <div className='flex items-center'>
+          <div className='flex items-center'>
             {item.external ? (
               <SidebarMenuButton
                 asChild
@@ -365,9 +409,14 @@ function SidebarMenuCollapsible({
                 tooltip={item.title}
                 className={cn('flex-1', item.className)}
               >
-                <a href={item.url as string} onClick={() => setOpenMobile(false)}>
+                <a
+                  href={item.url as string}
+                  onClick={() => setOpenMobile(false)}
+                >
                   <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-                  <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
+                  <span className='group-data-[collapsible=icon]:hidden'>
+                    {item.title}
+                  </span>
                   {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 </a>
               </SidebarMenuButton>
@@ -378,9 +427,15 @@ function SidebarMenuCollapsible({
                 tooltip={item.title}
                 className={cn('flex-1', item.className)}
               >
-                <Link preload={false} to={item.url} onClick={() => setOpenMobile(false)}>
+                <Link
+                  preload={false}
+                  to={item.url}
+                  onClick={() => setOpenMobile(false)}
+                >
                   <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-                  <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
+                  <span className='group-data-[collapsible=icon]:hidden'>
+                    {item.title}
+                  </span>
                   {item.badge && <NavBadge>{item.badge}</NavBadge>}
                 </Link>
               </SidebarMenuButton>
@@ -414,7 +469,7 @@ function SidebarMenuCollapsible({
                 {item.title}
               </span>
               {item.badge && <NavBadge>{item.badge}</NavBadge>}
-             <ChevronRight className='ms-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden rtl:rotate-180' />
+              <ChevronRight className='ms-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden rtl:rotate-180' />
             </SidebarMenuButton>
           </CollapsibleTrigger>
         )}
@@ -444,7 +499,9 @@ function SidebarMenuCollapsible({
                       }}
                     >
                       {subItem.icon && <subItem.icon />}
-                      <span className='group-data-[collapsible=icon]:hidden'>{subItem.title}</span>
+                      <span className='group-data-[collapsible=icon]:hidden'>
+                        {subItem.title}
+                      </span>
                       {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
@@ -455,15 +512,23 @@ function SidebarMenuCollapsible({
                 <SidebarMenuSubItem key={getNavItemKey(subItem)}>
                   <SidebarMenuSubButton
                     asChild
-                    isActive={'url' in subItem ? checkIsActive(pathname, subItem) : false}
+                    isActive={
+                      'url' in subItem
+                        ? checkIsActive(pathname, subItem)
+                        : false
+                    }
                   >
                     <SubItemLink
                       url={'url' in subItem ? subItem.url : '#'}
-                      external={'external' in subItem ? subItem.external : false}
+                      external={
+                        'external' in subItem ? subItem.external : false
+                      }
                       onClick={() => setOpenMobile(false)}
                     >
                       {subItem.icon && <subItem.icon />}
-                      <span className='group-data-[collapsible=icon]:hidden'>{subItem.title}</span>
+                      <span className='group-data-[collapsible=icon]:hidden'>
+                        {subItem.title}
+                      </span>
                       {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
                     </SubItemLink>
                   </SidebarMenuSubButton>
@@ -503,17 +568,23 @@ function SidebarMenuSubCollapsible({
       <Collapsible {...collapsibleProps} className='group/subcollapsible'>
         {item.url ? (
           <div className='flex items-center'>
-             <SidebarMenuSubButton
-                asChild
-                isActive={shouldHighlight}
-                className='flex-1'
+            <SidebarMenuSubButton
+              asChild
+              isActive={shouldHighlight}
+              className='flex-1'
+            >
+              <Link
+                preload={false}
+                to={item.url}
+                onClick={() => setOpenMobile(false)}
               >
-                <Link preload={false} to={item.url} onClick={() => setOpenMobile(false)}>
-                  <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-                  <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
-                  {item.badge && <NavBadge>{item.badge}</NavBadge>}
-                </Link>
-              </SidebarMenuSubButton>
+                <ItemIcon icon={item.icon} aggregate={item.aggregate} />
+                <span className='group-data-[collapsible=icon]:hidden'>
+                  {item.title}
+                </span>
+                {item.badge && <NavBadge>{item.badge}</NavBadge>}
+              </Link>
+            </SidebarMenuSubButton>
             <Tooltip>
               <TooltipTrigger asChild>
                 <CollapsibleTrigger asChild>
@@ -534,12 +605,14 @@ function SidebarMenuSubCollapsible({
             If NO URL, full row toggle
            */
           <CollapsibleTrigger asChild>
-             <SidebarMenuSubButton className='flex-1 cursor-pointer'>
-                <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-                <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
-                {item.badge && <NavBadge>{item.badge}</NavBadge>}
-                <ChevronRight className='ms-auto size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
-              </SidebarMenuSubButton>
+            <SidebarMenuSubButton className='flex-1 cursor-pointer'>
+              <ItemIcon icon={item.icon} aggregate={item.aggregate} />
+              <span className='group-data-[collapsible=icon]:hidden'>
+                {item.title}
+              </span>
+              {item.badge && <NavBadge>{item.badge}</NavBadge>}
+              <ChevronRight className='ms-auto size-3 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180' />
+            </SidebarMenuSubButton>
           </CollapsibleTrigger>
         )}
 
@@ -558,8 +631,12 @@ function SidebarMenuSubCollapsible({
                       }}
                     >
                       {subSubItem.icon && <subSubItem.icon />}
-                      <span className='group-data-[collapsible=icon]:hidden'>{subSubItem.title}</span>
-                      {subSubItem.badge && <NavBadge>{subSubItem.badge}</NavBadge>}
+                      <span className='group-data-[collapsible=icon]:hidden'>
+                        {subSubItem.title}
+                      </span>
+                      {subSubItem.badge && (
+                        <NavBadge>{subSubItem.badge}</NavBadge>
+                      )}
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 )
@@ -569,16 +646,26 @@ function SidebarMenuSubCollapsible({
                 <SidebarMenuSubItem key={getNavItemKey(subSubItem)}>
                   <SidebarMenuSubButton
                     asChild
-                    isActive={'url' in subSubItem ? checkIsActive(pathname, subSubItem) : false}
+                    isActive={
+                      'url' in subSubItem
+                        ? checkIsActive(pathname, subSubItem)
+                        : false
+                    }
                   >
                     <SubItemLink
                       url={'url' in subSubItem ? subSubItem.url : '#'}
-                      external={'external' in subSubItem ? subSubItem.external : false}
+                      external={
+                        'external' in subSubItem ? subSubItem.external : false
+                      }
                       onClick={() => setOpenMobile(false)}
                     >
                       {subSubItem.icon && <subSubItem.icon />}
-                      <span className='group-data-[collapsible=icon]:hidden'>{subSubItem.title}</span>
-                      {subSubItem.badge && <NavBadge>{subSubItem.badge}</NavBadge>}
+                      <span className='group-data-[collapsible=icon]:hidden'>
+                        {subSubItem.title}
+                      </span>
+                      {subSubItem.badge && (
+                        <NavBadge>{subSubItem.badge}</NavBadge>
+                      )}
                     </SubItemLink>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -607,8 +694,14 @@ function SidebarMenuCollapsedDropdown({
             isActive={checkIsActive(pathname, item)}
           >
             <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-            <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
-            {item.badge && <NavBadge className='group-data-[collapsible=icon]:hidden'>{item.badge}</NavBadge>}
+            <span className='group-data-[collapsible=icon]:hidden'>
+              {item.title}
+            </span>
+            {item.badge && (
+              <NavBadge className='group-data-[collapsible=icon]:hidden'>
+                {item.badge}
+              </NavBadge>
+            )}
             <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden rtl:rotate-180' />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
@@ -627,17 +720,28 @@ function SidebarMenuCollapsedDropdown({
                   <DropdownMenuSubTrigger>
                     {sub.icon && <sub.icon />}
                     <span className='max-w-52 text-wrap'>{sub.title}</span>
-                    {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
+                    {sub.badge && (
+                      <span className='ms-auto text-xs'>{sub.badge}</span>
+                    )}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     {sub.items.map((leaf) => {
                       const leafKey = getNavItemKey(leaf)
                       if (isNavAction(leaf)) {
                         return (
-                          <DropdownMenuItem key={leafKey} onClick={leaf.onClick}>
+                          <DropdownMenuItem
+                            key={leafKey}
+                            onClick={leaf.onClick}
+                          >
                             {leaf.icon && <leaf.icon />}
-                            <span className='max-w-52 text-wrap'>{leaf.title}</span>
-                            {leaf.badge && <span className='ms-auto text-xs'>{leaf.badge}</span>}
+                            <span className='max-w-52 text-wrap'>
+                              {leaf.title}
+                            </span>
+                            {leaf.badge && (
+                              <span className='ms-auto text-xs'>
+                                {leaf.badge}
+                              </span>
+                            )}
                           </DropdownMenuItem>
                         )
                       }
@@ -649,8 +753,14 @@ function SidebarMenuCollapsedDropdown({
                             className={`${checkIsActive(pathname, leaf) ? 'bg-secondary' : ''}`}
                           >
                             {leaf.icon && <leaf.icon />}
-                            <span className='max-w-52 text-wrap'>{leaf.title}</span>
-                            {leaf.badge && <span className='ms-auto text-xs'>{leaf.badge}</span>}
+                            <span className='max-w-52 text-wrap'>
+                              {leaf.title}
+                            </span>
+                            {leaf.badge && (
+                              <span className='ms-auto text-xs'>
+                                {leaf.badge}
+                              </span>
+                            )}
                           </SubItemLink>
                         </DropdownMenuItem>
                       )
@@ -664,7 +774,9 @@ function SidebarMenuCollapsedDropdown({
                 <DropdownMenuItem key={key} onClick={sub.onClick}>
                   {sub.icon && <sub.icon />}
                   <span className='max-w-52 text-wrap'>{sub.title}</span>
-                  {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
+                  {sub.badge && (
+                    <span className='ms-auto text-xs'>{sub.badge}</span>
+                  )}
                 </DropdownMenuItem>
               )
             }
@@ -677,7 +789,9 @@ function SidebarMenuCollapsedDropdown({
                 >
                   {sub.icon && <sub.icon />}
                   <span className='max-w-52 text-wrap'>{sub.title}</span>
-                  {sub.badge && <span className='ms-auto text-xs'>{sub.badge}</span>}
+                  {sub.badge && (
+                    <span className='ms-auto text-xs'>{sub.badge}</span>
+                  )}
                 </SubItemLink>
               </DropdownMenuItem>
             )
@@ -688,7 +802,11 @@ function SidebarMenuCollapsedDropdown({
   )
 }
 
-function checkIsActive(pathname: string, item: NavItem | NavSubItem, mainNav = false): boolean {
+function checkIsActive(
+  pathname: string,
+  item: NavItem | NavSubItem,
+  mainNav = false
+): boolean {
   // Normalize paths for comparison
   const normalizePath = (path: string): string => {
     if (!path) return '/'
@@ -713,13 +831,19 @@ function checkIsActive(pathname: string, item: NavItem | NavSubItem, mainNav = f
 
   // Check for prefix match (e.g., /abc123/settings matches /abc123)
   // But not for root URL to avoid matching everything
-  if (url && normalizedItemUrl !== '/' && normalizedPathname.startsWith(normalizedItemUrl + '/')) {
+  if (
+    url &&
+    normalizedItemUrl !== '/' &&
+    normalizedPathname.startsWith(normalizedItemUrl + '/')
+  ) {
     return true
   }
 
   // Check if any child nav item is active (Recursive)
   if ('items' in item && item.items && Array.isArray(item.items)) {
-    const hasActiveChild = item.items.some((child: NavItem | NavSubItem) => checkIsActive(pathname, child))
+    const hasActiveChild = item.items.some((child: NavItem | NavSubItem) =>
+      checkIsActive(pathname, child)
+    )
     if (hasActiveChild) {
       return true
     }

@@ -2,7 +2,14 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/utils'
 import { computeMentionDropdownPosition } from './mention-dropdown-position'
@@ -20,8 +27,10 @@ export interface MentionUser {
   detail?: string
 }
 
-interface MentionTextareaProps
-  extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
+interface MentionTextareaProps extends Omit<
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+  'onChange'
+> {
   value: string
   onValueChange: (value: string) => void
   /** Static list of people to filter client-side (used by CRM/projects). */
@@ -41,7 +50,7 @@ export function renderMentions(content: string): ReactNode {
       </span>
     ) : (
       part
-    ),
+    )
   )
 }
 
@@ -57,7 +66,10 @@ export const highlightMentions = (html: string): string => {
   if (!html.includes('@[')) return html
   const template = document.createElement('template')
   template.innerHTML = html
-  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT)
+  const walker = document.createTreeWalker(
+    template.content,
+    NodeFilter.SHOW_TEXT
+  )
   const nodes: Text[] = []
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.nodeValue?.includes('@[')) nodes.push(node as Text)
@@ -68,14 +80,16 @@ export const highlightMentions = (html: string): string => {
     let last = 0
     for (const match of text.matchAll(mentionTokenPattern)) {
       const index = match.index ?? 0
-      if (index > last) fragment.appendChild(document.createTextNode(text.slice(last, index)))
+      if (index > last)
+        fragment.appendChild(document.createTextNode(text.slice(last, index)))
       const span = document.createElement('span')
       span.className = 'text-primary font-medium'
       span.textContent = `@${match[1]}`
       fragment.appendChild(span)
       last = index + match[0].length
     }
-    if (last < text.length) fragment.appendChild(document.createTextNode(text.slice(last)))
+    if (last < text.length)
+      fragment.appendChild(document.createTextNode(text.slice(last)))
     node.replaceWith(fragment)
   }
   return template.innerHTML
@@ -92,8 +106,11 @@ export {
   type MentionResolvePerson,
 } from './mention-query'
 
-export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
-  function MentionTextarea({
+export const MentionTextarea = forwardRef<
+  HTMLTextAreaElement,
+  MentionTextareaProps
+>(function MentionTextarea(
+  {
     value,
     onValueChange,
     people = [],
@@ -102,7 +119,9 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
     className,
     onKeyDown,
     ...props
-  }, forwardedRef) {
+  },
+  forwardedRef
+) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   /** Last value written locally (keystroke / insert). Skips redundant prop sync. */
   const lastLocalValueRef = useRef(value)
@@ -150,7 +169,9 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
       ? onSearchPeople
         ? asyncResults.slice(0, 8)
         : people
-            .filter((p) => p.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+            .filter((p) =>
+              p.name.toLowerCase().startsWith(mentionQuery.toLowerCase())
+            )
             .slice(0, 8)
       : []
   const isOpen = mentionQuery !== null && filtered.length > 0
@@ -227,7 +248,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
               left: nextPos.left,
               width: nextPos.width,
               maxHeight: nextPos.maxHeight,
-            },
+            }
       )
     }
 
@@ -331,7 +352,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
         }
         className={cn(
           'border-input bg-background min-h-16 w-full rounded-lg border px-3 py-2 text-sm',
-          className,
+          className
         )}
         {...props}
       />
@@ -363,7 +384,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
                   'text-foreground flex w-full items-center px-3 py-2 text-start text-sm outline-none transition-colors',
                   i === activeIndex
                     ? 'bg-selected'
-                    : 'hover:bg-hover hover:text-hover-foreground',
+                    : 'hover:bg-hover hover:text-hover-foreground'
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault()
@@ -382,7 +403,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
               </button>
             ))}
           </div>,
-          document.body,
+          document.body
         )}
     </>
   )

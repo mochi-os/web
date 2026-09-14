@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { t } from '@lingui/core/macro'
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 export interface PaginatedResult<T> {
   items: T[]
@@ -10,7 +17,9 @@ export interface PaginatedResult<T> {
 }
 
 export interface UseLoadMoreOptions<T, P = Record<string, unknown>> {
-  fetcher: (params: P & { page: number; limit: number }) => Promise<PaginatedResult<T>>
+  fetcher: (
+    params: P & { page: number; limit: number }
+  ) => Promise<PaginatedResult<T>>
   initial?: PaginatedResult<T>
   params?: P
   limit?: number
@@ -30,7 +39,7 @@ export interface UseLoadMoreResult<T> {
 }
 
 export function useLoadMore<T, P = Record<string, unknown>>(
-  options: UseLoadMoreOptions<T, P>,
+  options: UseLoadMoreOptions<T, P>
 ): UseLoadMoreResult<T> {
   const { fetcher, initial, params, limit = 20 } = options
   const paramsKey = options.paramsKey ?? JSON.stringify(params ?? {})
@@ -71,7 +80,9 @@ export function useLoadMore<T, P = Record<string, unknown>>(
           limit,
         } as P & { page: number; limit: number }
         const result = await fetcher(fetchParams)
-        setItems((prev) => (replace ? result.items : [...prev, ...result.items]))
+        setItems((prev) =>
+          replace ? result.items : [...prev, ...result.items]
+        )
         setTotal(result.total)
         setPage(nextPage)
       } catch (err) {
@@ -82,7 +93,7 @@ export function useLoadMore<T, P = Record<string, unknown>>(
     },
     // fetcher intentionally excluded — callers typically pass inline functions
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [limit, paramsKey],
+    [limit, paramsKey]
   )
 
   // Refetch when params change

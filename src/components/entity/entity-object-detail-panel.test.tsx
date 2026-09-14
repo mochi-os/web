@@ -29,14 +29,29 @@ vi.mock('../../lib/toast-utils', async (importOriginal) => {
 
 // A task may parent a task, so the Parent select has something to offer.
 const design = createMockEntityDesign({ hierarchy: { task: ['task'] } })
-const object = createMockEntityObject({ id: 'obj-1', values: { title: 'Original' } })
-const sibling = createMockEntityObject({ id: 'obj-2', values: { title: 'Sibling' } })
+const object = createMockEntityObject({
+  id: 'obj-1',
+  values: { title: 'Original' },
+})
+const sibling = createMockEntityObject({
+  id: 'obj-2',
+  values: { title: 'Sibling' },
+})
 
 type Detail = EntityObjectDetail<EntityObject>
 
+// The server answers the row and its values as siblings, so the fixture must
+// not carry values on the row: the panel once titled the row and crashed on
+// every real fetch while a fixture shaped like the cache kept this green.
+function row(entity: EntityObject): Omit<EntityObject, 'values'> {
+  const { values, ...rest } = entity
+  void values
+  return rest
+}
+
 function detailFor(overrides?: Partial<Detail>): Detail {
   return {
-    object,
+    object: row(object),
     values: { title: 'Original' },
     outgoing: [],
     incoming: [],
@@ -81,7 +96,9 @@ function makeApi(): EntityObjectDetailPanelApi<EntityObject, Detail> {
 let api: EntityObjectDetailPanelApi<EntityObject, Detail>
 
 function renderPanel(
-  extra?: Partial<React.ComponentProps<typeof EntityObjectDetailPanel<EntityObject, Detail>>>,
+  extra?: Partial<
+    React.ComponentProps<typeof EntityObjectDetailPanel<EntityObject, Detail>>
+  >
 ) {
   return render(
     <EntityObjectDetailPanel
@@ -92,7 +109,7 @@ function renderPanel(
       api={api}
       onClose={() => {}}
       {...extra}
-    />,
+    />
   )
 }
 
@@ -112,7 +129,9 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     fireEvent.blur(input)
 
     await waitFor(() => expect(api.setValue).toHaveBeenCalled())
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Failed to save'))
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('Failed to save')
+    )
   })
 
   it('stays silent when the field edit succeeds', async () => {
@@ -133,7 +152,7 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     fireEvent.click(await screen.findByLabelText('Watch'))
 
     await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith('Failed to update watching'),
+      expect(toastError).toHaveBeenCalledWith('Failed to update watching')
     )
   })
 
@@ -144,7 +163,9 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     fireEvent.click(await screen.findByLabelText('Delete item'))
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Failed to delete'))
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('Failed to delete')
+    )
   })
 
   it('says so when the reparent is refused', async () => {
@@ -155,7 +176,9 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     fireEvent.click(await screen.findByRole('combobox', { name: 'Parent' }))
     fireEvent.click(await screen.findByRole('option', { name: 'Sibling' }))
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Failed to move'))
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('Failed to move')
+    )
   })
 })
 
@@ -174,12 +197,21 @@ describe('EntityObjectDetailPanel header', () => {
       values: { title: 'Original' },
     })
     vi.mocked(api.getObject).mockResolvedValue({
-      data: detailFor({ object: numbered }),
+      data: detailFor({ object: row(numbered) }),
     })
 
     renderPanel()
 
-    expect(await screen.findByTestId('entity-readable')).toHaveTextContent('PROJ-14')
+    expect(await screen.findByTestId('entity-readable')).toHaveTextContent(
+      'PROJ-14'
+    )
+  })
+
+  it('titles the object from the detail values, since the row carries none', async () => {
+    renderPanel()
+
+    expect(await screen.findByText('Original')).toBeInTheDocument()
+    expect(screen.queryByText('Try again')).toBeNull()
   })
 })
 
@@ -188,7 +220,9 @@ describe('EntityObjectDetailPanel tabs', () => {
     renderPanel()
     await screen.findByDisplayValue('Original')
 
-    expect(screen.getByRole('button', { name: /Properties/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Properties/ })
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Comments/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Activity/ })).toBeInTheDocument()
   })
@@ -227,7 +261,9 @@ describe('EntityObjectDetailPanel tabs', () => {
     renderPanel()
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Comments \(3\)/ })).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /Comments \(3\)/ })
+      ).toBeInTheDocument()
     )
   })
 })

@@ -70,7 +70,7 @@ interface MessagesPage {
 
 const isSameMessage = (
   incoming: GameWebsocketMessage,
-  existing: GameWebsocketMessage,
+  existing: GameWebsocketMessage
 ): boolean =>
   incoming.created === existing.created &&
   incoming.body === existing.body &&
@@ -80,7 +80,7 @@ const isSameMessage = (
 const createMessageFromPayload = (
   gameId: string,
   payload: ChatWebsocketMessagePayload,
-  unknownSenderLabel: string,
+  unknownSenderLabel: string
 ): GameWebsocketMessage => {
   const created =
     typeof payload.created === 'number'
@@ -120,7 +120,7 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   unknownSenderLabel: string,
   keys: GameWebsocketKeys,
   mergeMove: MergeMovePayload<G> | undefined,
-  snapshotField: string,
+  snapshotField: string
 ) => {
   if (!gameId) return
 
@@ -155,7 +155,7 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
         games: current.games.map((g) =>
           g.id === gameId
             ? { ...g, status, winner: winner ?? g.winner, draw_offer: null }
-            : g,
+            : g
         ),
       }
     })
@@ -234,7 +234,7 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   const incomingMessage = createMessageFromPayload(
     gameId,
     payload,
-    unknownSenderLabel,
+    unknownSenderLabel
   )
 
   queryClient.setQueryData<InfiniteData<MessagesPage>>(
@@ -248,7 +248,7 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
       }
 
       const alreadyExists = current.pages.some((page) =>
-        page.messages.some((message) => isSameMessage(incomingMessage, message)),
+        page.messages.some((message) => isSameMessage(incomingMessage, message))
       )
 
       if (alreadyExists) return current
@@ -256,11 +256,11 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
       const updatedPages = current.pages.map((page, index) =>
         index === 0
           ? { ...page, messages: [...page.messages, incomingMessage] }
-          : page,
+          : page
       )
 
       return { ...current, pages: updatedPages }
-    },
+    }
   )
 }
 
@@ -319,7 +319,7 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
           unknownSenderLabel,
           keys,
           mergeMove,
-          snapshotField,
+          snapshotField
         )
       },
       onStatusChange: (nextSnapshot) => {

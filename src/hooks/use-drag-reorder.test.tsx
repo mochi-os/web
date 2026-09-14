@@ -129,16 +129,28 @@ afterEach(() => {
 })
 
 function pointer(type: string, x: number, y: number, extra: object = {}) {
-  return { pointerId: 1, pointerType: type, button: 0, clientX: x, clientY: y, ...extra }
+  return {
+    pointerId: 1,
+    pointerType: type,
+    button: 0,
+    clientX: x,
+    clientY: y,
+    ...extra,
+  }
 }
 
 describe('useDragReorder', () => {
   it('moves the last tile to the front as the pointer crosses the slots', () => {
     const orders: string[][] = []
-    render(<List initial={['a', 'b', 'c', 'd']} onOrder={(o) => orders.push(o)} />)
+    render(
+      <List initial={['a', 'b', 'c', 'd']} onOrder={(o) => orders.push(o)} />
+    )
 
     // Grab 'd', which sits in slot 3 — first column of the second row.
-    fireEvent.pointerDown(screen.getByTestId('tile-d'), pointer('mouse', 50, 170))
+    fireEvent.pointerDown(
+      screen.getByTestId('tile-d'),
+      pointer('mouse', 50, 170)
+    )
     // Past the slop, so the drag is live.
     fireEvent.pointerMove(window, pointer('mouse', 50, 160))
     // Over slot 0.
@@ -154,11 +166,17 @@ describe('useDragReorder', () => {
   it('marks the dragged tile while it is moving and clears it on drop', () => {
     render(<List initial={['a', 'b', 'c']} onOrder={() => {}} />)
 
-    fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+    fireEvent.pointerDown(
+      screen.getByTestId('tile-a'),
+      pointer('mouse', 50, 50)
+    )
     expect(screen.getByTestId('tile-a')).not.toHaveAttribute('data-dragging')
 
     fireEvent.pointerMove(window, pointer('mouse', 70, 50))
-    expect(screen.getByTestId('tile-a')).toHaveAttribute('data-dragging', 'true')
+    expect(screen.getByTestId('tile-a')).toHaveAttribute(
+      'data-dragging',
+      'true'
+    )
 
     fireEvent.pointerUp(window, pointer('mouse', 70, 50))
     expect(screen.getByTestId('tile-a')).not.toHaveAttribute('data-dragging')
@@ -169,7 +187,10 @@ describe('useDragReorder', () => {
     const orders: string[][] = []
     render(<List initial={['a', 'b', 'c']} onOrder={(o) => orders.push(o)} />)
 
-    fireEvent.pointerDown(screen.getByTestId('tile-c'), pointer('touch', 290, 50))
+    fireEvent.pointerDown(
+      screen.getByTestId('tile-c'),
+      pointer('touch', 290, 50)
+    )
     fireEvent.pointerMove(window, pointer('touch', 290, 130))
     act(() => {
       vi.advanceTimersByTime(TOUCH_HOLD)
@@ -186,7 +207,10 @@ describe('useDragReorder', () => {
     const orders: string[][] = []
     render(<List initial={['a', 'b', 'c']} onOrder={(o) => orders.push(o)} />)
 
-    fireEvent.pointerDown(screen.getByTestId('tile-c'), pointer('touch', 290, 50))
+    fireEvent.pointerDown(
+      screen.getByTestId('tile-c'),
+      pointer('touch', 290, 50)
+    )
     act(() => {
       vi.advanceTimersByTime(TOUCH_HOLD)
     })
@@ -201,7 +225,10 @@ describe('useDragReorder', () => {
     const orders: string[][] = []
     render(<List initial={['a', 'b', 'c']} onOrder={(o) => orders.push(o)} />)
 
-    fireEvent.pointerDown(screen.getByTestId('tile-c'), pointer('mouse', 290, 50))
+    fireEvent.pointerDown(
+      screen.getByTestId('tile-c'),
+      pointer('mouse', 290, 50)
+    )
     fireEvent.pointerMove(window, pointer('mouse', 280, 50))
     fireEvent.pointerMove(window, pointer('mouse', 50, 50))
     flushFrame()
@@ -218,10 +245,17 @@ describe('useDragReorder', () => {
     it('fires once when the drag is let go, however many slots it crossed', () => {
       const onCommit = vi.fn()
       render(
-        <List initial={['a', 'b', 'c', 'd']} onOrder={() => {}} onCommit={onCommit} />
+        <List
+          initial={['a', 'b', 'c', 'd']}
+          onOrder={() => {}}
+          onCommit={onCommit}
+        />
       )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-d'), pointer('mouse', 50, 170))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-d'),
+        pointer('mouse', 50, 170)
+      )
       fireEvent.pointerMove(window, pointer('mouse', 50, 160))
       fireEvent.pointerMove(window, pointer('mouse', 170, 50))
       flushFrame()
@@ -235,9 +269,18 @@ describe('useDragReorder', () => {
 
     it('stays quiet when the drag is cancelled and the tile goes back', () => {
       const onCommit = vi.fn()
-      render(<List initial={['a', 'b', 'c']} onOrder={() => {}} onCommit={onCommit} />)
+      render(
+        <List
+          initial={['a', 'b', 'c']}
+          onOrder={() => {}}
+          onCommit={onCommit}
+        />
+      )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-c'), pointer('mouse', 290, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-c'),
+        pointer('mouse', 290, 50)
+      )
       fireEvent.pointerMove(window, pointer('mouse', 280, 50))
       fireEvent.pointerMove(window, pointer('mouse', 50, 50))
       flushFrame()
@@ -248,9 +291,18 @@ describe('useDragReorder', () => {
 
     it('stays quiet when the tile is let go in the slot it started in', () => {
       const onCommit = vi.fn()
-      render(<List initial={['a', 'b', 'c']} onOrder={() => {}} onCommit={onCommit} />)
+      render(
+        <List
+          initial={['a', 'b', 'c']}
+          onOrder={() => {}}
+          onCommit={onCommit}
+        />
+      )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-a'),
+        pointer('mouse', 50, 50)
+      )
       fireEvent.pointerMove(window, pointer('mouse', 70, 50))
       flushFrame()
       fireEvent.pointerUp(window, pointer('mouse', 70, 50))
@@ -260,9 +312,18 @@ describe('useDragReorder', () => {
 
     it('stays quiet for a press that never became a drag', () => {
       const onCommit = vi.fn()
-      render(<List initial={['a', 'b', 'c']} onOrder={() => {}} onCommit={onCommit} />)
+      render(
+        <List
+          initial={['a', 'b', 'c']}
+          onOrder={() => {}}
+          onCommit={onCommit}
+        />
+      )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-a'),
+        pointer('mouse', 50, 50)
+      )
       fireEvent.pointerUp(window, pointer('mouse', 50, 50))
 
       expect(onCommit).not.toHaveBeenCalled()
@@ -282,7 +343,10 @@ describe('useDragReorder', () => {
         </div>
       )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-a'),
+        pointer('mouse', 50, 50)
+      )
       fireEvent.pointerMove(window, pointer('mouse', 70, 50))
       fireEvent.pointerUp(window, pointer('mouse', 70, 50))
 
@@ -302,7 +366,10 @@ describe('useDragReorder', () => {
         </div>
       )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-a'),
+        pointer('mouse', 50, 50)
+      )
       fireEvent.pointerUp(window, pointer('mouse', 50, 50))
 
       fireEvent.click(screen.getByTestId('tile-a'))
@@ -318,7 +385,10 @@ describe('useDragReorder', () => {
         </div>
       )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-a'),
+        pointer('mouse', 50, 50)
+      )
       fireEvent.pointerMove(window, pointer('mouse', 70, 50))
       fireEvent.pointerUp(window, pointer('mouse', 70, 50))
       // When the browser elects not to synthesize the drop's click, only the
@@ -340,7 +410,10 @@ describe('useDragReorder', () => {
         </div>
       )
 
-      fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+      fireEvent.pointerDown(
+        screen.getByTestId('tile-a'),
+        pointer('mouse', 50, 50)
+      )
       fireEvent.pointerMove(window, pointer('mouse', 70, 50))
       fireEvent.pointerCancel(window, pointer('mouse', 70, 50))
 
@@ -366,7 +439,10 @@ describe('useDragReorder', () => {
     const orders: string[][] = []
     render(<List initial={['a']} onOrder={(o) => orders.push(o)} />)
 
-    fireEvent.pointerDown(screen.getByTestId('tile-a'), pointer('mouse', 50, 50))
+    fireEvent.pointerDown(
+      screen.getByTestId('tile-a'),
+      pointer('mouse', 50, 50)
+    )
     fireEvent.pointerMove(window, pointer('mouse', 200, 200))
     flushFrame()
 

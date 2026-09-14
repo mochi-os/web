@@ -19,9 +19,7 @@ function isTrustedExternalHost(
 
     if (normalizedAllowedHost.startsWith('*.')) {
       const suffix = normalizedAllowedHost.slice(2)
-      return (
-        normalizedHost === suffix || normalizedHost.endsWith(`.${suffix}`)
-      )
+      return normalizedHost === suffix || normalizedHost.endsWith(`.${suffix}`)
     }
 
     return normalizedHost === normalizedAllowedHost
@@ -47,7 +45,9 @@ export function isSameOriginRequest(
       : `${base.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`
 
   try {
-    return new URL(combined, window.location.href).origin === window.location.origin
+    return (
+      new URL(combined, window.location.href).origin === window.location.origin
+    )
   } catch {
     return false
   }

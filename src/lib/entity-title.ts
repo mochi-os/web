@@ -26,10 +26,10 @@ export interface EntityTitleObject {
 export function entityObjectTitle(
   obj: EntityTitleObject,
   classes: EntityClass[],
-  prefix?: string,
+  prefix?: string
 ): string {
   const cls = classes.find((c) => c.id === obj.class)
-  const title = (cls?.title ? obj.values[cls.title] : '') || ''
+  const title = (cls?.title ? obj.values?.[cls.title] : '') || ''
   if (title) return title
   // The server's own readable id wins over one rebuilt from the prefix, so a
   // server that ever numbers differently is still displayed as it numbered.

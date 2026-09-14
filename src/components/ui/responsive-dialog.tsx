@@ -73,7 +73,7 @@ function ResponsiveDialog({
         {...props}
         // Always allow mobile drawers to be dismissible for better UX
         // The shouldCloseOnInteractOutside setting only affects desktop/tablet dialogs
-        {... (isMobile && { dismissible: true })}
+        {...(isMobile && { dismissible: true })}
       >
         {children}
       </ResponsiveDialogRoot>
@@ -139,12 +139,14 @@ function ResponsiveDialogContent({
         className,
         isMobile &&
           bodyPadding &&
-          "data-[vaul-drawer-direction=bottom]:[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4 data-[vaul-drawer-direction=bottom]:[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4"
+          'data-[vaul-drawer-direction=bottom]:[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4 data-[vaul-drawer-direction=bottom]:[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4'
       )}
       {...props}
       {...(!isMobile && {
         showCloseButton,
-        onInteractOutside: (e: Parameters<NonNullable<typeof onInteractOutside>>[0]) => {
+        onInteractOutside: (
+          e: Parameters<NonNullable<typeof onInteractOutside>>[0]
+        ) => {
           if (!shouldCloseOnInteractOutside) {
             e.preventDefault()
           }

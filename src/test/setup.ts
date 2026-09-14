@@ -1,24 +1,24 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
-import { i18n } from "@lingui/core";
+import '@testing-library/jest-dom/vitest'
+import { cleanup } from '@testing-library/react'
+import { afterEach, vi } from 'vitest'
+import { i18n } from '@lingui/core'
 
 // Activate a locale globally so the Lingui macro resolves in any test,
 // including plain modules that never render under an I18nProvider. An empty
 // catalog means the macro's embedded English source is what comes out, which
 // is what assertions here should read.
-i18n.loadAndActivate({ locale: "en", messages: {} });
+i18n.loadAndActivate({ locale: 'en', messages: {} })
 
 afterEach(() => {
-  cleanup();
-});
+  cleanup()
+})
 
 // jsdom implements none of these, and Radix's popper-backed primitives
 // (Tooltip, Select, Popover) reach for all of them on mount.
-Object.defineProperty(window, "matchMedia", {
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -30,27 +30,34 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-});
+})
 
 global.ResizeObserver = class ResizeObserver {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-};
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
 
 global.IntersectionObserver = class IntersectionObserver {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-  root = null;
-  rootMargin = "";
-  thresholds: number[] = [];
-} as unknown as typeof globalThis.IntersectionObserver;
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+  root = null
+  rootMargin = ''
+  thresholds: number[] = []
+} as unknown as typeof globalThis.IntersectionObserver
 
 // Radix Select scrolls the active item into view when the listbox opens and
 // again on selection. Without this, a test that only reads the option labels
 // passes while one that actually picks an option throws.
-Element.prototype.scrollIntoView = vi.fn();
+Element.prototype.scrollIntoView = vi.fn()
+
+// Sonner captures the pointer on every pointer-down inside a toast so a swipe
+// can leave the toast's box. jsdom has no pointer capture; without these a
+// pointer-down on a toast reports an uncaught exception from Sonner's handler.
+Element.prototype.setPointerCapture = vi.fn()
+Element.prototype.releasePointerCapture = vi.fn()
+Element.prototype.hasPointerCapture = vi.fn(() => false)
 
 // @formkit/auto-animate calls el.animate() from a MutationObserver, so a missing
 // Web Animations API throws outside any test's stack: every test still reports
@@ -65,4 +72,4 @@ Element.prototype.animate = vi.fn().mockImplementation(() => ({
   removeEventListener: vi.fn(),
   finished: Promise.resolve(),
   onfinish: null,
-})) as unknown as Element["animate"];
+})) as unknown as Element['animate']

@@ -54,7 +54,9 @@ describe('newPendingFiles', () => {
   })
 
   it('drops a pick that is already staged', () => {
-    expect(newPendingFiles([pick('photo.png')], [pick('photo.png')])).toEqual([])
+    expect(newPendingFiles([pick('photo.png')], [pick('photo.png')])).toEqual(
+      []
+    )
   })
 
   it('drops a repeat inside one pick', () => {

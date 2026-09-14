@@ -13,8 +13,19 @@ describe('AccessList', () => {
     render(
       <AccessList
         rules={[
-          { subject: 'ownerid', operation: '*', grant: 1, name: 'Owner Person', owner: true },
-          { subject: 'memberid', operation: 'view', grant: 1, name: 'Member Person' },
+          {
+            subject: 'ownerid',
+            operation: '*',
+            grant: 1,
+            name: 'Owner Person',
+            owner: true,
+          },
+          {
+            subject: 'memberid',
+            operation: 'view',
+            grant: 1,
+            name: 'Member Person',
+          },
         ]}
         levels={[
           { value: 'view', label: 'View only' },

@@ -8,16 +8,21 @@ import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: forwardRef<HTMLAnchorElement, { to: unknown; children?: React.ReactNode; preload?: unknown }>(
-    function Link({ to, children, preload: _preload, ...rest }, ref) {
-      return (
-        <a ref={ref} data-router-link href={String(to)} {...rest}>
-          {children}
-        </a>
-      )
-    }
-  ),
-  useLocation: ({ select }: { select: (location: { pathname: string }) => unknown }) => select({ pathname: '/' }),
+  Link: forwardRef<
+    HTMLAnchorElement,
+    { to: unknown; children?: React.ReactNode; preload?: unknown }
+  >(function Link({ to, children, preload: _preload, ...rest }, ref) {
+    return (
+      <a ref={ref} data-router-link href={String(to)} {...rest}>
+        {children}
+      </a>
+    )
+  }),
+  useLocation: ({
+    select,
+  }: {
+    select: (location: { pathname: string }) => unknown
+  }) => select({ pathname: '/' }),
 }))
 
 import { SidebarProvider } from '../ui/sidebar'

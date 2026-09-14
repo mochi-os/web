@@ -77,38 +77,30 @@ export function TopBar({
               onClick={toggleSidebar}
               aria-label={t`Open navigation`}
             >
-              {sidebarOpen ? <PanelLeftClose className='size-5' /> : <PanelLeftOpen className='size-5' />}
+              {sidebarOpen ? (
+                <PanelLeftClose className='size-5' />
+              ) : (
+                <PanelLeftOpen className='size-5' />
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t`Open navigation`}</TooltipContent>
         </Tooltip>
 
         <a href='/' title={t`Home`}>
-          <img
-            src='/images/logo-header.png'
-            alt='Mochi'
-            className='h-6 w-6'
-          />
+          <img src='/images/logo-header.png' alt='Mochi' className='h-6 w-6' />
         </a>
 
         <div className='flex-1' />
 
-        <MochiMenu
-          notifications={notifications}
-          showLogo={false}
-        />
+        <MochiMenu notifications={notifications} showLogo={false} />
       </header>
     )
   }
 
   if (isMobile && mobileTitle) {
     return (
-      <header
-        className={cn(
-          'z-50 w-full overflow-visible',
-          className
-        )}
-      >
+      <header className={cn('z-50 w-full overflow-visible', className)}>
         <div className='grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-1'>
           <a
             href='/'
@@ -127,10 +119,7 @@ export function TopBar({
           </div>
 
           <div className='flex justify-center'>
-            <MochiMenu
-              notifications={notifications}
-              showLogo={false}
-            />
+            <MochiMenu notifications={notifications} showLogo={false} />
           </div>
         </div>
       </header>

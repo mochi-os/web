@@ -24,8 +24,8 @@ export function usePendingItems(): UsePendingItemsResult {
   const clear = useCallback((): string[] => {
     const groups = Array.from(
       new Set(
-        Array.from(itemsRef.current.values()).filter(
-          (g): g is string => Boolean(g)
+        Array.from(itemsRef.current.values()).filter((g): g is string =>
+          Boolean(g)
         )
       )
     )

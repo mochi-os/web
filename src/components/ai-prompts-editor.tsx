@@ -37,13 +37,14 @@ export interface AiPromptType {
 
 /** The app's prompt endpoints. Both apps already expose exactly this pair. */
 export interface AiPromptsApi {
-  getAiPrompts: (
-    entityId: string,
-  ) => Promise<{ prompts: Record<string, string>; defaults: Record<string, string> }>
+  getAiPrompts: (entityId: string) => Promise<{
+    prompts: Record<string, string>
+    defaults: Record<string, string>
+  }>
   setAiPrompt: (
     entityId: string,
     type: string,
-    prompt: string,
+    prompt: string
   ) => Promise<unknown>
 }
 
@@ -178,7 +179,11 @@ export interface AiPromptsEditorProps {
  * type. Renders nothing until the load settles, and the error if it fails: an
  * editor over empty defaults would show the failure as a blank prompt.
  */
-export function AiPromptsEditor({ entityId, types, api }: AiPromptsEditorProps) {
+export function AiPromptsEditor({
+  entityId,
+  types,
+  api,
+}: AiPromptsEditorProps) {
   const { t } = useLingui()
   const [prompts, setPrompts] = useState<Record<string, string>>({})
   const [defaults, setDefaults] = useState<Record<string, string>>({})

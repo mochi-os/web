@@ -26,7 +26,9 @@ describe('markdownUrlTransform', () => {
 
   it('keeps images on this origin, however they are written', () => {
     expect(transform('attachments/abc', 'src')).toBe('attachments/abc')
-    expect(transform('/wikis/x/-/attachments/abc', 'src')).toBe('/wikis/x/-/attachments/abc')
+    expect(transform('/wikis/x/-/attachments/abc', 'src')).toBe(
+      '/wikis/x/-/attachments/abc'
+    )
     expect(transform(`${window.location.origin}/avatar.png`, 'src')).toBe(
       `${window.location.origin}/avatar.png`
     )
@@ -39,7 +41,9 @@ describe('markdownUrlTransform', () => {
 
   it('leaves links alone, including external ones', () => {
     // Following a link is the reader's own act; only rendering is automatic.
-    expect(transform('https://example.com/page', 'href')).toBe('https://example.com/page')
+    expect(transform('https://example.com/page', 'href')).toBe(
+      'https://example.com/page'
+    )
   })
 
   it('still applies the renderer’s protocol sanitising', () => {
