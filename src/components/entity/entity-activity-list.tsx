@@ -27,7 +27,7 @@ export interface EntityActivityListProps {
   listActivity: (
     containerId: string,
     objectId: string,
-    page?: { limit: number; offset: number },
+    page?: { limit: number; offset: number }
   ) => Promise<{ data: { activities: EntityActivity[] } }>
   /** The object's class fields, which name the field an entry changed. */
   fields?: EntityField[]
