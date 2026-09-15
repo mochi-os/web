@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { Loader2, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
   ResponsiveDialog,
@@ -226,12 +226,12 @@ export function AccountAdd({
             >
               <Trans>Cancel</Trans>
             </Button>
-            <Button type='submit' disabled={isAdding || !isFormValid()}>
-              {isAdding ? (
-                <Loader2 className='me-2 h-4 w-4 animate-spin' />
-              ) : (
-                <Plus className='me-2 h-4 w-4' />
-              )}
+            <Button
+              type='submit'
+              disabled={!isFormValid()}
+              loading={isAdding}
+              icon={<Plus className='me-2 h-4 w-4' />}
+            >
               <Trans>Add</Trans>
             </Button>
           </ResponsiveDialogFooter>

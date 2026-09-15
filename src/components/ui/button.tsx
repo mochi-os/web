@@ -4,6 +4,7 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const buttonVariants = cva(
@@ -37,25 +38,71 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonLoadingProps = {
+  loading?: boolean
+  icon?: React.ReactNode
+}
+
+type ButtonSlotProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild: true
+    loading?: never
+    icon?: never
+  }
+
+type ButtonNativeProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> &
+  ButtonLoadingProps & { asChild?: false }
+
+// Overloaded so `React.ComponentProps<typeof Button>` (used by several
+// existing call sites to `extend`/`Omit` the props type) resolves to the
+// plain `ButtonNativeProps` object type below rather than a union — an
+// interface cannot `extend` a union, and consumers built for the old
+// single-object props type would break. The overloads still enforce the
+// asChild/loading exclusion at every call site; only the implementation
+// signature underneath is a union.
+function Button(props: ButtonSlotProps): React.JSX.Element
+function Button(props: ButtonNativeProps): React.JSX.Element
 function Button({
   className,
   variant,
   size,
   asChild = false,
   ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : 'button'
+}: ButtonSlotProps | ButtonNativeProps) {
+  if (asChild) {
+    return (
+      <Slot
+        data-slot='button'
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    )
+  }
+
+  const { loading, icon, disabled, children, ...rest } = props
 
   return (
-    <Comp
+    <button
       data-slot='button'
+      aria-busy={loading || undefined}
+      disabled={disabled || loading}
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+      {...rest}
+    >
+      {loading ? (
+        <Loader2
+          data-slot='button-spinner'
+          className='animate-spin'
+          aria-hidden='true'
+        />
+      ) : (
+        icon
+      )}
+      {children}
+    </button>
   )
 }
 
 export { Button, buttonVariants }
+export type { ButtonLoadingProps }

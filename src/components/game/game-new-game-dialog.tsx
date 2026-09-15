@@ -8,7 +8,7 @@
 // the way GameLayout already takes its own, so no Lingui string lives here.
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { Loader2, Plus, UserPlus, Users } from 'lucide-react'
+import { Plus, UserPlus, Users } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   ResponsiveDialog,
@@ -168,13 +168,13 @@ export function GameNewGameDialog({
           >
             {labels.cancel}
           </Button>
-          <Button onClick={onSubmit} disabled={!canSubmit}>
-            {isSubmitting ? (
-              <Loader2 className='size-4 animate-spin' />
-            ) : (
-              <Plus className='size-4' />
-            )}
-            {isSubmitting ? labels.submitting : labels.submit}
+          <Button
+            onClick={onSubmit}
+            disabled={!canSubmit}
+            loading={isSubmitting}
+            icon={<Plus className='size-4' />}
+          >
+            {labels.submit}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>

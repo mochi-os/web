@@ -3,7 +3,7 @@
 
 import { type FormEvent } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Loader2, Send } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
@@ -48,15 +48,11 @@ export function GameChatInput({
               type='submit'
               size='icon'
               className='bg-primary hover:bg-primary/80 rounded-full transition-colors size-7'
-              disabled={isSending || !newMessage.trim()}
+              disabled={!newMessage.trim()}
+              loading={isSending}
+              icon={<Send size={14} />}
               aria-label={t`Send message`}
-            >
-              {isSending ? (
-                <Loader2 size={14} className='animate-spin' />
-              ) : (
-                <Send size={14} />
-              )}
-            </Button>
+            />
           </TooltipTrigger>
           <TooltipContent>{t`Send message`}</TooltipContent>
         </Tooltip>

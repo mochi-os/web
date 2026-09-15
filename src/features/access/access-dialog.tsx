@@ -3,15 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
-import {
-  User,
-  UsersRound,
-  Search,
-  Globe,
-  Users,
-  Loader2,
-  Plus,
-} from 'lucide-react'
+import { User, UsersRound, Search, Globe, Users, Plus } from 'lucide-react'
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -363,13 +355,13 @@ export function AccessDialog({
           <Button variant='outline' onClick={resetAndClose}>
             <Trans>Cancel</Trans>
           </Button>
-          <Button onClick={handleAdd} disabled={!canAdd || isAdding}>
-            {isAdding ? (
-              <Loader2 className='size-4 animate-spin' />
-            ) : (
-              <Plus className='size-4' />
-            )}
-            {isAdding ? t`Adding...` : t`Add`}
+          <Button
+            onClick={handleAdd}
+            disabled={!canAdd}
+            loading={isAdding}
+            icon={<Plus className='size-4' />}
+          >
+            {t`Add`}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>

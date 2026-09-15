@@ -746,8 +746,12 @@ export function EntityBoardColumn<TObject extends EntityObject>({
               >
                 <Trans>Cancel</Trans>
               </Button>
-              <Button type='submit' disabled={!newName.trim() || isRenaming}>
-                <Pencil className='size-4' />
+              <Button
+                type='submit'
+                disabled={!newName.trim()}
+                loading={isRenaming}
+                icon={<Pencil className='size-4' />}
+              >
                 <Trans>Rename</Trans>
               </Button>
             </ResponsiveDialogFooter>

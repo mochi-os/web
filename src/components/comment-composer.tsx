@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
-import { Loader2, Paperclip, Send, X } from 'lucide-react'
+import { Paperclip, Send, X } from 'lucide-react'
 import { ConfirmDialog } from './confirm-dialog'
 import {
   AttachmentComposer,
@@ -553,20 +553,16 @@ export function CommentBox({
               type='button'
               size='icon'
               className='size-8'
-              disabled={!value.trim() || submitting}
+              disabled={!value.trim()}
+              loading={submitting}
+              icon={<Send className='size-4' />}
               onClick={(event) => {
                 event.preventDefault()
                 event.stopPropagation()
                 void submit()
               }}
               aria-label={labels.send}
-            >
-              {submitting ? (
-                <Loader2 className='size-4 animate-spin' />
-              ) : (
-                <Send className='size-4' />
-              )}
-            </Button>
+            />
           </TooltipTrigger>
           <TooltipContent>{labels.send}</TooltipContent>
         </Tooltip>
