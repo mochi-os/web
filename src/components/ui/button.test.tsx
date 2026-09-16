@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { render, screen } from '@testing-library/react'
-import { Save } from 'lucide-react'
+import { ArrowRight, Save } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
 import { Button } from './button'
 
@@ -35,5 +35,42 @@ describe('Button loading state', () => {
       'aria-busy',
       'true'
     )
+  })
+})
+
+describe('Button trailing icon', () => {
+  it('renders a trailing icon after the label at rest', () => {
+    render(
+      <Button trailingIcon={<ArrowRight data-testid='trailing-icon' />}>
+        Continue
+      </Button>
+    )
+
+    const button = screen.getByRole('button', { name: 'Continue' })
+    const icon = screen.getByTestId('trailing-icon')
+    const nodes = Array.from(button.childNodes)
+
+    expect(nodes[nodes.length - 1]).toBe(icon)
+  })
+
+  it('replaces the trailing icon with the spinner in the same trailing position while loading', () => {
+    render(
+      <Button
+        loading
+        trailingIcon={<ArrowRight data-testid='trailing-icon' />}
+      >
+        Continue
+      </Button>
+    )
+
+    const button = screen.getByRole('button', { name: 'Continue' })
+    expect(button).toBeDisabled()
+    expect(screen.queryByTestId('trailing-icon')).not.toBeInTheDocument()
+
+    const spinner = button.querySelector('[data-slot="button-spinner"]')
+    expect(spinner).not.toBeNull()
+
+    const nodes = Array.from(button.childNodes)
+    expect(nodes[nodes.length - 1]).toBe(spinner)
   })
 })

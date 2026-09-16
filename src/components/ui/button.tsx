@@ -41,6 +41,18 @@ const buttonVariants = cva(
 type ButtonLoadingProps = {
   loading?: boolean
   icon?: React.ReactNode
+  trailingIcon?: never
+}
+
+// Mirrors `ButtonLoadingProps` for the trailing-icon flavor: `icon` and
+// `trailingIcon` place a node on opposite sides of `children`, so a button
+// may use one or the other, never both. Kept as a second plain object type
+// (rather than folding into `ButtonLoadingProps` as a union) so the overload
+// this feeds stays a plain object for the same reason described below.
+type ButtonTrailingLoadingProps = {
+  loading?: boolean
+  icon?: never
+  trailingIcon?: React.ReactNode
 }
 
 type ButtonSlotProps = React.ComponentProps<'button'> &
@@ -48,11 +60,16 @@ type ButtonSlotProps = React.ComponentProps<'button'> &
     asChild: true
     loading?: never
     icon?: never
+    trailingIcon?: never
   }
 
 type ButtonNativeProps = React.ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> &
   ButtonLoadingProps & { asChild?: false }
+
+type ButtonNativeTrailingProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> &
+  ButtonTrailingLoadingProps & { asChild?: false }
 
 // Overloaded so `React.ComponentProps<typeof Button>` (used by several
 // existing call sites to `extend`/`Omit` the props type) resolves to the
@@ -61,7 +78,17 @@ type ButtonNativeProps = React.ComponentProps<'button'> &
 // single-object props type would break. The overloads still enforce the
 // asChild/loading exclusion at every call site; only the implementation
 // signature underneath is a union.
+//
+// `ButtonNativeTrailingProps` (the trailing-icon call shape) is inserted
+// before the final `ButtonNativeProps` overload rather than folded into it,
+// for the same reason: folding it in would make `ButtonNativeProps` itself a
+// union (`X & (A | B)` distributes), which breaks that same `extend`. Each
+// overload individually forbids the *other* icon slot via `?: never`, so a
+// caller passing both `icon` and `trailingIcon` matches none of the three
+// signatures and is a type error, without ever making the reflected type a
+// union.
 function Button(props: ButtonSlotProps): React.JSX.Element
+function Button(props: ButtonNativeTrailingProps): React.JSX.Element
 function Button(props: ButtonNativeProps): React.JSX.Element
 function Button({
   className,
@@ -69,7 +96,7 @@ function Button({
   size,
   asChild = false,
   ...props
-}: ButtonSlotProps | ButtonNativeProps) {
+}: ButtonSlotProps | ButtonNativeProps | ButtonNativeTrailingProps) {
   if (asChild) {
     return (
       <Slot
@@ -80,7 +107,15 @@ function Button({
     )
   }
 
-  const { loading, icon, disabled, children, ...rest } = props
+  const { loading, icon, trailingIcon, disabled, children, ...rest } = props
+
+  const spinner = (
+    <Loader2
+      data-slot='button-spinner'
+      className='animate-spin'
+      aria-hidden='true'
+    />
+  )
 
   return (
     <button
@@ -90,16 +125,9 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...rest}
     >
-      {loading ? (
-        <Loader2
-          data-slot='button-spinner'
-          className='animate-spin'
-          aria-hidden='true'
-        />
-      ) : (
-        icon
-      )}
+      {!trailingIcon && (loading ? spinner : icon)}
       {children}
+      {trailingIcon && (loading ? spinner : trailingIcon)}
     </button>
   )
 }
