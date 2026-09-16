@@ -7,7 +7,7 @@ import { Trans } from '@lingui/react/macro'
 import { z } from 'zod'
 import { useForm, type FieldPath } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, Loader2, type LucideIcon } from 'lucide-react'
+import { Plus, type LucideIcon } from 'lucide-react'
 import { Button } from './button'
 import {
   ResponsiveDialog,
@@ -271,16 +271,11 @@ export function CreateEntityDialog({
               </ResponsiveDialogClose>
               <Button
                 type='submit'
-                disabled={!form.formState.isValid || isPending}
+                disabled={!form.formState.isValid}
+                loading={isPending}
+                icon={<Plus className='size-4' />}
               >
-                {isPending ? (
-                  <Loader2 className='size-4 animate-spin' />
-                ) : (
-                  <Plus className='size-4' />
-                )}
-                {isPending
-                  ? t`Creating...`
-                  : (submitLabel ?? defaultSubmitLabel)}
+                {submitLabel ?? defaultSubmitLabel}
               </Button>
             </ResponsiveDialogFooter>
           </form>

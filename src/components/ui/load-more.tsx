@@ -34,9 +34,9 @@ export function LoadMore({
           variant='outline'
           size='sm'
           onClick={onLoadMore}
-          disabled={isLoading}
+          loading={isLoading}
         >
-          {isLoading ? <Trans>Loading...</Trans> : (label ?? t`Load more`)}
+          {label ?? t`Load more`}
         </Button>
       ) : null}
       <p className='text-xs text-muted-foreground'>

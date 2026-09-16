@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import { Trans } from '@lingui/react/macro'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from './button'
 import { Input } from './input'
 import { cn } from '../../lib/utils'
@@ -70,12 +70,13 @@ export function SecretField({
         className={cn('flex-1 min-w-0', inputClassName)}
       />
       {changed && (
-        <Button size='sm' onClick={handleSave} disabled={disabled || saving}>
-          {saving ? (
-            <Loader2 className='h-4 w-4 animate-spin' />
-          ) : (
-            <Check className='size-4' />
-          )}
+        <Button
+          size='sm'
+          onClick={handleSave}
+          disabled={disabled}
+          loading={saving}
+          icon={<Check className='size-4' />}
+        >
           <Trans>Save</Trans>
         </Button>
       )}
