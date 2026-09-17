@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { LogOut, UserMinus } from 'lucide-react'
+import { Ban, LogOut, UserMinus } from 'lucide-react'
 import { Button } from './ui/button'
 import { ListSkeleton } from './ui/list-skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
@@ -28,6 +28,8 @@ export interface MemberListProps {
   avatarUrls?: (id: string) => { src: string; styleUrl?: string }
   // Omitted, no row offers a removal.
   onRemove?: (member: MemberListMember) => void
+  // Omitted, no row offers a block. Shown beside the removal.
+  onBlock?: (member: MemberListMember) => void
   // Offered on the current user's own row in place of a removal.
   leave?: { label: string; onClick: () => void }
   disabled?: boolean
@@ -48,6 +50,7 @@ export function MemberList({
   ownerId,
   avatarUrls,
   onRemove,
+  onBlock,
   leave,
   disabled = false,
   isLoading = false,
@@ -112,23 +115,44 @@ export function MemberList({
               </Button>
             )
           }
-        } else if (onRemove) {
+        } else if (onRemove || onBlock) {
           action = (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  aria-label={t`Remove ${name}`}
-                  disabled={disabled}
-                  onClick={() => onRemove(member)}
-                  className={ACTION_CLASS}
-                >
-                  <UserMinus className='size-4' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t`Remove ${name}`}</TooltipContent>
-            </Tooltip>
+            <div className='flex shrink-0 items-center'>
+              {onRemove && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      aria-label={t`Remove ${name}`}
+                      disabled={disabled}
+                      onClick={() => onRemove(member)}
+                      className={ACTION_CLASS}
+                    >
+                      <UserMinus className='size-4' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t`Remove ${name}`}</TooltipContent>
+                </Tooltip>
+              )}
+              {onBlock && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      aria-label={t`Block ${name}`}
+                      disabled={disabled}
+                      onClick={() => onBlock(member)}
+                      className={ACTION_CLASS}
+                    >
+                      <Ban className='size-4' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t`Block ${name}`}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           )
         }
 
