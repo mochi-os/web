@@ -4,9 +4,12 @@
 import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 import { type VariantProps } from 'class-variance-authority'
-import { Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { buttonVariants, type ButtonLoadingProps } from './button'
+import {
+  ButtonSpinner,
+  buttonVariants,
+  type ButtonLoadingProps,
+} from './button'
 
 function AlertDialog({
   ...props
@@ -142,15 +145,7 @@ function AlertDialogAction({
       disabled={disabled || loading}
       {...props}
     >
-      {loading ? (
-        <Loader2
-          data-slot='button-spinner'
-          className='animate-spin'
-          aria-hidden='true'
-        />
-      ) : (
-        icon
-      )}
+      {loading ? <ButtonSpinner replacing={icon} /> : icon}
       {children}
     </AlertDialogPrimitive.Action>
   )

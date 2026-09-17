@@ -74,3 +74,31 @@ describe('Button trailing icon', () => {
     expect(nodes[nodes.length - 1]).toBe(spinner)
   })
 })
+
+describe('Button spinner geometry', () => {
+  it('gives the spinner the leading icon classes so the label does not move', () => {
+    render(
+      <Button loading icon={<Save className='me-2 size-3' />}>
+        Save
+      </Button>
+    )
+
+    const spinner = screen
+      .getByRole('button', { name: 'Save' })
+      .querySelector('[data-slot="button-spinner"]')
+    expect(spinner).toHaveClass('me-2', 'size-3', 'animate-spin')
+  })
+
+  it('gives the spinner the trailing icon classes', () => {
+    render(
+      <Button loading trailingIcon={<ArrowRight className='ms-2 h-4 w-4' />}>
+        Continue
+      </Button>
+    )
+
+    const spinner = screen
+      .getByRole('button', { name: 'Continue' })
+      .querySelector('[data-slot="button-spinner"]')
+    expect(spinner).toHaveClass('ms-2', 'h-4', 'w-4', 'animate-spin')
+  })
+})

@@ -36,3 +36,24 @@ describe('AlertDialogAction loading state', () => {
     expect(action.querySelector('[data-slot="button-spinner"]')).not.toBeNull()
   })
 })
+
+describe('AlertDialogAction spinner geometry', () => {
+  it('gives the spinner the resting icon classes', () => {
+    render(
+      <AlertDialog open>
+        <AlertDialogContent>
+          <AlertDialogTitle>Delete item</AlertDialogTitle>
+          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          <AlertDialogAction loading icon={<Trash2 className='me-2 size-3' />}>
+            Delete
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+    )
+
+    const spinner = screen
+      .getByRole('button', { name: 'Delete' })
+      .querySelector('[data-slot="button-spinner"]')
+    expect(spinner).toHaveClass('me-2', 'size-3', 'animate-spin')
+  })
+})

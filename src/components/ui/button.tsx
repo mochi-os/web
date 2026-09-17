@@ -109,14 +109,6 @@ function Button({
 
   const { loading, icon, trailingIcon, disabled, children, ...rest } = props
 
-  const spinner = (
-    <Loader2
-      data-slot='button-spinner'
-      className='animate-spin'
-      aria-hidden='true'
-    />
-  )
-
   return (
     <button
       data-slot='button'
@@ -125,12 +117,30 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...rest}
     >
-      {!trailingIcon && (loading ? spinner : icon)}
+      {!trailingIcon && (loading ? <ButtonSpinner replacing={icon} /> : icon)}
       {children}
-      {trailingIcon && (loading ? spinner : trailingIcon)}
+      {trailingIcon &&
+        (loading ? <ButtonSpinner replacing={trailingIcon} /> : trailingIcon)}
     </button>
   )
 }
 
-export { Button, buttonVariants }
+// Takes the classes of the icon it stands in for. Call sites size and space
+// their icons (`me-2`, `size-3`), and a spinner without the same classes makes
+// the label jump sideways the moment loading starts.
+function ButtonSpinner({ replacing }: { replacing?: React.ReactNode }) {
+  const iconClassName = React.isValidElement<{ className?: string }>(replacing)
+    ? replacing.props.className
+    : undefined
+
+  return (
+    <Loader2
+      data-slot='button-spinner'
+      className={cn(iconClassName, 'animate-spin')}
+      aria-hidden='true'
+    />
+  )
+}
+
+export { Button, ButtonSpinner, buttonVariants }
 export type { ButtonLoadingProps }
