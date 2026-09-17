@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import { useLingui } from '@lingui/react/macro'
-import { Check, Loader2, Pencil, X } from 'lucide-react'
+import { Check, Pencil, X } from 'lucide-react'
 import { Button } from './button'
 import { Input } from './input'
 import { Textarea } from './textarea'
@@ -126,16 +126,11 @@ export function EditableFieldRow({
               size='sm'
               variant='ghost'
               onClick={() => void save()}
-              disabled={saving}
+              loading={saving}
+              icon={<Check className='size-4' />}
               className='size-8 shrink-0 p-0'
               aria-label={t`Save`}
-            >
-              {saving ? (
-                <Loader2 className='size-4 animate-spin' />
-              ) : (
-                <Check className='size-4' />
-              )}
-            </Button>
+            />
             <Button
               size='sm'
               variant='ghost'

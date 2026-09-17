@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Section } from './layout/section'
@@ -105,13 +105,10 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
           <Button
             size='sm'
             onClick={() => void handleSave()}
-            disabled={saving || !dirty}
+            disabled={!dirty}
+            loading={saving}
+            icon={<Check className='size-4' />}
           >
-            {saving ? (
-              <Loader2 className='size-4 animate-spin' />
-            ) : (
-              <Check className='size-4' />
-            )}
             <Trans>Save</Trans>
           </Button>
           {banner && (

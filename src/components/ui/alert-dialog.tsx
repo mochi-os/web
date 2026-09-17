@@ -5,7 +5,11 @@ import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 import { type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
-import { buttonVariants } from './button'
+import {
+  ButtonSpinner,
+  buttonVariants,
+  type ButtonLoadingProps,
+} from './button'
 
 function AlertDialog({
   ...props
@@ -125,15 +129,25 @@ function AlertDialogDescription({
 function AlertDialogAction({
   className,
   variant = 'default',
+  loading,
+  icon,
+  disabled,
+  children,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Action> & {
-  variant?: VariantProps<typeof buttonVariants>['variant']
-}) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
+  ButtonLoadingProps & {
+    variant?: VariantProps<typeof buttonVariants>['variant']
+  }) {
   return (
     <AlertDialogPrimitive.Action
       className={cn(buttonVariants({ variant }), className)}
+      aria-busy={loading || undefined}
+      disabled={disabled || loading}
       {...props}
-    />
+    >
+      {loading ? <ButtonSpinner replacing={icon} /> : icon}
+      {children}
+    </AlertDialogPrimitive.Action>
   )
 }
 

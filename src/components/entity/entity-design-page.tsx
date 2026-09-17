@@ -8,13 +8,7 @@
 
 import { useCallback, useRef, useState, type JSX, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Download,
-  Loader2,
-  MoreHorizontal,
-  Settings2,
-  Upload,
-} from 'lucide-react'
+import { Download, MoreHorizontal, Settings2, Upload } from 'lucide-react'
 import { Main } from '../layout/main'
 import { PageHeader } from '../layout/page-header'
 import { Button } from '../ui/button'
@@ -281,16 +275,7 @@ export function EntityDesignPage<
         onOpenChange={setConfirmOpen}
         title={labels.replaceTitle}
         desc={labels.replaceDescription(pendingImport?.label)}
-        confirmText={
-          importing ? (
-            <>
-              <Loader2 className='size-4 me-1.5 animate-spin' />
-              {labels.replacing}
-            </>
-          ) : (
-            labels.replaceConfirm
-          )
-        }
+        confirmText={labels.replaceConfirm}
         handleConfirm={handleConfirmImport}
         isLoading={importing}
       >

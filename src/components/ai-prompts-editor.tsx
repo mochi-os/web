@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   Select,
@@ -147,14 +147,11 @@ function PromptEditor({
               <Button
                 size='sm'
                 onClick={handleSave}
-                disabled={saving || textUnchanged(text, customPrompt)}
+                disabled={textUnchanged(text, customPrompt)}
+                loading={saving}
+                icon={<Check className='size-4' />}
               >
-                {saving ? (
-                  <Loader2 className='size-4 animate-spin' />
-                ) : (
-                  <Check className='size-4' />
-                )}
-                {saving ? <Trans>Saving...</Trans> : <Trans>Save</Trans>}
+                <Trans>Save</Trans>
               </Button>
               <span className='text-muted-foreground text-xs'>
                 <Trans>Variables: {variables}</Trans>

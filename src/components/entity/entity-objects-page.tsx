@@ -1371,11 +1371,11 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               onClick={handleSaveColumnOrder}
               disabled={
                 !pendingColumnOrder ||
-                reorderColumnsMutation.isPending ||
                 arraysEqual(pendingColumnOrder, baselineColumnOrder)
               }
+              loading={reorderColumnsMutation.isPending}
+              icon={<Check className='size-4' />}
             >
-              <Check className='size-4' />
               {labels.save}
             </Button>
           </div>

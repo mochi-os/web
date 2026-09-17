@@ -8,7 +8,7 @@
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { Loader2, Paperclip, Plus, Upload, X } from 'lucide-react'
+import { Paperclip, Plus, Upload, X } from 'lucide-react'
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import type { AxiosProgressEvent } from 'axios'
 import { Button } from '../ui/button'
@@ -732,18 +732,14 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
             <Button
               type='submit'
               disabled={
-                createMutation.isPending ||
                 (parentRequired && !parent) ||
                 missingRequired ||
                 creatableClasses.length === 0
               }
+              loading={createMutation.isPending}
+              icon={<Plus className='size-4' />}
             >
-              {createMutation.isPending ? (
-                <Loader2 className='size-4 animate-spin' />
-              ) : (
-                <Plus className='size-4' />
-              )}
-              {createMutation.isPending ? t`Creating...` : t`Create`}
+              {t`Create`}
             </Button>
           </SheetFooter>
         </form>

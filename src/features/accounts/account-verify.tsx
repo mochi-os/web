@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
   ResponsiveDialog,
@@ -98,20 +98,16 @@ export function AccountVerify({
               type='button'
               variant='outline'
               onClick={handleResend}
-              disabled={isResending}
+              loading={isResending}
             >
-              {isResending && <Loader2 className='me-2 h-4 w-4 animate-spin' />}
               <Trans>Send again</Trans>
             </Button>
             <Button
               type='submit'
-              disabled={isVerifying || code.trim().length < 10}
+              disabled={code.trim().length < 10}
+              loading={isVerifying}
+              icon={<Check className='me-2 h-4 w-4' />}
             >
-              {isVerifying ? (
-                <Loader2 className='me-2 h-4 w-4 animate-spin' />
-              ) : (
-                <Check className='me-2 h-4 w-4' />
-              )}
               <Trans>Verify</Trans>
             </Button>
           </ResponsiveDialogFooter>

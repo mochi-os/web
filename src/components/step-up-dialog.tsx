@@ -356,11 +356,8 @@ export function StepUpDialog({
                     variant='outline'
                     className='w-full'
                     onClick={usePasskey}
-                    disabled={busy}
+                    loading={busy}
                   >
-                    {busy ? (
-                      <Loader2 className='me-2 h-4 w-4 animate-spin' />
-                    ) : null}
                     <Trans>Use your passkey</Trans>
                   </Button>
                 </div>
@@ -403,7 +400,6 @@ export function StepUpDialog({
             <Button
               onClick={submitFooter}
               disabled={
-                busy ||
                 !canVerify ||
                 !(
                   earnedToken ||
@@ -411,12 +407,9 @@ export function StepUpDialog({
                   (need('totp') && totpCode.trim())
                 )
               }
+              loading={busy}
+              icon={submitLabel ? undefined : <Check className='me-2 h-4 w-4' />}
             >
-              {busy ? (
-                <Loader2 className='me-2 h-4 w-4 animate-spin' />
-              ) : submitLabel ? null : (
-                <Check className='me-2 h-4 w-4' />
-              )}
               {submitLabel ?? <Trans>Verify</Trans>}
             </Button>
           ) : null}

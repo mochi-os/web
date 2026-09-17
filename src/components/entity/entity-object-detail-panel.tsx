@@ -548,15 +548,16 @@ export function EntityObjectDetailPanel<
                   size='icon'
                   className='h-8 w-8'
                   onClick={() => watchMutation.mutate(data.watching)}
-                  disabled={watchMutation.isPending}
+                  loading={watchMutation.isPending}
+                  icon={
+                    data.watching ? (
+                      <Eye className='size-4' />
+                    ) : (
+                      <EyeOff className='size-4' />
+                    )
+                  }
                   aria-label={data.watching ? t`Stop watching` : t`Watch`}
-                >
-                  {data.watching ? (
-                    <Eye className='size-4' />
-                  ) : (
-                    <EyeOff className='size-4' />
-                  )}
-                </Button>
+                />
               </TooltipTrigger>
               <TooltipContent>
                 {data.watching ? t`Stop watching` : t`Watch`}

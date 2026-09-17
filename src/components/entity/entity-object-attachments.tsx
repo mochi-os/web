@@ -294,13 +294,9 @@ export function EntityObjectAttachments({
               size='sm'
               className='h-7 text-xs'
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploadMutation.isPending}
+              loading={uploadMutation.isPending}
+              icon={<Upload className='size-3 me-1.5' />}
             >
-              {uploadMutation.isPending ? (
-                <Loader2 className='size-3 me-1.5 animate-spin' />
-              ) : (
-                <Upload className='size-3 me-1.5' />
-              )}
               <Trans>Upload</Trans>
             </Button>
           </>

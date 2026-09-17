@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from '../ui/button'
 
 interface GameDrawOfferBannerProps {
@@ -21,7 +21,6 @@ export function GameDrawOfferBanner({
   isDeclining,
 }: GameDrawOfferBannerProps) {
   const { t } = useLingui()
-  const disabled = isAccepting || isDeclining
 
   return (
     <div className='flex items-center justify-between gap-2 rounded-md border bg-muted/50 px-3 py-2'>
@@ -33,20 +32,18 @@ export function GameDrawOfferBanner({
           size='sm'
           variant='outline'
           onClick={onDecline}
-          disabled={disabled}
+          disabled={isAccepting}
+          loading={isDeclining}
         >
-          {isDeclining ? (
-            <Loader2 className='size-4 animate-spin' />
-          ) : (
-            t`Decline`
-          )}
+          {t`Decline`}
         </Button>
-        <Button size='sm' onClick={onAccept} disabled={disabled}>
-          {isAccepting ? (
-            <Loader2 className='size-4 animate-spin' />
-          ) : (
-            <Check className='size-4' />
-          )}
+        <Button
+          size='sm'
+          onClick={onAccept}
+          disabled={isDeclining}
+          loading={isAccepting}
+          icon={<Check className='size-4' />}
+        >
           {t`Accept`}
         </Button>
       </div>

@@ -4,6 +4,7 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const buttonVariants = cva(
@@ -37,25 +38,109 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonLoadingProps = {
+  loading?: boolean
+  icon?: React.ReactNode
+  trailingIcon?: never
+}
+
+// Mirrors `ButtonLoadingProps` for the trailing-icon flavor: `icon` and
+// `trailingIcon` place a node on opposite sides of `children`, so a button
+// may use one or the other, never both. Kept as a second plain object type
+// (rather than folding into `ButtonLoadingProps` as a union) so the overload
+// this feeds stays a plain object for the same reason described below.
+type ButtonTrailingLoadingProps = {
+  loading?: boolean
+  icon?: never
+  trailingIcon?: React.ReactNode
+}
+
+type ButtonSlotProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild: true
+    loading?: never
+    icon?: never
+    trailingIcon?: never
+  }
+
+type ButtonNativeProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> &
+  ButtonLoadingProps & { asChild?: false }
+
+type ButtonNativeTrailingProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> &
+  ButtonTrailingLoadingProps & { asChild?: false }
+
+// Overloaded so `React.ComponentProps<typeof Button>` (used by several
+// existing call sites to `extend`/`Omit` the props type) resolves to the
+// plain `ButtonNativeProps` object type below rather than a union — an
+// interface cannot `extend` a union, and consumers built for the old
+// single-object props type would break. The overloads still enforce the
+// asChild/loading exclusion at every call site; only the implementation
+// signature underneath is a union.
+//
+// `ButtonNativeTrailingProps` (the trailing-icon call shape) is inserted
+// before the final `ButtonNativeProps` overload rather than folded into it,
+// for the same reason: folding it in would make `ButtonNativeProps` itself a
+// union (`X & (A | B)` distributes), which breaks that same `extend`. Each
+// overload individually forbids the *other* icon slot via `?: never`, so a
+// caller passing both `icon` and `trailingIcon` matches none of the three
+// signatures and is a type error, without ever making the reflected type a
+// union.
+function Button(props: ButtonSlotProps): React.JSX.Element
+function Button(props: ButtonNativeTrailingProps): React.JSX.Element
+function Button(props: ButtonNativeProps): React.JSX.Element
 function Button({
   className,
   variant,
   size,
   asChild = false,
   ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : 'button'
+}: ButtonSlotProps | ButtonNativeProps | ButtonNativeTrailingProps) {
+  if (asChild) {
+    return (
+      <Slot
+        data-slot='button'
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    )
+  }
+
+  const { loading, icon, trailingIcon, disabled, children, ...rest } = props
 
   return (
-    <Comp
+    <button
       data-slot='button'
+      aria-busy={loading || undefined}
+      disabled={disabled || loading}
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      {...rest}
+    >
+      {!trailingIcon && (loading ? <ButtonSpinner replacing={icon} /> : icon)}
+      {children}
+      {trailingIcon &&
+        (loading ? <ButtonSpinner replacing={trailingIcon} /> : trailingIcon)}
+    </button>
+  )
+}
+
+// Takes the classes of the icon it stands in for. Call sites size and space
+// their icons (`me-2`, `size-3`), and a spinner without the same classes makes
+// the label jump sideways the moment loading starts.
+function ButtonSpinner({ replacing }: { replacing?: React.ReactNode }) {
+  const iconClassName = React.isValidElement<{ className?: string }>(replacing)
+    ? replacing.props.className
+    : undefined
+
+  return (
+    <Loader2
+      data-slot='button-spinner'
+      className={cn(iconClassName, 'animate-spin')}
+      aria-hidden='true'
     />
   )
 }
 
-export { Button, buttonVariants }
+export { Button, ButtonSpinner, buttonVariants }
+export type { ButtonLoadingProps }

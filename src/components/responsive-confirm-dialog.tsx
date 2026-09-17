@@ -70,7 +70,8 @@ export function ResponsiveConfirmDialog(props: ResponsiveConfirmDialogProps) {
           <Button
             variant={destructive ? 'destructive' : 'default'}
             onClick={handleConfirm}
-            disabled={disabled || isLoading}
+            disabled={disabled}
+            loading={isLoading}
           >
             {confirmText ?? t`Continue`}
           </Button>

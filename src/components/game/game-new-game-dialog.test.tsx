@@ -135,11 +135,13 @@ describe('GameNewGameDialog', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the submitting label while the mutation runs', () => {
+  it('disables and marks the submit button busy while the mutation runs', () => {
     renderDialog(<GameNewGameDialog {...base} canSubmit isSubmitting />)
 
-    expect(screen.getByText('Creating...')).toBeInTheDocument()
-    expect(screen.queryByText('Start game')).not.toBeInTheDocument()
+    const submit = screen.getByText('Start game').closest('button')
+    expect(submit).toBeDisabled()
+    expect(submit).toHaveAttribute('aria-busy', 'true')
+    expect(submit?.querySelector('[data-slot="button-spinner"]')).not.toBeNull()
   })
 
   it('closes from the cancel button', () => {
