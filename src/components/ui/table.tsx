@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as React from 'react'
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 type TableProps = React.ComponentProps<'table'> & {
@@ -16,15 +17,17 @@ function Table({ className, stickyFirstColumn = false, ...props }: TableProps) {
       className={cn(
         'relative w-full overflow-x-auto',
         stickyFirstColumn &&
-          '[&>table>thead>tr>th:first-child]:sticky [&>table>thead>tr>th:first-child]:start-0 [&>table>thead>tr>th:first-child]:z-10 [&>table>thead>tr>th:first-child]:border-e',
+          '[&>table>*>tr>:is(td,th):first-child]:sticky [&>table>*>tr>:is(td,th):first-child]:start-0 [&>table>*>tr>:is(td,th):first-child]:z-10 [&>table>*>tr>:is(td,th):first-child]:border-e',
+        // Scrolled cells pass under the sticky one, so it needs an opaque fill.
+        // :where() drops the default to zero specificity so a background class
+        // on the cell itself still wins.
         stickyFirstColumn &&
-          '[&>table>tbody>tr>td:first-child]:sticky [&>table>tbody>tr>td:first-child]:start-0 [&>table>tbody>tr>td:first-child]:z-10 [&>table>tbody>tr>td:first-child]:border-e',
+          '[:where(&>table>*>tr>:is(td,th):first-child)]:bg-background',
+        // The opaque fill covers the row's own hover and selected colours, so
+        // repeat them on the cell. Selected is 80% over the page, pre-mixed to
+        // stay opaque.
         stickyFirstColumn &&
-          '[&>table>tbody>tr>th:first-child]:sticky [&>table>tbody>tr>th:first-child]:start-0 [&>table>tbody>tr>th:first-child]:z-10 [&>table>tbody>tr>th:first-child]:border-e',
-        stickyFirstColumn &&
-          '[&>table>tfoot>tr>th:first-child]:sticky [&>table>tfoot>tr>th:first-child]:start-0 [&>table>tfoot>tr>th:first-child]:z-10 [&>table>tfoot>tr>th:first-child]:border-e',
-        stickyFirstColumn &&
-          '[&>table>tfoot>tr>td:first-child]:sticky [&>table>tfoot>tr>td:first-child]:start-0 [&>table>tfoot>tr>td:first-child]:z-10 [&>table>tfoot>tr>td:first-child]:border-e'
+          '[&>table>tbody>tr[data-slot=table-row]:hover>:is(td,th):first-child]:bg-hover [&>table>tbody>tr[data-slot=table-row][data-state=selected]>:is(td,th):first-child]:bg-[color-mix(in_srgb,var(--color-interactive-active)_80%,var(--color-background))]'
       )}
     >
       <table
@@ -108,6 +111,67 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   )
 }
 
+type TableSortHeaderProps = Omit<
+  React.ComponentProps<'th'>,
+  'onClick' | 'align'
+> & {
+  active: boolean
+  direction: 'asc' | 'desc'
+  onToggle: () => void
+  align?: 'start' | 'end'
+}
+
+// A header that sorts. The whole cell is the button so the hit target matches
+// what the eye reads as the column title, and the arrow only appears on the
+// column actually in force - an arrow on every header says nothing about which
+// one is sorting. Which direction a fresh column starts in belongs to the
+// caller, since "most interesting first" differs per column.
+function TableSortHeader({
+  active,
+  direction,
+  onToggle,
+  align = 'start',
+  className,
+  children,
+  ...props
+}: TableSortHeaderProps) {
+  const Arrow = !active
+    ? ChevronsUpDown
+    : direction === 'asc'
+      ? ArrowUp
+      : ArrowDown
+  const arrow = (
+    <Arrow className={cn('size-3 shrink-0', !active && 'opacity-40')} />
+  )
+  return (
+    <TableHead
+      data-slot='table-sort-header'
+      aria-sort={
+        active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
+      }
+      className={cn(align === 'end' && 'text-end', className)}
+      {...props}
+    >
+      <button
+        type='button'
+        onClick={onToggle}
+        className={cn(
+          'hover:text-foreground focus-visible:ring-ring/50 -mx-1 flex w-full items-center gap-1 rounded px-1 outline-none focus-visible:ring-[3px]',
+          align === 'end' && 'justify-end',
+          active && 'text-foreground font-semibold'
+        )}
+      >
+        {/* On an end-aligned column the arrow goes BEFORE the label, so the
+            label itself ends flush with the numbers below it. Trailing it there
+            pushed every heading an arrow's width off its own column. */}
+        {align === 'end' && arrow}
+        {children}
+        {align === 'start' && arrow}
+      </button>
+    </TableHead>
+  )
+}
+
 function TableCaption({
   className,
   ...props
@@ -123,6 +187,7 @@ function TableCaption({
 
 export {
   Table,
+  TableSortHeader,
   TableHeader,
   TableBody,
   TableFooter,
