@@ -55,10 +55,7 @@ describe('Button trailing icon', () => {
 
   it('replaces the trailing icon with the spinner in the same trailing position while loading', () => {
     render(
-      <Button
-        loading
-        trailingIcon={<ArrowRight data-testid='trailing-icon' />}
-      >
+      <Button loading trailingIcon={<ArrowRight data-testid='trailing-icon' />}>
         Continue
       </Button>
     )

@@ -18,7 +18,9 @@ describe('AlertDialogAction loading state', () => {
       <AlertDialog open>
         <AlertDialogContent>
           <AlertDialogTitle>Delete item</AlertDialogTitle>
-          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          <AlertDialogDescription>
+            This cannot be undone.
+          </AlertDialogDescription>
           <AlertDialogAction
             loading
             icon={<Trash2 data-testid='resting-icon' />}
@@ -43,7 +45,9 @@ describe('AlertDialogAction spinner geometry', () => {
       <AlertDialog open>
         <AlertDialogContent>
           <AlertDialogTitle>Delete item</AlertDialogTitle>
-          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          <AlertDialogDescription>
+            This cannot be undone.
+          </AlertDialogDescription>
           <AlertDialogAction loading icon={<Trash2 className='me-2 size-3' />}>
             Delete
           </AlertDialogAction>

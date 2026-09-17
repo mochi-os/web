@@ -408,7 +408,9 @@ export function StepUpDialog({
                 )
               }
               loading={busy}
-              icon={submitLabel ? undefined : <Check className='me-2 h-4 w-4' />}
+              icon={
+                submitLabel ? undefined : <Check className='me-2 h-4 w-4' />
+              }
             >
               {submitLabel ?? <Trans>Verify</Trans>}
             </Button>
