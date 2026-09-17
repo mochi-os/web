@@ -4,11 +4,28 @@
 import * as React from 'react'
 import { cn } from '../../lib/utils'
 
-function Table({ className, ...props }: React.ComponentProps<'table'>) {
+type TableProps = React.ComponentProps<'table'> & {
+  /** Keep the first column visible while the table scrolls horizontally. */
+  stickyFirstColumn?: boolean
+}
+
+function Table({ className, stickyFirstColumn = false, ...props }: TableProps) {
   return (
     <div
       data-slot='table-container'
-      className='relative w-full overflow-x-auto'
+      className={cn(
+        'relative w-full overflow-x-auto',
+        stickyFirstColumn &&
+          '[&>table>thead>tr>th:first-child]:sticky [&>table>thead>tr>th:first-child]:start-0 [&>table>thead>tr>th:first-child]:z-10 [&>table>thead>tr>th:first-child]:border-e',
+        stickyFirstColumn &&
+          '[&>table>tbody>tr>td:first-child]:sticky [&>table>tbody>tr>td:first-child]:start-0 [&>table>tbody>tr>td:first-child]:z-10 [&>table>tbody>tr>td:first-child]:border-e',
+        stickyFirstColumn &&
+          '[&>table>tbody>tr>th:first-child]:sticky [&>table>tbody>tr>th:first-child]:start-0 [&>table>tbody>tr>th:first-child]:z-10 [&>table>tbody>tr>th:first-child]:border-e',
+        stickyFirstColumn &&
+          '[&>table>tfoot>tr>th:first-child]:sticky [&>table>tfoot>tr>th:first-child]:start-0 [&>table>tfoot>tr>th:first-child]:z-10 [&>table>tfoot>tr>th:first-child]:border-e',
+        stickyFirstColumn &&
+          '[&>table>tfoot>tr>td:first-child]:sticky [&>table>tfoot>tr>td:first-child]:start-0 [&>table>tfoot>tr>td:first-child]:z-10 [&>table>tfoot>tr>td:first-child]:border-e'
+      )}
     >
       <table
         data-slot='table'
