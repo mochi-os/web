@@ -8,21 +8,38 @@ import { cn } from '../../lib/utils'
 type TableProps = React.ComponentProps<'table'> & {
   /** Keep the first column visible while the table scrolls horizontally. */
   stickyFirstColumn?: boolean
+  /** Draw the table's own border. Turn off inside a Card or another box. */
+  bordered?: boolean
 }
 
-function Table({ className, stickyFirstColumn = false, ...props }: TableProps) {
+function Table({
+  className,
+  stickyFirstColumn = false,
+  bordered = true,
+  ...props
+}: TableProps) {
   return (
     <div
       data-slot='table-container'
       className={cn(
         'relative w-full overflow-x-auto',
+        bordered && 'border-border rounded-lg border',
         stickyFirstColumn &&
-          '[&>table>*>tr>:is(td,th):first-child]:sticky [&>table>*>tr>:is(td,th):first-child]:start-0 [&>table>*>tr>:is(td,th):first-child]:z-10 [&>table>*>tr>:is(td,th):first-child]:border-e',
+          '[&>table>*>tr>:is(td,th):first-child]:sticky [&>table>*>tr>:is(td,th):first-child]:start-0 [&>table>*>tr>:is(td,th):first-child]:z-10',
+        // The divider is drawn by the cell, not as a border-e: the table paints
+        // collapsed borders itself, so a border stays where the column started
+        // and scrolls away while the sticky cell stays put.
+        stickyFirstColumn &&
+          '[&>table>*>tr>:is(td,th):first-child]:after:absolute [&>table>*>tr>:is(td,th):first-child]:after:inset-y-0 [&>table>*>tr>:is(td,th):first-child]:after:end-0 [&>table>*>tr>:is(td,th):first-child]:after:w-px [&>table>*>tr>:is(td,th):first-child]:after:bg-border',
         // Scrolled cells pass under the sticky one, so it needs an opaque fill.
         // :where() drops the default to zero specificity so a background class
         // on the cell itself still wins.
         stickyFirstColumn &&
           '[:where(&>table>*>tr>:is(td,th):first-child)]:bg-background',
+        // The header band is opaque, so its sticky cell has to match it rather
+        // than the page.
+        stickyFirstColumn &&
+          '[:where(&>table>thead>tr>:is(td,th):first-child)]:bg-surface-2',
         // The opaque fill covers the row's own hover and selected colours, so
         // repeat them on the cell. Selected is 80% over the page, pre-mixed to
         // stay opaque.
@@ -43,7 +60,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
     <thead
       data-slot='table-header'
-      className={cn('[&_tr]:border-b', className)}
+      className={cn('bg-surface-2 [&_tr]:border-b', className)}
       {...props}
     />
   )
@@ -77,7 +94,10 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot='table-row'
       className={cn(
-        'hover:bg-hover data-[state=selected]:bg-interactive-active/80 border-b border-border transition-colors',
+        // No colour transition: a fade makes the hover feel like it lags the
+        // pointer, and a sticky first column cannot fade with the row anyway,
+        // so the cell would snap while the rest of the row eased.
+        'hover:bg-hover data-[state=selected]:bg-interactive-active/80 border-b border-border',
         className
       )}
       {...props}
@@ -90,7 +110,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot='table-head'
       className={cn(
-        'text-foreground h-10 px-2 text-start align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]',
+        'text-foreground h-12 px-4 text-start align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]',
         className
       )}
       {...props}
@@ -103,7 +123,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
     <td
       data-slot='table-cell'
       className={cn(
-        'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]',
+        'px-4 py-3 align-middle whitespace-nowrap [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]',
         className
       )}
       {...props}
