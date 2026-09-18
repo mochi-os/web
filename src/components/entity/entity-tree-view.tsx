@@ -23,6 +23,7 @@ import { EmptyState } from '../ui/empty-state'
 import { ListSectionHeader } from '../list-section-header'
 import { TreeRow } from '../tree-row'
 import { TreeTableHeader } from '../tree-table-header'
+import { treeTableMinWidth } from '../tree-table-width'
 import { useShellStorage } from '../../hooks/use-shell-storage'
 import { sortEntityObjects, compareEntityObjects } from '../../lib/entity-sort'
 import type {
@@ -827,19 +828,33 @@ export function EntityTreeView<TObject extends EntityObject>({
     )
   }
 
+  const headerTitleFieldId = design.classes.find(
+    (c) => c.id === effectiveClass
+  )?.title
+
   return (
+    // The minimum width keeps every column readable on a narrow screen. The
+    // table then scrolls sideways inside the page's own scroller, which is the
+    // one the sticky header already follows, so the pinned first column and
+    // the pinned header work against the same scroll.
     <div
       ref={containerRef}
       className='border rounded-lg bg-background relative'
+      style={{
+        minWidth: treeTableMinWidth({
+          fields: rowFields,
+          showClass,
+          showId,
+          titleFieldId: headerTitleFieldId,
+        }),
+      }}
     >
       <table className='w-full border-collapse table-fixed'>
         <TreeTableHeader
           fields={rowFields}
           showClass={showClass}
           showId={showId}
-          titleFieldId={
-            design.classes.find((c) => c.id === effectiveClass)?.title
-          }
+          titleFieldId={headerTitleFieldId}
         />
         <tbody>
           {statusGroups.length > 0
