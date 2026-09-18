@@ -10,6 +10,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Plus, UserPlus, Users } from 'lucide-react'
 import { Button } from '../ui/button'
+import { Label } from '../ui/label'
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -112,9 +113,9 @@ export function GameNewGameDialog({
 
         <div className='space-y-4'>
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>
+            <Label>
               {labels.opponentLabel}
-            </label>
+            </Label>
             {isLoading ? (
               <Skeleton className='h-9 w-full' />
             ) : error ? (
