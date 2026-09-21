@@ -33,7 +33,7 @@ describe('TreeTableHeader', () => {
   })
 
   // A fixed-layout table ignores min-width on its cells, so the table itself
-  // carries the floor: handle 2.5, class 6, id 5, title 18, date 8, user 10.
+  // carries the floor: handle 2.5, class 6, id 5, title 15, date 8, user 10.
   it('sums the column widths into the table minimum', () => {
     expect(
       treeTableMinWidth({
@@ -46,7 +46,7 @@ describe('TreeTableHeader', () => {
         showId: true,
         titleFieldId: 'title',
       })
-    ).toBe('49.5rem')
+    ).toBe('46.5rem')
   })
 
   it('never shows a field id in place of a missing name', () => {

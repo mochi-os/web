@@ -6,10 +6,10 @@ import type { TreeTableHeaderField } from './tree-table-header'
 // The rem figures behind columnWidthClass in tree-table-header.tsx and
 // tree-row.tsx; change them together. A fixed-layout table ignores min-width on
 // its cells, so on a narrow screen the title column is squeezed to nothing
-// unless the table as a whole carries the floor. The title's 18rem is half as
-// wide again as a plain text column, so a title still reads when it is pinned.
+// unless the table as a whole carries the floor. The title's 15rem is wider
+// than a plain text column, so a title still reads when it is pinned.
 function columnRem(field: TreeTableHeaderField, isTitle: boolean): number {
-  if (isTitle) return 18
+  if (isTitle) return 15
   switch (field.fieldtype) {
     case 'user':
       return 10
@@ -23,7 +23,7 @@ function columnRem(field: TreeTableHeaderField, isTitle: boolean): number {
 }
 
 /** Minimum width of the tree table: every column at its set width, the title
- *  at its 18rem floor. Wider screens still stretch the title to fill. */
+ *  at its 15rem floor. Wider screens still stretch the title to fill. */
 export function treeTableMinWidth({
   fields,
   showClass,

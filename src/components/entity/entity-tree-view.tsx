@@ -834,9 +834,9 @@ export function EntityTreeView<TObject extends EntityObject>({
 
   return (
     // The minimum width keeps every column readable on a narrow screen. The
-    // table then scrolls sideways inside the page's own scroller, which is the
-    // one the sticky header already follows, so the pinned first column and
-    // the pinned header work against the same scroll.
+    // table then scrolls sideways inside the list content scroller, which is
+    // the one the sticky header already follows, so the pinned first column
+    // and the pinned header work against the same scroll.
     <div
       ref={containerRef}
       className='border rounded-lg bg-background relative'

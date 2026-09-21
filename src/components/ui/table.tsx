@@ -10,10 +10,13 @@ type TableProps = React.ComponentProps<'table'> & {
   stickyFirstColumn?: boolean
   /** Draw the table's own border. Turn off inside a Card or another box. */
   bordered?: boolean
+  /** Layout classes for the scrolling container around the table. */
+  containerClassName?: string
 }
 
 function Table({
   className,
+  containerClassName,
   stickyFirstColumn = false,
   bordered = true,
   ...props
@@ -44,7 +47,8 @@ function Table({
         // repeat them on the cell. Selected is 80% over the page, pre-mixed to
         // stay opaque.
         stickyFirstColumn &&
-          '[&>table>tbody>tr[data-slot=table-row]:hover>:is(td,th):first-child]:bg-hover [&>table>tbody>tr[data-slot=table-row][data-state=selected]>:is(td,th):first-child]:bg-[color-mix(in_srgb,var(--color-interactive-active)_80%,var(--color-background))]'
+          '[&>table>tbody>tr[data-slot=table-row]:hover>:is(td,th):first-child]:bg-hover [&>table>tbody>tr[data-slot=table-row][data-state=selected]>:is(td,th):first-child]:bg-[color-mix(in_srgb,var(--color-interactive-active)_80%,var(--color-background))]',
+        containerClassName
       )}
     >
       <table
@@ -141,11 +145,12 @@ type TableSortHeaderProps = Omit<
   align?: 'start' | 'end'
 }
 
-// A header that sorts. The whole cell is the button so the hit target matches
-// what the eye reads as the column title, and the arrow only appears on the
-// column actually in force - an arrow on every header says nothing about which
-// one is sorting. Which direction a fresh column starts in belongs to the
-// caller, since "most interesting first" differs per column.
+// A header that sorts. The button spans the cell's width rather than hugging
+// the label, so the hit target matches what the eye reads as the column title.
+// Every sortable column shows an indicator; inactive columns use a dimmed
+// neutral icon, while the active one shows its direction. Which direction a
+// fresh column starts in belongs to the caller, since "most interesting first"
+// differs per column.
 function TableSortHeader({
   active,
   direction,

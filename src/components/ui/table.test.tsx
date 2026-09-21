@@ -31,6 +31,20 @@ function renderTable(props: ComponentProps<typeof Table> = {}) {
 }
 
 describe('Table visual contract', () => {
+  it('keeps table and container classes on their intended elements', () => {
+    const { container } = renderTable({
+      className: 'inner-table',
+      containerClassName: 'outer-container mb-6',
+    })
+    const wrapper = container.querySelector('[data-slot="table-container"]')
+    const table = container.querySelector('[data-slot="table"]')
+
+    expect(wrapper).toHaveClass('outer-container', 'mb-6')
+    expect(wrapper).not.toHaveClass('inner-table')
+    expect(table).toHaveClass('inner-table')
+    expect(table).not.toHaveClass('mb-6')
+  })
+
   it('uses the shared bordered, shaded, and spaced defaults', () => {
     const { container } = renderTable()
     const wrapper = container.querySelector('[data-slot="table-container"]')

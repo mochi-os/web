@@ -24,7 +24,7 @@ function columnWidthClass(
   field: TreeTableHeaderField,
   isTitle: boolean
 ): string {
-  if (isTitle) return 'min-w-[18rem]'
+  if (isTitle) return 'min-w-[15rem]'
   switch (field.fieldtype) {
     case 'user':
       return 'w-40 shrink-0'

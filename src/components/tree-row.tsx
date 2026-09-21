@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef, type DragEvent } from 'react'
+import { useRef, type CSSProperties, type DragEvent } from 'react'
 import {
   Calendar,
   CheckSquare,
@@ -367,10 +367,8 @@ export function TreeRow({
           'after:pointer-events-none after:absolute after:inset-0 after:z-[3] after:ring-inset',
         isSelected &&
           'bg-primary/10 hover:bg-primary/10 after:ring-1 after:ring-primary/20',
-        isDragOver && 'bg-primary/20 after:ring-2 after:ring-primary/50',
-        borderColor && 'border-s-[3px]'
+        isDragOver && 'bg-primary/20 after:ring-2 after:ring-primary/50'
       )}
-      style={borderColor ? { borderInlineStartColor: borderColor } : undefined}
       onClick={onClick}
       draggable={canDrag}
       onDragStart={(e) => {
@@ -393,11 +391,21 @@ export function TreeRow({
         </td>
       ) : null}
 
+      {/* The colour bar is drawn by the pinned handle, not as a border-s on the
+          row: the table paints a collapsed row border in place, so it scrolled
+          away sideways and half its width showed past the pinned cell. */}
       <td
         className={cn(
           'whitespace-nowrap py-2 ps-2 pe-2 w-10 min-w-10',
-          pinnedHandle
+          pinnedHandle,
+          borderColor &&
+            'before:absolute before:inset-y-0 before:start-0 before:w-[3px] before:bg-(--row-border)'
         )}
+        style={
+          borderColor
+            ? ({ '--row-border': borderColor } as CSSProperties)
+            : undefined
+        }
       >
         <div className='flex items-center gap-0.5'>
           {/* Shown on hover, and always on a touch screen, which has none. */}

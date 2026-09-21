@@ -94,5 +94,6 @@ describe('TreeRow', () => {
     expect(cells[0]).toHaveClass('sticky', 'start-0')
     expect(cells[1]).toHaveClass('sticky', 'start-10')
     expect(cells[2]).not.toHaveClass('sticky')
+    expect(cells[2]).toHaveClass('min-w-[15rem]')
   })
 })
