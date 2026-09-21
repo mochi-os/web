@@ -58,6 +58,7 @@ export * from './components/ui/tabs'
 export * from './components/ui/textarea'
 export * from './components/ui/tooltip'
 export * from './components/ui/upload-progress'
+export * from './components/ui/progress'
 
 // Layout Components
 export * from './components/layout/main'

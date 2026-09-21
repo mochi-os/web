@@ -5,6 +5,7 @@ import { Trans, useLingui } from '@lingui/react/macro'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import type { Upload } from '../../hooks/use-upload-progress'
+import { Progress } from './progress'
 
 /**
  * Byte-progress bar for a file upload: determinate while the body is leaving
@@ -29,22 +30,11 @@ export function UploadProgress({
   const totalLabel = total != null ? formatFileSize(total) : ''
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <div
-        role='progressbar'
+      <Progress
         aria-label={t`Upload progress`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={determinate ? Math.round(fraction * 100) : undefined}
-        className='bg-muted h-1.5 min-w-16 flex-1 overflow-hidden rounded-full'
-      >
-        <div
-          className={cn(
-            'bg-primary h-full rounded-full transition-[width] duration-300',
-            !determinate && 'animate-pulse'
-          )}
-          style={{ width: `${fraction * 100}%` }}
-        />
-      </div>
+        className='min-w-16 flex-1'
+        value={determinate ? Math.round(fraction * 100) : null}
+      />
       <span className='text-muted-foreground shrink-0 text-xs tabular-nums'>
         {phase === 'processing' ? (
           <Trans>Processing…</Trans>
