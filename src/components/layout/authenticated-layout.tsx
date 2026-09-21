@@ -55,6 +55,8 @@ type RightPanelConfig = {
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
   sidebarData?: SidebarData
+  /** Sits above the first sidebar group, hidden in the icon-collapsed rail. */
+  sidebarHeader?: React.ReactNode
   sidebarFooter?: React.ReactNode
   notifications?: MochiMenuNotifications
   title?: string
@@ -74,6 +76,7 @@ export function AuthenticatedLayout({
   notifications,
   title,
   mobileTitle: _mobileTitle,
+  sidebarHeader,
   sidebarFooter,
   rightPanel,
   rightPanelDefaultOpen = true,
@@ -213,6 +216,7 @@ export function AuthenticatedLayout({
           <AppSidebar
             data={sidebarData}
             notifications={effectiveNotifications}
+            sidebarHeader={sidebarHeader}
             sidebarFooter={sidebarFooter}
             isLoading={isLoadingSidebar}
             hideMenu={inShell}

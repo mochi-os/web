@@ -17,6 +17,15 @@ function PopoverTrigger({
   return <PopoverPrimitive.Trigger data-slot='popover-trigger' {...props} />
 }
 
+// The element the content is positioned against when the popover has no
+// trigger of its own - a calendar anchors a summary to the block that was
+// clicked, which is not a button.
+function PopoverAnchor({
+  ...props
+}: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
+  return <PopoverPrimitive.Anchor data-slot='popover-anchor' {...props} />
+}
+
 function PopoverContent({
   className,
   align = 'center',
@@ -39,4 +48,4 @@ function PopoverContent({
   )
 }
 
-export { Popover, PopoverTrigger, PopoverContent }
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent }

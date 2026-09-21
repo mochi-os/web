@@ -19,6 +19,8 @@ import {
   ResponsiveDialogTrigger,
 } from './responsive-dialog'
 import { Input } from './input'
+import { Label } from './label'
+import { ColourPicker, PRESET_COLOURS } from '../colour-picker'
 import { Textarea } from './textarea'
 import { Switch } from './switch'
 import {
@@ -58,6 +60,10 @@ export interface CreateEntityDialogProps {
   descriptionLabel?: string
   showPrivacyToggle?: boolean
   privacyLabel?: string
+  /** Offers a colour, as a calendar needs one at creation. */
+  showColour?: boolean
+  /** The colour the picker opens on; defaults to one of the presets. */
+  defaultColour?: string
   extraToggles?: CreateEntityToggle[]
   // Submission
   onSubmit: (values: CreateEntityValues) => void | Promise<void>
@@ -69,6 +75,7 @@ export interface CreateEntityValues {
   name: string
   description?: string
   privacy?: 'public' | 'private'
+  colour?: string
   toggles?: Record<string, boolean>
 }
 
@@ -85,6 +92,8 @@ export function CreateEntityDialog({
   descriptionLabel = t`Description`,
   showPrivacyToggle,
   privacyLabel = t`Allow anyone to search for ${entityLabel}`,
+  showColour,
+  defaultColour = PRESET_COLOURS[8],
   extraToggles = [],
   onSubmit,
   isPending = false,
@@ -93,6 +102,9 @@ export function CreateEntityDialog({
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = open ?? internalOpen
   const setIsOpen = onOpenChange ?? setInternalOpen
+  // The picker is its own control rather than a form field: it has no text
+  // input to validate and nothing about it can fail.
+  const [colour, setColour] = useState(defaultColour)
 
   // Build schema dynamically (memoized to prevent re-validation on every render)
   const schema = useMemo(
@@ -138,10 +150,12 @@ export function CreateEntityDialog({
           ? 'public'
           : 'private'
         : undefined,
+      colour: showColour ? colour : undefined,
       toggles:
         extraToggles.length > 0 ? (rest as Record<string, boolean>) : undefined,
     })
     form.reset()
+    setColour(defaultColour)
     setIsOpen(false)
   }
 
@@ -149,6 +163,7 @@ export function CreateEntityDialog({
     setIsOpen(open)
     if (!open) {
       form.reset()
+      setColour(defaultColour)
     }
   }
 
@@ -214,6 +229,15 @@ export function CreateEntityDialog({
                   </FormItem>
                 )}
               />
+            )}
+
+            {showColour && (
+              <div className='space-y-2'>
+                <Label>
+                  <Trans>Colour</Trans>
+                </Label>
+                <ColourPicker value={colour} onChange={setColour} />
+              </div>
             )}
 
             {(showPrivacyToggle || extraToggles.length > 0) && (

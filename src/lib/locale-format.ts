@@ -121,6 +121,187 @@ function zonedParts(date: Date, timezone?: string): ZonedParts | null {
   }
 }
 
+// --- Calendar formatting ---
+// A calendar reads and writes whole days in the user's own zone, and names
+// weekdays and months in the interface language, neither of which the
+// preference-driven formatters above cover. They live here because this module
+// is the one place allowed to reach Intl directly.
+
+// A day in the user's zone, as YYYY-MM-DD. Every calendar view addresses days
+// by this string, so no view has to carry a Date whose meaning depends on the
+// browser's own zone.
+export function zonedDay(date: Date, timezone?: string): string {
+  const parts = zonedParts(date, timezone)
+  if (!parts) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  }
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`
+}
+
+/** Minutes since midnight in the user's zone. */
+export function zonedMinutes(date: Date, timezone?: string): number {
+  const parts = zonedParts(date, timezone)
+  if (!parts) return date.getHours() * 60 + date.getMinutes()
+  return parts.hour * 60 + parts.minute
+}
+
+// How far the zone runs ahead of UTC at that instant, in seconds.
+function zoneOffset(seconds: number, timezone?: string): number {
+  const parts = zonedParts(new Date(seconds * 1000), timezone)
+  if (!parts) return -new Date(seconds * 1000).getTimezoneOffset() * 60
+  const asUtc =
+    Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second
+    ) / 1000
+  return asUtc - seconds
+}
+
+/**
+ * The instant a wall-clock time falls at in the user's zone, in unix seconds.
+ * The second pass is what makes the hour after a DST change land correctly:
+ * the offset is read at the first guess, which can sit on the other side of
+ * the transition from the answer.
+ */
+export function timestampAt(
+  day: string,
+  minutes: number,
+  timezone?: string
+): number {
+  const [year, month, date] = day.split('-').map(Number)
+  const wall =
+    Date.UTC(year, month - 1, date, Math.floor(minutes / 60), minutes % 60) /
+    1000
+  const first = wall - zoneOffset(wall, timezone)
+  return wall - zoneOffset(first, timezone)
+}
+
+// Each shape gets its own cache: building an Intl formatter costs far more
+// than formatting with it, and a week view asks for dozens per render.
+const calendarFormatters = new Map<string, Intl.DateTimeFormat>()
+
+function calendarFormatter(
+  shape: string,
+  timezone: string | undefined,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  const lang = language()
+  const key = `${shape}|${lang}|${timezone ?? ''}`
+  let formatter = calendarFormatters.get(key)
+  if (!formatter) {
+    formatter = dateFormatter(lang, timezone, options)
+    calendarFormatters.set(key, formatter)
+  }
+  return formatter
+}
+
+/** The weekday's full name, as a column header reads it. */
+export function formatWeekday(date: Date, timezone?: string): string {
+  return calendarFormatter('weekday', timezone, { weekday: 'long' }).format(
+    date
+  )
+}
+
+/** The weekday abbreviated, for narrow column headers and the mini month. */
+export function formatWeekdayShort(date: Date, timezone?: string): string {
+  return calendarFormatter('weekdayShort', timezone, {
+    weekday: 'short',
+  }).format(date)
+}
+
+/** The month's full name on its own, as a mini-month heading reads it. */
+export function formatMonthName(date: Date, timezone?: string): string {
+  return calendarFormatter('month', timezone, { month: 'long' }).format(date)
+}
+
+/** The day of the month as a bare number, for a grid cell. */
+export function formatDayNumber(date: Date, timezone?: string): string {
+  return calendarFormatter('day', timezone, { day: 'numeric' }).format(date)
+}
+
+/** A whole date spelled out: "Tuesday 16 September 2026". */
+export function formatLongDate(date: Date, timezone?: string): string {
+  return calendarFormatter('long', timezone, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
+/** A month and its year: "September 2026". */
+export function formatMonthYear(date: Date, timezone?: string): string {
+  return calendarFormatter('monthYear', timezone, {
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
+/**
+ * A span of days the way the language writes one: "14 – 20 September 2026",
+ * "14 September – 11 October 2026". formatRange is looked up structurally
+ * because the apps compile against an ES2020 library that does not declare it;
+ * where it is missing the two dates are joined plainly.
+ */
+export function formatDayRange(
+  from: Date,
+  to: Date,
+  timezone?: string
+): string {
+  const formatter = calendarFormatter('dayRange', timezone, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }) as Intl.DateTimeFormat & {
+    formatRange?: (from: Date, to: Date) => string
+  }
+  if (typeof formatter.formatRange === 'function') {
+    try {
+      return formatter.formatRange(from, to)
+    } catch {
+      // Fall through to the plain join.
+    }
+  }
+  return `${formatter.format(from)} - ${formatter.format(to)}`
+}
+
+/** A clock reading without seconds: "14:30", "2:30 PM". */
+export function formatClock(
+  date: Date,
+  timeFormat: TimeFormat,
+  timezone?: string
+): string {
+  const zoned = zonedParts(date, timezone)
+  const hours = zoned ? zoned.hour : date.getHours()
+  const minutes = zoned ? zoned.minute : date.getMinutes()
+  if (timeFormat === '12h') {
+    return `${hours % 12 || 12}:${pad(minutes)} ${meridiem(date, timezone)}`
+  }
+  return `${pad(hours)}:${pad(minutes)}`
+}
+
+/**
+ * A time-grid axis label: "08:00", or "8 AM" where a whole hour needs no
+ * minutes.
+ */
+export function formatHour(
+  date: Date,
+  timeFormat: TimeFormat,
+  timezone?: string
+): string {
+  const zoned = zonedParts(date, timezone)
+  const hours = zoned ? zoned.hour : date.getHours()
+  const minutes = zoned ? zoned.minute : date.getMinutes()
+  if (timeFormat === '12h' && minutes === 0) {
+    return `${hours % 12 || 12} ${meridiem(date, timezone)}`
+  }
+  return formatClock(date, timeFormat, timezone)
+}
+
 // --- User-facing formatting (respects preferences) ---
 
 export type DateFormat =

@@ -15,7 +15,6 @@ import * as mic from '../../lib/shell-mic-session'
 
 describe('ui primitive exports', () => {
   it('keep the unadopted shadcn parts private', () => {
-    expect(Object.keys(popover)).not.toContain('PopoverAnchor')
     expect(Object.keys(scroll)).not.toContain('ScrollBar')
     expect(Object.keys(otp)).not.toContain('InputOTPSeparator')
     expect(Object.keys(dialog)).not.toContain('DialogBody')
@@ -28,6 +27,9 @@ describe('ui primitive exports', () => {
     expect(Object.keys(drawer)).not.toContain('DrawerOverlay')
     expect(Object.keys(pill)).not.toContain('statusToneClass')
     expect(Object.keys(pill)).toContain('StatusPill')
+    // Adopted by the calendars app: a summary popover is anchored to the
+    // event block that was clicked, which is not a trigger of its own.
+    expect(Object.keys(popover)).toContain('PopoverAnchor')
   })
 
   it('keep the mime picker inside the mic session host', () => {

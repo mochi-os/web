@@ -144,6 +144,7 @@ function getNavItemKey(item: {
 export function NavGroup({
   title,
   items,
+  actions,
   separator,
   animateList = false,
 }: NavGroupProps) {
@@ -160,6 +161,21 @@ export function NavGroup({
       {separator && <SidebarSeparator className='mx-2' />}
       <SidebarGroup>
         {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
+        {actions?.length ? (
+          <div className='absolute end-2 top-2.5 flex items-center gap-0.5 group-data-[collapsible=icon]:hidden'>
+            {actions.map((action) => (
+              <button
+                key={action.title}
+                type='button'
+                aria-label={action.title}
+                onClick={action.onClick}
+                className='text-sidebar-foreground/70 hover:bg-sidebar-hover hover:text-sidebar-foreground flex size-5 items-center justify-center rounded-md [&>svg]:size-3.5'
+              >
+                <action.icon />
+              </button>
+            ))}
+          </div>
+        ) : null}
         <SidebarMenu ref={animateList ? menuRef : undefined}>
           {items.map((item) => {
             const key = getNavItemKey(item)
@@ -236,7 +252,7 @@ function navLinkTooltip(
   return item.title
 }
 
-function NavLinkTrailing({ item }: { item: NavLink }) {
+function NavLinkTrailing({ item }: { item: NavLink | NavAction }) {
   const EndIcon = item.endIcon
   if (!EndIcon && !item.badge) return null
 
@@ -278,8 +294,10 @@ function SidebarLinkMenu({ menu }: { menu: NavMenuItem[] }) {
                 ? 'text-destructive focus:text-destructive'
                 : undefined
             }
+            // The default select closes the menu, which an item that opens a
+            // dialog needs; preventing it left the menu standing beside the
+            // dialog.
             onSelect={(event) => {
-              event.preventDefault()
               event.stopPropagation()
               setOpenMobile(false)
               menuItem.onClick()
@@ -301,6 +319,8 @@ function SidebarMenuAction({ item }: { item: NavAction }) {
       <SidebarMenuButton
         tooltip={item.title}
         isActive={item.isActive}
+        role={item.checked === undefined ? undefined : 'checkbox'}
+        aria-checked={item.checked}
         onClick={() => {
           setOpenMobile(false)
           item.onClick()
@@ -309,11 +329,12 @@ function SidebarMenuAction({ item }: { item: NavAction }) {
         className={item.className}
       >
         <ItemIcon icon={item.icon} aggregate={item.aggregate} />
-        <span className='group-data-[collapsible=icon]:hidden'>
+        <span className='min-w-0 flex-1 truncate text-start group-data-[collapsible=icon]:hidden'>
           {item.title}
         </span>
-        {item.badge && <NavBadge>{item.badge}</NavBadge>}
+        <NavLinkTrailing item={item} />
       </SidebarMenuButton>
+      {item.menu?.length ? <SidebarLinkMenu menu={item.menu} /> : null}
     </SidebarMenuItem>
   )
 }
