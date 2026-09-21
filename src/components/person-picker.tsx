@@ -12,6 +12,15 @@ import { Button } from './ui/button'
 import { EntityAvatar } from './entity-avatar'
 import { Input } from './ui/input'
 import { Checkbox } from './ui/checkbox'
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxClear,
+  ComboboxContent,
+  ComboboxInput,
+} from './ui/combobox'
+import { CommandGroup, CommandItem, CommandList } from './ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { cn } from '../lib/utils'
 import { plural, t } from '@lingui/core/macro'
@@ -52,6 +61,10 @@ export interface PersonPickerProps {
   disabled?: boolean
   /** Additional CSS classes */
   className?: string
+  /** How the picker looks. `trigger` is a button that opens a searchable
+   *  list. `combobox` is a search field with the list under it, and one
+   *  removable chip per person when `mode` is multiple. */
+  presentation?: 'trigger' | 'combobox'
   /** Controlled open state */
   open?: boolean
   /** Callback when open state changes */
@@ -71,6 +84,7 @@ export function PersonPicker({
   emptyMessage = t`No people found`,
   disabled = false,
   className,
+  presentation = 'trigger',
   open: controlledOpen,
   onOpenChange,
 }: PersonPickerProps) {
@@ -81,6 +95,8 @@ export function PersonPicker({
   const [debouncedSearch, setDebouncedSearch] = useState('')
   // Force re-render when global cache updates
   const [cacheVersion, setCacheVersion] = useState(0)
+  // Single combobox: the input holds the chosen name until the user types.
+  const [editing, setEditing] = useState(false)
 
   // Normalize value to array for internal use
   const selectedIds = useMemo(() => {
@@ -101,6 +117,7 @@ export function PersonPicker({
     if (!open) {
       setSearchQuery('')
       setDebouncedSearch('')
+      setEditing(false)
     }
   }, [open])
 
@@ -239,6 +256,131 @@ export function PersonPicker({
     return { names, count: selectedPeople.length }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds, allPeople, local, cacheVersion])
+
+  // Every selected id in order, with its person when one can be found.
+  const selectedPeople = useMemo(
+    () =>
+      selectedIds.map(
+        (id) =>
+          allPeople.find((p) => p.id === id) ||
+          local.find((p) => p.id === id) ||
+          selectedPeopleGlobalCache.get(id)
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedIds, allPeople, local, cacheVersion]
+  )
+
+  if (presentation === 'combobox') {
+    const single = mode === 'single'
+    const searching = isLoading && !!debouncedSearch
+    const hasPeople = filteredPeople.length > 0
+    const searchedAndEmpty = !isLoading && !!debouncedSearch && !hasPeople
+    const showList = searching || hasPeople || searchedAndEmpty
+    const chosenName = selectedPeople[0]?.name ?? selectedIds[0] ?? ''
+    const inputValue = single && !editing ? chosenName : searchQuery
+
+    return (
+      <Combobox open={open} onOpenChange={setOpen}>
+        <ComboboxChips disabled={disabled} className={className}>
+          {!single &&
+            selectedIds.map((id, index) => {
+              const name = selectedPeople[index]?.name ?? id
+              return (
+                <ComboboxChip
+                  key={id}
+                  removeLabel={t`Remove ${name}`}
+                  onRemove={() => handleSelect(id)}
+                  disabled={disabled}
+                >
+                  {name}
+                </ComboboxChip>
+              )
+            })}
+          <ComboboxInput
+            value={inputValue}
+            onValueChange={(next) => {
+              setEditing(true)
+              setSearchQuery(next)
+            }}
+            onFocus={(event) => {
+              if (single) event.currentTarget.select()
+            }}
+            onKeyDown={(event) => {
+              if (
+                !single &&
+                event.key === 'Backspace' &&
+                event.currentTarget.value === '' &&
+                selectedIds.length > 0
+              ) {
+                handleSelect(selectedIds[selectedIds.length - 1])
+              }
+            }}
+            placeholder={selectedIds.length === 0 ? placeholder : undefined}
+            aria-label={placeholder}
+            disabled={disabled}
+          />
+          {single && selectedIds.length > 0 && (
+            <ComboboxClear label={t`Clear`} onClick={() => onChange('')} />
+          )}
+        </ComboboxChips>
+        {showList && (
+          <ComboboxContent>
+            <CommandList className='p-1'>
+              {searching && (
+                <div className='flex items-center justify-center py-6'>
+                  <Loader2 className='size-5 animate-spin text-muted-foreground' />
+                </div>
+              )}
+
+              {searchedAndEmpty && (
+                <div className='py-6 text-center text-sm text-muted-foreground'>
+                  {emptyMessage}
+                </div>
+              )}
+
+              {!isLoading &&
+                groupedPeople.map((group) => (
+                  <CommandGroup
+                    key={group.label}
+                    heading={groupedPeople.length > 1 ? group.label : undefined}
+                    className='p-0'
+                  >
+                    {group.people.map((person) => (
+                      <CommandItem
+                        key={person.id}
+                        value={person.id}
+                        onSelect={() => {
+                          handleSelect(person.id)
+                          if (!single) setSearchQuery('')
+                        }}
+                      >
+                        <div className='size-4 shrink-0 flex items-center justify-center'>
+                          {selectedIds.includes(person.id) && (
+                            <Check className='size-4' />
+                          )}
+                        </div>
+                        <EntityAvatar
+                          src={
+                            assetUrl ? assetUrl(person, 'avatar') : undefined
+                          }
+                          styleUrl={
+                            assetUrl ? assetUrl(person, 'style') : undefined
+                          }
+                          seed={person.id}
+                          name={person.name}
+                          size='sm'
+                        />
+                        <span className='truncate text-sm'>{person.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ))}
+            </CommandList>
+          </ComboboxContent>
+        )}
+      </Combobox>
+    )
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

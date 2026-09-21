@@ -100,6 +100,7 @@ describe('GameNewGameDialog', () => {
     expect(pickerProps).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'single',
+        presentation: 'combobox',
         local: base.friends,
         placeholder: 'Select a friend...',
         emptyMessage: 'No friends found',
