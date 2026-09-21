@@ -8,19 +8,17 @@
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { Paperclip, Plus, Upload, X } from 'lucide-react'
+import { Paperclip, Plus, Upload } from 'lucide-react'
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import type { AxiosProgressEvent } from 'axios'
 import { Button } from '../ui/button'
 import { Label } from '../ui/label'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '../ui/sheet'
+  SidePanel,
+  SidePanelBody,
+  SidePanelFooter,
+  SidePanelHeader,
+} from '../ui/side-panel'
 import {
   Select,
   SelectContent,
@@ -28,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import {
   ComposerAttachments,
   dropActiveClass,
@@ -516,234 +513,216 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleClose} modal={false}>
-      <SheetContent
-        className='w-full sm:max-w-2xl p-0 gap-0 [&>button:last-child]:hidden'
-        onOpenAutoFocus={(event) => event.preventDefault()}
+    <SidePanel
+      open={open}
+      onOpenChange={handleClose}
+      modal={false}
+      size='lg'
+      label={srTitle}
+      description={srDescription}
+      onOpenAutoFocus={(event) => event.preventDefault()}
+    >
+      <SidePanelHeader>
+        {creatableClasses.length > 0 ? (
+          <>
+            <Label className='text-lg font-semibold'>
+              <Trans>New</Trans>
+            </Label>
+            <Select value={selectedClass} onValueChange={handleTypeChange}>
+              <SelectTrigger className='h-auto w-auto px-2 py-1 text-lg font-semibold'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className='z-[60]'>
+                {creatableClasses.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        ) : (
+          <Label className='text-lg font-semibold'>
+            <Trans>Create</Trans>
+          </Label>
+        )}
+      </SidePanelHeader>
+
+      {/* Content */}
+      <form
+        onSubmit={handleSubmit}
+        className='flex min-h-0 flex-1 flex-col overflow-hidden'
+        {...dropzoneProps}
       >
-        <SheetHeader className='sr-only'>
-          <SheetTitle>{srTitle}</SheetTitle>
-          <SheetDescription>{srDescription}</SheetDescription>
-        </SheetHeader>
-        {/* Header */}
-        <div className='flex items-center gap-3 px-6 py-4 border-b shrink-0'>
-          <div className='flex items-center gap-2 flex-1'>
-            {creatableClasses.length > 0 ? (
-              <>
-                <Label className='text-xl font-bold'>
-                  <Trans>New</Trans>
-                </Label>
-                <Select value={selectedClass} onValueChange={handleTypeChange}>
-                  <SelectTrigger className='w-auto h-auto py-1 px-2 text-xl font-bold'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className='z-[60]'>
-                    {creatableClasses.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : (
-              <Label className='text-xl font-bold'>
-                <Trans>Create</Trans>
-              </Label>
+        <SidePanelBody>
+          {/* The outline sits on the field stack rather than the form: the
+                form is the scroll clip, and an outline on it would be cut off. */}
+          <div
+            className={cn(
+              'max-w-2xl space-y-6',
+              isDragActive && dropActiveClass
+            )}
+          >
+            {creatableClasses.length === 0 && (
+              <p className='text-sm text-muted-foreground'>
+                <Trans>
+                  No item types can be created yet. Create the required parent
+                  items first.
+                </Trans>
+              </p>
+            )}
+
+            {/* Parent picker */}
+            {(validParentOptions.length > 0 || parentRequired) && (
+              <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                <label className='text-sm font-medium text-muted-foreground pt-2'>
+                  <Trans>Parent</Trans>
+                </label>
+                {validParentOptions.length > 0 ? (
+                  <Select
+                    value={parent || '_none_'}
+                    onValueChange={(v) => setParent(v === '_none_' ? '' : v)}
+                  >
+                    <SelectTrigger className='w-full'>
+                      <SelectValue placeholder={t`None`}>
+                        {currentParent ? objectTitle(currentParent) : t`None`}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className='z-[60]'>
+                      {!parentRequired && (
+                        <SelectItem value='_none_'>
+                          <Trans>None</Trans>
+                        </SelectItem>
+                      )}
+                      {validParentOptions.map((obj) => (
+                        <SelectItem key={obj.id} value={obj.id}>
+                          {objectTitle(obj)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className='text-sm text-muted-foreground pt-2'>
+                    {t`No ${parentClassNames} to add to`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Dynamic fields based on selected type */}
+            {classFields.map((field, index) => {
+              const isFirstTextField =
+                field.fieldtype === 'text' &&
+                classFields.findIndex((f) => f.fieldtype === 'text') === index
+              return (
+                <div
+                  key={field.id}
+                  className='grid grid-cols-[120px_1fr] gap-4 items-start'
+                >
+                  <label className='text-sm font-medium text-muted-foreground pt-2'>
+                    {field.name}
+                  </label>
+                  <EntityFieldEditor
+                    field={field}
+                    value={fieldValues[field.id] || ''}
+                    options={classOptions[field.id] || []}
+                    onChange={(value) => handleFieldChange(field.id, value)}
+                    disabled={createMutation.isPending}
+                    autoFocus={isFirstTextField}
+                    immediate
+                    hideLabel
+                    localPeople={peopleData}
+                    searchUsers={async (q) =>
+                      (await searchUsers(q)).data.results
+                    }
+                  />
+                </div>
+              )
+            })}
+
+            {/* File attachments */}
+            <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+              <label className='text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5'>
+                <Paperclip className='size-3.5' />
+                <Trans>Files</Trans>
+              </label>
+              <div className='space-y-2 pt-1'>
+                <ComposerAttachments
+                  files={pendingFiles}
+                  previewUrls={pendingFilePreviewUrls}
+                  // The object is created before the files upload, so the
+                  // tiles sit inert for a moment - that gap is the write, not
+                  // a stall.
+                  state={
+                    createMutation.isPending
+                      ? 'uploading'
+                      : error
+                        ? 'error'
+                        : 'idle'
+                  }
+                  onRetry={submit}
+                  progress={uploadProgress?.slices}
+                  onRemove={(file) =>
+                    setPendingFiles((prev) => removePendingFile(prev, file))
+                  }
+                  onReorder={(from, to) =>
+                    setPendingFiles((prev) => moveItem(prev, from, to))
+                  }
+                  groupMedia
+                />
+                <input
+                  ref={fileInputRef}
+                  type='file'
+                  multiple
+                  className='hidden'
+                  onChange={(e) => {
+                    // Copy the FileList before clearing the input: it is
+                    // live, so resetting the value empties it and a deferred
+                    // state updater would then read no files and drop the
+                    // pick.
+                    const picked = Array.from(e.target.files ?? [])
+                    e.target.value = ''
+                    addFiles(picked)
+                  }}
+                />
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='h-7 text-xs'
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={createMutation.isPending}
+                >
+                  <Upload className='size-3 me-1.5' />
+                  <Trans>Upload</Trans>
+                </Button>
+              </div>
+            </div>
+
+            {error && (
+              <div className='text-sm text-destructive bg-destructive/10 p-3 rounded-md'>
+                {error}
+              </div>
             )}
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant='ghost'
-                size='icon'
-                className='h-8 w-8'
-                onClick={handleClose}
-                aria-label={t`Close`}
-              >
-                <X className='size-4' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t`Close`}</TooltipContent>
-          </Tooltip>
-        </div>
+        </SidePanelBody>
 
-        {/* Content */}
-        <form
-          onSubmit={handleSubmit}
-          className='flex flex-col flex-1 overflow-hidden'
-          {...dropzoneProps}
-        >
-          <div className='flex-1 overflow-y-auto p-6'>
-            {/* The outline sits on the field stack rather than the form: the
-                form is the scroll clip, and an outline on it would be cut off. */}
-            <div
-              className={cn(
-                'max-w-2xl space-y-6',
-                isDragActive && dropActiveClass
-              )}
-            >
-              {creatableClasses.length === 0 && (
-                <p className='text-sm text-muted-foreground'>
-                  <Trans>
-                    No item types can be created yet. Create the required parent
-                    items first.
-                  </Trans>
-                </p>
-              )}
-
-              {/* Parent picker */}
-              {(validParentOptions.length > 0 || parentRequired) && (
-                <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
-                  <label className='text-sm font-medium text-muted-foreground pt-2'>
-                    <Trans>Parent</Trans>
-                  </label>
-                  {validParentOptions.length > 0 ? (
-                    <Select
-                      value={parent || '_none_'}
-                      onValueChange={(v) => setParent(v === '_none_' ? '' : v)}
-                    >
-                      <SelectTrigger className='w-full'>
-                        <SelectValue placeholder={t`None`}>
-                          {currentParent ? objectTitle(currentParent) : t`None`}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className='z-[60]'>
-                        {!parentRequired && (
-                          <SelectItem value='_none_'>
-                            <Trans>None</Trans>
-                          </SelectItem>
-                        )}
-                        {validParentOptions.map((obj) => (
-                          <SelectItem key={obj.id} value={obj.id}>
-                            {objectTitle(obj)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <p className='text-sm text-muted-foreground pt-2'>
-                      {t`No ${parentClassNames} to add to`}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Dynamic fields based on selected type */}
-              {classFields.map((field, index) => {
-                const isFirstTextField =
-                  field.fieldtype === 'text' &&
-                  classFields.findIndex((f) => f.fieldtype === 'text') === index
-                return (
-                  <div
-                    key={field.id}
-                    className='grid grid-cols-[120px_1fr] gap-4 items-start'
-                  >
-                    <label className='text-sm font-medium text-muted-foreground pt-2'>
-                      {field.name}
-                    </label>
-                    <EntityFieldEditor
-                      field={field}
-                      value={fieldValues[field.id] || ''}
-                      options={classOptions[field.id] || []}
-                      onChange={(value) => handleFieldChange(field.id, value)}
-                      disabled={createMutation.isPending}
-                      autoFocus={isFirstTextField}
-                      immediate
-                      hideLabel
-                      localPeople={peopleData}
-                      searchUsers={async (q) =>
-                        (await searchUsers(q)).data.results
-                      }
-                    />
-                  </div>
-                )
-              })}
-
-              {/* File attachments */}
-              <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
-                <label className='text-sm font-medium text-muted-foreground pt-2 flex items-center gap-1.5'>
-                  <Paperclip className='size-3.5' />
-                  <Trans>Files</Trans>
-                </label>
-                <div className='space-y-2 pt-1'>
-                  <ComposerAttachments
-                    files={pendingFiles}
-                    previewUrls={pendingFilePreviewUrls}
-                    // The object is created before the files upload, so the
-                    // tiles sit inert for a moment - that gap is the write, not
-                    // a stall.
-                    state={
-                      createMutation.isPending
-                        ? 'uploading'
-                        : error
-                          ? 'error'
-                          : 'idle'
-                    }
-                    onRetry={submit}
-                    progress={uploadProgress?.slices}
-                    onRemove={(file) =>
-                      setPendingFiles((prev) => removePendingFile(prev, file))
-                    }
-                    onReorder={(from, to) =>
-                      setPendingFiles((prev) => moveItem(prev, from, to))
-                    }
-                    groupMedia
-                  />
-                  <input
-                    ref={fileInputRef}
-                    type='file'
-                    multiple
-                    className='hidden'
-                    onChange={(e) => {
-                      // Copy the FileList before clearing the input: it is
-                      // live, so resetting the value empties it and a deferred
-                      // state updater would then read no files and drop the
-                      // pick.
-                      const picked = Array.from(e.target.files ?? [])
-                      e.target.value = ''
-                      addFiles(picked)
-                    }}
-                  />
-                  <Button
-                    type='button'
-                    variant='outline'
-                    size='sm'
-                    className='h-7 text-xs'
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={createMutation.isPending}
-                  >
-                    <Upload className='size-3 me-1.5' />
-                    <Trans>Upload</Trans>
-                  </Button>
-                </div>
-              </div>
-
-              {error && (
-                <div className='text-sm text-destructive bg-destructive/10 p-3 rounded-md'>
-                  {error}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <UploadProgress progress={uploadProgress} className='px-6 pb-2' />
-          <SheetFooter className='px-6 py-4 border-t'>
-            <Button
-              type='submit'
-              disabled={
-                (parentRequired && !parent) ||
-                missingRequired ||
-                creatableClasses.length === 0
-              }
-              loading={createMutation.isPending}
-              icon={<Plus className='size-4' />}
-            >
-              {t`Create`}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+        <UploadProgress progress={uploadProgress} className='px-6 pb-2' />
+        <SidePanelFooter>
+          <Button
+            type='submit'
+            disabled={
+              (parentRequired && !parent) ||
+              missingRequired ||
+              creatableClasses.length === 0
+            }
+            loading={createMutation.isPending}
+            icon={<Plus className='size-4' />}
+          >
+            {t`Create`}
+          </Button>
+        </SidePanelFooter>
+      </form>
+    </SidePanel>
   )
 }

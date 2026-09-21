@@ -9,7 +9,12 @@
 
 import { type FormEvent, type ReactNode } from 'react'
 import { GameChatInput } from './game-chat-input'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet'
+import {
+  SidePanel,
+  SidePanelFooter,
+  SidePanelHeader,
+  SidePanelTitle,
+} from '../ui/side-panel'
 import { cn } from '../../lib/utils'
 
 interface GameChatPanelBaseProps {
@@ -36,18 +41,18 @@ interface GameChatSheetProps extends GameChatPanelBaseProps {
   onOpenChange: (open: boolean) => void
 }
 
-function ChatPanelBody({
-  messageList,
+type ChatComposerProps = Omit<GameChatPanelBaseProps, 'title' | 'messageList'>
+
+function ChatComposer({
   newMessage,
   setNewMessage,
   onSendMessage,
   isSending,
   sendErrorMessage,
   footer,
-}: Omit<GameChatPanelBaseProps, 'title'>) {
+}: ChatComposerProps) {
   return (
     <>
-      {messageList}
       <GameChatInput
         newMessage={newMessage}
         setNewMessage={setNewMessage}
@@ -56,6 +61,18 @@ function ChatPanelBody({
         errorMessage={sendErrorMessage}
       />
       {footer}
+    </>
+  )
+}
+
+function ChatPanelBody({
+  messageList,
+  ...composer
+}: Omit<GameChatPanelBaseProps, 'title'>) {
+  return (
+    <>
+      {messageList}
+      <ChatComposer {...composer} />
     </>
   )
 }
@@ -81,20 +98,25 @@ export function GameChatSheet({
   title,
   open,
   onOpenChange,
-  ...body
+  messageList,
+  ...composer
 }: GameChatSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side='right'
-        className='flex flex-col p-0 w-80'
-        onOpenAutoFocus={(event) => event.preventDefault()}
-      >
-        <SheetHeader className='border-b px-3 py-2'>
-          <SheetTitle className='text-sm font-medium'>{title}</SheetTitle>
-        </SheetHeader>
-        <ChatPanelBody {...body} />
-      </SheetContent>
-    </Sheet>
+    <SidePanel
+      open={open}
+      onOpenChange={onOpenChange}
+      size='sm'
+      onOpenAutoFocus={(event) => event.preventDefault()}
+    >
+      <SidePanelHeader>
+        <SidePanelTitle>{title}</SidePanelTitle>
+      </SidePanelHeader>
+      {messageList}
+      {/* The composer is the footer. The input carries its own padding, so
+          the footer only adds the rule above it. */}
+      <SidePanelFooter className='gap-0 p-0 pt-2'>
+        <ChatComposer {...composer} />
+      </SidePanelFooter>
+    </SidePanel>
   )
 }

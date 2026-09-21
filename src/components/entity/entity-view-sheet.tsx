@@ -5,12 +5,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetFooter,
-} from '../ui/sheet'
+  SidePanel,
+  SidePanelBody,
+  SidePanelFooter,
+  SidePanelHeader,
+  SidePanelTitle,
+} from '../ui/side-panel'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
@@ -30,16 +30,8 @@ import {
 } from '../ui/select'
 import { SortDirectionButton } from '../ui/sort-direction-button'
 import { Switch } from '../ui/switch'
-import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { naturalCompare } from '../../lib/utils'
-import {
-  Check,
-  GripVertical,
-  Minus,
-  MoreHorizontal,
-  Plus,
-  X,
-} from 'lucide-react'
+import { Check, GripVertical, Minus, MoreHorizontal, Plus } from 'lucide-react'
 import type {
   EntityClass,
   EntityField,
@@ -286,176 +278,193 @@ export function ViewSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className='w-full sm:max-w-md p-0 flex flex-col [&>button:last-child]:hidden'
-        onOpenAutoFocus={(event) => event.preventDefault()}
-      >
-        <div className='flex items-center justify-between px-6 py-4 border-b'>
-          <SheetTitle>
-            {mode === 'create' ? (
-              <Trans>Add view</Trans>
-            ) : (
-              <Trans>Edit view</Trans>
-            )}
-          </SheetTitle>
-          <SheetDescription className='sr-only'>
-            <Trans>Configure view settings</Trans>
-          </SheetDescription>
-          <div className='flex items-center gap-1'>
-            <Tooltip>
-              <TooltipTrigger asChild>
+    <SidePanel
+      open={open}
+      onOpenChange={onOpenChange}
+      description={t`Configure view settings`}
+      onOpenAutoFocus={(event) => event.preventDefault()}
+    >
+      <SidePanelHeader
+        actions={
+          mode === 'edit' && onDelete ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant='ghost'
                   size='icon'
                   className='size-8'
-                  onClick={() => onOpenChange(false)}
-                  aria-label={t`Close dialog`}
+                  aria-label={t`Open view actions`}
                 >
-                  <X className='size-4' />
+                  <MoreHorizontal className='size-4' />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t`Close dialog`}</TooltipContent>
-            </Tooltip>
-            {mode === 'edit' && onDelete && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='size-8'
-                    aria-label={t`Open view actions`}
-                  >
-                    <MoreHorizontal className='size-4' />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align='end'
-                  onCloseAutoFocus={(e) => e.preventDefault()}
-                >
-                  <DropdownMenuItem onSelect={onDelete}>
-                    <Minus className='size-4' />
-                    <Trans>Delete view</Trans>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align='end'
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
+                <DropdownMenuItem onSelect={onDelete}>
+                  <Minus className='size-4' />
+                  <Trans>Delete view</Trans>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : undefined
+        }
+      >
+        <SidePanelTitle>
+          {mode === 'create' ? (
+            <Trans>Add view</Trans>
+          ) : (
+            <Trans>Edit view</Trans>
+          )}
+        </SidePanelTitle>
+      </SidePanelHeader>
+      <SidePanelBody className='space-y-4'>
+        <div className='space-y-2'>
+          <Label htmlFor='view-name'>
+            <Trans>Name</Trans>
+          </Label>
+          <div className='ps-4'>
+            <Input
+              id='view-name'
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={mode === 'edit' ? handleNameBlur : undefined}
+              autoFocus={mode === 'create'}
+            />
           </div>
         </div>
-        <div className='flex-1 overflow-y-auto p-6 space-y-4'>
-          <div className='space-y-2'>
-            <Label htmlFor='view-name'>
-              <Trans>Name</Trans>
-            </Label>
-            <div className='ps-4'>
-              <Input
-                id='view-name'
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={mode === 'edit' ? handleNameBlur : undefined}
-                autoFocus={mode === 'create'}
-              />
-            </div>
-          </div>
 
+        <div className='space-y-2'>
+          <Label>
+            <Trans>Layout</Trans>
+          </Label>
+          <div className='ps-4'>
+            <RadioGroup value={viewtype} onValueChange={handleViewtypeChange}>
+              <div className='flex items-center gap-2'>
+                <RadioGroupItem value='board' id='vt-board' />
+                <Label
+                  htmlFor='vt-board'
+                  className='font-normal cursor-pointer'
+                >
+                  <Trans>Board</Trans>
+                </Label>
+              </div>
+              <div className='flex items-center gap-2'>
+                <RadioGroupItem value='list' id='vt-list' />
+                <Label htmlFor='vt-list' className='font-normal cursor-pointer'>
+                  <Trans>List</Trans>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </div>
+
+        {classes.length > 1 && (
           <div className='space-y-2'>
             <Label>
-              <Trans>Layout</Trans>
+              <Trans>Show classes</Trans>
             </Label>
-            <div className='ps-4'>
-              <RadioGroup value={viewtype} onValueChange={handleViewtypeChange}>
-                <div className='flex items-center gap-2'>
-                  <RadioGroupItem value='board' id='vt-board' />
-                  <Label
-                    htmlFor='vt-board'
-                    className='font-normal cursor-pointer'
-                  >
-                    <Trans>Board</Trans>
-                  </Label>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <RadioGroupItem value='list' id='vt-list' />
-                  <Label
-                    htmlFor='vt-list'
-                    className='font-normal cursor-pointer'
-                  >
-                    <Trans>List</Trans>
-                  </Label>
-                </div>
-              </RadioGroup>
+            <div className='ps-4 space-y-1'>
+              {classes.map((cls) => (
+                <label
+                  key={cls.id}
+                  className='flex items-center gap-2 text-sm cursor-pointer'
+                >
+                  <Switch
+                    checked={selectedClasses.includes(cls.id)}
+                    onCheckedChange={() => toggleClass(cls.id)}
+                  />
+                  {cls.name}
+                </label>
+              ))}
             </div>
           </div>
+        )}
 
-          {classes.length > 1 && (
+        {(viewtype === 'board' || viewtype === 'list') &&
+          enumeratedFields.length > 0 && (
             <div className='space-y-2'>
               <Label>
-                <Trans>Show classes</Trans>
+                {viewtype === 'list' ? (
+                  <Trans>Group by</Trans>
+                ) : (
+                  <Trans>Columns group by</Trans>
+                )}
               </Label>
-              <div className='ps-4 space-y-1'>
-                {classes.map((cls) => (
-                  <label
-                    key={cls.id}
-                    className='flex items-center gap-2 text-sm cursor-pointer'
-                  >
-                    <Switch
-                      checked={selectedClasses.includes(cls.id)}
-                      onCheckedChange={() => toggleClass(cls.id)}
-                    />
-                    {cls.name}
-                  </label>
-                ))}
+              <div className='ps-4'>
+                <Select
+                  value={columns || NONE_SELECT_VALUE}
+                  onValueChange={(value) =>
+                    handleColumnsChange(
+                      value === NONE_SELECT_VALUE ? '' : value
+                    )
+                  }
+                >
+                  <SelectTrigger className='w-full'>
+                    <SelectValue placeholder={t`Select a field`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_SELECT_VALUE}>
+                      <Trans>None</Trans>
+                    </SelectItem>
+                    {enumeratedFields.map((field) => (
+                      <SelectItem key={field.id} value={field.id}>
+                        {field.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
 
-          {(viewtype === 'board' || viewtype === 'list') &&
-            enumeratedFields.length > 0 && (
-              <div className='space-y-2'>
-                <Label>
-                  {viewtype === 'list' ? (
-                    <Trans>Group by</Trans>
-                  ) : (
-                    <Trans>Columns group by</Trans>
-                  )}
-                </Label>
-                <div className='ps-4'>
-                  <Select
-                    value={columns || NONE_SELECT_VALUE}
-                    onValueChange={(value) =>
-                      handleColumnsChange(
-                        value === NONE_SELECT_VALUE ? '' : value
-                      )
-                    }
-                  >
-                    <SelectTrigger className='w-full'>
-                      <SelectValue placeholder={t`Select a field`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE_SELECT_VALUE}>
-                        <Trans>None</Trans>
-                      </SelectItem>
-                      {enumeratedFields.map((field) => (
-                        <SelectItem key={field.id} value={field.id}>
-                          {field.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
+        {viewtype === 'board' && enumeratedFields.length > 0 && (
+          <div className='space-y-2'>
+            <Label>
+              <Trans>Rows group by</Trans>
+            </Label>
+            <div className='ps-4'>
+              <Select
+                value={rows || NONE_SELECT_VALUE}
+                onValueChange={(value) =>
+                  handleRowsChange(value === NONE_SELECT_VALUE ? '' : value)
+                }
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder={t`None`} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_SELECT_VALUE}>
+                    <Trans>None</Trans>
+                  </SelectItem>
+                  {enumeratedFields.map((field) => (
+                    <SelectItem key={field.id} value={field.id}>
+                      {field.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
 
-          {viewtype === 'board' && enumeratedFields.length > 0 && (
+        {(viewtype === 'board' || viewtype === 'list') &&
+          enumeratedFields.length > 0 && (
             <div className='space-y-2'>
               <Label>
-                <Trans>Rows group by</Trans>
+                <Trans>Border colour</Trans>
               </Label>
               <div className='ps-4'>
                 <Select
-                  value={rows || NONE_SELECT_VALUE}
-                  onValueChange={(value) =>
-                    handleRowsChange(value === NONE_SELECT_VALUE ? '' : value)
-                  }
+                  value={border || NONE_SELECT_VALUE}
+                  onValueChange={(value) => {
+                    const nextValue = value === NONE_SELECT_VALUE ? '' : value
+                    setBorder(nextValue)
+                    if (mode === 'edit' && onUpdate) {
+                      onUpdate({ border: nextValue })
+                    }
+                  }}
                 >
                   <SelectTrigger className='w-full'>
                     <SelectValue placeholder={t`None`} />
@@ -475,157 +484,119 @@ export function ViewSheet({
             </div>
           )}
 
-          {(viewtype === 'board' || viewtype === 'list') &&
-            enumeratedFields.length > 0 && (
-              <div className='space-y-2'>
-                <Label>
-                  <Trans>Border colour</Trans>
-                </Label>
-                <div className='ps-4'>
-                  <Select
-                    value={border || NONE_SELECT_VALUE}
-                    onValueChange={(value) => {
-                      const nextValue = value === NONE_SELECT_VALUE ? '' : value
-                      setBorder(nextValue)
-                      if (mode === 'edit' && onUpdate) {
-                        onUpdate({ border: nextValue })
-                      }
-                    }}
+        <div className='space-y-2'>
+          <Label>
+            <Trans>Show fields</Trans>
+          </Label>
+          <div className='ps-4 space-y-1'>
+            {selectedFields
+              .map((id) => fields.find((f) => f.id === id))
+              .filter(Boolean)
+              .map((field) => (
+                <div key={field!.id}>
+                  {viewFieldDropIndicator?.fieldId === field!.id &&
+                    viewFieldDropIndicator.position === 'before' && (
+                      <div className='h-0.5 bg-primary mx-3 rounded-full' />
+                    )}
+                  <div
+                    draggable
+                    onDragStart={(e) => handleViewFieldDragStart(e, field!.id)}
+                    onDragEnd={handleViewFieldDragEnd}
+                    onDragOver={(e) => handleViewFieldDragOver(e, field!.id)}
+                    onDragLeave={() => setViewFieldDropIndicator(null)}
+                    onDrop={(e) => handleViewFieldDrop(e, field!.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-hover transition-colors cursor-grab ${
+                      draggedViewFieldId === field!.id ? 'opacity-50' : ''
+                    }`}
                   >
-                    <SelectTrigger className='w-full'>
-                      <SelectValue placeholder={t`None`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE_SELECT_VALUE}>
-                        <Trans>None</Trans>
-                      </SelectItem>
-                      {enumeratedFields.map((field) => (
-                        <SelectItem key={field.id} value={field.id}>
-                          {field.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-          <div className='space-y-2'>
-            <Label>
-              <Trans>Show fields</Trans>
-            </Label>
-            <div className='ps-4 space-y-1'>
-              {selectedFields
-                .map((id) => fields.find((f) => f.id === id))
-                .filter(Boolean)
-                .map((field) => (
-                  <div key={field!.id}>
-                    {viewFieldDropIndicator?.fieldId === field!.id &&
-                      viewFieldDropIndicator.position === 'before' && (
-                        <div className='h-0.5 bg-primary mx-3 rounded-full' />
-                      )}
-                    <div
-                      draggable
-                      onDragStart={(e) =>
-                        handleViewFieldDragStart(e, field!.id)
-                      }
-                      onDragEnd={handleViewFieldDragEnd}
-                      onDragOver={(e) => handleViewFieldDragOver(e, field!.id)}
-                      onDragLeave={() => setViewFieldDropIndicator(null)}
-                      onDrop={(e) => handleViewFieldDrop(e, field!.id)}
-                      className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-hover transition-colors cursor-grab ${
-                        draggedViewFieldId === field!.id ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <GripVertical className='size-4 text-muted-foreground shrink-0' />
-                      <Switch
-                        checked
-                        onCheckedChange={() => toggleViewField(field!.id)}
-                      />
-                      {field!.name}
-                    </div>
-                    {viewFieldDropIndicator?.fieldId === field!.id &&
-                      viewFieldDropIndicator.position === 'after' && (
-                        <div className='h-0.5 bg-primary mx-3 rounded-full' />
-                      )}
-                  </div>
-                ))}
-              {fields
-                .filter((f) => !selectedFields.includes(f.id))
-                .map((field) => (
-                  <label
-                    key={field.id}
-                    className='flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer'
-                  >
+                    <GripVertical className='size-4 text-muted-foreground shrink-0' />
                     <Switch
-                      checked={false}
-                      onCheckedChange={() => toggleViewField(field.id)}
+                      checked
+                      onCheckedChange={() => toggleViewField(field!.id)}
                     />
-                    {field.name}
-                  </label>
-                ))}
-            </div>
-          </div>
-
-          <div className='space-y-2'>
-            <Label>
-              <Trans>Default sort</Trans>
-            </Label>
-            <div className='ps-4 flex gap-2'>
-              <Select
-                value={sort || NONE_SELECT_VALUE}
-                onValueChange={(value) =>
-                  handleSortChange(value === NONE_SELECT_VALUE ? '' : value)
-                }
-              >
-                <SelectTrigger className='flex-1'>
-                  <SelectValue placeholder={t`None`} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_SELECT_VALUE}>
-                    <Trans>None</Trans>
-                  </SelectItem>
-                  <SelectItem value='created'>
-                    <Trans>Created</Trans>
-                  </SelectItem>
-                  {(numbered || sort === 'number') && (
-                    <SelectItem value='number'>
-                      <Trans>Number</Trans>
-                    </SelectItem>
-                  )}
-                  <SelectItem value='updated'>
-                    <Trans>Updated</Trans>
-                  </SelectItem>
-                  {[...fields]
-                    .sort((a, b) => naturalCompare(a.name, b.name))
-                    .map((field) => (
-                      <SelectItem key={field.id} value={field.id}>
-                        {field.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <SortDirectionButton
-                direction={direction}
-                onToggle={handleDirectionToggle}
-              />
-            </div>
+                    {field!.name}
+                  </div>
+                  {viewFieldDropIndicator?.fieldId === field!.id &&
+                    viewFieldDropIndicator.position === 'after' && (
+                      <div className='h-0.5 bg-primary mx-3 rounded-full' />
+                    )}
+                </div>
+              ))}
+            {fields
+              .filter((f) => !selectedFields.includes(f.id))
+              .map((field) => (
+                <label
+                  key={field.id}
+                  className='flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer'
+                >
+                  <Switch
+                    checked={false}
+                    onCheckedChange={() => toggleViewField(field.id)}
+                  />
+                  {field.name}
+                </label>
+              ))}
           </div>
         </div>
-        <SheetFooter className='px-6 py-4 border-t'>
-          {mode === 'create' ? (
-            <Button type='button' onClick={handleCreate} disabled={!canSubmit}>
-              <Plus className='size-4' />
-              <Trans>Add view</Trans>
-            </Button>
-          ) : (
-            <Button type='button' onClick={() => onOpenChange(false)}>
-              <Check className='size-4' />
-              <Trans>Done</Trans>
-            </Button>
-          )}
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+
+        <div className='space-y-2'>
+          <Label>
+            <Trans>Default sort</Trans>
+          </Label>
+          <div className='ps-4 flex gap-2'>
+            <Select
+              value={sort || NONE_SELECT_VALUE}
+              onValueChange={(value) =>
+                handleSortChange(value === NONE_SELECT_VALUE ? '' : value)
+              }
+            >
+              <SelectTrigger className='flex-1'>
+                <SelectValue placeholder={t`None`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_SELECT_VALUE}>
+                  <Trans>None</Trans>
+                </SelectItem>
+                <SelectItem value='created'>
+                  <Trans>Created</Trans>
+                </SelectItem>
+                {(numbered || sort === 'number') && (
+                  <SelectItem value='number'>
+                    <Trans>Number</Trans>
+                  </SelectItem>
+                )}
+                <SelectItem value='updated'>
+                  <Trans>Updated</Trans>
+                </SelectItem>
+                {[...fields]
+                  .sort((a, b) => naturalCompare(a.name, b.name))
+                  .map((field) => (
+                    <SelectItem key={field.id} value={field.id}>
+                      {field.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <SortDirectionButton
+              direction={direction}
+              onToggle={handleDirectionToggle}
+            />
+          </div>
+        </div>
+      </SidePanelBody>
+      <SidePanelFooter>
+        {mode === 'create' ? (
+          <Button type='button' onClick={handleCreate} disabled={!canSubmit}>
+            <Plus className='size-4' />
+            <Trans>Add view</Trans>
+          </Button>
+        ) : (
+          <Button type='button' onClick={() => onOpenChange(false)}>
+            <Check className='size-4' />
+            <Trans>Done</Trans>
+          </Button>
+        )}
+      </SidePanelFooter>
+    </SidePanel>
   )
 }

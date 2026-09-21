@@ -24,13 +24,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { ConfirmDialog } from '../confirm-dialog'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../ui/sheet'
+import { SidePanel, SidePanelBody, SidePanelHeader } from '../ui/side-panel'
 import {
   Select,
   SelectContent,
@@ -406,42 +400,34 @@ export function EntityObjectDetailPanel<
 
   if (isLoading) {
     return (
-      <Sheet open={true} onOpenChange={handleClose}>
-        <SheetContent
-          className='w-full sm:max-w-2xl p-0 gap-0'
-          onInteractOutside={() => {}}
-        >
-          <SheetHeader className='sr-only'>
-            <SheetTitle>
-              <Trans>Loading item</Trans>
-            </SheetTitle>
-            <SheetDescription>
-              <Trans>Loading item details</Trans>
-            </SheetDescription>
-          </SheetHeader>
-          <div className='p-6'>
-            <ListSkeleton variant='simple' height='h-12' count={3} />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SidePanel
+        open={true}
+        onOpenChange={handleClose}
+        size='xl'
+        label={<Trans>Loading item</Trans>}
+        description={<Trans>Loading item details</Trans>}
+        dismissOnOutsideClick
+      >
+        <SidePanelHeader />
+        <SidePanelBody>
+          <ListSkeleton variant='simple' height='h-12' count={3} />
+        </SidePanelBody>
+      </SidePanel>
     )
   }
 
   if (error || !data) {
     return (
-      <Sheet open={true} onOpenChange={handleClose}>
-        <SheetContent
-          className='w-full sm:max-w-2xl p-6'
-          onInteractOutside={() => {}}
-        >
-          <SheetHeader className='sr-only'>
-            <SheetTitle>
-              <Trans>Error</Trans>
-            </SheetTitle>
-            <SheetDescription>
-              <Trans>Failed to load item</Trans>
-            </SheetDescription>
-          </SheetHeader>
+      <SidePanel
+        open={true}
+        onOpenChange={handleClose}
+        size='xl'
+        label={<Trans>Error</Trans>}
+        description={<Trans>Failed to load item</Trans>}
+        dismissOnOutsideClick
+      >
+        <SidePanelHeader />
+        <SidePanelBody>
           <GeneralError
             error={error ?? new Error(t`Failed to load item`)}
             minimal
@@ -450,8 +436,8 @@ export function EntityObjectDetailPanel<
               void refetch()
             }}
           />
-        </SheetContent>
-      </Sheet>
+        </SidePanelBody>
+      </SidePanel>
     )
   }
 
@@ -506,41 +492,19 @@ export function EntityObjectDetailPanel<
     `${getAppPath()}/${containerId}/-/user/${person.id}/asset/${asset}`
 
   return (
-    <Sheet open={true} onOpenChange={handleClose}>
-      <SheetContent
-        className='w-full sm:max-w-3xl p-0 gap-0 [&>button:last-child]:hidden'
-        onInteractOutside={() => {}}
-        onOpenAutoFocus={(event) => event.preventDefault()}
-      >
-        <SheetHeader className='sr-only'>
-          <SheetTitle>
-            <Trans>Item details</Trans>
-          </SheetTitle>
-          <SheetDescription>
-            <Trans>View and edit item details</Trans>
-          </SheetDescription>
-        </SheetHeader>
-        {/* Header. The readable id shows only in apps that issue one. */}
-        <div className='flex items-center gap-3 px-6 py-4 border-b shrink-0'>
-          <div className='flex flex-col md:flex-row md:items-baseline gap-0.5 md:gap-2 flex-1 min-w-0'>
-            <h2 className='text-xl font-bold leading-tight line-clamp-2 md:truncate min-w-0'>
-              {title}
-            </h2>
-            {object.readable && (
-              <>
-                <span className='hidden md:block shrink-0 text-muted-foreground'>
-                  ·
-                </span>
-                <span
-                  data-testid='entity-readable'
-                  className='text-xs md:text-sm text-muted-foreground shrink-0 whitespace-nowrap'
-                >
-                  {object.readable}
-                </span>
-              </>
-            )}
-          </div>
-          <div className='flex items-center gap-1 shrink-0'>
+    <SidePanel
+      open={true}
+      onOpenChange={handleClose}
+      size='xl'
+      label={<Trans>Item details</Trans>}
+      description={<Trans>View and edit item details</Trans>}
+      dismissOnOutsideClick
+      onOpenAutoFocus={(event) => event.preventDefault()}
+    >
+      {/* Header. The readable id shows only in apps that issue one. */}
+      <SidePanelHeader
+        actions={
+          <>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -579,63 +543,139 @@ export function EntityObjectDetailPanel<
                 <TooltipContent>{t`Delete item`}</TooltipContent>
               </Tooltip>
             )}
-            <Button
-              variant='outline'
-              size='sm'
-              className='h-8'
-              onClick={handleClose}
-            >
-              <Trans>Done</Trans>
-            </Button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className='border-b shrink-0'>
-          <div className='flex gap-1 px-6 overflow-x-auto no-scrollbar'>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'relative flex shrink-0 items-center gap-2 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                  activeTab === tab.id
-                    ? 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab content — deferred until the open slide settles so cold queries
-            don't reflow the animating panel (first-open jank). */}
-        <div className='flex-1 overflow-y-auto p-6'>
-          {!slideSettled ? (
-            <div className='max-w-2xl space-y-6'>
-              <ListSkeleton variant='simple' height='h-12' count={4} />
-            </div>
-          ) : (
+          </>
+        }
+      >
+        <div className='flex min-w-0 flex-1 flex-col gap-0.5 md:flex-row md:items-baseline md:gap-2'>
+          <h2 className='min-w-0 line-clamp-2 text-lg leading-tight font-semibold md:truncate'>
+            {title}
+          </h2>
+          {object.readable && (
             <>
-              <div
-                className='max-w-2xl space-y-6'
-                hidden={activeTab !== 'properties'}
+              <span className='text-muted-foreground hidden shrink-0 md:block'>
+                ·
+              </span>
+              <span
+                data-testid='entity-readable'
+                className='text-muted-foreground shrink-0 text-xs whitespace-nowrap md:text-sm'
               >
-                {titleField && (
-                  <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                {object.readable}
+              </span>
+            </>
+          )}
+        </div>
+      </SidePanelHeader>
+
+      {/* Tabs */}
+      <div className='border-b shrink-0'>
+        <div className='flex gap-1 px-6 overflow-x-auto no-scrollbar'>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'relative flex shrink-0 items-center gap-2 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                activeTab === tab.id
+                  ? 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content — deferred until the open slide settles so cold queries
+            don't reflow the animating panel (first-open jank). */}
+      <SidePanelBody>
+        {!slideSettled ? (
+          <div className='max-w-2xl space-y-6'>
+            <ListSkeleton variant='simple' height='h-12' count={4} />
+          </div>
+        ) : (
+          <>
+            <div
+              className='max-w-2xl space-y-6'
+              hidden={activeTab !== 'properties'}
+            >
+              {titleField && (
+                <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                  <label className='text-sm font-medium text-muted-foreground pt-2'>
+                    {titleField.name}
+                  </label>
+                  <EntityFieldEditor
+                    field={titleField}
+                    value={data.values[titleField.id] || ''}
+                    options={classOptions[titleField.id] || []}
+                    onChange={(value) =>
+                      handleFieldChange(titleField.id, value)
+                    }
+                    readOnly={!canWrite(access)}
+                    hideLabel
+                    localPeople={peopleData}
+                    searchUsers={searchUsers}
+                    personAsset={personAsset}
+                  />
+                </div>
+              )}
+
+              {(validParentOptions.length > 0 || currentParent) && (
+                <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                  <label className='text-sm font-medium text-muted-foreground pt-2'>
+                    <Trans>Parent</Trans>
+                  </label>
+                  {!canWrite(access) ? (
+                    <span className='text-sm h-9 flex items-center'>
+                      {currentParent ? objectTitle(currentParent) : t`None`}
+                    </span>
+                  ) : (
+                    <Select
+                      value={object.parent || '_none_'}
+                      onValueChange={(value) => {
+                        const newParent = value === '_none_' ? '' : value
+                        if (textUnchanged(newParent, object.parent ?? ''))
+                          return
+                        updateParentMutation.mutate(newParent)
+                      }}
+                      disabled={updateParentMutation.isPending}
+                    >
+                      <SelectTrigger className='w-full' aria-label={t`Parent`}>
+                        <SelectValue placeholder={t`None`}>
+                          {currentParent ? objectTitle(currentParent) : t`None`}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='_none_'>
+                          <Trans>None</Trans>
+                        </SelectItem>
+                        {validParentOptions.map((obj) => (
+                          <SelectItem key={obj.id} value={obj.id}>
+                            {objectTitle(obj)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+
+              {classFields
+                .filter((f) => f.id !== cls?.title)
+                .map((field) => (
+                  <div
+                    key={field.id}
+                    className='grid grid-cols-[120px_1fr] gap-4 items-start'
+                  >
                     <label className='text-sm font-medium text-muted-foreground pt-2'>
-                      {titleField.name}
+                      {field.name}
                     </label>
                     <EntityFieldEditor
-                      field={titleField}
-                      value={data.values[titleField.id] || ''}
-                      options={classOptions[titleField.id] || []}
-                      onChange={(value) =>
-                        handleFieldChange(titleField.id, value)
-                      }
+                      field={field}
+                      value={data.values[field.id] || ''}
+                      options={classOptions[field.id] || []}
+                      onChange={(value) => handleFieldChange(field.id, value)}
                       readOnly={!canWrite(access)}
                       hideLabel
                       localPeople={peopleData}
@@ -643,144 +683,74 @@ export function EntityObjectDetailPanel<
                       personAsset={personAsset}
                     />
                   </div>
-                )}
+                ))}
 
-                {(validParentOptions.length > 0 || currentParent) && (
-                  <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
-                    <label className='text-sm font-medium text-muted-foreground pt-2'>
-                      <Trans>Parent</Trans>
-                    </label>
-                    {!canWrite(access) ? (
-                      <span className='text-sm h-9 flex items-center'>
-                        {currentParent ? objectTitle(currentParent) : t`None`}
-                      </span>
-                    ) : (
-                      <Select
-                        value={object.parent || '_none_'}
-                        onValueChange={(value) => {
-                          const newParent = value === '_none_' ? '' : value
-                          if (textUnchanged(newParent, object.parent ?? ''))
-                            return
-                          updateParentMutation.mutate(newParent)
-                        }}
-                        disabled={updateParentMutation.isPending}
-                      >
-                        <SelectTrigger
-                          className='w-full'
-                          aria-label={t`Parent`}
-                        >
-                          <SelectValue placeholder={t`None`}>
-                            {currentParent
-                              ? objectTitle(currentParent)
-                              : t`None`}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='_none_'>
-                            <Trans>None</Trans>
-                          </SelectItem>
-                          {validParentOptions.map((obj) => (
-                            <SelectItem key={obj.id} value={obj.id}>
-                              {objectTitle(obj)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                )}
+              <EntityObjectAttachments
+                containerId={containerId}
+                objectId={objectId}
+                readOnly={!canWrite(access)}
+                listAttachments={api.listAttachments}
+                uploadAttachments={api.uploadAttachments}
+                deleteAttachment={api.deleteAttachment}
+              />
 
-                {classFields
-                  .filter((f) => f.id !== cls?.title)
-                  .map((field) => (
-                    <div
-                      key={field.id}
-                      className='grid grid-cols-[120px_1fr] gap-4 items-start'
-                    >
-                      <label className='text-sm font-medium text-muted-foreground pt-2'>
-                        {field.name}
-                      </label>
-                      <EntityFieldEditor
-                        field={field}
-                        value={data.values[field.id] || ''}
-                        options={classOptions[field.id] || []}
-                        onChange={(value) => handleFieldChange(field.id, value)}
-                        readOnly={!canWrite(access)}
-                        hideLabel
-                        localPeople={peopleData}
-                        searchUsers={searchUsers}
-                        personAsset={personAsset}
-                      />
-                    </div>
-                  ))}
+              <EntityObjectLinks
+                containerId={containerId}
+                objectId={objectId}
+                outgoing={data.outgoing}
+                incoming={data.incoming}
+                prefix={prefix}
+                classes={design.classes}
+                readOnly={!canWrite(access)}
+                listObjects={api.listObjects}
+                createLink={api.createLink}
+                deleteLink={api.deleteLink}
+              />
+            </div>
 
-                <EntityObjectAttachments
-                  containerId={containerId}
-                  objectId={objectId}
-                  readOnly={!canWrite(access)}
-                  listAttachments={api.listAttachments}
-                  uploadAttachments={api.uploadAttachments}
-                  deleteAttachment={api.deleteAttachment}
-                />
+            {activeExtraTab && (
+              <div className='max-w-2xl'>{activeExtraTab.content}</div>
+            )}
 
-                <EntityObjectLinks
-                  containerId={containerId}
-                  objectId={objectId}
-                  outgoing={data.outgoing}
-                  incoming={data.incoming}
-                  prefix={prefix}
-                  classes={design.classes}
-                  readOnly={!canWrite(access)}
-                  listObjects={api.listObjects}
-                  createLink={api.createLink}
-                  deleteLink={api.deleteLink}
-                />
-              </div>
-
-              {activeExtraTab && (
-                <div className='max-w-2xl'>{activeExtraTab.content}</div>
-              )}
-
-              {/* Comments stay mounted so the draft survives tab switches —
+            {/* Comments stay mounted so the draft survives tab switches —
                   same pattern as the properties tab. */}
-              <div className='max-w-2xl' hidden={activeTab !== 'comments'}>
-                <EntityCommentList
+            <div className='max-w-2xl' hidden={activeTab !== 'comments'}>
+              <EntityCommentList
+                containerId={containerId}
+                objectId={objectId}
+                readOnly={!canComment(access)}
+                listComments={api.listComments}
+                listPeople={api.listPeople}
+                createComment={api.createComment}
+                updateComment={api.updateComment}
+                deleteComment={api.deleteComment}
+              />
+            </div>
+
+            {activeTab === 'activity' && (
+              <div className='max-w-2xl'>
+                <EntityActivityList
                   containerId={containerId}
                   objectId={objectId}
-                  readOnly={!canComment(access)}
-                  listComments={api.listComments}
-                  listPeople={api.listPeople}
-                  createComment={api.createComment}
-                  updateComment={api.updateComment}
-                  deleteComment={api.deleteComment}
+                  fields={classFields}
+                  listActivity={api.listActivity}
                 />
               </div>
+            )}
+          </>
+        )}
+      </SidePanelBody>
 
-              {activeTab === 'activity' && (
-                <div className='max-w-2xl'>
-                  <EntityActivityList
-                    containerId={containerId}
-                    objectId={objectId}
-                    fields={classFields}
-                    listActivity={api.listActivity}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <ConfirmDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          title={t`Delete item`}
-          desc={t`Are you sure you want to delete "${title}"? This action cannot be undone.`}
-          confirmText={t`Delete`}
-          destructive
-          isLoading={deleteMutation.isPending}
-          handleConfirm={() => deleteMutation.mutate()}
-        />
-      </SheetContent>
-    </Sheet>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title={t`Delete item`}
+        desc={t`Are you sure you want to delete "${title}"? This action cannot be undone.`}
+        confirmText={t`Delete`}
+        destructive
+        isLoading={deleteMutation.isPending}
+        handleConfirm={() => deleteMutation.mutate()}
+      />
+    </SidePanel>
   )
 }
