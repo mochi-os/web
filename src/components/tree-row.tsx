@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef, type DragEvent } from 'react'
+import { useRef, type CSSProperties, type DragEvent } from 'react'
 import {
   Calendar,
   CheckSquare,
@@ -112,8 +112,10 @@ function withTruncationTooltip(
   )
 }
 
+// Widths mirror tree-table-width.ts and tree-table-header.tsx; change them
+// together.
 function columnWidthClass(field: TreeRowField, isTitle: boolean): string {
-  if (isTitle) return 'min-w-[12rem] w-full max-w-0'
+  if (isTitle) return 'min-w-[15rem] w-full max-w-0'
   switch (field.fieldtype) {
     case 'user':
       return 'w-40 shrink-0'
@@ -303,6 +305,33 @@ export function TreeRow({
   const indentStyle =
     indentPx > 0 ? { paddingInlineStart: indentPx } : undefined
 
+  // The handle and first content cells stay put while the rest of the row
+  // scrolls beneath them (see TreeTableHeader), so they need an opaque fill.
+  // The row's selected and drop colours are translucent, so they are pre-mixed
+  // with the page here.
+  //
+  // Layering, lowest first: first content cell z-[1]; handle z-[2], since the
+  // grip and expand button are wider than the w-10 handle and spill into the
+  // first content cell's start padding, which would otherwise paint over half
+  // the button; ring overlay and drop lines z-[3]; the header at z-10 above all
+  // of it as rows scroll up.
+  const pinnedFill = cn(
+    'sticky transition-colors',
+    isDragOver
+      ? 'bg-[color-mix(in_srgb,var(--color-primary)_20%,var(--color-background))]'
+      : isSelected
+        ? 'bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-background))]'
+        : 'bg-background group-hover:bg-hover'
+  )
+  const pinnedHandle = cn(pinnedFill, 'start-0 z-[2]')
+  // The divider is drawn by the cell, not as a border: in a collapsed-border
+  // table the table paints the borders, so a border-e stays where the column
+  // started and scrolls away while the cell itself stays pinned.
+  const pinnedFirst = cn(
+    pinnedFill,
+    'start-10 z-[1] after:absolute after:inset-y-0 after:end-0 after:w-px after:bg-border'
+  )
+
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
@@ -331,12 +360,15 @@ export function TreeRow({
       data-card-id={object.id}
       className={cn(
         'hover:bg-hover transition-colors cursor-pointer text-sm group relative border-b border-border/60',
+        // The ring is drawn on an overlay rather than the row itself: a row's
+        // own shadow paints under its cells, so the opaque pinned cells would
+        // hide it along their stretch of the row.
+        (isSelected || isDragOver) &&
+          'after:pointer-events-none after:absolute after:inset-0 after:z-[3] after:ring-inset',
         isSelected &&
-          'bg-primary/10 hover:bg-primary/10 ring-1 ring-inset ring-primary/20',
-        isDragOver && 'bg-primary/20 ring-2 ring-inset ring-primary/50',
-        borderColor && 'border-s-[3px]'
+          'bg-primary/10 hover:bg-primary/10 after:ring-1 after:ring-primary/20',
+        isDragOver && 'bg-primary/20 after:ring-2 after:ring-primary/50'
       )}
-      style={borderColor ? { borderInlineStartColor: borderColor } : undefined}
       onClick={onClick}
       draggable={canDrag}
       onDragStart={(e) => {
@@ -351,7 +383,7 @@ export function TreeRow({
       {isDragBefore ? (
         <td
           colSpan={100}
-          className='absolute -top-px left-0 right-0 pointer-events-none'
+          className='absolute -top-px left-0 right-0 z-[3] pointer-events-none'
         >
           <div className='relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50'>
             <div className='absolute -start-1 -top-[3px] size-2 rounded-full bg-primary' />
@@ -359,9 +391,30 @@ export function TreeRow({
         </td>
       ) : null}
 
-      <td className='whitespace-nowrap py-2 ps-2 pe-2 w-10 min-w-10'>
+      {/* The colour bar is drawn by the pinned handle, not as a border-s on the
+          row: the table paints a collapsed row border in place, so it scrolled
+          away sideways and half its width showed past the pinned cell. */}
+      <td
+        className={cn(
+          'whitespace-nowrap py-2 ps-2 pe-2 w-10 min-w-10',
+          pinnedHandle,
+          borderColor &&
+            'before:absolute before:inset-y-0 before:start-0 before:w-[3px] before:bg-(--row-border)'
+        )}
+        style={
+          borderColor
+            ? ({ '--row-border': borderColor } as CSSProperties)
+            : undefined
+        }
+      >
         <div className='flex items-center gap-0.5'>
-          <div className='w-5 shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab'>
+          {/* Shown on hover, and always on a touch screen, which has none. */}
+          <div
+            className={cn(
+              'w-5 shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab',
+              canDrag && 'pointer-coarse:opacity-50'
+            )}
+          >
             <GripVertical className='size-3' />
           </div>
           {hasChildren ? (
@@ -394,7 +447,10 @@ export function TreeRow({
 
       {showClass ? (
         <td
-          className='whitespace-nowrap ps-1 pe-2 py-2 w-24 shrink-0'
+          className={cn(
+            'whitespace-nowrap ps-1 pe-2 py-2 w-24 shrink-0',
+            pinnedFirst
+          )}
           style={firstContentCol === 'class' ? indentStyle : undefined}
         >
           <span className='text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded'>
@@ -405,7 +461,10 @@ export function TreeRow({
 
       {hasId ? (
         <td
-          className='whitespace-nowrap ps-1 pe-2 py-2 text-xs text-muted-foreground font-mono w-20 shrink-0'
+          className={cn(
+            'whitespace-nowrap ps-1 pe-2 py-2 text-xs text-muted-foreground font-mono w-20 shrink-0',
+            firstContentCol === 'id' && pinnedFirst
+          )}
           style={firstContentCol === 'id' ? indentStyle : undefined}
         >
           {prefix}-{object.number}
@@ -421,7 +480,7 @@ export function TreeRow({
             className={cn(
               'px-2 py-2',
               columnWidthClass(field, isTitleField),
-              firstContentCol === field.id && 'ps-3'
+              firstContentCol === field.id && cn('ps-3', pinnedFirst)
             )}
             style={firstContentCol === field.id ? indentStyle : undefined}
           >
@@ -433,7 +492,7 @@ export function TreeRow({
       {isDragAfter ? (
         <td
           colSpan={100}
-          className='absolute -bottom-px left-0 right-0 pointer-events-none'
+          className='absolute -bottom-px left-0 right-0 z-[3] pointer-events-none'
         >
           <div className='relative h-0.5 bg-primary shadow-[0_0_4px_1px] shadow-primary/50'>
             <div className='absolute -start-1 -top-[3px] size-2 rounded-full bg-primary' />

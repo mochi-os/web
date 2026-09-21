@@ -157,148 +157,152 @@ export function FindEntityPage({
         </div>
       </Header>
       <Main>
-        <div className='mx-auto max-w-2xl space-y-6'>
-          <div className='relative'>
-            <Search className='text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2' />
-            <Input
-              placeholder={placeholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className='ps-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all'
-              autoFocus
-            />
-          </div>
-
-          {isLink && isResolving && (
-            <div className='flex items-center justify-center py-8'>
-              <Loader2 className='text-muted-foreground size-5 animate-spin' />
-            </div>
-          )}
-
-          {isLink && !isResolving && resolvedEntry && (
-            <EntityCard
-              entity={{
-                id: resolvedEntry.id,
-                name: resolvedEntry.name,
-                fingerprint: resolvedEntry.fingerprint,
-                blurb: resolvedEntry.blurb,
-              }}
-              icon={Icon}
-              iconClassName={iconClassName}
-              isPending={pendingEntityId === resolvedEntry.id}
-              onSubscribe={() => handleSubscribe(resolvedEntry)}
-              subscribeLabel={subscribeLabel}
-            />
-          )}
-
-          {isLink && !isResolving && !resolvedEntry && (
-            <div className='py-12 text-center'>
-              <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
-                <Icon className='text-muted-foreground size-8' />
-              </div>
-              <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
-            </div>
-          )}
-
-          {!isLink && isLoading && debouncedSearch && (
-            <div className='flex flex-col items-center justify-center py-12 gap-2'>
-              <Loader2 className='text-primary size-8 animate-spin' />
-              <p className='text-sm text-muted-foreground'>
-                <Trans>Searching...</Trans>
-              </p>
-            </div>
-          )}
-
-          {isError && (
-            <div className='py-12'>
-              <GeneralError
-                error={error}
-                minimal
-                mode='inline'
-                reset={refetch}
+        <div className='mx-auto max-w-2xl'>
+          <div className='sticky top-0 z-10 -mx-2 bg-background px-2 pb-4 pt-4 md:-mx-4 md:px-4'>
+            <div className='relative'>
+              <Search className='text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2' />
+              <Input
+                placeholder={placeholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className='ps-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all'
+                autoFocus
               />
             </div>
-          )}
+          </div>
 
-          {!isLink &&
-            !isLoading &&
-            !isError &&
-            debouncedSearch &&
-            filteredResults.length === 0 && (
+          <div className='space-y-6'>
+            {isLink && isResolving && (
+              <div className='flex items-center justify-center py-8'>
+                <Loader2 className='text-muted-foreground size-5 animate-spin' />
+              </div>
+            )}
+
+            {isLink && !isResolving && resolvedEntry && (
+              <EntityCard
+                entity={{
+                  id: resolvedEntry.id,
+                  name: resolvedEntry.name,
+                  fingerprint: resolvedEntry.fingerprint,
+                  blurb: resolvedEntry.blurb,
+                }}
+                icon={Icon}
+                iconClassName={iconClassName}
+                isPending={pendingEntityId === resolvedEntry.id}
+                onSubscribe={() => handleSubscribe(resolvedEntry)}
+                subscribeLabel={subscribeLabel}
+              />
+            )}
+
+            {isLink && !isResolving && !resolvedEntry && (
               <div className='py-12 text-center'>
                 <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
                   <Icon className='text-muted-foreground size-8' />
                 </div>
                 <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
-                <p className='text-muted-foreground text-xs mt-1'>
-                  <Trans>Try adjusting your search terms</Trans>
+              </div>
+            )}
+
+            {!isLink && isLoading && debouncedSearch && (
+              <div className='flex flex-col items-center justify-center py-12 gap-2'>
+                <Loader2 className='text-primary size-8 animate-spin' />
+                <p className='text-sm text-muted-foreground'>
+                  <Trans>Searching...</Trans>
                 </p>
               </div>
             )}
 
-          {!debouncedSearch && (
-            <div>
-              {isLoadingRecommendations ? (
-                <div className='flex items-center justify-center py-8'>
-                  <Loader2 className='text-muted-foreground size-5 animate-spin' />
-                </div>
-              ) : isRecommendationsError ? (
-                <div className='py-8'>
-                  <GeneralError
-                    error={recommendationsError}
-                    minimal
-                    mode='inline'
-                    reset={onRetryRecommendations}
-                  />
-                </div>
-              ) : filteredRecommendations.length === 0 ? (
-                <div className='flex flex-col items-center justify-center py-8 text-center text-muted-foreground'>
-                  <Search className='size-12 opacity-20 mb-3' />
-                </div>
-              ) : (
-                <div>
-                  <p className='text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide'>
-                    <Trans>Recommended</Trans>
-                  </p>
-                  <div className='space-y-1'>
-                    {filteredRecommendations.map((rec) => (
-                      <EntityCard
-                        key={rec.id}
-                        entity={rec}
-                        icon={Icon}
-                        iconClassName={iconClassName}
-                        isPending={pendingEntityId === rec.id}
-                        onSubscribe={() =>
-                          handleSubscribe({
-                            id: rec.id,
-                            name: rec.name,
-                            fingerprint: rec.fingerprint,
-                          })
-                        }
-                        subscribeLabel={subscribeLabel}
-                      />
-                    ))}
+            {isError && (
+              <div className='py-12'>
+                <GeneralError
+                  error={error}
+                  minimal
+                  mode='inline'
+                  reset={refetch}
+                />
+              </div>
+            )}
+
+            {!isLink &&
+              !isLoading &&
+              !isError &&
+              debouncedSearch &&
+              filteredResults.length === 0 && (
+                <div className='py-12 text-center'>
+                  <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
+                    <Icon className='text-muted-foreground size-8' />
                   </div>
+                  <h3 className='font-semibold text-sm'>{emptyMessage}</h3>
+                  <p className='text-muted-foreground text-xs mt-1'>
+                    <Trans>Try adjusting your search terms</Trans>
+                  </p>
                 </div>
               )}
-            </div>
-          )}
 
-          {filteredResults.length > 0 && (
-            <div className='space-y-1'>
-              {filteredResults.map((entity) => (
-                <EntityCard
-                  key={entity.fingerprint || entity.id}
-                  entity={entity}
-                  icon={Icon}
-                  iconClassName={iconClassName}
-                  isPending={pendingEntityId === entity.id}
-                  onSubscribe={() => handleSubscribe(entity)}
-                  subscribeLabel={subscribeLabel}
-                />
-              ))}
-            </div>
-          )}
+            {!debouncedSearch && (
+              <div>
+                {isLoadingRecommendations ? (
+                  <div className='flex items-center justify-center py-8'>
+                    <Loader2 className='text-muted-foreground size-5 animate-spin' />
+                  </div>
+                ) : isRecommendationsError ? (
+                  <div className='py-8'>
+                    <GeneralError
+                      error={recommendationsError}
+                      minimal
+                      mode='inline'
+                      reset={onRetryRecommendations}
+                    />
+                  </div>
+                ) : filteredRecommendations.length === 0 ? (
+                  <div className='flex flex-col items-center justify-center py-8 text-center text-muted-foreground'>
+                    <Search className='size-12 opacity-20 mb-3' />
+                  </div>
+                ) : (
+                  <div>
+                    <p className='text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide'>
+                      <Trans>Recommended</Trans>
+                    </p>
+                    <div className='space-y-1'>
+                      {filteredRecommendations.map((rec) => (
+                        <EntityCard
+                          key={rec.id}
+                          entity={rec}
+                          icon={Icon}
+                          iconClassName={iconClassName}
+                          isPending={pendingEntityId === rec.id}
+                          onSubscribe={() =>
+                            handleSubscribe({
+                              id: rec.id,
+                              name: rec.name,
+                              fingerprint: rec.fingerprint,
+                            })
+                          }
+                          subscribeLabel={subscribeLabel}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {filteredResults.length > 0 && (
+              <div className='space-y-1'>
+                {filteredResults.map((entity) => (
+                  <EntityCard
+                    key={entity.fingerprint || entity.id}
+                    entity={entity}
+                    icon={Icon}
+                    iconClassName={iconClassName}
+                    isPending={pendingEntityId === entity.id}
+                    onSubscribe={() => handleSubscribe(entity)}
+                    subscribeLabel={subscribeLabel}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </Main>
     </>

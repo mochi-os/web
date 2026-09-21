@@ -61,6 +61,9 @@ export interface AccessListProps {
   onRetry?: () => void
   /** Minimum width for the level select dropdown; it grows to fit longer labels (default: 250px) */
   selectWidth?: number
+  /** Draw the table's own border. Off by default, since access management
+   *  almost always sits inside a settings Card that already draws one. */
+  bordered?: boolean
 }
 
 function formatSubject(subject: string, name?: string): string {
@@ -112,6 +115,7 @@ export function AccessList({
   error = null,
   onRetry,
   selectWidth = 250,
+  bordered = false,
 }: AccessListProps) {
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
 
@@ -201,7 +205,7 @@ export function AccessList({
   )
 
   return (
-    <Table>
+    <Table bordered={bordered}>
       <TableHeader>
         <TableRow>
           <TableHead>

@@ -940,17 +940,14 @@ export function installShellNavigationSync(): void {
   // Distinguish push from replace: the shell owns the real top-window history,
   // and pushing for both turns every URL canonicalization and filter
   // replaceState into a back-stack entry that buries the app's own home.
-  const notifyShell = (replace: boolean) => {
+  const notifyShell = (location: URL | Location, replace: boolean) => {
     // Shed the shell's private _shell marker: the relayed path re-enters the
     // iframe src from the top history, where re-tagging plus the router's
     // search serialization nests duplicate keys.
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(location.search)
     params.delete('_shell')
     const query = params.toString()
-    const path =
-      window.location.pathname +
-      (query ? `?${query}` : '') +
-      window.location.hash
+    const path = location.pathname + (query ? `?${query}` : '') + location.hash
     window.parent.postMessage(
       { type: 'navigate', path, replace },
       shellOrigin()
@@ -961,21 +958,42 @@ export function installShellNavigationSync(): void {
   // not grow its own session history, or those entries interleave with the
   // shell's and make browser-back skip. Only the relayed flag decides push or
   // replace.
+  //
+  // WebKit, so every iOS browser, refuses a path or fragment change from the
+  // iframe's opaque origin with a SecurityError; Chrome allows it. The shell
+  // owns the real URL and reloads the iframe on back, so relay the requested
+  // URL anyway and leave the iframe's own copy behind.
+  const mirror = (
+    args: Parameters<typeof history.replaceState>,
+    replace: boolean
+  ) => {
+    try {
+      origReplaceState(...args)
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'SecurityError')) {
+        throw error
+      }
+    }
+    const url = args[2]
+    notifyShell(
+      url == null ? window.location : new URL(url, window.location.href),
+      replace
+    )
+  }
+
   history.pushState = function (...args: Parameters<typeof history.pushState>) {
-    origReplaceState(...args)
-    notifyShell(false)
+    mirror(args, false)
   }
 
   history.replaceState = function (
     ...args: Parameters<typeof history.replaceState>
   ) {
-    origReplaceState(...args)
-    notifyShell(true)
+    mirror(args, true)
   }
 
   // popstate (back/forward within the iframe) moves an existing entry — mirror
   // it as a replace so it never adds a new top-window entry.
-  window.addEventListener('popstate', () => notifyShell(true))
+  window.addEventListener('popstate', () => notifyShell(window.location, true))
 }
 
 /**

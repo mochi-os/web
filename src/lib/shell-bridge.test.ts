@@ -613,3 +613,53 @@ describe('initShellBridge', () => {
     }
   })
 })
+
+describe('installShellNavigationSync', () => {
+  let nativeReplaceState: History['replaceState']
+  let nativePushState: History['pushState']
+
+  beforeEach(() => {
+    nativeReplaceState = history.replaceState
+    nativePushState = history.pushState
+  })
+
+  afterEach(() => {
+    history.replaceState = nativeReplaceState
+    history.pushState = nativePushState
+  })
+
+  it('relays the requested URL when WebKit refuses the path change', async () => {
+    // WebKit blocks a path change from the sandboxed iframe's opaque origin.
+    history.replaceState = () => {
+      throw new DOMException(
+        'Paths and fragments must match for a sandboxed document.',
+        'SecurityError'
+      )
+    }
+    const { installShellNavigationSync } = await import('./shell-bridge')
+    installShellNavigationSync()
+
+    expect(() =>
+      history.replaceState(null, '', '/projects/abc/123?view=list&_shell=1')
+    ).not.toThrow()
+    history.pushState(null, '', '/projects/abc')
+
+    expect(parentPostMessage.mock.calls.map((call) => call[0])).toEqual([
+      { type: 'navigate', path: '/projects/abc/123?view=list', replace: true },
+      { type: 'navigate', path: '/projects/abc', replace: false },
+    ])
+  })
+
+  it('still throws errors other than the sandbox refusal', async () => {
+    history.replaceState = () => {
+      throw new TypeError('bad state')
+    }
+    const { installShellNavigationSync } = await import('./shell-bridge')
+    installShellNavigationSync()
+
+    expect(() => history.replaceState(null, '', '/projects/abc')).toThrow(
+      TypeError
+    )
+    expect(parentPostMessage).not.toHaveBeenCalled()
+  })
+})

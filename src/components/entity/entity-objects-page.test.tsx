@@ -189,6 +189,42 @@ describe('EntityObjectsPage', () => {
     expect(await screen.findByText('Acme Holdings')).toBeInTheDocument()
   })
 
+  it('keeps page chrome outside the list content scroller', async () => {
+    const design = createMockEntityDesign({
+      views: [
+        createMockEntityView({
+          id: 'list',
+          name: 'List',
+          viewtype: 'list',
+        }),
+      ],
+    })
+    const { container: rendered } = renderPage({
+      design,
+      search: { view: 'list' },
+    })
+
+    const tree = await screen.findByTestId('tree')
+    const scrollArea = rendered.querySelector(
+      '[data-slot="entity-content-scroll-area"]'
+    )
+    const pageHeader = screen
+      .getByRole('heading', {
+        name: 'Acme Holdings',
+      })
+      .closest('header')
+
+    // Guard both lookups first: not.toContainElement(null) passes vacuously.
+    expect(scrollArea).not.toBeNull()
+    expect(pageHeader).not.toBeNull()
+    expect(scrollArea).toHaveClass('overflow-auto')
+    expect(scrollArea).toContainElement(tree)
+    expect(scrollArea).not.toContainElement(pageHeader)
+    expect(scrollArea).not.toContainElement(
+      screen.getByTestId('view-options-bar')
+    )
+  })
+
   it('asks the api for this container’s objects', async () => {
     const { props } = renderPage()
     await waitFor(() =>

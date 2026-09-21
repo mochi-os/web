@@ -38,4 +38,24 @@ describe('AccessList', () => {
     expect(screen.getByText('Owner')).toBeInTheDocument()
     expect(screen.getAllByRole('combobox')).toHaveLength(1)
   })
+
+  // Access management sits inside a settings Card almost everywhere, so the
+  // table leaves the boundary to the Card unless the caller asks for one.
+  it('draws its own border only when asked', () => {
+    const props = {
+      rules: [{ subject: 'memberid', operation: 'view', grant: 1 }],
+      levels: [{ value: 'view', label: 'View only' }],
+      onLevelChange: vi.fn(async () => {}),
+      onRevoke: vi.fn(async () => {}),
+    }
+    const container = () =>
+      document.querySelector('[data-slot="table-container"]')
+
+    const { unmount } = render(<AccessList {...props} />)
+    expect(container()).not.toHaveClass('border')
+    unmount()
+
+    render(<AccessList {...props} bordered />)
+    expect(container()).toHaveClass('border')
+  })
 })

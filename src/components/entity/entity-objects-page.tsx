@@ -1408,16 +1408,20 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       <Main fluid className='flex flex-col min-h-0 min-w-0 flex-1 !p-0'>
         {/* Content area */}
         <div
+          data-slot='entity-content-scroll-area'
+          // The list's side gutter is a margin on the scroller, not padding
+          // inside it, so the pinned columns stop at the gutter instead of
+          // sliding to the screen edge when the table scrolls sideways.
           className={
             activeView?.viewtype === 'list'
-              ? 'flex-1 min-h-0 overflow-auto'
+              ? 'flex-1 min-h-0 overflow-auto mx-4'
               : 'flex-1 min-h-0 overflow-x-auto'
           }
         >
           {!populated || objectsLoading ? (
             <LoadingContent />
           ) : activeView?.viewtype === 'list' ? (
-            <div className='p-4'>
+            <div className='py-4'>
               {renderTree({
                 objects: filteredObjects,
                 peopleMap,

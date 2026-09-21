@@ -53,20 +53,24 @@ export function ListSectionHeader({
           onClick={onToggle}
           className='flex items-center gap-2 w-full text-start rounded-md px-1 py-0.5 hover:bg-hover transition-colors'
         >
-          {isExpanded ? (
-            <ChevronDown className='size-4 shrink-0 text-muted-foreground' />
-          ) : (
-            <ChevronRight className='size-4 shrink-0 text-muted-foreground rtl:rotate-180' />
-          )}
-          {colour ? (
-            <span
-              className='size-2.5 rounded-full shrink-0 ring-1 ring-border/50'
-              style={{ backgroundColor: colour }}
-            />
-          ) : null}
-          <span className='font-medium text-sm text-foreground'>{name}</span>
-          <span className='text-xs text-muted-foreground tabular-nums'>
-            {count}
+          {/* The row spans the whole table, so when it scrolls sideways the
+              label has to stay in view with the pinned columns beneath it. */}
+          <span className='sticky start-2 flex items-center gap-2'>
+            {isExpanded ? (
+              <ChevronDown className='size-4 shrink-0 text-muted-foreground' />
+            ) : (
+              <ChevronRight className='size-4 shrink-0 text-muted-foreground rtl:rotate-180' />
+            )}
+            {colour ? (
+              <span
+                className='size-2.5 rounded-full shrink-0 ring-1 ring-border/50'
+                style={{ backgroundColor: colour }}
+              />
+            ) : null}
+            <span className='font-medium text-sm text-foreground'>{name}</span>
+            <span className='text-xs text-muted-foreground tabular-nums'>
+              {count}
+            </span>
           </span>
         </button>
       </td>
