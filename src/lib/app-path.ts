@@ -45,11 +45,30 @@ function getDomainRoutePath(): string {
   return '/'
 }
 
+// An entity id (50 or 51 base58 characters) or a fingerprint (9), the shapes
+// core routes as an entity when they lead a path; the same test as the
+// server's is_entity_segment. An app path is a lowercase word and never
+// matches: it is too short for an id and, at nine letters, would have to
+// avoid the letter l.
+const ENTITY_SEGMENT = /^[1-9A-HJ-NP-Za-km-z]{9}$|^[1-9A-HJ-NP-Za-km-z]{50,51}$/
+
+function isEntitySegment(segment: string): boolean {
+  return ENTITY_SEGMENT.test(segment)
+}
+
+// The first path segment when it names an entity rather than an app: a direct
+// entity URL (/<fingerprint>/home) loaded inside the menu shell, whose
+// document carries no routing metas.
+function entitySegmentFromPath(): string | null {
+  const match = window.location.pathname.match(/^\/([^/]+)/)
+  return match && isEntitySegment(match[1]) ? match[1] : null
+}
+
 // Get the entity fingerprint from server context (null when not in entity context)
 export function getEntityFingerprint(): string | null {
   const meta = getMeta('mochi:fingerprint')
   if (meta) return meta
-  return getShellInitData()?.domain?.fingerprint ?? null
+  return getShellInitData()?.domain?.fingerprint ?? entitySegmentFromPath()
 }
 
 // Get the app path (e.g. "/wikis"). Empty string when not path-routed.
@@ -58,9 +77,11 @@ export function getAppPath(): string {
   if (app !== null) return '/' + app
   // Domain routing or direct entity routing — no app in URL
   if (isDomainEntityRouting() || hasMeta('mochi:fingerprint')) return ''
-  // Derive from URL path: first path segment
+  // Derive from URL path: the first segment, unless it is the entity itself
+  // (a direct entity URL in the menu shell, whose document carries no metas)
   const match = window.location.pathname.match(/^\/([^/]+)/)
-  return match ? '/' + match[1] : ''
+  if (!match || isEntitySegment(match[1])) return ''
+  return '/' + match[1]
 }
 
 // Get the router basepath for TanStack Router
@@ -74,9 +95,12 @@ export function getRouterBasepath(): string {
   if (fingerprint) return `/${fingerprint}/`
   if (app) return `/${app}/`
 
-  // Derive from URL path
+  // Derive from URL path. An entity segment stays in the path: the route
+  // trees that use this basepath carry the entity as their first parameter
+  // (/$forum/$post), so a direct entity URL routes from the root.
   const match = window.location.pathname.match(/^\/([^/]+)/)
-  return match ? '/' + match[1] + '/' : '/'
+  if (!match) return '/'
+  return isEntitySegment(match[1]) ? '/' : '/' + match[1] + '/'
 }
 
 // Get the API basepath for backend calls
@@ -94,9 +118,11 @@ export function getApiBasepath(): string {
   if (fingerprint) return `/${fingerprint}/-/`
   if (app) return `/${app}/`
 
-  // Derive from URL path
+  // Derive from URL path: an entity segment addresses its actions under -/,
+  // an app path its class-level actions directly.
   const match = window.location.pathname.match(/^\/([^/]+)/)
-  return match ? '/' + match[1] + '/' : '/'
+  if (!match) return '/'
+  return isEntitySegment(match[1]) ? `/${match[1]}/-/` : `/${match[1]}/`
 }
 
 // Normalize an entity-scoped URL for the current routing context. API responses

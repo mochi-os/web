@@ -4,10 +4,14 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import type { RouterHistory } from '@tanstack/react-router'
 import {
-  getAppBasepath,
   createAppHistory,
-  entityRouterPath,
   entityBrowserPath,
+  entityRouterPath,
+  getApiBasepath,
+  getAppBasepath,
+  getAppPath,
+  getEntityFingerprint,
+  getRouterBasepath,
 } from './app-path'
 
 const FINGERPRINT = 'v9VpRumgT'
@@ -30,6 +34,38 @@ afterEach(() => {
   history = undefined
   document.head.innerHTML = ''
   at('/')
+})
+
+// A document without routing metas: the menu shell's iframe. The helpers
+// derive the context from the URL, and a leading entity segment (a direct
+// entity URL such as /<fingerprint>/home) is told apart from an app path.
+describe('fallbacks without metas', () => {
+  it('addresses an entity segment under -/ and an app path directly', () => {
+    at(`/${FINGERPRINT}/home`)
+    expect(getApiBasepath()).toBe(`/${FINGERPRINT}/-/`)
+    expect(getEntityFingerprint()).toBe(FINGERPRINT)
+    expect(getAppPath()).toBe('')
+    expect(getAppBasepath()).toBe('/')
+    at('/wikis/home')
+    expect(getApiBasepath()).toBe('/wikis/')
+    expect(getEntityFingerprint()).toBeNull()
+    expect(getAppPath()).toBe('/wikis')
+    expect(getAppBasepath()).toBe('/wikis/')
+  })
+
+  it('routes a direct entity URL from the root and an app path from its segment', () => {
+    at(`/${FINGERPRINT}/${POST}`)
+    expect(getRouterBasepath()).toBe('/')
+    at(`/forums/${FINGERPRINT}/${POST}`)
+    expect(getRouterBasepath()).toBe('/forums/')
+  })
+
+  it('still prefers the metas when they are present', () => {
+    metas({ 'mochi:app': 'wikis', 'mochi:fingerprint': FINGERPRINT })
+    at(`/${FINGERPRINT}/home`)
+    expect(getApiBasepath()).toBe(`/wikis/${FINGERPRINT}/-/`)
+    expect(getRouterBasepath()).toBe(`/wikis/${FINGERPRINT}/`)
+  })
 })
 
 // The two transforms, on their own. Base '/feed/' is a subpath route, '/' is a
