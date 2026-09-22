@@ -81,9 +81,7 @@ export function MiniMonth({
         {days.slice(0, 7).map((day) => (
           <span key={day} className='text-muted-foreground'>
             {format
-              .formatWeekdayShort(
-                new Date(format.timestampAt(day, 720) * 1000)
-              )
+              .formatWeekdayShort(new Date(format.timestampAt(day, 720) * 1000))
               .slice(0, 2)}
           </span>
         ))}
@@ -137,7 +135,8 @@ function Cell({
           'hover:bg-hover rounded-sm py-0.5',
           monthOf(day) !== month && 'text-muted-foreground/60',
           covered && 'bg-accent',
-          day === today && 'text-primary font-semibold'
+          day === today &&
+            'bg-primary text-primary-foreground hover:bg-primary/90 font-semibold'
         )}
       >
         {format.formatDayNumber(new Date(format.timestampAt(day, 720) * 1000))}

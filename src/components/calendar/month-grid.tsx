@@ -218,7 +218,12 @@ export function MonthGrid({
                           onCreate(day)
                       }}
                     >
-                      <div className='flex justify-end px-1 pt-0.5'>
+                      <div
+                        className={cn(
+                          'flex justify-end px-1 py-0.5',
+                          day === today && 'bg-primary text-primary-foreground'
+                        )}
+                      >
                         <button
                           type='button'
                           onClick={() => onDay(day)}
@@ -226,7 +231,7 @@ export function MonthGrid({
                             'hover:bg-hover rounded-full px-1.5 text-sm',
                             outside && 'text-muted-foreground',
                             day === today &&
-                              'bg-primary text-primary-foreground font-semibold'
+                              'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
                           )}
                         >
                           {format.formatDayNumber(

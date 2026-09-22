@@ -386,10 +386,16 @@ export function TimeGrid({
                   onClick={() => onDay(day)}
                   className={cn(
                     'hover:bg-hover flex flex-col items-center gap-0.5 py-2 text-xs',
-                    day === today && 'text-primary font-semibold'
+                    day === today &&
+                      'bg-primary text-primary-foreground hover:bg-primary/90 font-semibold'
                   )}
                 >
-                  <span className='text-muted-foreground'>
+                  <span
+                    className={cn(
+                      'text-muted-foreground',
+                      day === today && 'text-primary-foreground/80'
+                    )}
+                  >
                     {format.formatWeekdayShort(date)}
                   </span>
                   <span className='text-sm'>
