@@ -2,19 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useMemo, useState } from 'react'
-import { useLingui } from '@lingui/react/macro'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
-import { Button } from '../ui/button'
+import { DateHeader } from './date-header'
 import {
   addMonths,
   dayList,
   daysBetween,
   monthOf,
+  monthsBetween,
   startOfMonth,
   startOfWeek,
   weekNumber,
+  yearOf,
 } from './layout'
 
 export interface MiniMonthProps {
@@ -30,7 +30,7 @@ export interface MiniMonthProps {
   className?: string
 }
 
-/** A month at a glance: click a day to jump, chevrons to change month. */
+/** A month at a glance: click a day to jump, the header to change month or year. */
 export function MiniMonth({
   selected,
   today,
@@ -39,9 +39,8 @@ export function MiniMonth({
   onSelect,
   className,
 }: MiniMonthProps) {
-  const { t } = useLingui()
   const format = useFormat()
-  // The month shown follows the selection until the chevrons move it; picking
+  // The month shown follows the selection until the header moves it; picking
   // a day then puts the two back in step.
   const [offset, setOffset] = useState(0)
   const anchor = addMonths(startOfMonth(selected), offset)
@@ -59,31 +58,18 @@ export function MiniMonth({
 
   return (
     <div className={cn('px-1', className)}>
-      <div className='flex items-center justify-between gap-1'>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='size-6'
-          aria-label={t`Previous month`}
-          onClick={() => setOffset((value) => value - 1)}
-        >
-          <ChevronLeft className='size-4 rtl:rotate-180' />
-        </Button>
-        <span className='truncate text-xs font-medium'>
-          {format.formatMonthYear(
-            new Date(format.timestampAt(anchor, 720) * 1000)
-          )}
-        </span>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='size-6'
-          aria-label={t`Next month`}
-          onClick={() => setOffset((value) => value + 1)}
-        >
-          <ChevronRight className='size-4 rtl:rotate-180' />
-        </Button>
-      </div>
+      <DateHeader
+        month={month}
+        year={yearOf(anchor)}
+        onChange={(year, picked) =>
+          setOffset(
+            monthsBetween(
+              startOfMonth(selected),
+              `${year}-${picked < 10 ? '0' : ''}${picked}-01`
+            )
+          )
+        }
+      />
 
       <div
         className={cn(

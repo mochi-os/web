@@ -336,6 +336,60 @@ export function formatDate(
   }
 }
 
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/
+
+function civilDay(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1) return null
+  if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null
+  return `${year}-${pad(month)}-${pad(day)}`
+}
+
+/** The twelve short month names of the interface language, lower-cased. */
+function monthShortNames(): string[] {
+  return Array.from({ length: 12 }, (_, index) =>
+    monthShort(new Date(2000, index, 15)).toLowerCase().replace(/\.$/, '')
+  )
+}
+
+/**
+ * The day a person typed in their own date format, as YYYY-MM-DD, or null
+ * when the text is not a day. The numbers are read in the format's order and
+ * any separator will do; the ISO form is accepted under every format; the
+ * short-month form takes the language's month names, with or without a
+ * trailing full stop, or a month number in their place. Whatever is typed
+ * last must be complete before the text is a day, so a half-typed date never
+ * commits as a different one: the year is always four digits, and in the
+ * year-first format the month and the day take two digits each.
+ */
+export function parseDate(text: string, dateFormat: DateFormat): string | null {
+  const trimmed = text.trim()
+  const iso = ISO_DAY.exec(trimmed)
+  if (iso) return civilDay(Number(iso[1]), Number(iso[2]), Number(iso[3]))
+  const parts = trimmed.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  if (parts.length !== 3) return null
+  const order: Record<DateFormat, [number, number, number]> = {
+    'YYYY-MM-DD': [0, 1, 2],
+    'DD/MM/YYYY': [2, 1, 0],
+    'DD.MM.YYYY': [2, 1, 0],
+    'MM/DD/YYYY': [2, 0, 1],
+    'D MMM YYYY': [2, 1, 0],
+  }
+  const [yearAt, monthAt, dayAt] = order[dateFormat]
+  const year = parts[yearAt]
+  const day = parts[dayAt]
+  const digits = dateFormat === 'YYYY-MM-DD' ? /^\d{2}$/ : /^\d{1,2}$/
+  if (!/^\d{4}$/.test(year) || !digits.test(day)) return null
+  let month: number
+  if (digits.test(parts[monthAt])) {
+    month = Number(parts[monthAt])
+  } else {
+    const wanted = parts[monthAt].toLowerCase().replace(/\.$/, '')
+    month = monthShortNames().indexOf(wanted) + 1
+    if (month === 0) return null
+  }
+  return civilDay(Number(year), month, Number(day))
+}
+
 export function formatTime(
   date: Date,
   timeFormat: TimeFormat,

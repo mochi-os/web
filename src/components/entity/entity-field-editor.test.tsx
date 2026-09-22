@@ -107,6 +107,32 @@ describe('EntityFieldEditor', () => {
     })
   })
 
+  describe('date', () => {
+    it('renders the shared picker and commits a typed day', () => {
+      const { onChange } = show({
+        field: createMockEntityField({ fieldtype: 'date' }),
+        value: '2026-09-22',
+      })
+      expect(screen.getByRole('button', { name: 'Choose a date' })).toBeTruthy()
+      const input = screen.getByDisplayValue('2026-09-22')
+      fireEvent.focus(input)
+      fireEvent.change(input, { target: { value: '2026-10-01' } })
+      expect(onChange).toHaveBeenLastCalledWith('2026-10-01')
+    })
+
+    it('says so when the text left in the field is not a day', () => {
+      const { onValidationError } = show({
+        field: createMockEntityField({ fieldtype: 'date' }),
+      })
+      const input = screen.getByRole('textbox')
+      fireEvent.focus(input)
+      fireEvent.change(input, { target: { value: 'soon' } })
+      fireEvent.blur(input)
+      expect(screen.getByText('Invalid date')).toBeTruthy()
+      expect(onValidationError).toHaveBeenLastCalledWith(true)
+    })
+  })
+
   describe('number display', () => {
     it('groups the digits and keeps every decimal the value carries', () => {
       const field = createMockEntityField({

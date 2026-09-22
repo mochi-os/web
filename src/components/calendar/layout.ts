@@ -80,6 +80,16 @@ export function startOfMonth(day: string): string {
   return `${day.slice(0, 8)}01`
 }
 
+/** The year `day` falls in. */
+export function yearOf(day: string): number {
+  return Number(day.slice(0, 4))
+}
+
+/** Months from the month of `from` to the month of `to`, negative going back. */
+export function monthsBetween(from: string, to: string): number {
+  return (yearOf(to) - yearOf(from)) * 12 + (monthOf(to) - monthOf(from))
+}
+
 /** The month `day` falls in, 1 through 12. */
 export function monthOf(day: string): number {
   return Number(day.slice(5, 7))

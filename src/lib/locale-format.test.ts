@@ -9,6 +9,7 @@ import {
   formatDateTime,
   formatRelativeTime,
   formatUserTimestamp,
+  parseDate,
 } from './locale-format'
 
 // A date whose month abbreviation differs visibly between languages.
@@ -216,5 +217,51 @@ describe('the timezone preference reaches every timestamp display', () => {
     expect(
       formatUserTimestamp(INSTANT, preferences('relative', 'Asia/Tokyo'))
     ).toBe('2026-03-15')
+  })
+})
+
+describe('parseDate reads the user\'s own format', () => {
+  beforeEach(() => load('en'))
+
+  it('reads the numbers in the format\'s order, with any separator', () => {
+    expect(parseDate('22/09/2026', 'DD/MM/YYYY')).toBe('2026-09-22')
+    expect(parseDate('22.9.2026', 'DD.MM.YYYY')).toBe('2026-09-22')
+    expect(parseDate('9/22/2026', 'MM/DD/YYYY')).toBe('2026-09-22')
+    expect(parseDate('2026/09/22', 'YYYY-MM-DD')).toBe('2026-09-22')
+    expect(parseDate('2/9/2026', 'DD/MM/YYYY')).toBe('2026-09-02')
+    expect(parseDate(' 22-09-2026 ', 'DD/MM/YYYY')).toBe('2026-09-22')
+  })
+
+  it('accepts the ISO form under every format', () => {
+    for (const format of ['DD/MM/YYYY', 'DD.MM.YYYY', 'MM/DD/YYYY', 'D MMM YYYY'] as const) {
+      expect(parseDate('2026-09-22', format)).toBe('2026-09-22')
+    }
+  })
+
+  it('reads the short month name in the interface language, or a number in its place', () => {
+    expect(parseDate('22 Sep 2026', 'D MMM YYYY')).toBe('2026-09-22')
+    expect(parseDate('22 sep. 2026', 'D MMM YYYY')).toBe('2026-09-22')
+    expect(parseDate('22 9 2026', 'D MMM YYYY')).toBe('2026-09-22')
+    load('fr')
+    expect(parseDate('14 mars 2026', 'D MMM YYYY')).toBe('2026-03-14')
+    expect(parseDate('14 Mar 2026', 'D MMM YYYY')).toBeNull()
+  })
+
+  it('refuses a day that does not exist', () => {
+    expect(parseDate('31/04/2026', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('29/02/2026', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('29/02/2024', 'DD/MM/YYYY')).toBe('2024-02-29')
+    expect(parseDate('22/13/2026', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('0/09/2026', 'DD/MM/YYYY')).toBeNull()
+  })
+
+  it('needs a four-digit year, so a half-typed date never commits as another', () => {
+    expect(parseDate('22/09/20', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('2026-09-2', 'YYYY-MM-DD')).toBeNull()
+    expect(parseDate('2026-9-22', 'YYYY-MM-DD')).toBeNull()
+    expect(parseDate('22/09/202', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('22/09', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('', 'DD/MM/YYYY')).toBeNull()
+    expect(parseDate('yesterday', 'DD/MM/YYYY')).toBeNull()
   })
 })

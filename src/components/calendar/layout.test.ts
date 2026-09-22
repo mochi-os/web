@@ -18,6 +18,8 @@ import {
   viewRange,
   weekNumber,
   weekRows,
+  yearOf,
+  monthsBetween,
   type RangeOptions,
 } from './layout'
 
@@ -283,5 +285,20 @@ describe('snap', () => {
     expect(snap(548, 15)).toBe(555)
     expect(snap(-20, 15)).toBe(0)
     expect(snap(547, 0)).toBe(547)
+  })
+})
+
+describe('yearOf and monthsBetween', () => {
+  it('reads the year from a civil day', () => {
+    expect(yearOf('2026-09-22')).toBe(2026)
+    expect(yearOf('1999-01-01')).toBe(1999)
+  })
+
+  it('counts months across a year boundary, either way', () => {
+    expect(monthsBetween('2026-09-22', '2026-09-01')).toBe(0)
+    expect(monthsBetween('2026-09-22', '2026-12-05')).toBe(3)
+    expect(monthsBetween('2026-11-30', '2027-01-01')).toBe(2)
+    expect(monthsBetween('2027-01-01', '2026-11-30')).toBe(-2)
+    expect(monthsBetween('2026-09-22', '2024-09-22')).toBe(-24)
   })
 })
