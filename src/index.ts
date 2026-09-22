@@ -125,6 +125,15 @@ export * from './components/game/game-empty-state'
 export * from './components/game/game-new-game-dialog'
 export * from './components/layout/back-button'
 export * from './components/layout/section'
+
+// Calendar Components - the grids, the mini month and their pure layout.
+export * from './components/calendar/layout'
+export * from './components/calendar/types'
+export * from './components/calendar/colour-checkbox'
+export * from './components/calendar/tooltip'
+export * from './components/calendar/time-grid'
+export * from './components/calendar/month-grid'
+export * from './components/calendar/mini-month'
 export type {
   SidebarData,
   NavItem,

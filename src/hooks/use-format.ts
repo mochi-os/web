@@ -12,6 +12,18 @@ import {
   formatNumber,
   formatFileSize,
   formatList,
+  formatClock,
+  formatHour,
+  formatWeekday,
+  formatWeekdayShort,
+  formatMonthName,
+  formatMonthYear,
+  formatDayNumber,
+  formatLongDate,
+  formatDayRange,
+  zonedDay,
+  zonedMinutes,
+  timestampAt,
 } from '../lib/locale-format'
 
 export function useFormat() {
@@ -43,7 +55,27 @@ export function useFormat() {
         items: string[],
         type: 'conjunction' | 'disjunction' = 'conjunction'
       ) => formatList(items, language, type),
+      // Calendar formatting: whole days and clock readings in the user's own
+      // zone, weekday and month names in the interface language.
+      formatClock: (date: Date) =>
+        formatClock(date, locale.timeFormat, locale.timezone),
+      formatHour: (date: Date) =>
+        formatHour(date, locale.timeFormat, locale.timezone),
+      formatWeekday: (date: Date) => formatWeekday(date, locale.timezone),
+      formatWeekdayShort: (date: Date) =>
+        formatWeekdayShort(date, locale.timezone),
+      formatMonthName: (date: Date) => formatMonthName(date, locale.timezone),
+      formatMonthYear: (date: Date) => formatMonthYear(date, locale.timezone),
+      formatDayNumber: (date: Date) => formatDayNumber(date, locale.timezone),
+      formatLongDate: (date: Date) => formatLongDate(date, locale.timezone),
+      formatDayRange: (from: Date, to: Date) =>
+        formatDayRange(from, to, locale.timezone),
+      zonedDay: (date: Date) => zonedDay(date, locale.timezone),
+      zonedMinutes: (date: Date) => zonedMinutes(date, locale.timezone),
+      timestampAt: (day: string, minutes: number) =>
+        timestampAt(day, minutes, locale.timezone),
       weekStartsOn: locale.weekStartsOn,
+      timezone: locale.timezone,
       units: locale.units,
     }),
     [locale, language]

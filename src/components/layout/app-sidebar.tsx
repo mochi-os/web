@@ -28,6 +28,8 @@ import type { SidebarData } from './types'
 type AppSidebarProps = {
   data: SidebarData
   notifications?: MochiMenuNotifications
+  /** Sits above the first group, hidden in the icon-collapsed rail. */
+  sidebarHeader?: React.ReactNode
   sidebarFooter?: React.ReactNode
   isLoading?: boolean
   hideMenu?: boolean
@@ -70,6 +72,7 @@ function CollapseBtn() {
 export function AppSidebar({
   data,
   notifications,
+  sidebarHeader,
   sidebarFooter,
   isLoading,
   hideMenu,
@@ -179,6 +182,11 @@ export function AppSidebar({
           </div>
         ) : (
           <>
+            {sidebarHeader && (
+              <div className='px-1 pt-1 group-data-[collapsible=icon]:hidden'>
+                {sidebarHeader}
+              </div>
+            )}
             {(() => {
               const primary = data.navGroups
                 .flatMap((g) => g.items)
