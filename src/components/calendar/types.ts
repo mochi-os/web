@@ -16,6 +16,11 @@ export interface CalendarEvent {
   /** Unix seconds; an all-day occurrence finishes at the end of its last day. */
   finish: number
   allday: boolean
+  /**
+   * The first day an all-day occurrence covers, as YYYY-MM-DD from the
+   * calendar itself rather than from any zone; present on all-day occurrences.
+   */
+  date?: string
   /** A read-only calendar's occurrence cannot be dragged or resized. */
   readonly?: boolean
   recurring?: boolean

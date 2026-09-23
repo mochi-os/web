@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { MonthGrid } from './month-grid'
@@ -54,5 +54,43 @@ describe('MonthGrid', () => {
     for (const day of WEEK.filter((other) => other !== '2026-09-22')) {
       expect(cell(container, day).querySelector('.bg-primary')).toBeNull()
     }
+  })
+})
+
+describe('MonthGrid all-day placement', () => {
+  it('draws an all-day occurrence on its own date, not on the days its instants fall', () => {
+    // Expanded by a server nine hours ahead of this browser's UTC: the instants
+    // begin on the 21st here, but the occurrence is the 22nd, one day long.
+    const start = Date.UTC(2026, 8, 21, 15) / 1000
+    render(
+      <I18nProvider i18n={i18n}>
+        <MonthGrid
+          days={WEEK}
+          month={9}
+          events={[
+            {
+              key: 'laundry',
+              title: 'Laundry',
+              colour: '#60a5fa',
+              start,
+              finish: start + 86400,
+              allday: true,
+              date: '2026-09-22',
+            },
+          ]}
+          today='2026-09-22'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onOverflow={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    const bar = screen.getByRole('button', { name: /Laundry/ })
+    // One column wide, starting in the second column: Tuesday the 22nd.
+    // jsdom rounds the percentage; one column is 14.28…%, two would be 28.57…%.
+    expect(bar.style.width).toMatch(/^calc\(14\.28\d*% - 4px\)$/)
+    expect(bar.style.insetInlineStart).toMatch(/^calc\(14\.28\d*% \+ 2px\)$/)
   })
 })

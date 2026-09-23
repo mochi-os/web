@@ -9,6 +9,7 @@ import { useFormat } from '../../hooks/use-format'
 import {
   addDays,
   barRows,
+  coveredDays,
   dayOfWeek,
   overlapColumns,
   snap,
@@ -175,10 +176,7 @@ export function TimeGrid({
   const bars = useMemo(() => {
     const source: Bar[] = whole.map((event) => ({
       key: event.key,
-      start: format.zonedDay(new Date(event.start * 1000)),
-      // An all-day occurrence finishes at the start of the day after its last,
-      // so the last day it covers is one second before its finish.
-      finish: format.zonedDay(new Date((event.finish - 1) * 1000)),
+      ...coveredDays(event, format.zonedDay),
     }))
     const byKey = new Map(whole.map((event) => [event.key, event]))
     const out: { placement: BarPlacement; event: CalendarEvent }[] = []

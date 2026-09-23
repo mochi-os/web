@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import {
   barRows,
+  coveredDays,
   monthOf,
   weekNumber,
   weekRows,
@@ -97,10 +98,7 @@ export function MonthGrid({
     )
     const source: Bar[] = whole.map((event) => ({
       key: event.key,
-      start: format.zonedDay(new Date(event.start * 1000)),
-      finish: format.zonedDay(
-        new Date(Math.max(event.start, event.finish - 1) * 1000)
-      ),
+      ...coveredDays(event, format.zonedDay),
     }))
     const byKey = new Map(whole.map((event) => [event.key, event]))
     return rows.map((week) => {
@@ -310,7 +308,7 @@ export function MonthGrid({
                     type='button'
                     onPointerDown={() => {
                       if (event.readonly) return
-                      const day = format.zonedDay(new Date(event.start * 1000))
+                      const day = coveredDays(event, format.zonedDay).start
                       setDragging({ key: event.key, day, from: day })
                     }}
                     onClick={(pointer) => {

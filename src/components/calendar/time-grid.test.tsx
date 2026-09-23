@@ -62,3 +62,39 @@ describe('TimeGrid', () => {
     expect(header.textContent).toMatch(/\b22\b/)
   })
 })
+
+describe('TimeGrid all-day band', () => {
+  it('puts an all-day occurrence on its own date, not on the days its instants fall', () => {
+    const start = Date.UTC(2026, 8, 21, 15) / 1000
+    render(
+      <I18nProvider i18n={i18n}>
+        <TimeGrid
+          days={WEEK}
+          events={[
+            {
+              key: 'laundry',
+              title: 'Laundry',
+              colour: '#60a5fa',
+              start,
+              finish: start + 86400,
+              allday: true,
+              date: '2026-09-22',
+            },
+          ]}
+          duration={60}
+          hours={{ start: 8, finish: 17 }}
+          workdays={[1, 2, 3, 4, 5]}
+          today='2026-09-22'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    const bar = screen.getByRole('button', { name: /Laundry/ })
+    // jsdom rounds the percentage; one column is 14.28…%, two would be 28.57…%.
+    expect(bar.style.width).toMatch(/^calc\(14\.28\d*% - 2px\)$/)
+    expect(bar.style.insetInlineStart).toMatch(/^14\.28\d*%$/)
+  })
+})

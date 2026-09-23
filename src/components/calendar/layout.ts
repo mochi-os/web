@@ -178,6 +178,28 @@ export function stepDate(
   }
 }
 
+/**
+ * The first and last day an occurrence covers. An all-day occurrence is placed
+ * by its own date and its whole-day count, never by its instants: the server
+ * expands it in its zone, and a browser in another zone would otherwise draw
+ * it a day out. A timed occurrence covers the days its instants fall on in the
+ * user's zone; a finish on the stroke of midnight belongs to the day before.
+ */
+export function coveredDays(
+  event: { allday: boolean; date?: string; start: number; finish: number },
+  zonedDay: (date: Date) => string
+): { start: string; finish: string } {
+  if (event.allday && event.date) {
+    const days = Math.max(1, Math.round((event.finish - event.start) / 86400))
+    return { start: event.date, finish: addDays(event.date, days - 1) }
+  }
+  const last = Math.max(event.start, event.finish - 1)
+  return {
+    start: zonedDay(new Date(event.start * 1000)),
+    finish: zonedDay(new Date(last * 1000)),
+  }
+}
+
 export interface RangeTitleFormat {
   /** A whole date spelled out: "Tuesday 16 September 2026". */
   longDate: (day: string) => string

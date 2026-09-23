@@ -6,6 +6,7 @@ import {
   addDays,
   addMonths,
   barRows,
+  coveredDays,
   dayList,
   dayOfWeek,
   daysBetween,
@@ -300,5 +301,53 @@ describe('yearOf and monthsBetween', () => {
     expect(monthsBetween('2026-11-30', '2027-01-01')).toBe(2)
     expect(monthsBetween('2027-01-01', '2026-11-30')).toBe(-2)
     expect(monthsBetween('2026-09-22', '2024-09-22')).toBe(-24)
+  })
+})
+
+describe('coveredDays', () => {
+  // A zone nine hours ahead of the instants, as a Tokyo browser reads a server
+  // that expanded in UTC.
+  const ahead = (date: Date) =>
+    new Date(date.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+  const utc = (date: Date) => date.toISOString().slice(0, 10)
+  const midnight = Date.UTC(2026, 8, 22) / 1000
+
+  it('places an all-day occurrence by its date whatever the zone', () => {
+    const one = {
+      allday: true,
+      date: '2026-09-22',
+      start: midnight,
+      finish: midnight + 86400,
+    }
+    expect(coveredDays(one, ahead)).toEqual({
+      start: '2026-09-22',
+      finish: '2026-09-22',
+    })
+    expect(
+      coveredDays({ ...one, finish: midnight + 2 * 86400 }, ahead)
+    ).toEqual({ start: '2026-09-22', finish: '2026-09-23' })
+  })
+
+  it('places a timed occurrence by the days its instants fall on', () => {
+    const evening = {
+      allday: false,
+      start: midnight + 20 * 3600,
+      finish: midnight + 22 * 3600,
+    }
+    expect(coveredDays(evening, utc)).toEqual({
+      start: '2026-09-22',
+      finish: '2026-09-22',
+    })
+    expect(coveredDays(evening, ahead)).toEqual({
+      start: '2026-09-23',
+      finish: '2026-09-23',
+    })
+    // A finish on the stroke of midnight belongs to the day before.
+    expect(
+      coveredDays(
+        { allday: false, start: midnight, finish: midnight + 86400 },
+        utc
+      )
+    ).toEqual({ start: '2026-09-22', finish: '2026-09-22' })
   })
 })
