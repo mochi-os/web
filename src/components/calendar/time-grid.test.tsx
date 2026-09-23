@@ -39,16 +39,26 @@ function show(today: string) {
 describe('TimeGrid', () => {
   it("fills today's column header in the primary colour with contrasting text", () => {
     show('2026-09-22')
-    const header = screen.getByRole('button', { name: /22$/ })
+    const header = screen.getByRole('button', { name: /22/ })
     expect(header.classList.contains('bg-primary')).toBe(true)
     expect(header.classList.contains('text-primary-foreground')).toBe(true)
   })
 
   it('leaves every other header unfilled', () => {
     show('2026-09-22')
-    for (const name of [/21$/, /23$/, /24$/, /25$/, /26$/, /27$/]) {
+    for (const name of [/21/, /23/, /24/, /25/, /26/, /27/]) {
       const header = screen.getByRole('button', { name })
       expect(header.classList.contains('bg-primary')).toBe(false)
     }
+  })
+
+  it('names each column with the weekday and the day on one line', () => {
+    show('2026-09-22')
+    const header = screen.getByRole('button', { name: /22/ })
+    // One run of text, not a weekday stacked over a number, on a thin row.
+    expect(header.children.length).toBe(0)
+    expect(header.classList.contains('py-1')).toBe(true)
+    expect(header.textContent).toMatch(/Tue/)
+    expect(header.textContent).toMatch(/\b22\b/)
   })
 })

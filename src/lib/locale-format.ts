@@ -19,6 +19,25 @@ function language(): string {
   return i18n.locale || 'en'
 }
 
+// The tag Intl formats with: the interface language, carrying the browser's
+// script and region when the browser speaks the same language. A British
+// browser on the base `en` therefore reads "Tuesday 22 September" and "Tue 22"
+// rather than the American forms `en` alone gives, while `fr` under an en-GB
+// browser stays plain French. A region-qualified catalogue (en-us, de-ch,
+// es-ar) is already complete and passes through as it is.
+function tag(): string {
+  const lang = language()
+  if (lang.includes('-')) return lang
+  const browser =
+    typeof navigator !== 'undefined' ? navigator.language : undefined
+  if (!browser || !browser.includes('-')) return lang
+  try {
+    return new Intl.Locale(browser).language === lang ? browser : lang
+  } catch {
+    return lang
+  }
+}
+
 // Cached: constructing an Intl formatter is expensive relative to formatting,
 // and these run per row in long lists.
 const monthFormatters = new Map<string, Intl.DateTimeFormat>()
@@ -43,7 +62,7 @@ function dateFormatter(
 }
 
 function monthShort(date: Date, timezone?: string): string {
-  const lang = language()
+  const lang = tag()
   const key = timezone ? lang + '|' + timezone : lang
   let formatter = monthFormatters.get(key)
   if (!formatter) {
@@ -54,7 +73,7 @@ function monthShort(date: Date, timezone?: string): string {
 }
 
 function meridiem(date: Date, timezone?: string): string {
-  const lang = language()
+  const lang = tag()
   const key = timezone ? lang + '|' + timezone : lang
   let formatter = meridiemFormatters.get(key)
   if (!formatter) {
@@ -189,7 +208,7 @@ function calendarFormatter(
   timezone: string | undefined,
   options: Intl.DateTimeFormatOptions
 ): Intl.DateTimeFormat {
-  const lang = language()
+  const lang = tag()
   const key = `${shape}|${lang}|${timezone ?? ''}`
   let formatter = calendarFormatters.get(key)
   if (!formatter) {
@@ -210,6 +229,19 @@ export function formatWeekday(date: Date, timezone?: string): string {
 export function formatWeekdayShort(date: Date, timezone?: string): string {
   return calendarFormatter('weekdayShort', timezone, {
     weekday: 'short',
+  }).format(date)
+}
+
+/**
+ * The weekday abbreviated with the day of the month, as a week view's column
+ * header reads it on one line, in the language's own order: "Tue 22" in
+ * British English, "22 Tue" in American, "mar. 22" in French, "22日(火)" in
+ * Japanese.
+ */
+export function formatWeekdayDay(date: Date, timezone?: string): string {
+  return calendarFormatter('weekdayDay', timezone, {
+    weekday: 'short',
+    day: 'numeric',
   }).format(date)
 }
 
@@ -347,7 +379,9 @@ function civilDay(year: number, month: number, day: number): string | null {
 /** The twelve short month names of the interface language, lower-cased. */
 function monthShortNames(): string[] {
   return Array.from({ length: 12 }, (_, index) =>
-    monthShort(new Date(2000, index, 15)).toLowerCase().replace(/\.$/, '')
+    monthShort(new Date(2000, index, 15))
+      .toLowerCase()
+      .replace(/\.$/, '')
   )
 }
 

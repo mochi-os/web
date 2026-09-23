@@ -385,22 +385,12 @@ export function TimeGrid({
                   type='button'
                   onClick={() => onDay(day)}
                   className={cn(
-                    'hover:bg-hover flex flex-col items-center gap-0.5 py-2 text-xs',
+                    'hover:bg-hover py-1 text-sm',
                     day === today &&
                       'bg-primary text-primary-foreground hover:bg-primary/90 font-semibold'
                   )}
                 >
-                  <span
-                    className={cn(
-                      'text-muted-foreground',
-                      day === today && 'text-primary-foreground/80'
-                    )}
-                  >
-                    {format.formatWeekdayShort(date)}
-                  </span>
-                  <span className='text-sm'>
-                    {format.formatDayNumber(date)}
-                  </span>
+                  {format.formatWeekdayDay(date)}
                 </button>
               )
             })}
