@@ -57,9 +57,11 @@ export function useFormat() {
         type: 'conjunction' | 'disjunction' = 'conjunction'
       ) => formatList(items, language, type),
       // Calendar formatting: whole days and clock readings in the user's own
-      // zone, weekday and month names in the interface language.
-      formatClock: (date: Date) =>
-        formatClock(date, locale.timeFormat, locale.timezone),
+      // zone, weekday and month names in the interface language. Where a
+      // zone may be given it overrides the user's: an event's own, when the
+      // calendar shows events in their zones; "" means the user's.
+      formatClock: (date: Date, zone?: string) =>
+        formatClock(date, locale.timeFormat, zone || locale.timezone),
       formatHour: (date: Date) =>
         formatHour(date, locale.timeFormat, locale.timezone),
       formatWeekday: (date: Date) => formatWeekday(date, locale.timezone),
@@ -69,13 +71,16 @@ export function useFormat() {
       formatMonthName: (date: Date) => formatMonthName(date, locale.timezone),
       formatMonthYear: (date: Date) => formatMonthYear(date, locale.timezone),
       formatDayNumber: (date: Date) => formatDayNumber(date, locale.timezone),
-      formatLongDate: (date: Date) => formatLongDate(date, locale.timezone),
+      formatLongDate: (date: Date, zone?: string) =>
+        formatLongDate(date, zone || locale.timezone),
       formatDayRange: (from: Date, to: Date) =>
         formatDayRange(from, to, locale.timezone),
-      zonedDay: (date: Date) => zonedDay(date, locale.timezone),
-      zonedMinutes: (date: Date) => zonedMinutes(date, locale.timezone),
-      timestampAt: (day: string, minutes: number) =>
-        timestampAt(day, minutes, locale.timezone),
+      zonedDay: (date: Date, zone?: string) =>
+        zonedDay(date, zone || locale.timezone),
+      zonedMinutes: (date: Date, zone?: string) =>
+        zonedMinutes(date, zone || locale.timezone),
+      timestampAt: (day: string, minutes: number, zone?: string) =>
+        timestampAt(day, minutes, zone || locale.timezone),
       weekStartsOn: locale.weekStartsOn,
       timezone: locale.timezone,
       units: locale.units,

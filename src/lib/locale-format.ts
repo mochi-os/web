@@ -157,6 +157,47 @@ export function zonedDay(date: Date, timezone?: string): string {
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`
 }
 
+/**
+ * The city an IANA zone is named for, as a label beside a time in that zone:
+ * "America/New_York" reads "New York", "UTC" stays "UTC".
+ */
+export function zoneCity(zone: string): string {
+  return (zone.split('/').pop() ?? zone).replace(/_/g, ' ')
+}
+
+/**
+ * A zone's offset from UTC at an instant, as a short label: "UTC+1",
+ * "UTC-5:30", "UTC" for none. "" for a zone the browser does not know.
+ */
+export function offsetLabel(zone: string, date = new Date()): string {
+  try {
+    const part = new Intl.DateTimeFormat('en-US', { // i18n-format-ok: reads the offset, not a date
+      timeZone: zone,
+      timeZoneName: 'shortOffset',
+    })
+      .formatToParts(date)
+      .find((item) => item.type === 'timeZoneName')
+    // Some runtimes spell no offset "GMT+0".
+    return (part?.value ?? '').replace(/^GMT/, 'UTC').replace(/^UTC[+-]0$/, 'UTC')
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * The sea's zones, which the browser's own list leaves out: one per whole
+ * hour from UTC-12 to UTC+12, named the zone database's way, where Etc/GMT+5
+ * is UTC-5.
+ */
+export function seaTimezones(): string[] {
+  const out: string[] = []
+  for (let offset = -12; offset <= 12; offset++) {
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- zone identifiers, not text
+    out.push(offset === 0 ? 'Etc/GMT' : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`)
+  }
+  return out
+}
+
 /** Minutes since midnight in the user's zone. */
 export function zonedMinutes(date: Date, timezone?: string): number {
   const parts = zonedParts(date, timezone)

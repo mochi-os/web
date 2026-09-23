@@ -351,3 +351,28 @@ describe('coveredDays', () => {
     ).toEqual({ start: '2026-09-22', finish: '2026-09-22' })
   })
 })
+
+describe('coveredDays across zones', () => {
+  // A callback reading a day in a named zone, as the format hook's does.
+  const zoned = (date: Date, zone?: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: zone ?? 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date) // i18n-format-ok: a test's own reading of a day in a named zone
+  // 23:00Z on the 25th: still the 25th in New York, already the 26th in Tokyo.
+  const late = Date.UTC(2026, 8, 25, 23) / 1000
+
+  it('reads each end in its own zone', () => {
+    const event = { allday: false, start: late, finish: late + 3600, zone: { start: 'America/New_York', finish: 'Asia/Tokyo' } }
+    expect(coveredDays(event, zoned)).toEqual({ start: '2026-09-25', finish: '2026-09-26' })
+  })
+
+  it('reads both ends in the user zone without zones', () => {
+    // The last second, 23:59:59Z, is still the 25th.
+    expect(coveredDays({ allday: false, start: late, finish: late + 3600 }, zoned)).toEqual({ start: '2026-09-25', finish: '2026-09-25' })
+    expect(coveredDays({ allday: false, start: late, finish: late + 7200 }, zoned)).toEqual({ start: '2026-09-25', finish: '2026-09-26' })
+  })
+
+  it('covers the start day alone when the end falls before it by the clock', () => {
+    const event = { allday: false, start: late, finish: late + 3600, zone: { start: 'Asia/Tokyo', finish: 'America/New_York' } }
+    expect(coveredDays(event, zoned)).toEqual({ start: '2026-09-26', finish: '2026-09-26' })
+  })
+})
+

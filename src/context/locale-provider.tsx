@@ -249,7 +249,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isInShell() || typeof fetch !== 'function') return
     let cancelled = false
-    fetch('/_/shell', { method: 'POST', credentials: 'same-origin' })
+    fetch('/_/shell', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      // The device's zone, which the server keeps as the user's while the
+      // preference is "auto".
+      body: JSON.stringify({ timezone: detectTimezone() }),
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => {
         if (cancelled || !body) return

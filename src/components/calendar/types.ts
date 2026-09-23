@@ -26,6 +26,13 @@ export interface CalendarEvent {
   recurring?: boolean
   /** True when the occurrence overrides its series. */
   exception?: boolean
+  /**
+   * The zone each end was written in, present when the calendar shows events
+   * in their own zones: a view then places that end at its wall-clock time
+   * there, so a flight reads 10:00 London to 13:00 New York. An end with no
+   * zone of its own, or an occurrence without this, is placed in the user's.
+   */
+  zone?: { start?: string; finish?: string }
 }
 
 /** Where a drag left an occurrence, in unix seconds. */

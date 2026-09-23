@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLingui } from '@lingui/react/macro'
-import { Repeat, Repeat2 } from 'lucide-react'
+import { History, Repeat, Repeat2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import {
@@ -39,6 +39,11 @@ export interface TimeGridProps {
   workdays: number[]
   /** Today in the user's own zone. */
   today: string
+  /**
+   * A label for the gutter, the zone its hours read in, shown when the
+   * occurrences may sit at times in other zones.
+   */
+  zone?: string
   /** Opens the occurrence's summary popover. */
   onSelect: (key: string, anchor: HTMLElement) => void
   /** A drag across empty grid, in unix seconds. */
@@ -62,7 +67,12 @@ type Drag =
       key: string
       day: string
       start: number
+      /** The block's height in minutes by the clock, for keeping it on the day. */
       length: number
+      /** How long the occurrence really lasts, in seconds, which a move keeps. */
+      duration: number
+      /** The occurrence's own zones, which its new instants are read in. */
+      zone?: { start?: string; finish?: string }
       grab: number
       /** Where it began, so a click that never moved writes nothing. */
       from: { day: string; start: number }
@@ -74,6 +84,7 @@ type Drag =
       day: string
       start: number
       finish: number
+      zone?: { start?: string; finish?: string }
       from: number
       moved: boolean
     }
@@ -85,6 +96,7 @@ export function TimeGrid({
   hours,
   workdays,
   today,
+  zone,
   onSelect,
   onCreate,
   onMove,
@@ -121,24 +133,59 @@ export function TimeGrid({
   const whole = useMemo(() => events.filter((e) => e.allday), [events])
 
   // Blocks per day, already placed side by side where they overlap. An
-  // occurrence crossing midnight draws a block on each day it covers.
+  // occurrence crossing midnight draws a block on each day it covers. Each
+  // end is placed at its wall-clock time in its own zone when it has one, so
+  // a flight can read 10:00 London to 13:00 New York; when that puts the end
+  // before the start by the clock, the block sits on the start day alone, as
+  // short as a block gets, and says so with a glyph.
   const blocks = useMemo(() => {
     const perDay = new Map<
       string,
-      { event: CalendarEvent; start: number; finish: number }[]
+      {
+        event: CalendarEvent
+        start: number
+        finish: number
+        backwards?: boolean
+      }[]
     >()
     for (const day of days) perDay.set(day, [])
     for (const event of timed) {
+      const begins = new Date(event.start * 1000)
+      const ends = new Date(Math.max(event.start, event.finish) * 1000)
+      const from = {
+        day: format.zonedDay(begins, event.zone?.start),
+        minutes: format.zonedMinutes(begins, event.zone?.start),
+      }
+      const to = {
+        day: format.zonedDay(ends, event.zone?.finish),
+        minutes: format.zonedMinutes(ends, event.zone?.finish),
+      }
+      // A finish on the stroke of midnight belongs to the day before.
+      if (to.minutes === 0 && to.day > from.day) {
+        to.day = addDays(to.day, -1)
+        to.minutes = 1440
+      }
+      const backwards =
+        to.day < from.day || (to.day === from.day && to.minutes < from.minutes)
       for (const day of days) {
-        const open = format.timestampAt(day, 0)
-        const close = format.timestampAt(addDays(day, 1), 0)
-        if (event.finish <= open || event.start >= close) continue
         const list = perDay.get(day)
-        if (!list) continue
+        if (!list || day < from.day) continue
+        if (backwards) {
+          if (day === from.day) {
+            list.push({
+              event,
+              start: from.minutes,
+              finish: from.minutes + MINIMUM,
+              backwards: true,
+            })
+          }
+          continue
+        }
+        if (day > to.day) continue
         list.push({
           event,
-          start: Math.max(0, (Math.max(event.start, open) - open) / 60),
-          finish: Math.min(1440, (Math.min(event.finish, close) - open) / 60),
+          start: day === from.day ? from.minutes : 0,
+          finish: day === to.day ? to.minutes : 1440,
         })
       }
     }
@@ -148,6 +195,7 @@ export function TimeGrid({
         event: CalendarEvent
         start: number
         finish: number
+        backwards?: boolean
         column: number
         width: number
       }[]
@@ -235,14 +283,14 @@ export function TimeGrid({
       return
     } else if (drag.mode === 'move') {
       dragged.current = true
-      const start = format.timestampAt(drag.day, drag.start)
-      onMove({ key: drag.key, start, finish: start + drag.length * 60 })
+      const start = format.timestampAt(drag.day, drag.start, drag.zone?.start)
+      onMove({ key: drag.key, start, finish: start + drag.duration })
     } else {
       dragged.current = true
       onMove({
         key: drag.key,
-        start: format.timestampAt(drag.day, drag.start),
-        finish: format.timestampAt(drag.day, drag.finish),
+        start: format.timestampAt(drag.day, drag.start, drag.zone?.start),
+        finish: format.timestampAt(drag.day, drag.finish, drag.zone?.finish),
       })
     }
     setDrag(null)
@@ -333,6 +381,8 @@ export function TimeGrid({
       day,
       start,
       length,
+      duration: Math.max(MINIMUM * 60, item.finish - item.start),
+      zone: item.zone,
       grab: snap(point.minutes, SNAP) - start,
       from: { day, start },
       moved: false,
@@ -354,6 +404,7 @@ export function TimeGrid({
       day,
       start,
       finish: end,
+      zone: item.zone,
       from: end,
       moved: false,
     })
@@ -399,6 +450,11 @@ export function TimeGrid({
       {/* All-day band */}
       <div className='flex border-b'>
         <div className='text-muted-foreground w-14 shrink-0 px-1 py-1.5 text-xs'>
+          {zone && (
+            <div className='truncate text-[10px] leading-3' data-testid='gutter-zone'>
+              {zone}
+            </div>
+          )}
           {t`All day`}
         </div>
         <div
@@ -544,7 +600,10 @@ export function TimeGrid({
                         }}
                       >
                         <div className='flex items-center gap-1'>
-                          <EventMarks event={item.event} />
+                          <EventMarks
+                            event={item.event}
+                            backwards={item.backwards}
+                          />
                           <span className='truncate font-medium'>
                             {item.event.title}
                           </span>
@@ -552,7 +611,8 @@ export function TimeGrid({
                         {((end - start) / 60) * HOUR >= TWO_LINES && (
                           <div className='text-muted-foreground truncate text-xs'>
                             {format.formatClock(
-                              new Date(item.event.start * 1000)
+                              new Date(item.event.start * 1000),
+                              item.event.zone?.start
                             )}
                             {item.event.location
                               ? ` · ${item.event.location}`
@@ -606,8 +666,23 @@ export function TimeGrid({
   )
 }
 
-function EventMarks({ event }: { event: CalendarEvent }) {
+function EventMarks({
+  event,
+  backwards,
+}: {
+  event: CalendarEvent
+  /** The end falls before the start by the clock, across zones. */
+  backwards?: boolean
+}) {
   const { t } = useLingui()
+  if (backwards) {
+    return (
+      <History
+        className='size-3 shrink-0 opacity-70'
+        aria-label={t`Ends before it starts`}
+      />
+    )
+  }
   if (event.exception) {
     return (
       <Repeat2

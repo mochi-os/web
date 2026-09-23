@@ -285,7 +285,8 @@ export function MonthGrid({
                               />
                               <span className='text-muted-foreground shrink-0'>
                                 {format.formatClock(
-                                  new Date(event.start * 1000)
+                                  new Date(event.start * 1000),
+                                  event.zone?.start
                                 )}
                               </span>
                               <EventMarks event={event} />
