@@ -8,6 +8,7 @@ import {
   MAP_SERVICE_NAMES,
   MAP_SERVICES,
   flightLink,
+  flightNumber,
   flightService,
   mapLink,
   mapService,
@@ -75,5 +76,41 @@ describe('flightLink', () => {
     expect(flightLink('ba 123', 'flightaware')).toBe(
       'https://www.flightaware.com/live/flight/BA123'
     )
+  })
+})
+
+describe('flightNumber', () => {
+  it('recognises an airline code and a number, spaced or not, in any case', () => {
+    expect(flightNumber('EI59')).toBe('EI59')
+    expect(flightNumber('BA 123')).toBe('BA123')
+    expect(flightNumber('U28642')).toBe('U28642')
+    expect(flightNumber('9w 7')).toBe('9W7')
+    expect(flightNumber(' lh1234a ')).toBe('LH1234A')
+  })
+
+  it("recognises the airline's name before its flight number", () => {
+    expect(flightNumber('Aer Lingus EI59')).toBe('EI59')
+    expect(flightNumber('Aer Lingus EI 59')).toBe('EI59')
+    expect(flightNumber('alaska airlines as1342')).toBe('AS1342')
+    expect(flightNumber('British Airways BA 123A')).toBe('BA123A')
+  })
+
+  it('leaves everything else alone', () => {
+    for (const location of [
+      'Meeting room',
+      'Studio',
+      'Studio 54',
+      'EI59 gate 12',
+      'Gate B12',
+      'Terminal 2',
+      'Alaska 1342',
+      'A1',
+      '12 34',
+      'EI',
+      'EI12345',
+      '',
+    ]) {
+      expect(flightNumber(location)).toBeNull()
+    }
   })
 })
