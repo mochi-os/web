@@ -15,6 +15,7 @@ import {
   weekNumber,
   yearOf,
 } from './layout'
+import { Wheel } from './wheel'
 
 export interface MiniMonthProps {
   /** The day the main view is showing; the mini month opens on its month. */
@@ -39,6 +40,7 @@ export function MiniMonth({
   // The month shown follows the selection until the header moves it; picking
   // a day then puts the two back in step.
   const [offset, setOffset] = useState(0)
+  const [wheel] = useState(() => new Wheel())
   const anchor = addMonths(startOfMonth(selected), offset)
   const month = monthOf(anchor)
 
@@ -48,7 +50,13 @@ export function MiniMonth({
   )
 
   return (
-    <div className={cn('px-1', className)}>
+    <div
+      className={cn('px-1', className)}
+      onWheel={(event) => {
+        const direction = wheel.step(event)
+        if (direction) setOffset((current) => current + direction)
+      }}
+    >
       <DateHeader
         month={month}
         year={yearOf(anchor)}

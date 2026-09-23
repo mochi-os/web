@@ -17,6 +17,7 @@ import {
   type BarPlacement,
 } from './layout'
 import { useEventTooltip } from './tooltip'
+import { Wheel } from './wheel'
 import type { CalendarEvent } from './types'
 
 const BAR = 28
@@ -42,6 +43,8 @@ export interface MonthGridProps {
   onOverflow: (day: string) => void
   /** A day number clicked. */
   onDay: (day: string) => void
+  /** The wheel over the grid: 1 for the next range, -1 for the previous. */
+  onStep?: (direction: number) => void
 }
 
 export function MonthGrid({
@@ -55,12 +58,14 @@ export function MonthGrid({
   onMove,
   onOverflow,
   onDay,
+  onStep,
 }: MonthGridProps) {
   const { t } = useLingui()
   const format = useFormat()
   const tooltip = useEventTooltip()
   const body = useRef<HTMLDivElement>(null)
   const [rowHeight, setRowHeight] = useState(120)
+  const [wheel] = useState(() => new Wheel())
   // `from` is where the chip started, so a click that never left its own cell
   // writes nothing; a drag ends in a click event, which `dragged` swallows.
   const [dragging, setDragging] = useState<{
@@ -166,7 +171,13 @@ export function MonthGrid({
   )
 
   return (
-    <div className='flex h-full min-h-0 flex-col'>
+    <div
+      className='flex h-full min-h-0 flex-col'
+      onWheel={(event) => {
+        const direction = wheel.step(event)
+        if (direction) onStep?.(direction)
+      }}
+    >
       <div className='flex border-b'>
         {weekNumbers && <div className='w-8 shrink-0' />}
         <div className='grid flex-1 grid-cols-7'>

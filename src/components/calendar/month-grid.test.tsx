@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { MonthGrid } from './month-grid'
@@ -92,5 +92,45 @@ describe('MonthGrid all-day placement', () => {
     // jsdom rounds the percentage; one column is 14.28…%, two would be 28.57…%.
     expect(bar.style.width).toMatch(/^calc\(14\.28\d*% - 4px\)$/)
     expect(bar.style.insetInlineStart).toMatch(/^calc\(14\.28\d*% \+ 2px\)$/)
+  })
+})
+
+describe('MonthGrid wheel', () => {
+  function grid(onStep: (direction: number) => void) {
+    const { container } = render(
+      <I18nProvider i18n={i18n}>
+        <MonthGrid
+          days={WEEK}
+          month={9}
+          events={[]}
+          today='2026-09-22'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onOverflow={vi.fn()}
+          onDay={vi.fn()}
+          onStep={onStep}
+        />
+      </I18nProvider>
+    )
+    return container.firstChild as HTMLElement
+  }
+
+  it('steps forward on a wheel notch down', () => {
+    const onStep = vi.fn()
+    fireEvent.wheel(grid(onStep), { deltaY: 100 })
+    expect(onStep).toHaveBeenCalledWith(1)
+  })
+
+  it('steps back on a wheel notch up', () => {
+    const onStep = vi.fn()
+    fireEvent.wheel(grid(onStep), { deltaY: -100 })
+    expect(onStep).toHaveBeenCalledWith(-1)
+  })
+
+  it('does not step on a delta under the threshold', () => {
+    const onStep = vi.fn()
+    fireEvent.wheel(grid(onStep), { deltaY: 5 })
+    expect(onStep).not.toHaveBeenCalled()
   })
 })

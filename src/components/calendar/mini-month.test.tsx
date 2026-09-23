@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { MiniMonth } from './mini-month'
 
 function show(today: string) {
-  render(
+  const { container } = render(
     <I18nProvider i18n={i18n}>
       <MiniMonth selected='2026-09-22' today={today} onSelect={vi.fn()} />
     </I18nProvider>
   )
+  return container.firstChild as HTMLElement
 }
 
 describe('MiniMonth', () => {
@@ -44,5 +45,22 @@ describe('MiniMonth', () => {
       [...day.classList].some((name) => name.startsWith('bg-'))
     )
     expect(shaded).toEqual([])
+  })
+})
+
+describe('MiniMonth wheel', () => {
+  it('moves to the next month on a wheel notch down', () => {
+    fireEvent.wheel(show('2026-09-22'), { deltaY: 100 })
+    expect(screen.getByRole('button', { name: 'October' })).toBeTruthy()
+  })
+
+  it('moves to the previous month on a wheel notch up', () => {
+    fireEvent.wheel(show('2026-09-22'), { deltaY: -100 })
+    expect(screen.getByRole('button', { name: 'August' })).toBeTruthy()
+  })
+
+  it('stays on a delta under the threshold', () => {
+    fireEvent.wheel(show('2026-09-22'), { deltaY: 5 })
+    expect(screen.getByRole('button', { name: 'September' })).toBeTruthy()
   })
 })
