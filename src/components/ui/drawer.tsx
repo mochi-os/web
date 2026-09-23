@@ -96,13 +96,20 @@ function DrawerContent({
           // Drawers must sit above sheets/dialogs so mobile confirm flows opened
           // from existing panels remain visible and interactive.
           // No padding here: DrawerHeader and DrawerFooter each own a single
-          // p-4 (matching SheetHeader/SheetFooter), and the two selectors below
-          // give the same 16px inset to whatever body content sits between them,
-          // so header, body and footer line up on one edge instead of stacking
-          // padding on top of a parent padding.
+          // p-4 (matching SheetHeader/SheetFooter), and the three selectors
+          // below give the same 16px inset to whatever body content sits
+          // between them, so header, body and footer line up on one edge
+          // instead of stacking padding on top of a parent padding. Three
+          // shapes exist in the wild: header, plain body, footer as siblings;
+          // a form wrapping all three; and a form that wraps only the body
+          // and footer while the header sits outside it (CreateEntityDialog
+          // and its five app copies) - the third pads the form's own
+          // children instead of the form, so the footer nested inside it
+          // is not padded twice.
           'group/drawer-content bg-background fixed z-[60] flex h-auto flex-col overflow-y-auto',
           '[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4',
           '[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4',
+          '[&>[data-slot=drawer-header]+form>*:not([data-slot=drawer-footer])]:px-4',
           'data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80dvh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b',
           'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80dvh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t data-[vaul-drawer-direction=bottom]:pb-[env(safe-area-inset-bottom)]',
           'data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:border-s data-[vaul-drawer-direction=right]:sm:max-w-sm',
@@ -128,7 +135,10 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot='drawer-header'
       className={cn(
-        'flex flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-1.5 md:text-start',
+        // Sticky, not just a normal flex item: DrawerContent scrolls as one
+        // box once content is taller than the sheet, and without this the
+        // title scrolls away with everything else instead of staying put.
+        'bg-background sticky top-0 z-10 flex flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-1.5 md:text-start',
         className
       )}
       {...props}
@@ -140,7 +150,16 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='drawer-footer'
-      className={cn('mt-auto flex flex-col gap-2 p-4', className)}
+      className={cn(
+        // Sticky, not just mt-auto: mt-auto only pins the footer to the
+        // bottom of a sheet short enough to have spare room. Once a form is
+        // tall enough that DrawerContent itself scrolls, mt-auto stops
+        // helping and the buttons end up below the fold - sticky is what
+        // keeps Cancel/Submit visible at the bottom of the scrolled viewport
+        // instead of requiring a scroll to reach them.
+        'bg-background sticky bottom-0 z-10 mt-auto flex flex-col gap-2 p-4',
+        className
+      )}
       {...props}
     />
   )
