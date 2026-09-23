@@ -8,7 +8,6 @@ import { DateHeader } from './date-header'
 import {
   addMonths,
   dayList,
-  daysBetween,
   monthOf,
   monthsBetween,
   startOfMonth,
@@ -22,8 +21,6 @@ export interface MiniMonthProps {
   selected: string
   /** Today in the user's own zone. */
   today: string
-  /** The span the main view covers, highlighted across the grid. */
-  highlight?: { from: string; days: number }
   /** Draws the ISO week number in each row's gutter. */
   weekNumbers?: boolean
   onSelect: (day: string) => void
@@ -34,7 +31,6 @@ export interface MiniMonthProps {
 export function MiniMonth({
   selected,
   today,
-  highlight,
   weekNumbers = true,
   onSelect,
   className,
@@ -50,11 +46,6 @@ export function MiniMonth({
     () => dayList(startOfWeek(anchor, format.weekStartsOn), 42),
     [anchor, format.weekStartsOn]
   )
-
-  const covered = (day: string) =>
-    highlight !== undefined &&
-    daysBetween(highlight.from, day) >= 0 &&
-    daysBetween(highlight.from, day) < highlight.days
 
   return (
     <div className={cn('px-1', className)}>
@@ -92,7 +83,6 @@ export function MiniMonth({
             index={index}
             month={month}
             today={today}
-            covered={covered(day)}
             weekNumbers={weekNumbers}
             onSelect={(picked) => {
               setOffset(0)
@@ -110,7 +100,6 @@ function Cell({
   index,
   month,
   today,
-  covered,
   weekNumbers,
   onSelect,
 }: {
@@ -118,7 +107,6 @@ function Cell({
   index: number
   month: number
   today: string
-  covered: boolean
   weekNumbers: boolean
   onSelect: (day: string) => void
 }) {
@@ -134,9 +122,7 @@ function Cell({
         className={cn(
           'hover:bg-hover rounded-sm py-0.5',
           monthOf(day) !== month && 'text-muted-foreground/60',
-          covered && 'bg-accent',
-          day === today &&
-            'bg-primary text-primary-foreground hover:bg-primary/90 font-semibold'
+          day === today && 'text-primary font-semibold'
         )}
       >
         {format.formatDayNumber(new Date(format.timestampAt(day, 720) * 1000))}

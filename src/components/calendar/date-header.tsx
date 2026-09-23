@@ -60,7 +60,11 @@ export function DateHeader({
         <Chevron label={t`Previous month`} back onClick={() => step(-1)} />
         <Popover open={months} onOpenChange={setMonths}>
           <PopoverTrigger asChild>
-            <Button variant='ghost' size='sm' className='h-6 px-1 text-xs font-medium'>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='h-6 px-1 text-xs font-medium'
+            >
               {/* Every name occupies the same cell, so the box is as wide as
                   the widest month and the chevron beside it never moves. */}
               <span className='grid text-center'>
@@ -97,7 +101,8 @@ export function DateHeader({
                   }}
                   className={cn(
                     'hover:bg-hover rounded-sm px-2 py-1 text-start text-xs',
-                    index + 1 === month && 'bg-accent font-semibold'
+                    index + 1 === month &&
+                      'bg-primary/10 text-primary font-semibold'
                   )}
                 >
                   {name}
@@ -138,7 +143,10 @@ export function DateHeader({
             />
           </PopoverContent>
         </Popover>
-        <Chevron label={t`Next year`} onClick={() => onChange(year + 1, month)} />
+        <Chevron
+          label={t`Next year`}
+          onClick={() => onChange(year + 1, month)}
+        />
       </div>
     </div>
   )
@@ -243,7 +251,7 @@ function YearList({
           style={{ height: ROW }}
           className={cn(
             'hover:bg-hover block w-full rounded-sm px-2 text-xs tabular-nums',
-            value === year && 'bg-accent font-semibold'
+            value === year && 'bg-primary/10 text-primary font-semibold'
           )}
         >
           {String(value)}

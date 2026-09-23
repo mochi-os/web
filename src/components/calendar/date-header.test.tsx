@@ -64,6 +64,17 @@ describe('DateHeader', () => {
     fireEvent.click(screen.getByRole('button', { name: 'September' }))
     const list = await screen.findByRole('listbox', { name: 'Month' })
     expect(list.querySelectorAll('[role=option]')).toHaveLength(12)
+    // The shown month is tinted in the primary colour; the others are not.
+    expect(
+      screen
+        .getByRole('option', { name: 'September' })
+        .classList.contains('bg-primary/10')
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('option', { name: 'March' })
+        .classList.contains('bg-primary/10')
+    ).toBe(false)
     fireEvent.click(screen.getByRole('option', { name: 'March' }))
     expect(onChange).toHaveBeenLastCalledWith(2026, 3)
     await waitFor(() =>
@@ -75,10 +86,24 @@ describe('DateHeader', () => {
     const onChange = show(9, 2026)
     fireEvent.click(screen.getByRole('button', { name: '2026' }))
     const list = await screen.findByRole('listbox', { name: 'Year' })
-    const years = [...list.querySelectorAll('[role=option]')].map((o) => o.textContent)
+    const years = [...list.querySelectorAll('[role=option]')].map(
+      (o) => o.textContent
+    )
     expect(years[0]).toBe('1986')
     expect(years[years.length - 1]).toBe('2066')
-    expect(screen.getByRole('option', { name: '2026', selected: true })).toBeTruthy()
+    expect(
+      screen.getByRole('option', { name: '2026', selected: true })
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole('option', { name: '2026' })
+        .classList.contains('bg-primary/10')
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('option', { name: '2030' })
+        .classList.contains('bg-primary/10')
+    ).toBe(false)
     fireEvent.click(screen.getByRole('option', { name: '2030' }))
     expect(onChange).toHaveBeenLastCalledWith(2030, 9)
   })
@@ -89,13 +114,22 @@ describe('DateHeader', () => {
     const list = await screen.findByRole('listbox', { name: 'Year' })
     const count = () => list.querySelectorAll('[role=option]').length
     expect(count()).toBe(81)
-    Object.defineProperty(list, 'scrollHeight', { value: 81 * 28, configurable: true })
-    Object.defineProperty(list, 'clientHeight', { value: 224, configurable: true })
+    Object.defineProperty(list, 'scrollHeight', {
+      value: 81 * 28,
+      configurable: true,
+    })
+    Object.defineProperty(list, 'clientHeight', {
+      value: 224,
+      configurable: true,
+    })
     list.scrollTop = 0
     fireEvent.scroll(list)
     await waitFor(() => expect(count()).toBe(121))
     expect(list.querySelector('[role=option]')?.textContent).toBe('1946')
-    Object.defineProperty(list, 'scrollHeight', { value: 121 * 28, configurable: true })
+    Object.defineProperty(list, 'scrollHeight', {
+      value: 121 * 28,
+      configurable: true,
+    })
     list.scrollTop = 121 * 28 - 224
     fireEvent.scroll(list)
     await waitFor(() => expect(count()).toBe(161))

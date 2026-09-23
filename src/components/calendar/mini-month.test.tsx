@@ -16,19 +16,33 @@ function show(today: string) {
 }
 
 describe('MiniMonth', () => {
-  it('fills today as a rectangle in the primary colour with contrasting text', () => {
+  it("colours today's number in the primary colour on a plain background", () => {
     show('2026-09-22')
     const today = screen.getByRole('button', { name: '22' })
-    expect(today.classList.contains('bg-primary')).toBe(true)
-    expect(today.classList.contains('text-primary-foreground')).toBe(true)
-    expect(today.classList.contains('rounded-full')).toBe(false)
+    expect(today.classList.contains('text-primary')).toBe(true)
+    expect(today.classList.contains('font-semibold')).toBe(true)
+    expect(today.classList.contains('bg-primary')).toBe(false)
+    expect(today.classList.contains('text-primary-foreground')).toBe(false)
   })
 
-  it('leaves every other day unfilled', () => {
+  it('leaves every other day in the plain text colour', () => {
     show('2026-09-22')
     for (const name of ['21', '23', '15']) {
       const day = screen.getByRole('button', { name })
-      expect(day.classList.contains('bg-primary')).toBe(false)
+      expect(day.classList.contains('text-primary')).toBe(false)
+      expect(day.classList.contains('font-semibold')).toBe(false)
     }
+  })
+
+  it('shades no day at all', () => {
+    show('2026-09-22')
+    const days = screen
+      .getAllByRole('button')
+      .filter((button) => /^\d{1,2}$/.test(button.textContent ?? ''))
+    expect(days).toHaveLength(42)
+    const shaded = days.filter((day) =>
+      [...day.classList].some((name) => name.startsWith('bg-'))
+    )
+    expect(shaded).toEqual([])
   })
 })
