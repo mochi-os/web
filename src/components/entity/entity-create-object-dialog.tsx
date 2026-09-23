@@ -168,14 +168,16 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   })
   const objectsData = objectListData?.objects
 
-  // Filter out classes that require a parent but have no valid parent objects
+  // Filter out classes that cannot be created. One the hierarchy gives no
+  // position at all never can, and the server refuses it; one that needs a
+  // parent can once an object of an allowed parent class exists, which is
+  // only known once the objects have loaded.
   const creatableClasses = useMemo(() => {
-    if (!objectsData) return availableClasses
     return availableClasses.filter((cls) => {
       const parentClasses = design.hierarchy[cls.id] || []
-      if (parentClasses.length === 0 || parentClasses.includes('')) return true
-      const parentClassIds = parentClasses.filter((t) => t !== '')
-      return objectsData.some((obj) => parentClassIds.includes(obj.class))
+      if (parentClasses.includes('')) return true
+      if (!objectsData) return parentClasses.length > 0
+      return objectsData.some((obj) => parentClasses.includes(obj.class))
     })
   }, [availableClasses, design.hierarchy, objectsData])
 
