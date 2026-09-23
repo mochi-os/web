@@ -122,12 +122,16 @@ describe('viewRange', () => {
 
 describe('stepDate', () => {
   it('steps by the view unit', () => {
-    expect(stepDate('day', '2026-09-16', 1, options)).toBe('2026-09-17')
-    expect(stepDate('week', '2026-09-16', -1, options)).toBe('2026-09-09')
-    expect(stepDate('multiweek', '2026-09-16', 1, options)).toBe('2026-10-14')
-    expect(stepDate('month', '2026-09-16', 1, options)).toBe('2026-10-01')
-    expect(stepDate('month', '2026-01-15', -1, options)).toBe('2025-12-01')
-    expect(stepDate('list', '2026-09-16', 1, options)).toBe('2026-10-01')
+    expect(stepDate('day', '2026-09-16', 1)).toBe('2026-09-17')
+    expect(stepDate('week', '2026-09-16', -1)).toBe('2026-09-09')
+    expect(stepDate('month', '2026-09-16', 1)).toBe('2026-10-01')
+    expect(stepDate('month', '2026-01-15', -1)).toBe('2025-12-01')
+    expect(stepDate('list', '2026-09-16', 1)).toBe('2026-10-01')
+  })
+
+  it('slides the multiweek span one week at a time, not its length', () => {
+    expect(stepDate('multiweek', '2026-09-16', 1)).toBe('2026-09-23')
+    expect(stepDate('multiweek', '2026-09-16', -1)).toBe('2026-09-09')
   })
 })
 
@@ -139,9 +143,9 @@ describe('rangeTitle', () => {
   }
 
   it('names a single day, a span and a month', () => {
-    expect(rangeTitle('day', viewRange('day', '2026-09-16', options), format)).toBe(
-      'long:2026-09-16'
-    )
+    expect(
+      rangeTitle('day', viewRange('day', '2026-09-16', options), format)
+    ).toBe('long:2026-09-16')
     expect(
       rangeTitle('week', viewRange('week', '2026-09-16', options), format)
     ).toBe('range:2026-09-14..2026-09-20')
@@ -234,9 +238,7 @@ describe('barRows', () => {
 
   it('places a bar at its column with its span', () => {
     expect(
-      barRows(week, [
-        { key: 'a', start: '2026-09-15', finish: '2026-09-17' },
-      ])
+      barRows(week, [{ key: 'a', start: '2026-09-15', finish: '2026-09-17' }])
     ).toEqual([
       { key: 'a', column: 1, span: 3, row: 0, before: false, after: false },
     ])
@@ -244,9 +246,7 @@ describe('barRows', () => {
 
   it('clips a bar to the week and marks the sides it runs past', () => {
     expect(
-      barRows(week, [
-        { key: 'a', start: '2026-09-10', finish: '2026-09-23' },
-      ])
+      barRows(week, [{ key: 'a', start: '2026-09-10', finish: '2026-09-23' }])
     ).toEqual([
       { key: 'a', column: 0, span: 7, row: 0, before: true, after: true },
     ])

@@ -156,20 +156,21 @@ export function viewRange(
   }
 }
 
-/** The day to anchor on after a step forward (1) or back (-1). */
+/**
+ * The day to anchor on after a step forward (1) or back (-1). Multiweek steps
+ * a week at a time, so the span slides a row rather than jumping its length.
+ */
 export function stepDate(
   view: CalendarView,
   date: string,
-  direction: number,
-  options: RangeOptions
+  direction: number
 ): string {
   switch (view) {
     case 'day':
       return addDays(date, direction)
     case 'week':
-      return addDays(date, 7 * direction)
     case 'multiweek':
-      return addDays(date, 7 * options.weeks * direction)
+      return addDays(date, 7 * direction)
     case 'month':
       return addMonths(startOfMonth(date), direction)
     case 'list':
@@ -304,10 +305,7 @@ export function barRows(week: string[], bars: Bar[]): BarPlacement[] {
   const clipped = bars
     .map((bar) => {
       const column = Math.max(0, daysBetween(first, bar.start))
-      const finish = Math.min(
-        week.length - 1,
-        daysBetween(first, bar.finish)
-      )
+      const finish = Math.min(week.length - 1, daysBetween(first, bar.finish))
       return {
         key: bar.key,
         column,
@@ -342,7 +340,11 @@ export function barRows(week: string[], bars: Bar[]): BarPlacement[] {
         }
       }
       if (free) {
-        for (let column = bar.column; column < bar.column + bar.span; column++) {
+        for (
+          let column = bar.column;
+          column < bar.column + bar.span;
+          column++
+        ) {
           taken[column] = true
         }
         break
