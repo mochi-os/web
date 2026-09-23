@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import { t } from '@lingui/core/macro'
-import { X } from 'lucide-react'
+import { ArrowRightToLine } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { insideToaster } from '../../lib/toast-utils'
 import { Button } from './button'
@@ -20,6 +20,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from './sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip'
 
 // Full width below `sm`, then a step. A panel never picks its own width.
 const SIZE_CLASS = {
@@ -120,16 +121,21 @@ function SidePanelHeader({
       {actions && (
         <div className='flex shrink-0 items-center gap-1'>{actions}</div>
       )}
-      <SheetClose asChild>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='size-8 shrink-0'
-          aria-label={t`Close`}
-        >
-          <X className='size-4' />
-        </Button>
-      </SheetClose>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SheetClose asChild>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='size-8 shrink-0'
+              aria-label={t`Close`}
+            >
+              <ArrowRightToLine className='size-4' />
+            </Button>
+          </SheetClose>
+        </TooltipTrigger>
+        <TooltipContent>{t`Close`}</TooltipContent>
+      </Tooltip>
     </div>
   )
 }
