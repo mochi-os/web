@@ -95,9 +95,16 @@ function DrawerContent({
         className={cn(
           // Drawers must sit above sheets/dialogs so mobile confirm flows opened
           // from existing panels remain visible and interactive.
-          'p-4 group/drawer-content bg-background fixed z-[60] flex h-auto flex-col',
+          // No padding here: DrawerHeader and DrawerFooter each own a single
+          // p-4 (matching SheetHeader/SheetFooter), and the two selectors below
+          // give the same 16px inset to whatever body content sits between them,
+          // so header, body and footer line up on one edge instead of stacking
+          // padding on top of a parent padding.
+          'group/drawer-content bg-background fixed z-[60] flex h-auto flex-col overflow-y-auto',
+          '[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4',
+          '[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4',
           'data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80dvh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b',
-          'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80dvh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t',
+          'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80dvh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t data-[vaul-drawer-direction=bottom]:pb-[env(safe-area-inset-bottom)]',
           'data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:border-s data-[vaul-drawer-direction=right]:sm:max-w-sm',
           'data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:border-e data-[vaul-drawer-direction=left]:sm:max-w-sm',
           className
@@ -109,7 +116,7 @@ function DrawerContent({
         }}
         {...props}
       >
-        <div className='bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block' />
+        <div className='bg-muted mx-auto mt-2 mb-1 hidden h-1.5 w-9 shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block' />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
@@ -133,7 +140,7 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='drawer-footer'
-      className={cn('mt-auto flex flex-col gap-2', className)}
+      className={cn('mt-auto flex flex-col gap-2 p-4', className)}
       {...props}
     />
   )

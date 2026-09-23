@@ -4,7 +4,6 @@
 'use client'
 
 import * as React from 'react'
-import { cn } from '../../lib/utils'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import {
   Dialog,
@@ -116,15 +115,12 @@ function ResponsiveDialogClose({
 function ResponsiveDialogContent({
   className,
   children,
-  bodyPadding = true,
   showCloseButton,
   onInteractOutside,
   ...props
 }: BaseProps & { className?: string } & React.ComponentProps<
     typeof DialogContent
-  > & {
-    bodyPadding?: boolean
-  }) {
+  >) {
   const isMobile = useResponsiveVariant()
   const ResponsiveDialogContentComponent = !isMobile
     ? DialogContent
@@ -135,12 +131,7 @@ function ResponsiveDialogContent({
 
   return (
     <ResponsiveDialogContentComponent
-      className={cn(
-        className,
-        isMobile &&
-          bodyPadding &&
-          'data-[vaul-drawer-direction=bottom]:[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4 data-[vaul-drawer-direction=bottom]:[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4'
-      )}
+      className={className}
       {...props}
       {...(!isMobile && {
         showCloseButton,
