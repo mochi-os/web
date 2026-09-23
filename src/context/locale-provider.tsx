@@ -15,6 +15,12 @@ import type {
   NumberFormat,
 } from '../lib/locale-format'
 import { setActiveLocale } from './i18n-provider'
+import {
+  flightService,
+  mapService,
+  type FlightService,
+  type MapService,
+} from '../lib/links'
 
 export type ResolvedLocale = {
   dateFormat: DateFormat
@@ -24,6 +30,10 @@ export type ResolvedLocale = {
   numberFormat: NumberFormat
   units: 'metric' | 'imperial' | 'usa'
   timezone: string
+  /** Where a location links to. */
+  maps: MapService
+  /** Where a flight number links to. */
+  flights: FlightService
 }
 
 type LocaleContextValue = {
@@ -49,6 +59,8 @@ const defaultResolved: ResolvedLocale = {
   numberFormat: '1,000.00',
   units: 'metric',
   timezone: 'UTC',
+  maps: 'openstreetmap',
+  flights: 'flightradar24',
 }
 
 const LocaleContext = createContext<LocaleContextValue>({
@@ -209,6 +221,8 @@ function resolveLocale(raw: LocalePreferences): ResolvedLocale {
         ? detectUnits()
         : (raw.units as 'metric' | 'imperial' | 'usa'),
     timezone: raw.timezone === 'auto' ? detectTimezone() : raw.timezone,
+    maps: mapService(raw.maps),
+    flights: flightService(raw.flights),
   }
 }
 
