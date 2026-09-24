@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { Plus } from 'lucide-react'
+import { ExternalLink, Plus } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import {
   ResponsiveDialog,
@@ -36,6 +36,10 @@ interface AccountAddProps {
     addToExisting: boolean,
     setAsDefault?: boolean
   ) => Promise<void>
+  // An OAuth provider is not added by this form: the caller takes the user
+  // through the provider's consent instead. Without this the oauth providers
+  // are left out of the list altogether.
+  onLink?: (type: string) => void
   isAdding: boolean
   appBase: string
   hasExistingAiAccount?: boolean
@@ -46,6 +50,7 @@ export function AccountAdd({
   onOpenChange,
   providers,
   onAdd,
+  onLink,
   isAdding,
   appBase: _appBase,
   hasExistingAiAccount = false,
@@ -64,10 +69,14 @@ export function AccountAdd({
     [providers]
   )
 
-  // Filter out browser provider from the add dialog
+  // Filter out browser provider from the add dialog, and the oauth ones when
+  // the caller cannot take the user through a provider's consent.
   const availableProviders = useMemo(
-    () => providersList.filter((p) => p.type !== 'browser'),
-    [providersList]
+    () =>
+      providersList.filter(
+        (p) => p.type !== 'browser' && (onLink !== undefined || p.flow !== 'oauth')
+      ),
+    [providersList, onLink]
   )
 
   // Pre-populate non-required text fields that have a placeholder value
@@ -101,6 +110,9 @@ export function AccountAdd({
   }, [open, availableProviders])
 
   const selectedProvider = providersList.find((p) => p.type === selectedType)
+  const providerLabel = selectedProvider
+    ? getProviderLabel(selectedProvider.type)
+    : ''
 
   // Reset fields with defaults when provider type changes
   useEffect(() => {
@@ -113,6 +125,10 @@ export function AccountAdd({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (selectedProvider?.flow === 'oauth') {
+      onLink?.(selectedType)
+      return
+    }
     await onAdd(
       selectedType,
       fields,
@@ -179,7 +195,11 @@ export function AccountAdd({
                     <Label htmlFor={field.name}>{field.label}</Label>
                     <Input
                       id={field.name}
-                      type='text'
+                      type={
+                        field.type === 'password' || field.type === 'email'
+                          ? field.type
+                          : 'text'
+                      }
                       autoComplete='off'
                       value={fields[field.name] || ''}
                       onChange={(e) =>
@@ -226,14 +246,23 @@ export function AccountAdd({
             >
               <Trans>Cancel</Trans>
             </Button>
-            <Button
-              type='submit'
-              disabled={!isFormValid()}
-              loading={isAdding}
-              icon={<Plus className='me-2 h-4 w-4' />}
-            >
-              <Trans>Add</Trans>
-            </Button>
+            {selectedProvider?.flow === 'oauth' ? (
+              <Button
+                type='submit'
+                icon={<ExternalLink className='me-2 h-4 w-4' />}
+              >
+                <Trans>Continue with {providerLabel}</Trans>
+              </Button>
+            ) : (
+              <Button
+                type='submit'
+                disabled={!isFormValid()}
+                loading={isAdding}
+                icon={<Plus className='me-2 h-4 w-4' />}
+              >
+                <Trans>Add</Trans>
+              </Button>
+            )}
           </ResponsiveDialogFooter>
         </form>
       </ResponsiveDialogContent>
