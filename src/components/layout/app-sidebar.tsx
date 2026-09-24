@@ -128,9 +128,12 @@ export function AppSidebar({
                   // max-width: 1023.98px block), so nothing overlays the
                   // sidebar and this clearance reads as an empty gap. From
                   // 1024 the menu is a fixed rail painted over the app, and
-                  // the space is what keeps it off the first entry.
+                  // the space is what keeps it off the first entry. Collapsed,
+                  // the menu is a column of the avatar, Home and two recent
+                  // apps: four 9-unit buttons, three 1-unit gaps and 2-unit
+                  // padding at each end, 43 units.
                   'min-h-0 p-0',
-                  state === 'collapsed' ? 'lg:min-h-20' : 'lg:min-h-10'
+                  state === 'collapsed' ? 'lg:min-h-44' : 'lg:min-h-10'
                 )
               : undefined
           }
