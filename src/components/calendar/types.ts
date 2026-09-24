@@ -35,9 +35,28 @@ export interface CalendarEvent {
   zone?: { start?: string; finish?: string }
 }
 
-/** Where a drag left an occurrence, in unix seconds. */
+/** Where a drag left an occurrence in the day and week views. */
 export interface EventMove {
   key: string
+  /** The new span in unix seconds; for an all-day landing, the day's bounds. */
   start: number
   finish: number
+  /** It landed in the all-day band, and becomes an all-day occurrence. */
+  allday?: boolean
+  /** Alt was held: a copy lands there and the original stays where it was. */
+  copy?: boolean
+  /**
+   * It was dropped on a calendar outside the grid, whose name this is; the
+   * span is then the one it already had.
+   */
+  calendar?: string
+}
+
+/** Where a drag left an occurrence in the month and multiweek views. */
+export interface DayMove {
+  key: string
+  /** The day it landed on; it keeps its time of day. */
+  day: string
+  copy?: boolean
+  calendar?: string
 }

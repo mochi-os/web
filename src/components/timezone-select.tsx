@@ -83,10 +83,14 @@ export function TimezoneSelect({
   const offsets = useMemo(() => {
     if (!open) return new Map<string, string>()
     const now = new Date()
-    return new Map([...timezones, ...sea].map((tz) => [tz, offsetLabel(tz, now)]))
+    return new Map(
+      [...timezones, ...sea].map((tz) => [tz, offsetLabel(tz, now)])
+    )
   }, [open, timezones, sea])
 
-  const formatTimezone = (tz: string) => tz.replace(/_/g, ' ')
+  // A sea zone is its offset from UTC, which is its whole name.
+  const formatTimezone = (tz: string) =>
+    tz.startsWith('Etc/GMT') ? zoneCity(tz) : tz.replace(/_/g, ' ')
   const displayValue =
     value === 'auto'
       ? `${t_`Detect from web browser`}: ${formatTimezone(browserTimezone)}`
@@ -191,7 +195,7 @@ export function TimezoneSelect({
                 <CommandItem
                   key={tz}
                   value={tz}
-                  keywords={[offsets.get(tz) ?? '']}
+                  keywords={[zoneCity(tz)]}
                   onSelect={() => choose(tz)}
                   onPointerEnter={() => setHovered(tz)}
                   onPointerLeave={() => setHovered(null)}
@@ -202,10 +206,8 @@ export function TimezoneSelect({
                       value === tz ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  <span className='truncate'>{tz}</span>
-                  <span className='text-muted-foreground ms-auto ps-3 text-xs'>
-                    {offsets.get(tz)}
-                  </span>
+                  {/* A sea zone is its offset, so that is its whole name. */}
+                  <span className='truncate'>{zoneCity(tz)}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

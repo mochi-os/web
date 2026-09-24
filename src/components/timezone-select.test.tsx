@@ -2,15 +2,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { TimezoneSelect } from './timezone-select'
-import { offsetLabel, seaTimezones } from '../lib/locale-format'
+import { offsetLabel, seaTimezones, zoneCity } from '../lib/locale-format'
 
 afterEach(() => cleanup())
 
-function show(props: Partial<React.ComponentProps<typeof TimezoneSelect>> = {}) {
+function show(
+  props: Partial<React.ComponentProps<typeof TimezoneSelect>> = {}
+) {
   render(
     <I18nProvider i18n={i18n}>
       <TimezoneSelect value='Europe/London' onChange={vi.fn()} {...props} />
@@ -24,7 +32,9 @@ function show(props: Partial<React.ComponentProps<typeof TimezoneSelect>> = {}) 
 // A zone's land, the layer that shows, unless another layer is asked for.
 const path = (zone: string, layer = 'land') =>
   waitFor(() => {
-    const found = document.querySelector(`[data-layer="${layer}"][data-zone="${zone}"]`)
+    const found = document.querySelector(
+      `[data-layer="${layer}"][data-zone="${zone}"]`
+    )
     if (!found) throw new Error('the map has not loaded')
     return found
   })
@@ -55,7 +65,9 @@ describe('TimezoneSelect', () => {
     const newYork = await path('America/New_York')
     expect(newYork.getAttribute('class')).not.toContain('fill-primary')
     fireEvent.pointerEnter(newYork)
-    expect(screen.getByTestId('timezone-pointed').textContent).toContain('New York')
+    expect(screen.getByTestId('timezone-pointed').textContent).toContain(
+      'New York'
+    )
     fireEvent.click(newYork)
     expect(onChange).toHaveBeenCalledWith('America/New_York')
   })
@@ -64,7 +76,9 @@ describe('TimezoneSelect', () => {
     fireEvent.click(show())
     await path('Europe/London')
     const notice = screen.getByText('© OpenStreetMap contributors')
-    expect(notice.parentElement?.querySelector('[data-testid="timezone-map"]')).toBeTruthy()
+    expect(
+      notice.parentElement?.querySelector('[data-testid="timezone-map"]')
+    ).toBeTruthy()
   })
 
   it('draws the sea bands, then each zone whole and invisible, then its land on top', async () => {
@@ -73,8 +87,12 @@ describe('TimezoneSelect', () => {
     const band = await path('Etc/GMT', 'sea')
     const whole = await path('Asia/Jakarta', 'zone')
     const land = await path('Asia/Jakarta', 'land')
-    expect(band.compareDocumentPosition(whole) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(whole.compareDocumentPosition(land) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      band.compareDocumentPosition(whole) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      whole.compareDocumentPosition(land) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
     // The whole zone catches a click in its waters without painting them.
     expect(whole.getAttribute('class')).toContain('fill-transparent')
     expect(land.getAttribute('class')).not.toContain('fill-transparent')
@@ -93,7 +111,9 @@ describe('TimezoneSelect', () => {
     fireEvent.click(show())
     const whole = await path('Asia/Jakarta', 'zone')
     fireEvent.pointerEnter(whole)
-    expect((await path('Asia/Jakarta', 'land')).getAttribute('class')).toContain('fill-primary/35')
+    expect(
+      (await path('Asia/Jakarta', 'land')).getAttribute('class')
+    ).toContain('fill-primary/35')
     expect(whole.getAttribute('class')).toContain('fill-primary/35')
   })
 })
@@ -103,9 +123,32 @@ describe('the list', () => {
     fireEvent.click(show())
     const tokyo = await screen.findByText('Asia/Tokyo')
     expect(tokyo.parentElement?.textContent).toContain('UTC+9')
-    expect(screen.getByText('At sea')).toBeTruthy()
-    const band = screen.getByText('Etc/GMT+5')
-    expect(band.parentElement?.textContent).toContain('UTC-5')
+    // A sea zone reads as the offset it is, not as the zone database's
+    // inverted name.
+    const sea = screen.getByText('At sea').closest('[cmdk-group]')!
+    expect(sea.textContent).toContain('UTC-5')
+    expect(sea.textContent).toContain('UTC+12')
+    expect(sea.textContent).not.toContain('Etc/GMT')
+  })
+
+  it('names a chosen sea zone the same way on the button', () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <TimezoneSelect value='Etc/GMT-8' onChange={vi.fn()} auto={false} />
+      </I18nProvider>
+    )
+    expect(screen.getByRole('combobox').textContent).toContain('UTC+8')
+    expect(screen.getByRole('combobox').textContent).not.toContain('Etc')
+  })
+
+  it('names a sea zone by its offset from UTC, the sign read the right way round', () => {
+    expect(zoneCity('Etc/GMT-8')).toBe('UTC+8')
+    expect(zoneCity('Etc/GMT+10')).toBe('UTC-10')
+    expect(zoneCity('Etc/GMT')).toBe('UTC')
+    expect(zoneCity('Etc/GMT-1')).toBe('UTC+1')
+    expect(zoneCity('Etc/GMT+0')).toBe('UTC')
+    expect(zoneCity('America/New_York')).toBe('New York')
+    expect(zoneCity('UTC')).toBe('UTC')
   })
 
   it('names the sea zones the way the zone database does', () => {
@@ -131,4 +174,3 @@ describe('offsetLabel', () => {
     expect(offsetLabel('Nowhere/Invalid')).toBe('')
   })
 })
-

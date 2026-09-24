@@ -162,6 +162,9 @@ export function zonedDay(date: Date, timezone?: string): string {
  * "America/New_York" reads "New York", "UTC" stays "UTC".
  */
 export function zoneCity(zone: string): string {
+  // A sea zone is named the zone database's way, where Etc/GMT-8 is eight
+  // hours ahead of UTC; it reads as the offset it is, "UTC+8".
+  if (/^Etc\/GMT([+-]\d{1,2})?$/.test(zone)) return offsetLabel(zone) || zone
   return (zone.split('/').pop() ?? zone).replace(/_/g, ' ')
 }
 

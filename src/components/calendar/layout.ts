@@ -207,6 +207,53 @@ export function coveredDays(
   return { start, finish: finish < start ? start : finish }
 }
 
+/** The clock an occurrence is read and written by, in a zone. */
+export interface Clock {
+  zonedDay: (date: Date, zone?: string) => string
+  zonedMinutes: (date: Date, zone?: string) => number
+  timestampAt: (day: string, minutes: number, zone?: string) => number
+}
+
+/**
+ * The occurrence moved by whole days: each end keeps its clock reading in
+ * its own zone, so a move across a clock change lands at the same time of
+ * day, and an all-day occurrence keeps its date and its length.
+ */
+export function shiftedEvent<
+  T extends {
+    start: number
+    finish: number
+    allday: boolean
+    date?: string
+    zone?: { start?: string; finish?: string }
+  },
+>(event: T, days: number, clock: Clock): T {
+  if (days === 0) return event
+  if (event.allday) {
+    return {
+      ...event,
+      start: event.start + days * 86400,
+      finish: event.finish + days * 86400,
+      date: event.date ? addDays(event.date, days) : event.date,
+    }
+  }
+  const begins = new Date(event.start * 1000)
+  const ends = new Date(event.finish * 1000)
+  return {
+    ...event,
+    start: clock.timestampAt(
+      addDays(clock.zonedDay(begins, event.zone?.start), days),
+      clock.zonedMinutes(begins, event.zone?.start),
+      event.zone?.start
+    ),
+    finish: clock.timestampAt(
+      addDays(clock.zonedDay(ends, event.zone?.finish), days),
+      clock.zonedMinutes(ends, event.zone?.finish),
+      event.zone?.finish
+    ),
+  }
+}
+
 export interface RangeTitleFormat {
   /** A whole date spelled out: "Tuesday 16 September 2026". */
   longDate: (day: string) => string
