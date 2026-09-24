@@ -21,7 +21,7 @@ import { NavGroup } from './nav-group'
 import { Button } from '../ui/button'
 import { Skeleton } from '../ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { MochiMenu, type MochiMenuNotifications } from './mochi-menu'
+import { HomeIcon, MochiMenu, type MochiMenuNotifications } from './mochi-menu'
 
 import type { SidebarData } from './types'
 
@@ -91,11 +91,7 @@ export function AppSidebar({
           <SidebarHeader>
             <div className='flex items-center gap-2 px-2 py-1'>
               <a href='/' title={t`Home`} className='flex items-center gap-2'>
-                <img
-                  src='/images/logo-header.png'
-                  alt={'Mochi'}
-                  className='h-6 w-6'
-                />
+                <HomeIcon />
                 {/* jsx-text-ok: brand wordmark, verbatim in every locale */}
                 <span className='text-sm font-semibold'>mochi</span>
               </a>

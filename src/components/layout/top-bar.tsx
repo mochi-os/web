@@ -12,7 +12,7 @@ import { useScreenSize } from '../../hooks/use-screen-size'
 import { useSidebar } from '../ui/sidebar'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { MochiMenu, type MochiMenuNotifications } from './mochi-menu'
+import { HomeIcon, MochiMenu, type MochiMenuNotifications } from './mochi-menu'
 import { t } from '@lingui/core/macro'
 
 type TopBarProps = {
@@ -88,7 +88,7 @@ export function TopBar({
         </Tooltip>
 
         <a href='/' title={t`Home`}>
-          <img src='/images/logo-header.png' alt='Mochi' className='h-6 w-6' />
+          <HomeIcon />
         </a>
 
         <div className='flex-1' />
@@ -105,13 +105,10 @@ export function TopBar({
           <a
             href='/'
             title={t`Home`}
+
             className='flex size-10 items-center justify-center rounded-md transition-colors duration-150 hover:bg-hover active:bg-interactive-active'
           >
-            <img
-              src='/images/logo-header.png'
-              alt='Mochi'
-              className='h-6 w-6'
-            />
+            <HomeIcon />
           </a>
 
           <div className='min-w-0 overflow-hidden text-center whitespace-nowrap text-ellipsis'>
