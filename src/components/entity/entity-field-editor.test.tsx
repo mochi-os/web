@@ -64,6 +64,51 @@ describe('EntityFieldEditor', () => {
       const remove = screen.getByRole('button', { name: 'Remove item' })
       expect(remove.className).toContain('[@media(hover:none)]:opacity-100')
     })
+
+    it('exposes completion progress to assistive technology', () => {
+      show({ field, value })
+
+      expect(
+        screen.getByRole('progressbar', { name: 'Steps' })
+      ).toHaveAttribute('aria-valuenow', '0')
+    })
+
+    it('moves the editor bar with the items that are done', () => {
+      show({
+        field,
+        value: JSON.stringify([
+          { id: 'a', text: 'Draft', done: true },
+          { id: 'b', text: 'Review', done: false },
+        ]),
+      })
+
+      expect(
+        screen.getByRole('progressbar', { name: 'Steps' })
+      ).toHaveAttribute('aria-valuenow', '50')
+    })
+
+    it('shows the same bar in the read-only view', () => {
+      show({
+        field,
+        readOnly: true,
+        value: JSON.stringify([
+          { id: 'a', text: 'Draft', done: true },
+          { id: 'b', text: 'Review', done: false },
+          { id: 'c', text: 'Ship', done: true },
+          { id: 'd', text: 'Tell', done: true },
+        ]),
+      })
+
+      expect(
+        screen.getByRole('progressbar', { name: 'Steps' })
+      ).toHaveAttribute('aria-valuenow', '75')
+    })
+
+    it('draws no bar for an empty read-only list', () => {
+      show({ field, readOnly: true, value: '[]' })
+
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    })
   })
 
   describe('text pattern', () => {

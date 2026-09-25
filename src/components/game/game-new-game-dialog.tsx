@@ -145,6 +145,7 @@ export function GameNewGameDialog({
               </div>
             ) : (
               <PersonPicker
+                presentation='combobox'
                 mode={mode}
                 value={value}
                 onChange={onChange}

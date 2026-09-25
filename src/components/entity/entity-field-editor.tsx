@@ -11,6 +11,7 @@ import { Switch } from '../ui/switch'
 import { Input } from '../ui/input'
 import { DatePicker } from '../ui/date-picker'
 import { Textarea } from '../ui/textarea'
+import { Progress } from '../ui/progress'
 import {
   Select,
   SelectContent,
@@ -235,12 +236,11 @@ export function EntityFieldEditor({
         return (
           <div className='space-y-2'>
             <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-              <div className='flex-1 h-1.5 bg-muted rounded-full overflow-hidden'>
-                <div
-                  className='h-full bg-primary transition-[width]'
-                  style={{ width: `${(doneCount / items.length) * 100}%` }}
-                />
-              </div>
+              <Progress
+                aria-label={field.name}
+                className='min-w-0 flex-1'
+                value={(doneCount / items.length) * 100}
+              />
               <span className='tabular-nums'>
                 {doneCount}/{items.length}
               </span>
@@ -399,6 +399,7 @@ export function EntityFieldEditor({
       case 'checklist':
         return (
           <ChecklistEditor
+            label={field.name}
             value={value}
             onChange={onChange}
             disabled={disabled}
@@ -477,12 +478,18 @@ function DateEditor({
 
 // Checklist editor component
 interface ChecklistEditorProps {
+  label: string
   value: string
   onChange: (value: string) => void
   disabled?: boolean
 }
 
-function ChecklistEditor({ value, onChange, disabled }: ChecklistEditorProps) {
+function ChecklistEditor({
+  label,
+  value,
+  onChange,
+  disabled,
+}: ChecklistEditorProps) {
   const [newItemText, setNewItemText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -559,12 +566,11 @@ function ChecklistEditor({ value, onChange, disabled }: ChecklistEditorProps) {
       {/* Progress indicator */}
       {totalCount > 0 && (
         <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-          <div className='flex-1 h-1.5 bg-muted rounded-full overflow-hidden'>
-            <div
-              className='h-full bg-primary transition-[width]'
-              style={{ width: `${(doneCount / totalCount) * 100}%` }}
-            />
-          </div>
+          <Progress
+            aria-label={label}
+            className='min-w-0 flex-1'
+            value={(doneCount / totalCount) * 100}
+          />
           <span className='tabular-nums'>
             {doneCount}/{totalCount}
           </span>
