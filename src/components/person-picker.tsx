@@ -276,7 +276,24 @@ export function PersonPicker({
     const hasPeople = filteredPeople.length > 0
     const searchedAndEmpty = !isLoading && !!debouncedSearch && !hasPeople
     const showList = searching || hasPeople || searchedAndEmpty
-    const chosenName = selectedPeople[0]?.name ?? selectedIds[0] ?? ''
+    // An id with no name to show, as when a caller preselects someone who is
+    // in no loaded list, reads "N selected" like the trigger does, never the
+    // raw id. In multiple mode the unknown ones share one chip.
+    const unknownIds = selectedIds.filter((_, index) => !selectedPeople[index])
+    // Written out rather than shared so both extract to the trigger's own
+    // strings, "{0, plural, ...}" and "Remove {name}", already translated.
+    const name = plural(unknownIds.length, {
+      one: '# selected',
+      other: '# selected',
+    })
+    const chosenName =
+      selectedIds.length === 0
+        ? ''
+        : (selectedPeople[0]?.name ??
+          plural(selectedIds.length, {
+            one: '# selected',
+            other: '# selected',
+          }))
     const inputValue = single && !editing ? chosenName : searchQuery
 
     return (
@@ -284,7 +301,9 @@ export function PersonPicker({
         <ComboboxChips disabled={disabled} className={className}>
           {!single &&
             selectedIds.map((id, index) => {
-              const name = selectedPeople[index]?.name ?? id
+              const person = selectedPeople[index]
+              if (!person) return null
+              const { name } = person
               return (
                 <ComboboxChip
                   key={id}
@@ -296,6 +315,17 @@ export function PersonPicker({
                 </ComboboxChip>
               )
             })}
+          {!single && unknownIds.length > 0 && (
+            <ComboboxChip
+              removeLabel={t`Remove ${name}`}
+              onRemove={() =>
+                onChange(selectedIds.filter((id) => !unknownIds.includes(id)))
+              }
+              disabled={disabled}
+            >
+              {name}
+            </ComboboxChip>
+          )}
           <ComboboxInput
             value={inputValue}
             onValueChange={(next) => {
@@ -312,7 +342,11 @@ export function PersonPicker({
                 event.currentTarget.value === '' &&
                 selectedIds.length > 0
               ) {
-                handleSelect(selectedIds[selectedIds.length - 1])
+                // Removes the last chip shown, which is the shared one when
+                // any id has no name.
+                if (unknownIds.length > 0)
+                  onChange(selectedIds.filter((id) => !unknownIds.includes(id)))
+                else handleSelect(selectedIds[selectedIds.length - 1])
               }
             }}
             placeholder={selectedIds.length === 0 ? placeholder : undefined}

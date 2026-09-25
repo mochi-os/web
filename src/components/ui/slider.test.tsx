@@ -44,6 +44,25 @@ describe('Slider', () => {
     expect(commit).toHaveBeenCalledWith([1])
   })
 
+  // Radix commits a key step inside its value update, before it reports the
+  // change. A caller that works the value over in onValueChange and reads the
+  // result in onValueCommit gets the value from before the step, so it has to
+  // work from the commit's own argument. Settings' interest weights did not,
+  // and every key press saved the weight before it.
+  it('commits a keyboard step before it reports it', () => {
+    const calls: string[] = []
+    render(
+      <Slider
+        aria-label='Weight'
+        value={[40]}
+        onValueChange={() => calls.push('change')}
+        onValueCommit={() => calls.push('commit')}
+      />
+    )
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' })
+    expect(calls).toEqual(['commit', 'change'])
+  })
+
   it('ignores input while disabled', () => {
     const change = vi.fn()
     render(

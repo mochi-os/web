@@ -130,7 +130,7 @@ function SidePanelHeader({
               className='size-8 shrink-0'
               aria-label={t`Close`}
             >
-              <ArrowRightToLine className='size-4' />
+              <ArrowRightToLine className='size-4 rtl:-scale-x-100' />
             </Button>
           </SheetClose>
         </TooltipTrigger>
