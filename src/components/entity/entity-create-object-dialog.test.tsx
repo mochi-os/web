@@ -5,6 +5,7 @@
 // try created is the one the retry finishes, and the sentence naming the
 // classes a parent may come from is built by the locale, not by joining.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   act,
   render,
@@ -47,10 +48,20 @@ function show(over: Record<string, unknown> = {}) {
     searchUsers: vi.fn(async () => ({ data: { results: [] } })),
     ...over,
   }
-  render(
+  const dialog = (
     <EntityCreateObjectDialog
       {...(props as Parameters<typeof EntityCreateObjectDialog>[0])}
     />
+  )
+  // A test that reads the board's list brings its own client; the nearest
+  // provider is the one the dialog uses.
+  const client = over.client as QueryClient | undefined
+  render(
+    client ? (
+      <QueryClientProvider client={client}>{dialog}</QueryClientProvider>
+    ) : (
+      dialog
+    )
   )
   return { createObject, setValue }
 }
@@ -106,6 +117,62 @@ describe('EntityCreateObjectDialog', () => {
     const create = await screen.findByRole('button', { name: 'Create' })
     expect(create.querySelector('svg.lucide-plus')).not.toBeNull()
     expect(create.querySelector('svg.lucide-check')).toBeNull()
+  })
+})
+
+// The board's list, which the dialog adds the new object to as soon as it is
+// made rather than waiting for a reload.
+describe('EntityCreateObjectDialog and the board list', () => {
+  // The first load is empty; any reload after it stays pending, so the list
+  // reads as the dialog left it.
+  function board() {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    const listObjects = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { objects: [] as EntityObject[] } })
+      .mockReturnValue(new Promise(() => {}))
+    const copies = () =>
+      (
+        client.getQueryData(['objects', 'c1']) as { objects: EntityObject[] }
+      ).objects.filter((object) => object.id === 'o1').length
+    return { client, listObjects, copies }
+  }
+
+  async function create(onCreated: ReturnType<typeof vi.fn>) {
+    const button = await screen.findByRole('button', { name: 'Create' })
+    fireEvent.submit(button.closest('form') as HTMLFormElement)
+    await waitFor(() => expect(onCreated).toHaveBeenCalled())
+  }
+
+  it('adds the new object at once', async () => {
+    const { client, listObjects, copies } = board()
+    const onCreated = vi.fn()
+    show({ client, listObjects, onCreated })
+    await waitFor(() => expect(listObjects).toHaveBeenCalled())
+    await create(onCreated)
+    expect(copies()).toBe(1)
+  })
+
+  it('adds it once when a reload has already brought it', async () => {
+    const { client, listObjects, copies } = board()
+    const onCreated = vi.fn()
+    // The server's object/create message reloads the list while the dialog
+    // is still writing the board's defaults.
+    const setValue = vi.fn(async () => {
+      client.setQueryData(['objects', 'c1'], {
+        objects: [{ id: 'o1', class: 'task', values: {} } as EntityObject],
+      })
+      return {}
+    })
+    show({ client, listObjects, onCreated, setValue })
+    await waitFor(() => expect(listObjects).toHaveBeenCalled())
+    await create(onCreated)
+    expect(copies()).toBe(1)
   })
 })
 

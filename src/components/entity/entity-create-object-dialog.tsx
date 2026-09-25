@@ -410,6 +410,9 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
       queryClient.setQueryData(
         ['objects', containerId],
         (old: { objects: TObject[]; watched?: string[] } | undefined) => {
+          // A reload while the fields were being written, such as the one the
+          // server's object/create message starts, may already hold it.
+          if (old?.objects.some((o) => o.id === data.id)) return old
           const maxRank =
             old?.objects.reduce(
               (max, o) =>
