@@ -214,11 +214,44 @@ describe('PersonPicker', () => {
       expect(input).toHaveValue('')
     })
 
-    it('multiple: names a chip for an id it cannot resolve', () => {
-      show({ presentation: 'combobox', value: ['ghost'], local: people })
+    it('multiple: ids it cannot resolve share one "N selected" chip, never the raw id', () => {
+      const onChange = vi.fn()
+      show({
+        presentation: 'combobox',
+        value: ['ghost', 'a', 'phantom'],
+        local: people,
+        onChange,
+      })
+      expect(screen.queryByText('ghost')).not.toBeInTheDocument()
+      expect(screen.queryByText('phantom')).not.toBeInTheDocument()
+      expect(screen.getByText('2 selected')).toBeInTheDocument()
       expect(
-        screen.getByRole('button', { name: 'Remove ghost' })
+        screen.getByRole('button', { name: 'Remove Ana' })
       ).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Remove 2 selected' }))
+      expect(onChange).toHaveBeenCalledWith(['a'])
+    })
+
+    it('multiple: Backspace removes the shared chip when it is the last one shown', () => {
+      const onChange = vi.fn()
+      show({
+        presentation: 'combobox',
+        value: ['ghost', 'a', 'phantom'],
+        local: people,
+        onChange,
+      })
+      fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Backspace' })
+      expect(onChange).toHaveBeenCalledWith(['a'])
+    })
+
+    it('single: an id it cannot resolve reads "1 selected", never the raw id', () => {
+      show({
+        presentation: 'combobox',
+        mode: 'single',
+        value: 'ghost',
+        local: people,
+      })
+      expect(screen.getByRole('combobox')).toHaveValue('1 selected')
     })
 
     it('multiple: a chip outlives the result set that held the person', () => {

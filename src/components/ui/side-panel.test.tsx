@@ -82,6 +82,17 @@ describe('SidePanel', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  // The panel sits at the end edge, which is the left in right-to-left
+  // pages, so the arrow has to turn round with it.
+  it('mirrors the close arrow in right-to-left pages', () => {
+    render(<Fixture onOpenChange={() => {}} />)
+
+    const arrow = screen
+      .getByRole('button', { name: 'Close' })
+      .querySelector('svg')
+    expect(arrow).toHaveClass('rtl:-scale-x-100')
+  })
+
   it('stays open on a tap outside by default', async () => {
     const onOpenChange = vi.fn()
     render(<Fixture onOpenChange={onOpenChange} />)
