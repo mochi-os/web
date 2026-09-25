@@ -80,6 +80,16 @@ export function startOfMonth(day: string): string {
   return `${day.slice(0, 8)}01`
 }
 
+/** The year `day` falls in. */
+export function yearOf(day: string): number {
+  return Number(day.slice(0, 4))
+}
+
+/** Months from the month of `from` to the month of `to`, negative going back. */
+export function monthsBetween(from: string, to: string): number {
+  return (yearOf(to) - yearOf(from)) * 12 + (monthOf(to) - monthOf(from))
+}
+
 /** The month `day` falls in, 1 through 12. */
 export function monthOf(day: string): number {
   return Number(day.slice(5, 7))
@@ -146,24 +156,101 @@ export function viewRange(
   }
 }
 
-/** The day to anchor on after a step forward (1) or back (-1). */
+/**
+ * The day to anchor on after a step forward (1) or back (-1). Multiweek steps
+ * a week at a time, so the span slides a row rather than jumping its length.
+ */
 export function stepDate(
   view: CalendarView,
   date: string,
-  direction: number,
-  options: RangeOptions
+  direction: number
 ): string {
   switch (view) {
     case 'day':
       return addDays(date, direction)
     case 'week':
-      return addDays(date, 7 * direction)
     case 'multiweek':
-      return addDays(date, 7 * options.weeks * direction)
+      return addDays(date, 7 * direction)
     case 'month':
       return addMonths(startOfMonth(date), direction)
     case 'list':
       return addMonths(startOfMonth(date), direction)
+  }
+}
+
+/**
+ * The first and last day an occurrence covers. An all-day occurrence is placed
+ * by its own date and its whole-day count, never by its instants: the server
+ * expands it in its zone, and a browser in another zone would otherwise draw
+ * it a day out. A timed occurrence covers the days its instants fall on, each
+ * end in its own zone when it has one and in the user's otherwise; a finish
+ * on the stroke of midnight belongs to the day before. An occurrence whose
+ * end falls, by the clock, before its start covers its start day alone.
+ */
+export function coveredDays(
+  event: {
+    allday: boolean
+    date?: string
+    start: number
+    finish: number
+    zone?: { start?: string; finish?: string }
+  },
+  zonedDay: (date: Date, zone?: string) => string
+): { start: string; finish: string } {
+  if (event.allday && event.date) {
+    const days = Math.max(1, Math.round((event.finish - event.start) / 86400))
+    return { start: event.date, finish: addDays(event.date, days - 1) }
+  }
+  const last = Math.max(event.start, event.finish - 1)
+  const start = zonedDay(new Date(event.start * 1000), event.zone?.start)
+  const finish = zonedDay(new Date(last * 1000), event.zone?.finish)
+  return { start, finish: finish < start ? start : finish }
+}
+
+/** The clock an occurrence is read and written by, in a zone. */
+export interface Clock {
+  zonedDay: (date: Date, zone?: string) => string
+  zonedMinutes: (date: Date, zone?: string) => number
+  timestampAt: (day: string, minutes: number, zone?: string) => number
+}
+
+/**
+ * The occurrence moved by whole days: each end keeps its clock reading in
+ * its own zone, so a move across a clock change lands at the same time of
+ * day, and an all-day occurrence keeps its date and its length.
+ */
+export function shiftedEvent<
+  T extends {
+    start: number
+    finish: number
+    allday: boolean
+    date?: string
+    zone?: { start?: string; finish?: string }
+  },
+>(event: T, days: number, clock: Clock): T {
+  if (days === 0) return event
+  if (event.allday) {
+    return {
+      ...event,
+      start: event.start + days * 86400,
+      finish: event.finish + days * 86400,
+      date: event.date ? addDays(event.date, days) : event.date,
+    }
+  }
+  const begins = new Date(event.start * 1000)
+  const ends = new Date(event.finish * 1000)
+  return {
+    ...event,
+    start: clock.timestampAt(
+      addDays(clock.zonedDay(begins, event.zone?.start), days),
+      clock.zonedMinutes(begins, event.zone?.start),
+      event.zone?.start
+    ),
+    finish: clock.timestampAt(
+      addDays(clock.zonedDay(ends, event.zone?.finish), days),
+      clock.zonedMinutes(ends, event.zone?.finish),
+      event.zone?.finish
+    ),
   }
 }
 
@@ -294,10 +381,7 @@ export function barRows(week: string[], bars: Bar[]): BarPlacement[] {
   const clipped = bars
     .map((bar) => {
       const column = Math.max(0, daysBetween(first, bar.start))
-      const finish = Math.min(
-        week.length - 1,
-        daysBetween(first, bar.finish)
-      )
+      const finish = Math.min(week.length - 1, daysBetween(first, bar.finish))
       return {
         key: bar.key,
         column,
@@ -332,7 +416,11 @@ export function barRows(week: string[], bars: Bar[]): BarPlacement[] {
         }
       }
       if (free) {
-        for (let column = bar.column; column < bar.column + bar.span; column++) {
+        for (
+          let column = bar.column;
+          column < bar.column + bar.span;
+          column++
+        ) {
           taken[column] = true
         }
         break

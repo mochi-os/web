@@ -6,6 +6,7 @@ import {
   addDays,
   addMonths,
   barRows,
+  coveredDays,
   dayList,
   dayOfWeek,
   daysBetween,
@@ -18,6 +19,8 @@ import {
   viewRange,
   weekNumber,
   weekRows,
+  yearOf,
+  monthsBetween,
   type RangeOptions,
 } from './layout'
 
@@ -120,12 +123,16 @@ describe('viewRange', () => {
 
 describe('stepDate', () => {
   it('steps by the view unit', () => {
-    expect(stepDate('day', '2026-09-16', 1, options)).toBe('2026-09-17')
-    expect(stepDate('week', '2026-09-16', -1, options)).toBe('2026-09-09')
-    expect(stepDate('multiweek', '2026-09-16', 1, options)).toBe('2026-10-14')
-    expect(stepDate('month', '2026-09-16', 1, options)).toBe('2026-10-01')
-    expect(stepDate('month', '2026-01-15', -1, options)).toBe('2025-12-01')
-    expect(stepDate('list', '2026-09-16', 1, options)).toBe('2026-10-01')
+    expect(stepDate('day', '2026-09-16', 1)).toBe('2026-09-17')
+    expect(stepDate('week', '2026-09-16', -1)).toBe('2026-09-09')
+    expect(stepDate('month', '2026-09-16', 1)).toBe('2026-10-01')
+    expect(stepDate('month', '2026-01-15', -1)).toBe('2025-12-01')
+    expect(stepDate('list', '2026-09-16', 1)).toBe('2026-10-01')
+  })
+
+  it('slides the multiweek span one week at a time, not its length', () => {
+    expect(stepDate('multiweek', '2026-09-16', 1)).toBe('2026-09-23')
+    expect(stepDate('multiweek', '2026-09-16', -1)).toBe('2026-09-09')
   })
 })
 
@@ -137,9 +144,9 @@ describe('rangeTitle', () => {
   }
 
   it('names a single day, a span and a month', () => {
-    expect(rangeTitle('day', viewRange('day', '2026-09-16', options), format)).toBe(
-      'long:2026-09-16'
-    )
+    expect(
+      rangeTitle('day', viewRange('day', '2026-09-16', options), format)
+    ).toBe('long:2026-09-16')
     expect(
       rangeTitle('week', viewRange('week', '2026-09-16', options), format)
     ).toBe('range:2026-09-14..2026-09-20')
@@ -232,9 +239,7 @@ describe('barRows', () => {
 
   it('places a bar at its column with its span', () => {
     expect(
-      barRows(week, [
-        { key: 'a', start: '2026-09-15', finish: '2026-09-17' },
-      ])
+      barRows(week, [{ key: 'a', start: '2026-09-15', finish: '2026-09-17' }])
     ).toEqual([
       { key: 'a', column: 1, span: 3, row: 0, before: false, after: false },
     ])
@@ -242,9 +247,7 @@ describe('barRows', () => {
 
   it('clips a bar to the week and marks the sides it runs past', () => {
     expect(
-      barRows(week, [
-        { key: 'a', start: '2026-09-10', finish: '2026-09-23' },
-      ])
+      barRows(week, [{ key: 'a', start: '2026-09-10', finish: '2026-09-23' }])
     ).toEqual([
       { key: 'a', column: 0, span: 7, row: 0, before: true, after: true },
     ])
@@ -285,3 +288,91 @@ describe('snap', () => {
     expect(snap(547, 0)).toBe(547)
   })
 })
+
+describe('yearOf and monthsBetween', () => {
+  it('reads the year from a civil day', () => {
+    expect(yearOf('2026-09-22')).toBe(2026)
+    expect(yearOf('1999-01-01')).toBe(1999)
+  })
+
+  it('counts months across a year boundary, either way', () => {
+    expect(monthsBetween('2026-09-22', '2026-09-01')).toBe(0)
+    expect(monthsBetween('2026-09-22', '2026-12-05')).toBe(3)
+    expect(monthsBetween('2026-11-30', '2027-01-01')).toBe(2)
+    expect(monthsBetween('2027-01-01', '2026-11-30')).toBe(-2)
+    expect(monthsBetween('2026-09-22', '2024-09-22')).toBe(-24)
+  })
+})
+
+describe('coveredDays', () => {
+  // A zone nine hours ahead of the instants, as a Tokyo browser reads a server
+  // that expanded in UTC.
+  const ahead = (date: Date) =>
+    new Date(date.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+  const utc = (date: Date) => date.toISOString().slice(0, 10)
+  const midnight = Date.UTC(2026, 8, 22) / 1000
+
+  it('places an all-day occurrence by its date whatever the zone', () => {
+    const one = {
+      allday: true,
+      date: '2026-09-22',
+      start: midnight,
+      finish: midnight + 86400,
+    }
+    expect(coveredDays(one, ahead)).toEqual({
+      start: '2026-09-22',
+      finish: '2026-09-22',
+    })
+    expect(
+      coveredDays({ ...one, finish: midnight + 2 * 86400 }, ahead)
+    ).toEqual({ start: '2026-09-22', finish: '2026-09-23' })
+  })
+
+  it('places a timed occurrence by the days its instants fall on', () => {
+    const evening = {
+      allday: false,
+      start: midnight + 20 * 3600,
+      finish: midnight + 22 * 3600,
+    }
+    expect(coveredDays(evening, utc)).toEqual({
+      start: '2026-09-22',
+      finish: '2026-09-22',
+    })
+    expect(coveredDays(evening, ahead)).toEqual({
+      start: '2026-09-23',
+      finish: '2026-09-23',
+    })
+    // A finish on the stroke of midnight belongs to the day before.
+    expect(
+      coveredDays(
+        { allday: false, start: midnight, finish: midnight + 86400 },
+        utc
+      )
+    ).toEqual({ start: '2026-09-22', finish: '2026-09-22' })
+  })
+})
+
+describe('coveredDays across zones', () => {
+  // A callback reading a day in a named zone, as the format hook's does.
+  const zoned = (date: Date, zone?: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: zone ?? 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date) // i18n-format-ok: a test's own reading of a day in a named zone
+  // 23:00Z on the 25th: still the 25th in New York, already the 26th in Tokyo.
+  const late = Date.UTC(2026, 8, 25, 23) / 1000
+
+  it('reads each end in its own zone', () => {
+    const event = { allday: false, start: late, finish: late + 3600, zone: { start: 'America/New_York', finish: 'Asia/Tokyo' } }
+    expect(coveredDays(event, zoned)).toEqual({ start: '2026-09-25', finish: '2026-09-26' })
+  })
+
+  it('reads both ends in the user zone without zones', () => {
+    // The last second, 23:59:59Z, is still the 25th.
+    expect(coveredDays({ allday: false, start: late, finish: late + 3600 }, zoned)).toEqual({ start: '2026-09-25', finish: '2026-09-25' })
+    expect(coveredDays({ allday: false, start: late, finish: late + 7200 }, zoned)).toEqual({ start: '2026-09-25', finish: '2026-09-26' })
+  })
+
+  it('covers the start day alone when the end falls before it by the clock', () => {
+    const event = { allday: false, start: late, finish: late + 3600, zone: { start: 'Asia/Tokyo', finish: 'America/New_York' } }
+    expect(coveredDays(event, zoned)).toEqual({ start: '2026-09-26', finish: '2026-09-26' })
+  })
+})
+

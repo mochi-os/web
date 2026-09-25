@@ -4,6 +4,7 @@
 import { useCallback } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useFormat } from '../../hooks/use-format'
+import { descriptionText } from '../../lib/html'
 import type { CalendarEvent } from './types'
 
 /** How much of a description a hover tooltip carries. */
@@ -40,11 +41,10 @@ export function useEventTooltip(): (event: CalendarEvent) => string {
       const lines = [event.title, span]
       if (event.location) lines.push(event.location)
       if (event.description) {
-        lines.push(
-          event.description.length > HEAD
-            ? `${event.description.slice(0, HEAD)}…`
-            : event.description
-        )
+        // A subscription's description may be HTML; a title attribute can
+        // only carry its text.
+        const text = descriptionText(event.description)
+        lines.push(text.length > HEAD ? `${text.slice(0, HEAD)}…` : text)
       }
       return lines.join('\n')
     },

@@ -135,6 +135,8 @@ export * from './components/calendar/tooltip'
 export * from './components/calendar/time-grid'
 export * from './components/calendar/month-grid'
 export * from './components/calendar/mini-month'
+export * from './components/calendar/date-header'
+export * from './components/ui/date-picker'
 export type {
   SidebarData,
   NavItem,
@@ -369,6 +371,9 @@ export * from './lib/rank'
 export * from './lib/request'
 export * from './lib/utils'
 export * from './lib/locale-format'
+export * from './lib/links'
+export * from './lib/html'
+export * from './hooks/use-links'
 export * from './lib/rtl'
 export * from './lib/chat-ui'
 export * from './lib/places-api'

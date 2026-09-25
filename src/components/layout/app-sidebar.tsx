@@ -21,7 +21,7 @@ import { NavGroup } from './nav-group'
 import { Button } from '../ui/button'
 import { Skeleton } from '../ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { MochiMenu, type MochiMenuNotifications } from './mochi-menu'
+import { HomeIcon, MochiMenu, type MochiMenuNotifications } from './mochi-menu'
 
 import type { SidebarData } from './types'
 
@@ -91,11 +91,7 @@ export function AppSidebar({
           <SidebarHeader>
             <div className='flex items-center gap-2 px-2 py-1'>
               <a href='/' title={t`Home`} className='flex items-center gap-2'>
-                <img
-                  src='/images/logo-header.png'
-                  alt={'Mochi'}
-                  className='h-6 w-6'
-                />
+                <HomeIcon />
                 {/* jsx-text-ok: brand wordmark, verbatim in every locale */}
                 <span className='text-sm font-semibold'>mochi</span>
               </a>
@@ -128,9 +124,12 @@ export function AppSidebar({
                   // max-width: 1023.98px block), so nothing overlays the
                   // sidebar and this clearance reads as an empty gap. From
                   // 1024 the menu is a fixed rail painted over the app, and
-                  // the space is what keeps it off the first entry.
+                  // the space is what keeps it off the first entry. Collapsed,
+                  // the menu is a column of the avatar, Home and two recent
+                  // apps: four 9-unit buttons, three 1-unit gaps and 2-unit
+                  // padding at each end, 43 units.
                   'min-h-0 p-0',
-                  state === 'collapsed' ? 'lg:min-h-20' : 'lg:min-h-10'
+                  state === 'collapsed' ? 'lg:min-h-44' : 'lg:min-h-10'
                 )
               : undefined
           }
