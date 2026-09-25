@@ -590,7 +590,7 @@ export function ViewSheet({
                   </SelectItem>
                   {(numbered || sort === 'number') && (
                     <SelectItem value='number'>
-                      <Trans>Number</Trans>
+                      <Trans context='item number'>Number</Trans>
                     </SelectItem>
                   )}
                   <SelectItem value='updated'>

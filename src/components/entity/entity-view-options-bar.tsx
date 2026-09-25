@@ -50,7 +50,7 @@ function useBuiltInSortOptions(numbered: boolean, activeSortId: string) {
     () => [
       { id: 'rank', label: t`Manual` },
       ...(numbered || activeSortId === 'number'
-        ? [{ id: 'number', label: t`Number` }]
+        ? [{ id: 'number', label: t({ message: 'Number', context: 'item number' }) }]
         : []),
       { id: 'created', label: t`Created` },
       { id: 'updated', label: t`Updated` },

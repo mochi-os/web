@@ -44,7 +44,7 @@ export function SortSelector({
       label: t`Interests`,
       icon: <Star className='size-4' />,
     },
-    { value: 'new', label: t`New`, icon: <Clock className='size-4' /> },
+    { value: 'new', label: t({ message: 'New', context: 'sort order' }), icon: <Clock className='size-4' /> },
     { value: 'hot', label: t`Hot`, icon: <Flame className='size-4' /> },
     { value: 'top', label: t`Top`, icon: <Trophy className='size-4' /> },
   ]
