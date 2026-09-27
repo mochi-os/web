@@ -731,15 +731,13 @@ export function MonthGrid({
                               )
                             }
                             className={cn(
-                              'bg-surface-2 hover:bg-surface-3 pointer-events-auto absolute flex items-center gap-1.5 overflow-hidden border px-2 text-start text-sm',
+                              'hover:bg-hover pointer-events-auto absolute flex items-center gap-1.5 overflow-hidden px-2 text-start text-sm',
                               placement.before ? 'rounded-e-md' : 'rounded-md',
                               faded(event)
                                 ? 'opacity-40'
                                 : over(event) && 'opacity-60',
                               event.readonly ? 'cursor-pointer' : 'cursor-grab',
-                              event.status === 'tentative' && 'border-dashed',
-                              event.key === selected &&
-                                'bg-primary/10 border-primary'
+                              event.key === selected && 'bg-primary/10'
                             )}
                             style={{
                               insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,

@@ -1092,10 +1092,10 @@ export function TimeGrid({
                 }
                 title={tooltip(event)}
                 className={cn(
-                  'bg-surface-2 hover:bg-surface-3 absolute flex h-[26px] items-center gap-1.5 overflow-hidden rounded-md border px-2 text-start text-sm',
+                  'hover:bg-hover absolute flex h-[26px] items-center gap-1.5 overflow-hidden rounded-md px-2 text-start text-sm',
                   dragging ? 'opacity-40' : over(event) && 'opacity-60',
                   event.readonly ? 'cursor-pointer' : 'cursor-grab',
-                  card(event)
+                  event.key === selected && 'bg-primary/10'
                 )}
                 style={{
                   insetInlineStart: `${(placement.column / days.length) * 100}%`,

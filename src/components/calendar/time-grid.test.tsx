@@ -315,6 +315,11 @@ describe('TimeGrid event appearance', () => {
   it('draws an all-day bar as its dot and its title, with no time', () => {
     cleanup()
     const bar = draw()('holiday')
+    // No fill, unlike the timed blocks' grey card.
+    expect(bar.className).not.toMatch(/(^|\s)bg-/)
+    expect([...bar.classList].some((name) => name.startsWith('border'))).toBe(
+      false
+    )
     expect((bar.firstElementChild as HTMLElement).style.backgroundColor).toBe(
       'rgb(34, 197, 94)'
     )
@@ -451,13 +456,16 @@ describe('TimeGrid event states', () => {
     expect(block.classList.contains('opacity-60')).toBe(true)
   })
 
-  it('draws a tentative event with a ring for its dot and a dashed card', () => {
+  it('draws a tentative event with a ring for its dot, a dashed card for a block, and no outline for a bar', () => {
     const find = draw()
     const block = find('maybe')
     expect(block.classList.contains('border-dashed')).toBe(true)
     expect(dot(block).style.borderColor).toBe('rgb(168, 85, 247)')
     expect(dot(block).style.backgroundColor).toBe('')
-    expect(find('offsite').classList.contains('border-dashed')).toBe(true)
+    expect(dot(find('offsite')).style.borderColor).toBe('rgb(34, 197, 94)')
+    expect(
+      [...find('offsite').classList].some((name) => name.startsWith('border'))
+    ).toBe(false)
     expect(find('called').classList.contains('border-dashed')).toBe(false)
   })
 

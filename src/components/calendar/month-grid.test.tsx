@@ -214,6 +214,11 @@ describe('MonthGrid event appearance', () => {
 
   it('draws an all-day event as its dot and its title, with no time', () => {
     const bar = draw()('holiday')
+    // No fill: the grey card is for the week's timed blocks only.
+    expect(bar.className).not.toMatch(/(^|\s)bg-/)
+    expect([...bar.classList].some((name) => name.startsWith('border'))).toBe(
+      false
+    )
     expect((bar.firstElementChild as HTMLElement).style.backgroundColor).toBe(
       'rgb(34, 197, 94)'
     )
@@ -483,11 +488,14 @@ describe('MonthGrid event states', () => {
     expect(chip.classList.contains('opacity-60')).toBe(true)
   })
 
-  it('draws a tentative event with a ring for its dot, and a dashed bar', () => {
+  it('draws a tentative event with a ring for its dot, a bar with no outline', () => {
     const find = draw()
     expect(dot(find('maybe')).style.borderColor).toBe('rgb(168, 85, 247)')
     expect(dot(find('maybe')).style.backgroundColor).toBe('')
-    expect(find('offsite').classList.contains('border-dashed')).toBe(true)
+    expect(dot(find('offsite')).style.borderColor).toBe('rgb(34, 197, 94)')
+    expect(
+      [...find('offsite').classList].some((name) => name.startsWith('border'))
+    ).toBe(false)
     expect(dot(find('called')).style.backgroundColor).toBe('rgb(96, 165, 250)')
   })
 
@@ -504,6 +512,8 @@ describe('MonthGrid event states', () => {
     cleanup()
     find = draw('offsite')
     expect(find('offsite').classList.contains('bg-primary/10')).toBe(true)
-    expect(find('offsite').classList.contains('bg-surface-2')).toBe(false)
+    expect(
+      [...find('offsite').classList].some((name) => name.startsWith('border'))
+    ).toBe(false)
   })
 })
