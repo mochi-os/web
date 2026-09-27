@@ -10,6 +10,7 @@ import {
   dayList,
   dayOfWeek,
   daysBetween,
+  finished,
   overlapColumns,
   rangeTitle,
   snap,
@@ -376,3 +377,37 @@ describe('coveredDays across zones', () => {
   })
 })
 
+describe('finished', () => {
+  const utc = (date: Date) => date.toISOString().slice(0, 10)
+  const midnight = Date.UTC(2026, 8, 22) / 1000
+
+  it('counts a timed occurrence over once its finish has passed', () => {
+    const meeting = {
+      allday: false,
+      start: midnight + 9 * 3600,
+      finish: midnight + 10 * 3600,
+    }
+    expect(finished(meeting, midnight + 9.5 * 3600, '2026-09-22', utc)).toBe(
+      false
+    )
+    expect(finished(meeting, midnight + 10 * 3600, '2026-09-22', utc)).toBe(
+      true
+    )
+  })
+
+  it('counts an all-day occurrence over only once its last day is behind', () => {
+    const holiday = {
+      allday: true,
+      date: '2026-09-22',
+      start: midnight,
+      finish: midnight + 2 * 86400,
+    }
+    // On its second day it is still running, though its first day is past.
+    expect(finished(holiday, midnight + 30 * 3600, '2026-09-23', utc)).toBe(
+      false
+    )
+    expect(finished(holiday, midnight + 50 * 3600, '2026-09-24', utc)).toBe(
+      true
+    )
+  })
+})

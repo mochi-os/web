@@ -10,8 +10,7 @@ import {
   useState,
 } from 'react'
 import { useLingui } from '@lingui/react/macro'
-import { plural } from '@lingui/core/macro'
-import { Copy, Repeat, Repeat2 } from 'lucide-react'
+import { Bell, Copy, Repeat, Repeat2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import {
@@ -19,6 +18,7 @@ import {
   barRows,
   coveredDays,
   daysBetween,
+  finished,
   monthOf,
   shiftedEvent,
   weekNumber,
@@ -35,12 +35,15 @@ import {
   target,
   type Point,
 } from './gesture'
+import { EventDot } from './event-dot'
+import { EventTitle } from './event-title'
 import { useEventTooltip } from './tooltip'
 import { Wheel } from './wheel'
 import type { CalendarEvent, DayMove } from './types'
 
 const BAR = 28
-const CHIP = 28
+// A timed event's two lines: its title, then its time and marks.
+const CHIP = 40
 const HEADER = 28
 
 export interface MonthGridProps {
@@ -53,13 +56,13 @@ export interface MonthGridProps {
   today: string
   /** Draws the ISO week number in each row's gutter. */
   weekNumbers?: boolean
+  /** The occurrence whose summary or editor is open, drawn tinted. */
+  selected?: string
   onSelect: (key: string, anchor: HTMLElement) => void
   /** An empty cell clicked. */
   onCreate: (day: string) => void
   /** A chip dragged onto another day or calendar. */
   onMove: (move: DayMove) => void
-  /** The day's own "+N more" opened. */
-  onOverflow: (day: string) => void
   /** A day number clicked. */
   onDay: (day: string) => void
   /**
@@ -89,10 +92,10 @@ export function MonthGrid({
   events,
   today,
   weekNumbers,
+  selected,
   onSelect,
   onCreate,
   onMove,
-  onOverflow,
   onDay,
   onStep,
 }: MonthGridProps) {
@@ -136,8 +139,16 @@ export function MonthGrid({
     []
   )
 
-  // How many bars and chips a cell can show before it needs "+N more".
-  const capacity = Math.max(1, Math.floor((rowHeight - HEADER - 4) / CHIP))
+  /**
+   * The height a week's bars take: all of them while they fit, else what
+   * leaves each day room for one timed event, or the whole day where the
+   * week has none, and never less than one bar; the rest scroll.
+   */
+  const band = (bars: number, timed: boolean) =>
+    Math.min(
+      bars * BAR,
+      Math.max(BAR, rowHeight - HEADER - 2 - (timed ? CHIP : 0))
+    )
 
   // The dragged occurrence as it would land on the day under the pointer,
   // laid out like any other so it takes a row of its own, spans every day it
@@ -328,6 +339,29 @@ export function MonthGrid({
     }
   }, [pointing])
 
+  // The dragged chip is drawn first in the day it would land on, so that
+  // day's list shows its top however far it was scrolled.
+  const destination = dragging && !dragging.calendar ? dragging.day : null
+  useEffect(() => {
+    if (!destination) return
+    const list = body.current?.querySelector<HTMLElement>(
+      `[data-day="${destination}"] [data-list]`
+    )
+    if (list) list.scrollTop = 0
+  }, [destination])
+
+  // A bar lifted onto a week whose bars scroll is kept in view there.
+  useEffect(() => {
+    const element = ghost.current
+    const parent = element?.closest<HTMLElement>('[data-band]')
+    if (!element || !parent) return
+    const top = element.offsetTop
+    const bottom = top + element.offsetHeight
+    if (top < parent.scrollTop) parent.scrollTop = top
+    else if (bottom > parent.scrollTop + parent.clientHeight)
+      parent.scrollTop = bottom - parent.clientHeight
+  }, [bars, tentative])
+
   // A keyboard drag keeps focus on the chip as it moves, and gives it back
   // to the chip when it ends.
   const chipOf = (key: string) => {
@@ -450,23 +484,33 @@ export function MonthGrid({
   const faded = (event: CalendarEvent) =>
     tentative !== null && dragging?.event.key === event.key && !dragging.copy
 
+  /** Over already, or cancelled, and drawn quieter. */
+  const over = (event: CalendarEvent) =>
+    event.status === 'cancelled' ||
+    finished(event, Date.now() / 1000, today, format.zonedDay)
+
+  /** An event's start, in its own zone when it has one. */
+  const clock = (event: CalendarEvent) =>
+    format.formatClock(new Date(event.start * 1000), event.zone?.start)
+
+  // The title, then under it, aligned with it: the time, how it repeats,
+  // and whether it has a reminder.
   const chipContent = (event: CalendarEvent, lifted: boolean) => (
     <>
-      <span
-        aria-hidden
-        className='size-2 shrink-0 rounded-full'
-        style={{ backgroundColor: event.colour }}
-      />
-      <span className='text-muted-foreground shrink-0'>
-        {format.formatClock(new Date(event.start * 1000), event.zone?.start)}
+      <span className='flex min-w-0 items-center gap-1.5'>
+        <EventDot event={event} />
+        {lifted && dragging?.copy && (
+          <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
+        )}
+        <EventTitle
+          event={event}
+          className={cn('flex-1', lifted && 'font-medium')}
+        />
       </span>
-      {lifted && dragging?.copy ? (
-        <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
-      ) : (
-        <EventMarks event={event} />
-      )}
-      <span className={cn('truncate', lifted && 'font-medium')}>
-        {event.title}
+      <span className='text-muted-foreground flex items-center gap-1 ps-3.5 text-xs leading-4'>
+        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
+        {!lifted && <RepeatMark event={event} />}
+        {!lifted && <AlarmMark event={event} />}
       </span>
     </>
   )
@@ -479,12 +523,8 @@ export function MonthGrid({
         tabIndex={-1}
         data-testid='ghost'
         onKeyDown={(pointer) => keyed(pointer, dragging.event, dragging.from)}
-        className='pointer-events-none flex w-full items-center gap-2 overflow-hidden rounded-sm border-s-[3px] px-2 text-start text-sm shadow-md outline-none'
-        style={{
-          height: `${CHIP - 2}px`,
-          backgroundColor: `${event.colour}33`,
-          borderInlineStartColor: event.colour,
-        }}
+        className='bg-surface-2 pointer-events-none flex w-full flex-col justify-center overflow-hidden rounded-md border px-2 text-start text-sm leading-5 shadow-md outline-none'
+        style={{ height: `${CHIP - 2}px` }}
       >
         {chipContent(event, true)}
       </div>
@@ -504,9 +544,10 @@ export function MonthGrid({
         onKeyDown={(pointer) => keyed(pointer, event, day)}
         title={tooltip(event)}
         className={cn(
-          'flex w-full items-center gap-2 overflow-hidden rounded-sm px-2 text-start text-sm',
-          faded(event) && 'opacity-40',
-          event.readonly ? 'cursor-pointer' : 'cursor-grab'
+          'hover:bg-hover flex w-full flex-col justify-center overflow-hidden rounded-md px-2 text-start text-sm leading-5',
+          faded(event) ? 'opacity-40' : over(event) && 'opacity-60',
+          event.readonly ? 'cursor-pointer' : 'cursor-grab',
+          event.key === selected && 'bg-primary/10'
         )}
         style={{ height: `${CHIP - 2}px` }}
       >
@@ -518,6 +559,9 @@ export function MonthGrid({
     <div
       className='flex h-full min-h-0 flex-col'
       onWheel={(event) => {
+        // A day whose events overflow it scrolls them; the rest of the grid
+        // pages.
+        if (scrolls(event.target)) return
         const direction = wheel.step(event)
         if (direction) onStep?.(direction)
       }}
@@ -547,6 +591,10 @@ export function MonthGrid({
             (most, item) => Math.max(most, item.placement.row + 1),
             0
           )
+          const height = band(
+            barCount,
+            week.some((day) => chips.has(day))
+          )
           return (
             <div key={week[0]} className='flex min-h-0 flex-1 border-b'>
               {weekNumbers && (
@@ -558,10 +606,6 @@ export function MonthGrid({
                 {week.map((day) => {
                   const outside = month !== undefined && monthOf(day) !== month
                   const list = chips.get(day) ?? []
-                  const room = Math.max(0, capacity - barCount)
-                  const shown =
-                    list.length > room ? Math.max(0, room - 1) : room
-                  const hidden = list.length - Math.min(list.length, shown)
                   const landing =
                     dragging && !dragging.calendar && dragging.day === day
                       ? dragging
@@ -576,7 +620,12 @@ export function MonthGrid({
                         landing && 'bg-primary/10'
                       )}
                       onClick={(pointer) => {
-                        if (pointer.target === pointer.currentTarget)
+                        // Empty space in the cell, below its events too.
+                        const target = pointer.target as Element
+                        if (
+                          target === pointer.currentTarget ||
+                          target.hasAttribute('data-list')
+                        )
                           onCreate(day)
                       }}
                     >
@@ -601,115 +650,119 @@ export function MonthGrid({
                           )}
                         </button>
                       </div>
-                      <div
-                        className='absolute inset-x-0.5'
-                        style={{ top: `${HEADER + barCount * BAR}px` }}
-                      >
-                        {list
-                          .slice(0, Math.min(list.length, shown))
-                          .map((event) => chipButton(event, day))}
-                        {hidden > 0 && (
-                          <button
-                            type='button'
-                            onClick={(pointer) => {
-                              pointer.stopPropagation()
-                              onOverflow(day)
-                            }}
-                            className='text-muted-foreground hover:text-foreground w-full px-2 text-start text-sm'
-                            style={{ height: `${CHIP - 2}px` }}
-                          >
-                            {plural(hidden, {
-                              one: '+# more',
-                              other: '+# more',
-                            })}
-                          </button>
-                        )}
-                      </div>
+                      {list.length > 0 && (
+                        <div
+                          data-list
+                          className='absolute inset-x-0.5 bottom-0.5 overflow-y-auto overscroll-contain'
+                          style={{ top: `${HEADER + height}px` }}
+                        >
+                          {list.map((event) => chipButton(event, day))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
 
-                {placements.map(({ placement, event }) =>
-                  dragging && event.key === tentative?.key ? (
+                {placements.length > 0 && (
+                  <div
+                    data-band
+                    className='pointer-events-none absolute inset-x-0 overflow-y-auto overscroll-contain'
+                    style={{ top: `${HEADER}px`, height: `${height}px` }}
+                  >
                     <div
-                      key={`${placement.key}:${placement.column}`}
-                      ref={ghost}
-                      tabIndex={-1}
-                      data-testid='ghost'
-                      onKeyDown={(pointer) =>
-                        keyed(pointer, dragging.event, dragging.from)
-                      }
-                      className={cn(
-                        'pointer-events-none absolute z-20 flex items-center gap-2 overflow-hidden px-2 text-start text-sm shadow-md outline-none',
-                        placement.before
-                          ? 'rounded-e-sm'
-                          : 'rounded-sm border-s-[3px]'
-                      )}
-                      style={{
-                        insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,
-                        width: `calc(${(placement.span / 7) * 100}% - 4px)`,
-                        top: `${HEADER + placement.row * BAR}px`,
-                        height: `${BAR - 2}px`,
-                        backgroundColor: `${event.colour}33`,
-                        borderInlineStartColor: event.colour,
-                      }}
+                      className='relative'
+                      style={{ height: `${barCount * BAR}px` }}
                     >
-                      {dragging.copy && (
-                        <Copy
-                          className='size-3 shrink-0'
-                          aria-label={t`Copy`}
-                        />
+                      {placements.map(({ placement, event }) =>
+                        dragging && event.key === tentative?.key ? (
+                          <div
+                            key={`${placement.key}:${placement.column}`}
+                            ref={ghost}
+                            tabIndex={-1}
+                            data-testid='ghost'
+                            onKeyDown={(pointer) =>
+                              keyed(pointer, dragging.event, dragging.from)
+                            }
+                            className={cn(
+                              'bg-surface-2 pointer-events-none absolute z-20 flex items-center gap-1.5 overflow-hidden border px-2 text-start text-sm shadow-md outline-none',
+                              placement.before ? 'rounded-e-md' : 'rounded-md'
+                            )}
+                            style={{
+                              insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,
+                              width: `calc(${(placement.span / 7) * 100}% - 4px)`,
+                              top: `${placement.row * BAR}px`,
+                              height: `${BAR - 2}px`,
+                            }}
+                          >
+                            <EventDot event={event} />
+                            {dragging.copy && (
+                              <Copy
+                                className='size-3 shrink-0'
+                                aria-label={t`Copy`}
+                              />
+                            )}
+                            <EventTitle
+                              event={event}
+                              className='flex-1 font-medium'
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            key={placement.key}
+                            type='button'
+                            data-key={event.key}
+                            onPointerDown={(pointer) => {
+                              pointer.stopPropagation()
+                              startMove(
+                                pointer,
+                                event,
+                                coveredDays(event, format.zonedDay).start
+                              )
+                            }}
+                            onClick={(pointer) => {
+                              pointer.stopPropagation()
+                              onSelect(event.key, pointer.currentTarget)
+                            }}
+                            onKeyDown={(pointer) =>
+                              keyed(
+                                pointer,
+                                event,
+                                coveredDays(event, format.zonedDay).start
+                              )
+                            }
+                            className={cn(
+                              'bg-surface-2 hover:bg-surface-3 pointer-events-auto absolute flex items-center gap-1.5 overflow-hidden border px-2 text-start text-sm',
+                              placement.before ? 'rounded-e-md' : 'rounded-md',
+                              faded(event)
+                                ? 'opacity-40'
+                                : over(event) && 'opacity-60',
+                              event.readonly ? 'cursor-pointer' : 'cursor-grab',
+                              event.status === 'tentative' && 'border-dashed',
+                              event.key === selected &&
+                                'bg-primary/10 border-primary'
+                            )}
+                            style={{
+                              insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,
+                              width: `calc(${(placement.span / 7) * 100}% - 4px)`,
+                              top: `${placement.row * BAR}px`,
+                              height: `${BAR - 2}px`,
+                            }}
+                            title={tooltip(event)}
+                          >
+                            <EventDot event={event} />
+                            <EventTitle event={event} className='flex-1' />
+                            <EventMarks event={event} />
+                            {/* A timed run of days reads its start where it begins. */}
+                            {!event.allday && !placement.before && (
+                              <span className='text-muted-foreground shrink-0'>
+                                {clock(event)}
+                              </span>
+                            )}
+                          </button>
+                        )
                       )}
-                      <span className='truncate font-medium'>
-                        {event.title}
-                      </span>
                     </div>
-                  ) : (
-                    <button
-                      key={placement.key}
-                      type='button'
-                      data-key={event.key}
-                      onPointerDown={(pointer) => {
-                        pointer.stopPropagation()
-                        startMove(
-                          pointer,
-                          event,
-                          coveredDays(event, format.zonedDay).start
-                        )
-                      }}
-                      onClick={(pointer) => {
-                        pointer.stopPropagation()
-                        onSelect(event.key, pointer.currentTarget)
-                      }}
-                      onKeyDown={(pointer) =>
-                        keyed(
-                          pointer,
-                          event,
-                          coveredDays(event, format.zonedDay).start
-                        )
-                      }
-                      className={cn(
-                        'absolute flex items-center gap-2 overflow-hidden px-2 text-start text-sm',
-                        placement.before
-                          ? 'rounded-e-sm'
-                          : 'rounded-sm border-s-[3px]',
-                        faded(event) && 'opacity-40',
-                        event.readonly ? 'cursor-pointer' : 'cursor-grab'
-                      )}
-                      style={{
-                        insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,
-                        width: `calc(${(placement.span / 7) * 100}% - 4px)`,
-                        top: `${HEADER + placement.row * BAR}px`,
-                        height: `${BAR - 2}px`,
-                        backgroundColor: `${event.colour}33`,
-                        borderInlineStartColor: event.colour,
-                      }}
-                      title={tooltip(event)}
-                    >
-                      <EventMarks event={event} />
-                      <span className='truncate'>{event.title}</span>
-                    </button>
-                  )
+                  </div>
                 )}
               </div>
             </div>
@@ -725,7 +778,32 @@ export function MonthGrid({
   )
 }
 
+/** Whether a wheel over this element scrolls a day's events or a week's bars. */
+function scrolls(target: EventTarget) {
+  if (!(target instanceof Element)) return false
+  const list = target.closest<HTMLElement>('[data-list], [data-band]')
+  return list !== null && list.scrollHeight > list.clientHeight
+}
+
 function EventMarks({ event }: { event: CalendarEvent }) {
+  // Beside the time on one line: a reminder, then how it repeats.
+  return (
+    <>
+      <AlarmMark event={event} />
+      <RepeatMark event={event} />
+    </>
+  )
+}
+
+function AlarmMark({ event }: { event: CalendarEvent }) {
+  const { t } = useLingui()
+  if (!event.alarm) return null
+  return (
+    <Bell className='size-3 shrink-0 opacity-70' aria-label={t`Reminder`} />
+  )
+}
+
+function RepeatMark({ event }: { event: CalendarEvent }) {
   const { t } = useLingui()
   if (event.exception) {
     return (

@@ -9,7 +9,7 @@ export interface CalendarEvent {
   location?: string
   /** Shown, shortened, in the hover text. */
   description?: string
-  /** The calendar's colour, as #rrggbb. */
+  /** The event's own colour when it has one, else its calendar's, as #rrggbb. */
   colour: string
   /** Unix seconds. */
   start: number
@@ -26,6 +26,10 @@ export interface CalendarEvent {
   recurring?: boolean
   /** True when the occurrence overrides its series. */
   exception?: boolean
+  /** The occurrence carries a reminder of its own. */
+  alarm?: boolean
+  /** Not confirmed: cancelled, or only tentative. */
+  status?: 'cancelled' | 'tentative'
   /**
    * The zone each end was written in, present when the calendar shows events
    * in their own zones: a view then places that end at its wall-clock time

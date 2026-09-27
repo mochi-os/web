@@ -3,13 +3,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLingui } from '@lingui/react/macro'
-import { Copy, History, Repeat, Repeat2 } from 'lucide-react'
+import { Bell, Copy, History, Repeat, Repeat2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import {
   addDays,
   barRows,
   coveredDays,
+  finished,
   dayOfWeek,
   daysBetween,
   overlapColumns,
@@ -28,6 +29,8 @@ import {
   target,
   type Point,
 } from './gesture'
+import { EventDot } from './event-dot'
+import { EventTitle } from './event-title'
 import { useEventTooltip } from './tooltip'
 import type { CalendarEvent, EventMove } from './types'
 
@@ -36,6 +39,8 @@ const HOUR = 80
 // time and place beneath the title.
 const LINE = 24
 const TWO_LINES = 48
+// A week block's title, its time line and its location.
+const THREE_LINES = 56
 const SNAP = 15
 const MINIMUM = 15
 
@@ -56,6 +61,8 @@ export interface TimeGridProps {
    * occurrences may sit at times in other zones.
    */
   zone?: string
+  /** The occurrence whose summary or editor is open, drawn tinted. */
+  selected?: string
   /** Opens the occurrence's summary popover. */
   onSelect: (key: string, anchor: HTMLElement) => void
   /** A drag across empty grid, in unix seconds. */
@@ -126,6 +133,7 @@ export function TimeGrid({
   workdays,
   today,
   zone,
+  selected,
   onSelect,
   onCreate,
   onMove,
@@ -914,6 +922,39 @@ export function TimeGrid({
   const nowDay = format.zonedDay(new Date(minute * 1000))
   const nowMinutes = format.zonedMinutes(new Date(minute * 1000))
 
+  /** An event's start, in its own zone when it has one. */
+  const clock = (event: CalendarEvent) =>
+    format.formatClock(new Date(event.start * 1000), event.zone?.start)
+
+  /**
+   * When an event starts and ends, each in its own zone when it has one, as
+   * its drag preview reads the time it would land on.
+   */
+  const reading = (event: CalendarEvent) => {
+    const from = clock(event)
+    const to = format.formatClock(
+      new Date(event.finish * 1000),
+      event.zone?.finish
+    )
+    return t`${from} to ${to}`
+  }
+
+  /** Over already, or cancelled, and drawn quieter. */
+  const over = (event: CalendarEvent) =>
+    event.status === 'cancelled' ||
+    finished(event, minute, nowDay, format.zonedDay)
+
+  /** How an event's card is drawn: tinted when open, dashed when tentative. */
+  const card = (event: CalendarEvent) =>
+    cn(
+      event.status === 'tentative' && 'border-dashed',
+      event.key === selected && 'bg-primary/10 border-primary'
+    )
+
+  // A week's narrow columns give the time and the marks a line of their own
+  // under the title; a single day has room for them beside it.
+  const stacked = days.length > 1
+
   const gridTemplate = {
     // eslint-disable-next-line lingui/no-unlocalized-strings -- a CSS grid template, never shown to anyone
     gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
@@ -941,12 +982,6 @@ export function TimeGrid({
           ),
       }
     : null
-  const ghostColour = lifted
-    ? {
-        backgroundColor: `${lifted.event.colour}33`,
-        borderInlineStartColor: lifted.event.colour,
-      }
-    : {}
 
   return (
     <div ref={root} className='flex h-full min-h-0 flex-col'>
@@ -1005,18 +1040,18 @@ export function TimeGrid({
                 <div
                   key={placement.key}
                   {...ghostProps}
-                  className='pointer-events-none absolute z-20 flex h-[26px] items-center gap-1.5 overflow-hidden rounded-sm border-s-[3px] px-2 text-start text-sm shadow-md outline-none'
+                  className='bg-surface-2 pointer-events-none absolute z-20 flex h-[26px] items-center gap-1.5 overflow-hidden rounded-md border px-2 text-start text-sm shadow-md outline-none'
                   style={{
-                    ...ghostColour,
                     insetInlineStart: `${(placement.column / days.length) * 100}%`,
                     width: `calc(${(placement.span / days.length) * 100}% - 2px)`,
                     top: `${placement.row * 28 + 2}px`,
                   }}
                 >
+                  <EventDot event={event} />
                   {lifted.mode === 'move' && lifted.copy && (
                     <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
                   )}
-                  <span className='truncate font-medium'>{event.title}</span>
+                  <EventTitle event={event} className='flex-1 font-medium' />
                 </div>
               )
             }
@@ -1057,20 +1092,27 @@ export function TimeGrid({
                 }
                 title={tooltip(event)}
                 className={cn(
-                  'absolute flex h-[26px] items-center gap-1.5 overflow-hidden rounded-sm border-s-[3px] px-2 text-start text-sm',
-                  dragging && 'opacity-40',
-                  event.readonly ? 'cursor-pointer' : 'cursor-grab'
+                  'bg-surface-2 hover:bg-surface-3 absolute flex h-[26px] items-center gap-1.5 overflow-hidden rounded-md border px-2 text-start text-sm',
+                  dragging ? 'opacity-40' : over(event) && 'opacity-60',
+                  event.readonly ? 'cursor-pointer' : 'cursor-grab',
+                  card(event)
                 )}
                 style={{
                   insetInlineStart: `${(placement.column / days.length) * 100}%`,
                   width: `calc(${(placement.span / days.length) * 100}% - 2px)`,
                   top: `${placement.row * 28 + 2}px`,
-                  backgroundColor: `${event.colour}33`,
-                  borderInlineStartColor: event.colour,
                 }}
               >
+                <EventDot event={event} />
+                <EventTitle event={event} className='flex-1' />
                 <EventMarks event={event} />
-                <span className='truncate'>{event.title}</span>
+                {/* A timed run of days reads its start where it begins. */}
+                {!event.allday &&
+                  coveredDays(event, format.zonedDay).start >= days[0] && (
+                    <span className='text-muted-foreground shrink-0'>
+                      {clock(event)}
+                    </span>
+                  )}
               </button>
             )
           })}
@@ -1175,40 +1217,71 @@ export function TimeGrid({
                         }
                         title={tooltip(item.event)}
                         className={cn(
-                          'absolute z-10 overflow-hidden rounded-sm border-s-[3px] px-2 py-0.5 text-start text-sm leading-5',
-                          dragging &&
-                            !(lifted.mode === 'move' && lifted.copy) &&
-                            'opacity-40',
-                          item.event.readonly ? 'cursor-pointer' : 'cursor-grab'
+                          'bg-surface-2 hover:bg-surface-3 absolute z-10 overflow-hidden rounded-md border px-2 py-0.5 text-start text-sm leading-5',
+                          dragging && !(lifted.mode === 'move' && lifted.copy)
+                            ? 'opacity-40'
+                            : over(item.event) && 'opacity-60',
+                          item.event.readonly
+                            ? 'cursor-pointer'
+                            : 'cursor-grab',
+                          card(item.event)
                         )}
                         style={{
                           top: `${(start / 60) * HOUR}px`,
                           height: `${Math.max(LINE, ((end - start) / 60) * HOUR - 1)}px`,
                           insetInlineStart: `${(item.column / item.width) * 100}%`,
                           width: `calc(${100 / item.width}% - 2px)`,
-                          backgroundColor: `${item.event.colour}33`,
-                          borderInlineStartColor: item.event.colour,
                         }}
                       >
-                        <div className='flex items-center gap-1'>
-                          <EventMarks
-                            event={item.event}
-                            backwards={item.backwards}
-                          />
-                          <span className='truncate font-medium'>
-                            {item.event.title}
-                          </span>
-                        </div>
-                        {((end - start) / 60) * HOUR >= TWO_LINES && (
-                          <div className='text-muted-foreground truncate text-xs'>
-                            {format.formatClock(
-                              new Date(item.event.start * 1000),
-                              item.event.zone?.start
-                            )}
-                            {item.event.location
-                              ? ` · ${item.event.location}`
-                              : ''}
-                          </div>
+                        {stacked ? (
+                          <>
+                            <div className='flex items-center gap-1.5'>
+                              <EventDot event={item.event} />
+                              <EventTitle
+                                event={item.event}
+                                className='flex-1 font-medium'
+                              />
+                            </div>
+                            <div className='text-muted-foreground flex items-center gap-1 ps-3.5 text-xs leading-4'>
+                              <span className='min-w-0 truncate'>
+                                {reading(item.event)}
+                              </span>
+                              <RepeatMark
+                                event={item.event}
+                                backwards={item.backwards}
+                              />
+                              <AlarmMark event={item.event} />
+                            </div>
+                            {((end - start) / 60) * HOUR >= THREE_LINES &&
+                              item.event.location && (
+                                <div className='text-muted-foreground truncate ps-3.5 text-xs leading-4'>
+                                  {item.event.location}
+                                </div>
+                              )}
+                          </>
+                        ) : (
+                          <>
+                            <div className='flex items-center gap-1.5'>
+                              <EventDot event={item.event} />
+                              <EventTitle
+                                event={item.event}
+                                className='flex-1 font-medium'
+                              />
+                              <EventMarks
+                                event={item.event}
+                                backwards={item.backwards}
+                              />
+                              <span className='text-muted-foreground shrink-0'>
+                                {reading(item.event)}
+                              </span>
+                            </div>
+                            {((end - start) / 60) * HOUR >= TWO_LINES &&
+                              item.event.location && (
+                                <div className='text-muted-foreground truncate text-xs'>
+                                  {item.event.location}
+                                </div>
+                              )}
+                          </>
                         )}
                         {!item.event.readonly && (
                           <div
@@ -1239,9 +1312,8 @@ export function TimeGrid({
                     ) && (
                       <div
                         {...ghostProps}
-                        className='pointer-events-none absolute inset-x-0 z-20 overflow-hidden rounded-sm border-s-[3px] px-2 py-0.5 text-start text-sm leading-5 shadow-md outline-none'
+                        className='bg-surface-2 pointer-events-none absolute inset-x-0 z-20 overflow-hidden rounded-md border px-2 py-0.5 text-start text-sm leading-5 shadow-md outline-none'
                         style={{
-                          ...ghostColour,
                           top: `${(lifted.start / 60) * HOUR}px`,
                           height: `${Math.max(
                             LINE,
@@ -1255,24 +1327,35 @@ export function TimeGrid({
                           )}px`,
                         }}
                       >
-                        <div className='flex items-center gap-1 font-medium'>
+                        <div className='flex items-center gap-1.5'>
+                          <EventDot event={lifted.event} />
                           {lifted.mode === 'move' && lifted.copy && (
                             <Copy
                               className='size-3 shrink-0'
                               aria-label={t`Copy`}
                             />
                           )}
-                          <span className='truncate'>{tentative(lifted)}</span>
+                          <EventTitle
+                            event={lifted.event}
+                            className='flex-1 font-medium'
+                          />
+                          {!stacked && (
+                            <span className='text-muted-foreground shrink-0'>
+                              {tentative(lifted)}
+                            </span>
+                          )}
                         </div>
-                        <div className='text-muted-foreground truncate text-xs'>
-                          {lifted.event.title}
-                        </div>
+                        {stacked && (
+                          <div className='text-muted-foreground truncate ps-3.5 text-xs leading-4'>
+                            {tentative(lifted)}
+                          </div>
+                        )}
                       </div>
                     )}
 
                   {drag?.mode === 'create' && drag.day === day && (
                     <div
-                      className='bg-primary/20 border-primary pointer-events-none absolute inset-x-1 z-20 rounded-sm border-s-[3px]'
+                      className='bg-primary/15 border-primary/60 pointer-events-none absolute inset-x-1 z-20 rounded-md border'
                       style={{
                         top: `${(Math.min(drag.start, drag.finish) / 60) * HOUR}px`,
                         height: `${(Math.max(SNAP, Math.abs(drag.finish - drag.start)) / 60) * HOUR}px`,
@@ -1304,6 +1387,31 @@ export function TimeGrid({
 }
 
 function EventMarks({
+  event,
+  backwards,
+}: {
+  event: CalendarEvent
+  /** The end falls before the start by the clock, across zones. */
+  backwards?: boolean
+}) {
+  // Beside the time on one line: a reminder, then how it repeats.
+  return (
+    <>
+      <AlarmMark event={event} />
+      <RepeatMark event={event} backwards={backwards} />
+    </>
+  )
+}
+
+function AlarmMark({ event }: { event: CalendarEvent }) {
+  const { t } = useLingui()
+  if (!event.alarm) return null
+  return (
+    <Bell className='size-3 shrink-0 opacity-70' aria-label={t`Reminder`} />
+  )
+}
+
+function RepeatMark({
   event,
   backwards,
 }: {

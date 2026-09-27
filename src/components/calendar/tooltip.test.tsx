@@ -45,4 +45,25 @@ describe('useEventTooltip', () => {
     })
     expect(text).toContain('Bring the numbers\na < b')
   })
+
+  it('names an untitled event, and says when it is cancelled or tentative', () => {
+    const { result } = renderHook(() => useEventTooltip(), { wrapper })
+    const base = {
+      key: 'e3',
+      title: '',
+      colour: '#60a5fa',
+      start: noon,
+      finish: noon + 3600,
+      allday: false,
+    }
+    const [first, second] = result
+      .current({ ...base, status: 'cancelled' })
+      .split('\n')
+    expect(first).toBe('(No title)')
+    expect(second).toBe('Cancelled')
+    expect(result.current({ ...base, status: 'tentative' })).toContain(
+      '\nTentative\n'
+    )
+    expect(result.current(base).split('\n')).toHaveLength(2)
+  })
 })

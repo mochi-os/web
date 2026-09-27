@@ -207,6 +207,27 @@ export function coveredDays(
   return { start, finish: finish < start ? start : finish }
 }
 
+/**
+ * The occurrence is over: a timed one has finished by now (unix seconds), an
+ * all-day one's last day is before today. The views draw it quieter, so what
+ * is still to come stands out.
+ */
+export function finished(
+  event: {
+    allday: boolean
+    date?: string
+    start: number
+    finish: number
+    zone?: { start?: string; finish?: string }
+  },
+  now: number,
+  today: string,
+  zonedDay: (date: Date, zone?: string) => string
+): boolean {
+  if (event.allday) return coveredDays(event, zonedDay).finish < today
+  return event.finish <= now
+}
+
 /** The clock an occurrence is read and written by, in a zone. */
 export interface Clock {
   zonedDay: (date: Date, zone?: string) => string
