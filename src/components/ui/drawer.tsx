@@ -95,23 +95,29 @@ function DrawerContent({
         className={cn(
           // Drawers must sit above sheets/dialogs so mobile confirm flows opened
           // from existing panels remain visible and interactive.
-          // No padding here: DrawerHeader and DrawerFooter each own a single
-          // p-4 (matching SheetHeader/SheetFooter), and the three selectors
-          // below give the same 16px inset to whatever body content sits
-          // between them, so header, body and footer line up on one edge
-          // instead of stacking padding on top of a parent padding. Three
-          // shapes exist in the wild: header, plain body, footer as siblings;
-          // a form wrapping all three; and a form that wraps only the body
-          // and footer while the header sits outside it (CreateEntityDialog
-          // and its five app copies) - the third pads the form's own
-          // children instead of the form, so the footer nested inside it
-          // is not padded twice.
-          'group/drawer-content bg-background fixed z-[60] flex h-auto flex-col overflow-y-auto',
-          '[&>[data-slot=drawer-header]+*:not(form):not([data-slot=drawer-footer])]:px-4',
-          '[&_form>[data-slot=drawer-header]+*:not([data-slot=drawer-footer])]:px-4',
-          '[&>[data-slot=drawer-header]+form>*:not([data-slot=drawer-footer])]:px-4',
+          // The side inset lives here, once, so header, every body block and
+          // the footer share one 16px edge whatever shape the body takes:
+          // loose siblings, a form around all of it, a form around body and
+          // footer only, or a footer nested inside a body block. Padding the
+          // children instead covered only the first block after the header,
+          // and it padded a bordered or tinted block from the inside, leaving
+          // its edge on the screen edge.
+          'group/drawer-content bg-background fixed z-[60] flex h-auto flex-col overflow-y-auto px-4',
+          // DialogContent spaces its blocks with gap-6. A plain gap here would
+          // also land under the handle and above the footer, which carry their
+          // own spacing, so only a body block that follows another body block
+          // gets the margin - directly inside the drawer or inside a form.
+          '[&>:not([data-slot=drawer-handle]):not([data-slot=drawer-header])+:not([data-slot=drawer-footer])]:mt-4',
+          '[&>form>:not([data-slot=drawer-header])+:not([data-slot=drawer-footer])]:mt-4',
+          // A footer carries the bottom inset. Without one the last block
+          // would sit on the bottom edge, so the drawer carries it instead.
+          '[&:not(:has([data-slot=drawer-footer]))]:pb-[calc(1rem+env(safe-area-inset-bottom))]',
+          // Callers size the desktop dialog with sm:max-w-*, and the drawer
+          // renders up to 767px. Without this a 640-767px sheet takes that
+          // width and sits against the left edge.
+          'data-[vaul-drawer-direction=bottom]:max-w-none data-[vaul-drawer-direction=top]:max-w-none',
           'data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80dvh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b',
-          'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80dvh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t data-[vaul-drawer-direction=bottom]:pb-[env(safe-area-inset-bottom)]',
+          'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80dvh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t',
           'data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:border-s data-[vaul-drawer-direction=right]:sm:max-w-sm',
           'data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:border-e data-[vaul-drawer-direction=left]:sm:max-w-sm',
           className
@@ -123,7 +129,10 @@ function DrawerContent({
         }}
         {...props}
       >
-        <div className='bg-muted mx-auto mt-2 mb-1 hidden h-1.5 w-9 shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block' />
+        <div
+          data-slot='drawer-handle'
+          className='bg-muted mx-auto mt-2 mb-1 hidden h-1.5 w-9 shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block'
+        />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
@@ -138,7 +147,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<'div'>) {
         // Sticky, not just a normal flex item: DrawerContent scrolls as one
         // box once content is taller than the sheet, and without this the
         // title scrolls away with everything else instead of staying put.
-        'bg-background sticky top-0 z-10 flex flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-1.5 md:text-start',
+        'bg-background sticky top-0 z-10 flex flex-col gap-0.5 py-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-1.5 md:text-start',
         className
       )}
       {...props}
@@ -157,7 +166,8 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
         // helping and the buttons end up below the fold - sticky is what
         // keeps Cancel/Submit visible at the bottom of the scrolled viewport
         // instead of requiring a scroll to reach them.
-        'bg-background sticky bottom-0 z-10 mt-auto flex flex-col gap-2 p-4',
+        // No side padding: DrawerContent owns the inset.
+        'bg-background sticky bottom-0 z-10 mt-auto flex flex-col gap-2 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]',
         className
       )}
       {...props}
