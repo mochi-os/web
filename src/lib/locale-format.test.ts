@@ -4,7 +4,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
 import {
+  formatClock,
   formatDate,
+  formatHour,
   formatTime,
   formatDateTime,
   formatRelativeTime,
@@ -100,14 +102,14 @@ describe("the browser's region reaches the formatters under a base language", ()
     expect(formatWeekdayDay(TUESDAY, 'UTC')).toBe('Tue 22')
     expect(formatLongDate(TUESDAY, 'UTC')).toContain('22 September 2026')
     expect(formatDate(TUESDAY, 'D MMM YYYY', 'UTC')).toBe('22 Sept 2026')
-    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00 pm')
+    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00\u202fpm')
   })
 
   it('reads American under en with an American browser', () => {
     load('en')
     speaks('en-US')
     expect(formatWeekdayDay(TUESDAY, 'UTC')).toBe('22 Tue')
-    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00 PM')
+    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00\u202fPM')
   })
 
   it('keeps the interface language when the browser speaks another', () => {
@@ -126,7 +128,7 @@ describe("the browser's region reaches the formatters under a base language", ()
 describe('meridiem follows the active language', () => {
   it('is AM/PM under en', () => {
     load('en')
-    expect(formatTime(MARCH, '12h')).toBe('3:30:00 PM')
+    expect(formatTime(MARCH, '12h')).toBe('3:30:00\u202fPM')
   })
 
   it('is not the English marker under a language that uses its own', () => {
@@ -140,6 +142,55 @@ describe('meridiem follows the active language', () => {
   it('does not touch 24h time, which has no marker', () => {
     load('ja')
     expect(formatTime(MARCH, '24h')).toBe('15:30:00')
+  })
+})
+
+// The clock as each language writes its short time: where the period goes,
+// the language's word for the part of the day, and what separates hours from
+// minutes. The server writes a reminder's time the same way.
+describe('the clock is written as the language writes it', () => {
+  const at = (hours: number, minutes: number) =>
+    new Date(Date.UTC(2026, 2, 14, hours, minutes, 0))
+
+  it('puts the period where the language puts it', () => {
+    load('ja')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('午後3:30')
+    expect(formatTime(at(15, 30), '12h', 'UTC')).toBe('午後3:30:00')
+    load('ko')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('PM 3:30')
+    load('en-us')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('3:30\u202fPM')
+  })
+
+  it("uses the language's words for the parts of the day", () => {
+    load('zh-hant')
+    expect(formatClock(at(0, 30), '12h', 'UTC')).toBe('凌晨12:30')
+    load('bg')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('3:30 ч. pm')
+    load('ar')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('3:30 م')
+  })
+
+  it('separates hours from minutes as the language does', () => {
+    load('da')
+    expect(formatClock(at(15, 30), '24h', 'UTC')).toBe('15.30')
+    load('fr-ca')
+    expect(formatClock(at(15, 30), '24h', 'UTC')).toBe('15 h 30')
+  })
+
+  it('keeps the digits 0-9 and the minutes two of them', () => {
+    load('fa')
+    expect(formatClock(at(15, 30), '24h', 'UTC')).toBe('15:30')
+    load('yo')
+    expect(formatClock(at(15, 4), '24h', 'UTC')).toBe('15:04')
+  })
+
+  it("writes a whole hour on the 12-hour clock as the language's hour", () => {
+    load('en-us')
+    expect(formatHour(at(15, 0), '12h', 'UTC')).toBe('3\u202fPM')
+    load('ja')
+    expect(formatHour(at(15, 0), '12h', 'UTC')).toBe('午後3時')
+    expect(formatHour(at(15, 30), '12h', 'UTC')).toBe('午後3:30')
   })
 })
 
@@ -216,8 +267,8 @@ describe('the timezone preference reaches the rendered value', () => {
   })
 
   it('applies the zone to the 12-hour clock and its meridiem', () => {
-    expect(formatTime(INSTANT, '12h', 'UTC')).toBe('3:30:00 PM')
-    expect(formatTime(INSTANT, '12h', 'Asia/Tokyo')).toBe('12:30:00 AM')
+    expect(formatTime(INSTANT, '12h', 'UTC')).toBe('3:30:00\u202fPM')
+    expect(formatTime(INSTANT, '12h', 'Asia/Tokyo')).toBe('12:30:00\u202fAM')
   })
 
   it('applies the zone to the month name form', () => {
@@ -242,7 +293,7 @@ describe('the timezone preference reaches the rendered value', () => {
     // The month-name and meridiem forms build their own Intl formatters,
     // which used to throw where the numeric forms already degraded.
     expect(formatDate(local, 'D MMM YYYY', 'Not/AZone')).toBe('14 Mar 2026')
-    expect(formatTime(local, '12h', 'Not/AZone')).toBe('3:30:00 PM')
+    expect(formatTime(local, '12h', 'Not/AZone')).toBe('3:30:00\u202fPM')
   })
 })
 

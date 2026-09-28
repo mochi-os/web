@@ -41,7 +41,7 @@ function tag(): string {
 // Cached: constructing an Intl formatter is expensive relative to formatting,
 // and these run per row in long lists.
 const monthFormatters = new Map<string, Intl.DateTimeFormat>()
-const meridiemFormatters = new Map<string, Intl.DateTimeFormat>()
+const clockFormatters = new Map<string, Intl.DateTimeFormat>()
 
 // A formatter for the zone when Intl accepts it, else for the browser's own:
 // an unusable stored preference degrades to local time rather than throwing
@@ -72,21 +72,42 @@ function monthShort(date: Date, timezone?: string): string {
   return formatter.format(date)
 }
 
-function meridiem(date: Date, timezone?: string): string {
+/**
+ * A time as the active language writes it on the chosen clock: its short time
+ * (hours and minutes), its medium time (with seconds) or its hour alone, with
+ * the period where the language puts it, its own word for the part of the day,
+ * and what it puts between hours and minutes. Digits stay 0-9, and minutes and
+ * seconds two of them, as the calendar lays a time out; ICU leaves Yoruba's
+ * unpadded.
+ */
+function clockText(
+  date: Date,
+  timeFormat: TimeFormat,
+  timezone: string | undefined,
+  style: 'short' | 'medium' | 'hour'
+): string {
   const lang = tag()
-  const key = timezone ? lang + '|' + timezone : lang
-  let formatter = meridiemFormatters.get(key)
+  const key = `${style}|${timeFormat}|${lang}|${timezone ?? ''}`
+  let formatter = clockFormatters.get(key)
   if (!formatter) {
-    formatter = dateFormatter(lang, timezone, { hour: 'numeric', hour12: true })
-    meridiemFormatters.set(key, formatter)
+    const hourCycle = timeFormat === '12h' ? 'h12' : 'h23'
+    formatter = dateFormatter(
+      lang,
+      timezone,
+      style === 'hour'
+        ? { hour: 'numeric', hourCycle, numberingSystem: 'latn' }
+        : { timeStyle: style, hourCycle, numberingSystem: 'latn' }
+    )
+    clockFormatters.set(key, formatter)
   }
-  // formatToParts rather than a string match: the marker's position and
-  // spelling vary by language (Japanese puts 午前 first), so there is nothing
-  // reliable to slice off the formatted string.
-  const part = formatter.formatToParts(date).find((p) => p.type === 'dayPeriod')
-  if (part) return part.value
-  const parts = zonedParts(date, timezone)
-  return (parts ? parts.hour : date.getHours()) >= 12 ? 'PM' : 'AM'
+  return formatter
+    .formatToParts(date)
+    .map((part) =>
+      part.type === 'minute' || part.type === 'second'
+        ? part.value.padStart(2, '0')
+        : part.value
+    )
+    .join('')
 }
 
 // Calendar fields as they read in `timezone`. Returns null for the browser's
@@ -174,14 +195,17 @@ export function zoneCity(zone: string): string {
  */
 export function offsetLabel(zone: string, date = new Date()): string {
   try {
-    const part = new Intl.DateTimeFormat('en-US', { // i18n-format-ok: reads the offset, not a date
+    const part = new Intl.DateTimeFormat('en-US', {
+      // i18n-format-ok: reads the offset, not a date
       timeZone: zone,
       timeZoneName: 'shortOffset',
     })
       .formatToParts(date)
       .find((item) => item.type === 'timeZoneName')
     // Some runtimes spell no offset "GMT+0".
-    return (part?.value ?? '').replace(/^GMT/, 'UTC').replace(/^UTC[+-]0$/, 'UTC')
+    return (part?.value ?? '')
+      .replace(/^GMT/, 'UTC')
+      .replace(/^UTC[+-]0$/, 'UTC')
   } catch {
     return ''
   }
@@ -196,7 +220,11 @@ export function seaTimezones(): string[] {
   const out: string[] = []
   for (let offset = -12; offset <= 12; offset++) {
     // eslint-disable-next-line lingui/no-unlocalized-strings -- zone identifiers, not text
-    out.push(offset === 0 ? 'Etc/GMT' : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`)
+    out.push(
+      offset === 0
+        ? 'Etc/GMT'
+        : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`
+    )
   }
   return out
 }
@@ -345,19 +373,13 @@ export function formatDayRange(
   return `${formatter.format(from)} - ${formatter.format(to)}`
 }
 
-/** A clock reading without seconds: "14:30", "2:30 PM". */
+/** A clock reading without seconds: "14:30", "2:30 PM", "午後2:30", "14.30". */
 export function formatClock(
   date: Date,
   timeFormat: TimeFormat,
   timezone?: string
 ): string {
-  const zoned = zonedParts(date, timezone)
-  const hours = zoned ? zoned.hour : date.getHours()
-  const minutes = zoned ? zoned.minute : date.getMinutes()
-  if (timeFormat === '12h') {
-    return `${hours % 12 || 12}:${pad(minutes)} ${meridiem(date, timezone)}`
-  }
-  return `${pad(hours)}:${pad(minutes)}`
+  return clockText(date, timeFormat, timezone, 'short')
 }
 
 /**
@@ -370,10 +392,9 @@ export function formatHour(
   timezone?: string
 ): string {
   const zoned = zonedParts(date, timezone)
-  const hours = zoned ? zoned.hour : date.getHours()
   const minutes = zoned ? zoned.minute : date.getMinutes()
   if (timeFormat === '12h' && minutes === 0) {
-    return `${hours % 12 || 12} ${meridiem(date, timezone)}`
+    return clockText(date, timeFormat, timezone, 'hour')
   }
   return formatClock(date, timeFormat, timezone)
 }
@@ -473,16 +494,7 @@ export function formatTime(
   timeFormat: TimeFormat,
   timezone?: string
 ): string {
-  const zoned = zonedParts(date, timezone)
-  const hours = zoned ? zoned.hour : date.getHours()
-  const minutes = zoned ? zoned.minute : date.getMinutes()
-  const seconds = zoned ? zoned.second : date.getSeconds()
-  if (timeFormat === '12h') {
-    const ampm = meridiem(date, timezone)
-    const h = hours % 12 || 12
-    return `${h}:${pad(minutes)}:${pad(seconds)} ${ampm}`
-  }
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  return clockText(date, timeFormat, timezone, 'medium')
 }
 
 export function formatDateTime(
