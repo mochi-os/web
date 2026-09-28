@@ -3,7 +3,9 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
+import names from '../data/timezone-names.json'
 import {
+  currentZone,
   formatClock,
   formatDate,
   formatHour,
@@ -385,5 +387,53 @@ describe("parseDate reads the user's own format", () => {
     expect(parseDate('22/09', 'DD/MM/YYYY')).toBeNull()
     expect(parseDate('', 'DD/MM/YYYY')).toBeNull()
     expect(parseDate('yesterday', 'DD/MM/YYYY')).toBeNull()
+  })
+})
+
+// These tests run on Node, whose zone data names zones as Chrome does:
+// Asia/Calcutta, never Asia/Kolkata.
+describe('a zone by its current name', () => {
+  it('reads an old name as the current one', () => {
+    expect(currentZone('Asia/Calcutta')).toBe('Asia/Kolkata')
+    expect(currentZone('Europe/Kiev')).toBe('Europe/Kyiv')
+    expect(currentZone('America/Buenos_Aires')).toBe(
+      'America/Argentina/Buenos_Aires'
+    )
+    expect(currentZone('America/Coral_Harbour')).toBe('America/Atikokan')
+    expect(currentZone('Pacific/Truk')).toBe('Pacific/Chuuk')
+  })
+
+  it('keeps a current name, and resolves any other alias of a drawn zone', () => {
+    expect(currentZone('Asia/Kolkata')).toBe('Asia/Kolkata')
+    expect(currentZone('Europe/London')).toBe('Europe/London')
+    expect(currentZone('US/Eastern')).toBe('America/New_York')
+  })
+
+  it('reads a zone too small for the map as the one it is drawn within', () => {
+    expect(currentZone('Europe/Busingen')).toBe('Europe/Zurich')
+    expect(currentZone('Europe/Vatican')).toBe('Europe/Rome')
+  })
+
+  it('leaves a zone the map does not draw as it is', () => {
+    for (const zone of [
+      'UTC',
+      'Etc/GMT',
+      'Etc/GMT-8',
+      'Antarctica/Troll',
+      'Not/AZone',
+    ]) {
+      expect(currentZone(zone)).toBe(zone)
+    }
+  })
+
+  it('finds every zone the browser lists on the map, but those below its southern edge', () => {
+    const drawn = new Set(names.zones)
+    const missing = Intl.supportedValuesOf('timeZone').filter(
+      (zone) =>
+        !drawn.has(currentZone(zone)) &&
+        !zone.startsWith('Antarctica/') &&
+        zone !== 'UTC'
+    )
+    expect(missing).toEqual([])
   })
 })

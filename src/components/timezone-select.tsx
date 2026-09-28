@@ -4,8 +4,13 @@
 import { useState, useMemo } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Check, ChevronsUpDown, Globe } from 'lucide-react'
-import { cn } from '../lib/utils'
-import { zoneCity, offsetLabel, seaTimezones } from '../lib/locale-format'
+import { cn, naturalCompare } from '../lib/utils'
+import {
+  currentZone,
+  zoneCity,
+  offsetLabel,
+  seaTimezones,
+} from '../lib/locale-format'
 import { Button } from './ui/button'
 import {
   Command,
@@ -39,10 +44,25 @@ function getTimezones(): string[] {
 
 function getBrowserTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone
+    return currentZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
   } catch {
     return 'UTC'
   }
+}
+
+/**
+ * The browser's zones by their current names, each with the other names the
+ * browser lists it by, so a search for Calcutta or Kiev still finds it.
+ */
+function listedTimezones(): Map<string, string[]> {
+  const out = new Map<string, string[]>()
+  for (const listed of getTimezones()) {
+    const zone = currentZone(listed)
+    const others = out.get(zone) ?? []
+    if (listed !== zone) others.push(listed)
+    out.set(zone, others)
+  }
+  return new Map([...out].sort(([a], [b]) => naturalCompare(a, b)))
 }
 
 interface TimezoneOptions {
@@ -98,7 +118,8 @@ export function TimezoneSelect({
   const { t: t_ } = useLingui()
   const [open, setOpen] = useState(false)
   const [hovered, setHovered] = useState<string | null>(null)
-  const timezones = useMemo(() => getTimezones(), [])
+  const listed = useMemo(() => listedTimezones(), [])
+  const timezones = useMemo(() => [...listed.keys()], [listed])
   const sea = useMemo(() => seaTimezones(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
   // Each zone's offset now, read once the list opens: a few hundred
@@ -114,12 +135,14 @@ export function TimezoneSelect({
   // A sea zone is its offset from UTC, which is its whole name.
   const formatTimezone = (tz: string) =>
     tz.startsWith('Etc/GMT') ? zoneCity(tz) : tz.replace(/_/g, ' ')
+  // A stored zone may carry a name the list and the map know by another.
+  const current = value === 'auto' ? value : currentZone(value)
   const displayValue =
     value === 'auto'
       ? `${t_`Detect from web browser`}: ${formatTimezone(browserTimezone)}`
-      : formatTimezone(value)
+      : formatTimezone(current)
   // The map fills the chosen zone; with "auto" that is the browser's.
-  const chosen = value === 'auto' ? browserTimezone : value
+  const chosen = value === 'auto' ? browserTimezone : current
   const choose = (tz: string) => {
     onChange(tz)
     setOpen(false)
@@ -202,7 +225,7 @@ export function TimezoneSelect({
                 <CommandItem
                   key={tz}
                   value={tz}
-                  keywords={[offsets.get(tz) ?? '']}
+                  keywords={[offsets.get(tz) ?? '', ...(listed.get(tz) ?? [])]}
                   onSelect={() => choose(tz)}
                   onPointerEnter={() => setHovered(tz)}
                   onPointerLeave={() => setHovered(null)}
@@ -210,7 +233,7 @@ export function TimezoneSelect({
                   <Check
                     className={cn(
                       'me-2 h-4 w-4 shrink-0',
-                      value === tz ? 'opacity-100' : 'opacity-0'
+                      current === tz ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   <span className='truncate'>{formatTimezone(tz)}</span>
@@ -233,7 +256,7 @@ export function TimezoneSelect({
                   <Check
                     className={cn(
                       'me-2 h-4 w-4 shrink-0',
-                      value === tz ? 'opacity-100' : 'opacity-0'
+                      current === tz ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   {/* A sea zone is its offset, so that is its whole name. */}

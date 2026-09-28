@@ -8,6 +8,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
@@ -168,6 +169,56 @@ describe('the list', () => {
     expect(sea.textContent).toContain('UTC-5')
     expect(sea.textContent).toContain('UTC+12')
     expect(sea.textContent).not.toContain('Etc/GMT')
+  })
+
+  // Node, which runs these tests, lists zones by the names Chrome does:
+  // Asia/Calcutta for Asia/Kolkata, Europe/Kiev for Europe/Kyiv.
+  it('lists a zone the browser names the old way by its current name, and finds it by either', async () => {
+    fireEvent.click(show())
+    expect(await screen.findByText('Asia/Kolkata')).toBeTruthy()
+    expect(screen.getByText('Europe/Kyiv')).toBeTruthy()
+    expect(screen.queryByText('Asia/Calcutta')).toBeNull()
+    expect(screen.queryByText('Europe/Kiev')).toBeNull()
+    fireEvent.change(screen.getByPlaceholderText('Search time zone...'), {
+      target: { value: 'Calcutta' },
+    })
+    await waitFor(() => expect(screen.queryByText('Asia/Tokyo')).toBeNull())
+    expect(screen.getByText('Asia/Kolkata')).toBeTruthy()
+  })
+
+  it('fills and ticks a zone stored under its old name', async () => {
+    const trigger = show({ value: 'Asia/Calcutta' })
+    expect(trigger.textContent).toContain('Asia/Kolkata')
+    fireEvent.click(trigger)
+    expect((await path('Asia/Kolkata')).getAttribute('class')).toContain(
+      'fill-primary'
+    )
+    const item = within(screen.getByRole('dialog'))
+      .getByText('Asia/Kolkata')
+      .closest('[cmdk-item]')!
+    expect(item.querySelector('svg')?.getAttribute('class')).toContain(
+      'opacity-100'
+    )
+  })
+
+  it("fills the browser's own zone by its current name", async () => {
+    const zone = process.env.TZ
+    // The browser gives the zone as Asia/Calcutta.
+    process.env.TZ = 'Asia/Kolkata'
+    try {
+      expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe(
+        'Asia/Calcutta'
+      )
+      const trigger = show({ value: 'auto' })
+      expect(trigger.textContent).toContain('Asia/Kolkata')
+      fireEvent.click(trigger)
+      expect((await path('Asia/Kolkata')).getAttribute('class')).toContain(
+        'fill-primary'
+      )
+    } finally {
+      if (zone === undefined) delete process.env.TZ
+      else process.env.TZ = zone
+    }
   })
 
   it('names a chosen sea zone the same way on the button', () => {

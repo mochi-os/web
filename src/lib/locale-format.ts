@@ -1,5 +1,6 @@
 import { t, plural } from '@lingui/core/macro'
 import { i18n } from '@lingui/core'
+import names from '../data/timezone-names.json'
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
@@ -209,6 +210,55 @@ export function offsetLabel(zone: string, date = new Date()): string {
   } catch {
     return ''
   }
+}
+
+// The zones the time zone map draws, by their current names, and each name a
+// browser may give one of them by instead: Chrome resolves Asia/Kolkata to
+// Asia/Calcutta and lists only the latter. Built the first time a zone is
+// named, from the browser's own resolution of each drawn zone.
+let drawn: Set<string> | null = null
+let renamed: Map<string, string> | null = null
+
+function resolvedZone(zone: string): string | null {
+  try {
+    // i18n-format-ok: resolves the zone's name, formats nothing
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+    }).resolvedOptions().timeZone
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A zone's current name, the one the zone database and the time zone map
+ * give it, so that one zone compares equal under whichever name a browser,
+ * a stored preference or another calendar used: Asia/Kolkata for
+ * Asia/Calcutta, Europe/Kyiv for Europe/Kiev. A zone too small for the map
+ * reads as the zone it is drawn within, as Europe/Busingen does as
+ * Europe/Zurich. A zone the map does not draw, such as UTC or a sea zone,
+ * keeps its name.
+ */
+export function currentZone(zone: string): string {
+  if (!drawn || !renamed) {
+    drawn = new Set(names.zones)
+    renamed = new Map(Object.entries(names.within))
+    for (const name of names.zones) {
+      const listed = resolvedZone(name)
+      if (listed && listed !== name && !renamed.has(listed)) {
+        renamed.set(listed, name)
+      }
+    }
+  }
+  if (drawn.has(zone)) return zone
+  const known = renamed.get(zone)
+  if (known) return known
+  // Another alias of a drawn zone, such as US/Eastern, resolves to it or to
+  // the browser's own name for it.
+  const listed = resolvedZone(zone)
+  if (!listed) return zone
+  if (drawn.has(listed)) return listed
+  return renamed.get(listed) ?? zone
 }
 
 /**
