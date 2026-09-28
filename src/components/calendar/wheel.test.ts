@@ -32,14 +32,16 @@ describe('Wheel', () => {
 
   it('steps once per cooldown while notches roll quickly', () => {
     const wheel = new Wheel()
-    expect([0, 60, 120, 180, 240].map((time) => wheel.step(at(time, 100)))).toEqual([
-      1, 0, 0, 0, 1,
-    ])
+    expect(
+      [0, 60, 120, 180, 240].map((time) => wheel.step(at(time, 100)))
+    ).toEqual([1, 0, 0, 0, 1])
   })
 
   it('steps on every notch rolled slowly', () => {
     const wheel = new Wheel()
-    expect([0, 500, 1000].map((time) => wheel.step(at(time, 100)))).toEqual([1, 1, 1])
+    expect([0, 500, 1000].map((time) => wheel.step(at(time, 100)))).toEqual([
+      1, 1, 1,
+    ])
   })
 
   it('steps once on a flick, on its ramp, and never on its tail', () => {
@@ -58,9 +60,35 @@ describe('Wheel', () => {
     expect(steps.filter((step) => step !== 0)).toEqual([1])
   })
 
+  it('keeps stepping, a stride at a time, while the fingers keep moving', () => {
+    const wheel = new Wheel()
+    const steps = stream(wheel, 0, Array(100).fill(10))
+    // The threshold at the fourth frame, then every 150 pixels: fifteen frames.
+    expect(steps.flatMap((step, index) => (step ? [index] : []))).toEqual([
+      3, 18, 33, 48, 63, 78, 93,
+    ])
+    expect(steps.every((step) => step >= 0)).toBe(true)
+  })
+
+  it("steps on each new swipe, though the last one's glide has not died away", () => {
+    const wheel = new Wheel()
+    const swipe = [2, 5, 12, 25, ...tail(40).slice(0, 20)]
+    // No gap between the swipes: the glide still runs when the next begins,
+    // and the last one's runs on to its end.
+    const steps = stream(wheel, 0, [
+      ...swipe,
+      ...swipe,
+      ...swipe,
+      ...tail(40).slice(20),
+    ])
+    expect(steps.filter((step) => step !== 0)).toEqual([1, 1, 1])
+  })
+
   it('steps nothing on a drag that stays under the threshold', () => {
     const wheel = new Wheel()
-    expect(stream(wheel, 0, Array(10).fill(3)).every((step) => step === 0)).toBe(true)
+    expect(
+      stream(wheel, 0, Array(10).fill(3)).every((step) => step === 0)
+    ).toBe(true)
   })
 
   it('steps again on a new push after a gap', () => {
