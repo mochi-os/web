@@ -539,6 +539,64 @@ export function parseDate(text: string, dateFormat: DateFormat): string | null {
   return civilDay(Number(year), month, Number(day))
 }
 
+/**
+ * The active language's words for the morning and the afternoon on a 12-hour
+ * clock, as it writes them beside a time: "AM" and "PM" in English, "午前" and
+ * "午後" in Japanese.
+ */
+export function dayPeriods(): { am: string; pm: string } {
+  const word = (hour: number) =>
+    // i18n-format-ok: reads the language's word for the part of the day
+    new Intl.DateTimeFormat(tag(), {
+      hour: 'numeric',
+      hourCycle: 'h12',
+      timeZone: 'UTC',
+    })
+      .formatToParts(new Date(Date.UTC(2000, 0, 1, hour)))
+      .find((part) => part.type === 'dayPeriod')?.value ?? ''
+  return { am: word(9), pm: word(21) }
+}
+
+/**
+ * A time of day typed by hand, as minutes since midnight, or null when the
+ * text is not one. Hours and minutes may be separated by a colon, a full stop
+ * or an h, or run together: "9", "930", "9:30", "21.30", "14h30". A period,
+ * the language's own word or AM and PM, puts the hour on the 12-hour clock.
+ */
+export function parseClock(text: string): number | null {
+  const lower = text.trim().toLowerCase()
+  const split = /(\d{1,2})\s*[:.h]\s*(\d{2})/.exec(lower)
+  const run = split ? null : /\d+/.exec(lower)
+  if (!split && !run) return null
+  let hour: number
+  let minute = 0
+  if (split) {
+    hour = Number(split[1])
+    minute = Number(split[2])
+  } else {
+    const digits = run![0]
+    if (digits.length > 4) return null
+    hour = Number(digits.length > 2 ? digits.slice(0, -2) : digits)
+    minute = digits.length > 2 ? Number(digits.slice(-2)) : 0
+  }
+  // A bare trailing h marks the hour, as "14h" does in French.
+  const rest = lower
+    .replace(split ? split[0] : run![0], '')
+    .replace(/[\s.]/g, '')
+    .replace(/^h$/, '')
+  if (rest) {
+    const key = (word: string) => word.toLowerCase().replace(/[\s.]/g, '')
+    const { am, pm } = dayPeriods()
+    const morning = [key(am), 'am', 'a'].includes(rest)
+    const afternoon = [key(pm), 'pm', 'p'].includes(rest)
+    if (!morning && !afternoon) return null
+    if (hour < 1 || hour > 12) return null
+    hour = (hour % 12) + (afternoon ? 12 : 0)
+  }
+  if (hour > 23 || minute > 59) return null
+  return hour * 60 + minute
+}
+
 export function formatTime(
   date: Date,
   timeFormat: TimeFormat,

@@ -6,6 +6,7 @@ import { i18n } from '@lingui/core'
 import names from '../data/timezone-names.json'
 import {
   currentZone,
+  dayPeriods,
   formatClock,
   formatDate,
   formatHour,
@@ -15,6 +16,7 @@ import {
   formatUserTimestamp,
   formatWeekdayDay,
   formatLongDate,
+  parseClock,
   parseDate,
 } from './locale-format'
 
@@ -435,5 +437,69 @@ describe('a zone by its current name', () => {
         zone !== 'UTC'
     )
     expect(missing).toEqual([])
+  })
+})
+
+describe('a time typed by hand', () => {
+  beforeEach(() => load('en'))
+
+  it('reads hours and minutes however they are separated, or run together', () => {
+    expect(parseClock('9')).toBe(9 * 60)
+    expect(parseClock('930')).toBe(9 * 60 + 30)
+    expect(parseClock('0930')).toBe(9 * 60 + 30)
+    expect(parseClock('9:30')).toBe(9 * 60 + 30)
+    expect(parseClock('21.45')).toBe(21 * 60 + 45)
+    expect(parseClock('14h30')).toBe(14 * 60 + 30)
+    expect(parseClock('14h')).toBe(14 * 60)
+    expect(parseClock(' 23:59 ')).toBe(23 * 60 + 59)
+    expect(parseClock('0:00')).toBe(0)
+  })
+
+  it('puts a time with a period on the 12-hour clock', () => {
+    expect(parseClock('9:30 pm')).toBe(21 * 60 + 30)
+    expect(parseClock('9:30PM')).toBe(21 * 60 + 30)
+    expect(parseClock('9 p.m.')).toBe(21 * 60)
+    expect(parseClock('2p')).toBe(14 * 60)
+    expect(parseClock('12 am')).toBe(0)
+    expect(parseClock('12:15 pm')).toBe(12 * 60 + 15)
+    expect(parseClock('11:59 AM')).toBe(11 * 60 + 59)
+  })
+
+  it("reads the language's own word for the part of the day", () => {
+    load('ja')
+    const { am, pm } = dayPeriods()
+    expect(am).toBe('午前')
+    expect(pm).toBe('午後')
+    expect(parseClock('午後3:04')).toBe(15 * 60 + 4)
+    expect(parseClock('午前 9:05')).toBe(9 * 60 + 5)
+  })
+
+  it('reads what the clock writes, on either clock', () => {
+    for (const minutes of [
+      0,
+      9 * 60 + 5,
+      12 * 60,
+      13 * 60 + 30,
+      23 * 60 + 55,
+    ]) {
+      const at = new Date(Date.UTC(2000, 0, 1, 0, minutes))
+      expect(parseClock(formatClock(at, '24h', 'UTC'))).toBe(minutes)
+      expect(parseClock(formatClock(at, '12h', 'UTC'))).toBe(minutes)
+    }
+  })
+
+  it('is null for text that is not a time', () => {
+    for (const text of [
+      '',
+      'soon',
+      '24:00',
+      '9:60',
+      '13 pm',
+      '0 am',
+      '12345',
+      '9:30 tomorrow',
+    ]) {
+      expect(parseClock(text)).toBeNull()
+    }
   })
 })
