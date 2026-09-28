@@ -306,24 +306,29 @@ describe('MonthGrid dragging a bar', () => {
     allday: false,
   }
 
-  it('lays the whole bar out where it would land, wrapping into the next week', () => {
+  const days = (element: HTMLElement[]) =>
+    element.map((item) => item.closest('[data-day]')!.getAttribute('data-day'))
+
+  it('lays the whole event out where it would land, wrapping into the next week', () => {
     const { onMove } = show([retreat, lunch])
     fireEvent.pointerDown(chip('Retreat'), pointer('mouse', 150, 300))
     over('2026-09-26')
     fireEvent.pointerMove(window, pointer('mouse', 650, 300))
     const ghosts = screen.getAllByTestId('ghost')
     // Three days from Saturday: two in this week, one in the next.
-    expect(ghosts).toHaveLength(2)
-    expect(ghosts[0].style.insetInlineStart).toMatch(
-      /^calc\(71\.42\d*% \+ 2px\)$/
-    )
-    expect(ghosts[0].style.width).toMatch(/^calc\(28\.57\d*% - 4px\)$/)
-    expect(ghosts[1].style.width).toMatch(/^calc\(14\.28\d*% - 4px\)$/)
+    expect(days(ghosts)).toEqual(['2026-09-26', '2026-09-27', '2026-09-28'])
     expect(ghosts.every((ghost) => ghost.textContent === 'Retreat')).toBe(true)
-    // It shares the bar row with the faded original, which it does not
-    // overlap, and the chips of the week sit beneath that row.
-    expect(ghosts[0].style.top).toBe('0px')
-    expect(chip('Lunch').parentElement!.style.top).toBe('56px')
+    // It leads Saturday's all-day events, above the day's lunch.
+    const saturday = cell('2026-09-26')
+    expect(saturday.querySelector('[data-band]')!.firstElementChild).toBe(
+      ghosts[0]
+    )
+    expect(
+      saturday
+        .querySelector('[data-band]')!
+        .compareDocumentPosition(chip('Lunch')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
     expect(chip('Retreat').classList.contains('opacity-40')).toBe(true)
     fireEvent.pointerUp(window, pointer('mouse', 650, 300))
     expect(onMove).toHaveBeenCalledWith({
@@ -333,59 +338,69 @@ describe('MonthGrid dragging a bar', () => {
     })
   })
 
-  it('takes a row of its own where it would overlap the original, moving the chips down', () => {
+  it('moves the whole event by as many days, whichever of its days was taken', () => {
+    const { onMove } = show([retreat])
+    // The middle day, the 23rd, carried onto the 26th: three days on.
+    const middle = cell('2026-09-23').querySelector(
+      '[data-key="e3"]'
+    ) as HTMLElement
+    fireEvent.pointerDown(middle, pointer('mouse', 250, 300))
+    over('2026-09-26')
+    fireEvent.pointerMove(window, pointer('mouse', 650, 300))
+    expect(days(screen.getAllByTestId('ghost'))).toEqual([
+      '2026-09-25',
+      '2026-09-26',
+      '2026-09-27',
+    ])
+    fireEvent.pointerUp(window, pointer('mouse', 650, 300))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e3',
+      day: '2026-09-25',
+      copy: false,
+    })
+  })
+
+  it('leaves the days the event only passes over as they were', () => {
     show([retreat, lunch])
-    expect(chip('Lunch').parentElement!.style.top).toBe('56px')
     fireEvent.pointerDown(chip('Retreat'), pointer('mouse', 150, 300))
     over('2026-09-23')
     fireEvent.pointerMove(window, pointer('mouse', 250, 300))
-    const lifted = ghost()!
-    expect(lifted.style.width).toMatch(/^calc\(42\.85\d*% - 4px\)$/)
-    expect(lifted.style.top).toBe('28px')
-    expect(chip('Lunch').parentElement!.style.top).toBe('84px')
+    // The copy falls on the 23rd to the 25th; Saturday's lunch still starts
+    // its day, and the 22nd holds only the faded original.
+    expect(days(screen.getAllByTestId('ghost'))).toEqual([
+      '2026-09-23',
+      '2026-09-24',
+      '2026-09-25',
+    ])
+    expect(cell('2026-09-26').querySelector('[data-band]')).toBeNull()
+    expect(
+      cell('2026-09-22').querySelectorAll('[data-testid="ghost"]')
+    ).toHaveLength(0)
     fireEvent.pointerUp(window, pointer('mouse', 250, 300))
   })
 
-  it('keeps the lifted bar in view in a week whose bars scroll', () => {
-    // Rows 100px tall leave the bars 30px, one row, above a timed event;
-    // elements report the offsets and heights their styles give them.
-    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(
-      function (this: Element) {
-        const element = this as HTMLElement
-        if (element.dataset?.testid === 'weeks') return 200
-        return element.hasAttribute('data-band')
-          ? parseFloat(element.style.height)
-          : 0
-      }
-    )
-    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
-      function (this: HTMLElement) {
-        return parseFloat(this.style.top) || 0
-      }
-    )
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
-      function (this: HTMLElement) {
-        return parseFloat(this.style.height) || 0
-      }
-    )
-    show([retreat, lunch])
-    const band = cell('2026-09-22').parentElement!.querySelector(
-      '[data-band]'
-    ) as HTMLElement
-    expect(band.style.height).toBe('28px')
+  it('shows each day it would land on its top, where the lifted copy is drawn', () => {
+    // Starting before where the copy would, so only the lift puts the copy first.
+    const offsite: CalendarEvent = {
+      ...retreat,
+      key: 'e5',
+      title: 'Offsite',
+      readonly: true,
+    }
+    show([retreat, offsite])
+    const band = cell('2026-09-24').querySelector('[data-band]') as HTMLElement
     Object.defineProperty(band, 'scrollTop', {
       configurable: true,
       writable: true,
-      value: 0,
+      value: 24,
     })
     fireEvent.pointerDown(chip('Retreat'), pointer('mouse', 150, 300))
     over('2026-09-23')
     fireEvent.pointerMove(window, pointer('mouse', 250, 300))
-    // The lifted copy takes a second row, 28px down and 26px tall, which
-    // the 30px the bars have leaves partly out of view.
-    expect(band.style.height).toBe('30px')
-    expect(ghost()!.style.top).toBe('28px')
-    expect(band.scrollTop).toBe(24)
+    expect(band.firstElementChild).toBe(
+      screen.getAllByTestId('ghost').find((ghost) => band.contains(ghost))
+    )
+    expect(band.scrollTop).toBe(0)
     fireEvent.pointerUp(window, pointer('mouse', 250, 300))
   })
 
