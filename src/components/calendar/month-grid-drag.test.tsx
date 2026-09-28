@@ -76,7 +76,6 @@ function show(events: CalendarEvent[]) {
         onSelect={onSelect}
         onCreate={vi.fn()}
         onMove={onMove}
-        onOverflow={vi.fn()}
         onDay={vi.fn()}
         onStep={onStep}
       />
@@ -113,7 +112,7 @@ beforeEach(() => {
     value: (x: number, y: number) => under(x, y),
   })
   // The week rows fill a box 200px down from the top of the page, tall
-  // enough that a cell has room for several chips under a bar.
+  // enough that a week's bars all fit above its chips.
   vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(
     function (this: Element) {
       return (this as HTMLElement).dataset?.testid === 'weeks' ? 600 : 0
@@ -167,6 +166,29 @@ describe('MonthGrid dragging a chip', () => {
     })
     fireEvent.click(target)
     expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('shows a scrolled day its top, where the chip dragged onto it is drawn', () => {
+    const lunch: CalendarEvent = {
+      ...meeting,
+      key: 'e2',
+      title: 'Lunch',
+      start: at('2026-09-24', 720),
+      finish: at('2026-09-24', 780),
+    }
+    show([meeting, lunch])
+    const list = cell('2026-09-24').querySelector('[data-list]') as HTMLElement
+    Object.defineProperty(list, 'scrollTop', {
+      configurable: true,
+      writable: true,
+      value: 60,
+    })
+    fireEvent.pointerDown(chip('Standup'), pointer('mouse', 150, 300))
+    over('2026-09-24')
+    fireEvent.pointerMove(window, pointer('mouse', 350, 300))
+    expect(list.contains(ghost())).toBe(true)
+    expect(list.scrollTop).toBe(0)
+    fireEvent.pointerUp(window, pointer('mouse', 350, 300))
   })
 
   it('writes nothing for a chip dropped back on its own day', () => {
@@ -300,7 +322,7 @@ describe('MonthGrid dragging a bar', () => {
     expect(ghosts.every((ghost) => ghost.textContent === 'Retreat')).toBe(true)
     // It shares the bar row with the faded original, which it does not
     // overlap, and the chips of the week sit beneath that row.
-    expect(ghosts[0].style.top).toBe('28px')
+    expect(ghosts[0].style.top).toBe('0px')
     expect(chip('Lunch').parentElement!.style.top).toBe('56px')
     expect(chip('Retreat').classList.contains('opacity-40')).toBe(true)
     fireEvent.pointerUp(window, pointer('mouse', 650, 300))
@@ -319,8 +341,51 @@ describe('MonthGrid dragging a bar', () => {
     fireEvent.pointerMove(window, pointer('mouse', 250, 300))
     const lifted = ghost()!
     expect(lifted.style.width).toMatch(/^calc\(42\.85\d*% - 4px\)$/)
-    expect(lifted.style.top).toBe('56px')
+    expect(lifted.style.top).toBe('28px')
     expect(chip('Lunch').parentElement!.style.top).toBe('84px')
+    fireEvent.pointerUp(window, pointer('mouse', 250, 300))
+  })
+
+  it('keeps the lifted bar in view in a week whose bars scroll', () => {
+    // Rows 100px tall leave the bars 30px, one row, above a timed event;
+    // elements report the offsets and heights their styles give them.
+    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(
+      function (this: Element) {
+        const element = this as HTMLElement
+        if (element.dataset?.testid === 'weeks') return 200
+        return element.hasAttribute('data-band')
+          ? parseFloat(element.style.height)
+          : 0
+      }
+    )
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
+      function (this: HTMLElement) {
+        return parseFloat(this.style.top) || 0
+      }
+    )
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+      function (this: HTMLElement) {
+        return parseFloat(this.style.height) || 0
+      }
+    )
+    show([retreat, lunch])
+    const band = cell('2026-09-22').parentElement!.querySelector(
+      '[data-band]'
+    ) as HTMLElement
+    expect(band.style.height).toBe('28px')
+    Object.defineProperty(band, 'scrollTop', {
+      configurable: true,
+      writable: true,
+      value: 0,
+    })
+    fireEvent.pointerDown(chip('Retreat'), pointer('mouse', 150, 300))
+    over('2026-09-23')
+    fireEvent.pointerMove(window, pointer('mouse', 250, 300))
+    // The lifted copy takes a second row, 28px down and 26px tall, which
+    // the 30px the bars have leaves partly out of view.
+    expect(band.style.height).toBe('30px')
+    expect(ghost()!.style.top).toBe('28px')
+    expect(band.scrollTop).toBe(24)
     fireEvent.pointerUp(window, pointer('mouse', 250, 300))
   })
 

@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useFormat } from '../../hooks/use-format'
 import { descriptionText } from '../../lib/html'
+import { useEventStatus } from './status'
 import type { CalendarEvent } from './types'
 
 /** How much of a description a hover tooltip carries. */
@@ -18,6 +19,7 @@ const HEAD = 200
 export function useEventTooltip(): (event: CalendarEvent) => string {
   const { t } = useLingui()
   const format = useFormat()
+  const status = useEventStatus()
   return useCallback(
     (event: CalendarEvent) => {
       const start = new Date(event.start * 1000)
@@ -38,7 +40,10 @@ export function useEventTooltip(): (event: CalendarEvent) => string {
         const to = `${format.formatLongDate(new Date(event.finish * 1000))} ${format.formatClock(new Date(event.finish * 1000))}`
         span = t`${from} to ${to}`
       }
-      const lines = [event.title, span]
+      const lines = [event.title || t`(No title)`]
+      const state = status(event.status)
+      if (state) lines.push(state)
+      lines.push(span)
       if (event.location) lines.push(event.location)
       if (event.description) {
         // A subscription's description may be HTML; a title attribute can
@@ -48,6 +53,6 @@ export function useEventTooltip(): (event: CalendarEvent) => string {
       }
       return lines.join('\n')
     },
-    [t, format]
+    [t, format, status]
   )
 }

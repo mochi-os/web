@@ -106,7 +106,7 @@ export function AuditTimeline({
             const detail = formatDetail?.(parseData(entry.data), entry.action)
             const actor =
               entry.actor === 'system'
-                ? t`System`
+                ? t({ message: 'System', context: 'actor' })
                 : entry.actor_name ||
                   formatFingerprint(entry.actor_fingerprint ?? '')
             return {

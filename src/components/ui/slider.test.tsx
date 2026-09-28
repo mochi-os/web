@@ -47,8 +47,7 @@ describe('Slider', () => {
   // Radix commits a key step inside its value update, before it reports the
   // change. A caller that works the value over in onValueChange and reads the
   // result in onValueCommit gets the value from before the step, so it has to
-  // work from the commit's own argument. Settings' interest weights did not,
-  // and every key press saved the weight before it.
+  // work from the commit's own argument.
   it('commits a keyboard step before it reports it', () => {
     const calls: string[] = []
     render(

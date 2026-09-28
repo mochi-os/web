@@ -139,7 +139,12 @@ describe('TimeGrid zones', () => {
   })
 
   it('places each end at its wall-clock time in its own zone', () => {
-    grid([{ ...flight, zone: { start: 'Europe/London', finish: 'America/New_York' } }])
+    grid([
+      {
+        ...flight,
+        zone: { start: 'Europe/London', finish: 'America/New_York' },
+      },
+    ])
     const block = screen.getByRole('button', { name: /Flight/ })
     expect(block.style.top).toBe(`${10 * 80}px`)
     expect(block.style.height).toBe(`${3 * 80 - 1}px`)
@@ -178,10 +183,19 @@ describe('TimeGrid zones', () => {
       allday: false,
     }
     grid([meeting])
-    expect(screen.getByRole('button', { name: /Meeting/ }).textContent).toContain('13:00')
+    expect(
+      screen.getByRole('button', { name: /Meeting/ }).textContent
+    ).toContain('13:00')
     cleanup()
-    grid([{ ...meeting, zone: { start: 'America/New_York', finish: 'America/New_York' } }])
-    expect(screen.getByRole('button', { name: /Meeting/ }).textContent).toContain('09:00')
+    grid([
+      {
+        ...meeting,
+        zone: { start: 'America/New_York', finish: 'America/New_York' },
+      },
+    ])
+    expect(
+      screen.getByRole('button', { name: /Meeting/ }).textContent
+    ).toContain('09:00')
   })
 })
 
@@ -209,9 +223,277 @@ describe('TimeGrid gutter zone', () => {
     grid('UTC+1')
     expect(screen.getByTestId('gutter-zone').textContent).toBe('UTC+1')
   })
+
   it('shows no label otherwise', () => {
     grid()
     expect(screen.queryByTestId('gutter-zone')).toBeNull()
   })
 })
 
+describe('TimeGrid event appearance', () => {
+  const at = (day: number, hour: number) => Date.UTC(2026, 8, day, hour) / 1000
+  const events: CalendarEvent[] = [
+    {
+      key: 'standup',
+      title: 'Standup',
+      colour: '#60a5fa',
+      start: at(23, 9),
+      finish: at(23, 10),
+      allday: false,
+      location: 'Room 4',
+    },
+    {
+      key: 'weekly',
+      title: 'Weekly',
+      colour: '#a855f7',
+      start: at(24, 11),
+      finish: at(24, 12),
+      allday: false,
+      recurring: true,
+      alarm: true,
+    },
+    {
+      key: 'earlier',
+      title: 'Earlier',
+      colour: '#f97316',
+      start: at(21, 9),
+      finish: at(21, 10),
+      allday: false,
+    },
+    {
+      key: 'holiday',
+      title: 'Holiday',
+      colour: '#22c55e',
+      start: at(24, 0),
+      finish: at(25, 0),
+      allday: true,
+      date: '2026-09-24',
+    },
+  ]
+
+  function draw() {
+    vi.useFakeTimers({
+      now: new Date(Date.UTC(2026, 8, 22, 12)),
+      toFake: ['Date'],
+    })
+    const { container } = render(
+      <I18nProvider i18n={i18n}>
+        <TimeGrid
+          days={WEEK}
+          events={events}
+          duration={60}
+          hours={{ start: 8, finish: 17 }}
+          workdays={[1, 2, 3, 4, 5]}
+          today='2026-09-22'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    vi.useRealTimers()
+    return (key: string) =>
+      container.querySelector(`[data-key="${key}"]`) as HTMLElement
+  }
+
+  it('reads a week block as its dot and title, with its time on a line under the title, on a neutral card', () => {
+    cleanup()
+    const block = draw()('standup')
+    const [first, second] = Array.from(block.children) as HTMLElement[]
+    const dot = first.firstElementChild as HTMLElement
+    expect(dot.classList.contains('rounded-full')).toBe(true)
+    expect(dot.style.backgroundColor).toBe('rgb(96, 165, 250)')
+    expect(first.textContent).toBe('Standup')
+    expect(second.textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(second.classList.contains('ps-3.5')).toBe(true)
+    expect(block.style.borderInlineStartColor).toBe('')
+    expect(block.style.backgroundColor).toBe('')
+    expect(block.classList.contains('bg-surface-2')).toBe(true)
+  })
+
+  it('draws an all-day bar as its dot and its title, with no time', () => {
+    cleanup()
+    const bar = draw()('holiday')
+    // No fill, unlike the timed blocks' grey card.
+    expect(bar.className).not.toMatch(/(^|\s)bg-/)
+    expect([...bar.classList].some((name) => name.startsWith('border'))).toBe(
+      false
+    )
+    expect((bar.firstElementChild as HTMLElement).style.backgroundColor).toBe(
+      'rgb(34, 197, 94)'
+    )
+    expect(bar.textContent).toBe('Holiday')
+  })
+
+  it('draws a block that is over quieter than one still to come', () => {
+    cleanup()
+    const find = draw()
+    expect(find('earlier').classList.contains('opacity-60')).toBe(true)
+    expect(find('standup').classList.contains('opacity-60')).toBe(false)
+  })
+
+  it('puts the time, then the repeat mark, then the reminder under the title', () => {
+    cleanup()
+    const block = draw()('weekly')
+    const parts = Array.from(block.children[1].children) as HTMLElement[]
+    expect(parts[0].textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(parts[1].getAttribute('aria-label')).toBe('Repeats')
+    expect(parts[2].getAttribute('aria-label')).toBe('Reminder')
+  })
+
+  it('keeps a single day on one line: title, reminder, repeat mark, then the time at the end', () => {
+    cleanup()
+    const { container } = render(
+      <I18nProvider i18n={i18n}>
+        <TimeGrid
+          days={['2026-09-24']}
+          events={events}
+          duration={60}
+          hours={{ start: 8, finish: 17 }}
+          workdays={[1, 2, 3, 4, 5]}
+          today='2026-09-22'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    const block = container.querySelector('[data-key="weekly"]') as HTMLElement
+    const parts = Array.from(block.firstElementChild!.children) as HTMLElement[]
+    const title = parts.findIndex((part) => part.textContent === 'Weekly')
+    expect(parts[title].classList.contains('flex-1')).toBe(true)
+    expect(parts[title + 1].getAttribute('aria-label')).toBe('Reminder')
+    expect(parts[title + 2].getAttribute('aria-label')).toBe('Repeats')
+    expect(parts[parts.length - 1].textContent).toMatch(/^\d{1,2}:\d{2}/)
+  })
+
+  it('shows no reminder mark on an event without one', () => {
+    cleanup()
+    const find = draw()
+    expect(find('standup').querySelector('[aria-label="Reminder"]')).toBeNull()
+  })
+})
+
+describe('TimeGrid event states', () => {
+  const at = (day: number, hour: number) => Date.UTC(2026, 8, day, hour) / 1000
+  const events: CalendarEvent[] = [
+    {
+      key: 'called',
+      title: 'Called off',
+      colour: '#60a5fa',
+      start: at(23, 9),
+      finish: at(23, 10),
+      allday: false,
+      status: 'cancelled',
+    },
+    {
+      key: 'maybe',
+      title: 'Maybe',
+      colour: '#a855f7',
+      start: at(24, 11),
+      finish: at(24, 12),
+      allday: false,
+      status: 'tentative',
+    },
+    {
+      key: 'blank',
+      title: '',
+      colour: '#f97316',
+      start: at(25, 9),
+      finish: at(25, 10),
+      allday: false,
+    },
+    {
+      key: 'offsite',
+      title: 'Offsite',
+      colour: '#22c55e',
+      start: at(24, 0),
+      finish: at(25, 0),
+      allday: true,
+      date: '2026-09-24',
+      status: 'tentative',
+    },
+  ]
+
+  function draw(days = WEEK, selected?: string) {
+    cleanup()
+    vi.useFakeTimers({
+      now: new Date(Date.UTC(2026, 8, 22, 12)),
+      toFake: ['Date'],
+    })
+    const { container } = render(
+      <I18nProvider i18n={i18n}>
+        <TimeGrid
+          days={days}
+          events={events}
+          duration={60}
+          hours={{ start: 8, finish: 17 }}
+          workdays={[1, 2, 3, 4, 5]}
+          today='2026-09-22'
+          selected={selected}
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    vi.useRealTimers()
+    return (key: string) =>
+      container.querySelector(`[data-key="${key}"]`) as HTMLElement
+  }
+
+  const dot = (element: HTMLElement) =>
+    element.querySelector('[aria-hidden].rounded-full') as HTMLElement
+
+  it('strikes through and quietens a cancelled event', () => {
+    const block = draw()('called')
+    expect(
+      screen.getByText('Called off').classList.contains('line-through')
+    ).toBe(true)
+    expect(block.classList.contains('opacity-60')).toBe(true)
+  })
+
+  it('draws a tentative event with a ring for its dot, a dashed card for a block, and no outline for a bar', () => {
+    const find = draw()
+    const block = find('maybe')
+    expect(block.classList.contains('border-dashed')).toBe(true)
+    expect(dot(block).style.borderColor).toBe('rgb(168, 85, 247)')
+    expect(dot(block).style.backgroundColor).toBe('')
+    expect(dot(find('offsite')).style.borderColor).toBe('rgb(34, 197, 94)')
+    expect(
+      [...find('offsite').classList].some((name) => name.startsWith('border'))
+    ).toBe(false)
+    expect(find('called').classList.contains('border-dashed')).toBe(false)
+  })
+
+  it('names an event with no title, quietly', () => {
+    draw()
+    const title = screen.getByText('(No title)')
+    expect(title.classList.contains('text-muted-foreground')).toBe(true)
+  })
+
+  it('tints the open event', () => {
+    const find = draw(WEEK, 'maybe')
+    expect(find('maybe').classList.contains('bg-primary/10')).toBe(true)
+    expect(find('maybe').classList.contains('bg-surface-2')).toBe(false)
+    expect(find('called').classList.contains('bg-primary/10')).toBe(false)
+  })
+
+  it("reads a week block's time as a range under its title", () => {
+    const block = draw()('maybe')
+    expect(block.children[1].textContent).toMatch(
+      /^\d{1,2}:\d{2} to \d{1,2}:\d{2}$/
+    )
+  })
+
+  it("reads a single day's block time as a range at the end of its line", () => {
+    const block = draw(['2026-09-24'])('maybe')
+    const parts = Array.from(block.firstElementChild!.children)
+    expect(parts[parts.length - 1].textContent).toMatch(
+      /^\d{1,2}:\d{2} to \d{1,2}:\d{2}$/
+    )
+  })
+})
