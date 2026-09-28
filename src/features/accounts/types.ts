@@ -10,17 +10,24 @@ import { t } from '@lingui/core/macro'
 // active then and never update on a language change.
 function providerLabels(): Record<string, string> {
   return {
+    apple: 'Apple',
     browser: t`Browser notifications`,
+    caldav: t`Calendar server`,
     claude: 'Claude',
     email: t`Email`,
+    facebook: 'Facebook',
     fcm: t`Android push`,
+    github: 'GitHub',
+    google: 'Google',
     mcp: t`MCP server`,
+    microsoft: 'Microsoft',
     ntfy: 'ntfy',
     openai: 'OpenAI',
     pushbullet: 'Pushbullet',
     unifiedpush: t`Push notification`,
     url: t`External URL`,
     web: t`Mochi web`,
+    x: 'X',
   }
 }
 
@@ -41,6 +48,8 @@ export interface Account {
   default: string
   // The device a push account was registered from, or "" for none.
   device?: string
+  // The capabilities the account holds now, such as "login" and "calendar".
+  granted?: string[]
 }
 
 export interface ProviderField {

@@ -87,6 +87,10 @@ export type LocalePreferences = {
   number_format: string
   units: string
   timezone: string
+  /** Where a location links to; absent on a server older than the preference. */
+  maps?: string
+  /** Where a flight number links to; absent on a server older than the preference. */
+  flights?: string
 }
 
 type ShellInitData = {

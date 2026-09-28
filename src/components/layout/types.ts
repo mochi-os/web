@@ -55,6 +55,12 @@ type NavAction = BaseNavItem & {
    * off rather than navigating to it, and screen readers need to hear that.
    */
   checked?: boolean
+  /**
+   * Names the row as somewhere a drag in the page can land: an event dropped
+   * on a calendar's row moves to that calendar. The row lights while a drag
+   * hovers it.
+   */
+  drop?: string
 }
 
 // Sub-item that can be a link, action, or nested collapsible

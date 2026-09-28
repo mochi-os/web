@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { LogOut, Settings } from 'lucide-react'
+import { House, LogOut, Settings } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { onShellMessage } from '../../lib/shell-bridge'
 import { useAuthStore } from '../../stores/auth-store'
@@ -47,8 +47,9 @@ type MochiMenuProps = {
   className?: string
 }
 
-function MochiLogo() {
-  return <img src='/images/logo-header.png' alt='Mochi' className='h-6 w-6' />
+/** The home link's icon: the house the shell menu shows for Home. */
+export function HomeIcon() {
+  return <House aria-hidden='true' className='text-primary size-6' />
 }
 
 function UserIcon({
@@ -194,7 +195,7 @@ export function MochiMenu({
       >
         {showLogo && (
           <a href='/' title={t`Home`}>
-            <MochiLogo />
+            <HomeIcon />
           </a>
         )}
 

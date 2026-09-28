@@ -19,6 +19,25 @@ function language(): string {
   return i18n.locale || 'en'
 }
 
+// The tag Intl formats with: the interface language, carrying the browser's
+// script and region when the browser speaks the same language. A British
+// browser on the base `en` therefore reads "Tuesday 22 September" and "Tue 22"
+// rather than the American forms `en` alone gives, while `fr` under an en-GB
+// browser stays plain French. A region-qualified catalogue (en-us, de-ch,
+// es-ar) is already complete and passes through as it is.
+function tag(): string {
+  const lang = language()
+  if (lang.includes('-')) return lang
+  const browser =
+    typeof navigator !== 'undefined' ? navigator.language : undefined
+  if (!browser || !browser.includes('-')) return lang
+  try {
+    return new Intl.Locale(browser).language === lang ? browser : lang
+  } catch {
+    return lang
+  }
+}
+
 // Cached: constructing an Intl formatter is expensive relative to formatting,
 // and these run per row in long lists.
 const monthFormatters = new Map<string, Intl.DateTimeFormat>()
@@ -43,7 +62,7 @@ function dateFormatter(
 }
 
 function monthShort(date: Date, timezone?: string): string {
-  const lang = language()
+  const lang = tag()
   const key = timezone ? lang + '|' + timezone : lang
   let formatter = monthFormatters.get(key)
   if (!formatter) {
@@ -54,7 +73,7 @@ function monthShort(date: Date, timezone?: string): string {
 }
 
 function meridiem(date: Date, timezone?: string): string {
-  const lang = language()
+  const lang = tag()
   const key = timezone ? lang + '|' + timezone : lang
   let formatter = meridiemFormatters.get(key)
   if (!formatter) {
@@ -138,6 +157,50 @@ export function zonedDay(date: Date, timezone?: string): string {
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`
 }
 
+/**
+ * The city an IANA zone is named for, as a label beside a time in that zone:
+ * "America/New_York" reads "New York", "UTC" stays "UTC".
+ */
+export function zoneCity(zone: string): string {
+  // A sea zone is named the zone database's way, where Etc/GMT-8 is eight
+  // hours ahead of UTC; it reads as the offset it is, "UTC+8".
+  if (/^Etc\/GMT([+-]\d{1,2})?$/.test(zone)) return offsetLabel(zone) || zone
+  return (zone.split('/').pop() ?? zone).replace(/_/g, ' ')
+}
+
+/**
+ * A zone's offset from UTC at an instant, as a short label: "UTC+1",
+ * "UTC-5:30", "UTC" for none. "" for a zone the browser does not know.
+ */
+export function offsetLabel(zone: string, date = new Date()): string {
+  try {
+    const part = new Intl.DateTimeFormat('en-US', { // i18n-format-ok: reads the offset, not a date
+      timeZone: zone,
+      timeZoneName: 'shortOffset',
+    })
+      .formatToParts(date)
+      .find((item) => item.type === 'timeZoneName')
+    // Some runtimes spell no offset "GMT+0".
+    return (part?.value ?? '').replace(/^GMT/, 'UTC').replace(/^UTC[+-]0$/, 'UTC')
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * The sea's zones, which the browser's own list leaves out: one per whole
+ * hour from UTC-12 to UTC+12, named the zone database's way, where Etc/GMT+5
+ * is UTC-5.
+ */
+export function seaTimezones(): string[] {
+  const out: string[] = []
+  for (let offset = -12; offset <= 12; offset++) {
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- zone identifiers, not text
+    out.push(offset === 0 ? 'Etc/GMT' : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`)
+  }
+  return out
+}
+
 /** Minutes since midnight in the user's zone. */
 export function zonedMinutes(date: Date, timezone?: string): number {
   const parts = zonedParts(date, timezone)
@@ -189,7 +252,7 @@ function calendarFormatter(
   timezone: string | undefined,
   options: Intl.DateTimeFormatOptions
 ): Intl.DateTimeFormat {
-  const lang = language()
+  const lang = tag()
   const key = `${shape}|${lang}|${timezone ?? ''}`
   let formatter = calendarFormatters.get(key)
   if (!formatter) {
@@ -210,6 +273,19 @@ export function formatWeekday(date: Date, timezone?: string): string {
 export function formatWeekdayShort(date: Date, timezone?: string): string {
   return calendarFormatter('weekdayShort', timezone, {
     weekday: 'short',
+  }).format(date)
+}
+
+/**
+ * The weekday abbreviated with the day of the month, as a week view's column
+ * header reads it on one line, in the language's own order: "Tue 22" in
+ * British English, "22 Tue" in American, "mar. 22" in French, "22日(火)" in
+ * Japanese.
+ */
+export function formatWeekdayDay(date: Date, timezone?: string): string {
+  return calendarFormatter('weekdayDay', timezone, {
+    weekday: 'short',
+    day: 'numeric',
   }).format(date)
 }
 
@@ -334,6 +410,62 @@ export function formatDate(
     case 'D MMM YYYY':
       return `${dayNumber} ${monthShort(date, timezone)} ${y}`
   }
+}
+
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/
+
+function civilDay(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1) return null
+  if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null
+  return `${year}-${pad(month)}-${pad(day)}`
+}
+
+/** The twelve short month names of the interface language, lower-cased. */
+function monthShortNames(): string[] {
+  return Array.from({ length: 12 }, (_, index) =>
+    monthShort(new Date(2000, index, 15))
+      .toLowerCase()
+      .replace(/\.$/, '')
+  )
+}
+
+/**
+ * The day a person typed in their own date format, as YYYY-MM-DD, or null
+ * when the text is not a day. The numbers are read in the format's order and
+ * any separator will do; the ISO form is accepted under every format; the
+ * short-month form takes the language's month names, with or without a
+ * trailing full stop, or a month number in their place. Whatever is typed
+ * last must be complete before the text is a day, so a half-typed date never
+ * commits as a different one: the year is always four digits, and in the
+ * year-first format the month and the day take two digits each.
+ */
+export function parseDate(text: string, dateFormat: DateFormat): string | null {
+  const trimmed = text.trim()
+  const iso = ISO_DAY.exec(trimmed)
+  if (iso) return civilDay(Number(iso[1]), Number(iso[2]), Number(iso[3]))
+  const parts = trimmed.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  if (parts.length !== 3) return null
+  const order: Record<DateFormat, [number, number, number]> = {
+    'YYYY-MM-DD': [0, 1, 2],
+    'DD/MM/YYYY': [2, 1, 0],
+    'DD.MM.YYYY': [2, 1, 0],
+    'MM/DD/YYYY': [2, 0, 1],
+    'D MMM YYYY': [2, 1, 0],
+  }
+  const [yearAt, monthAt, dayAt] = order[dateFormat]
+  const year = parts[yearAt]
+  const day = parts[dayAt]
+  const digits = dateFormat === 'YYYY-MM-DD' ? /^\d{2}$/ : /^\d{1,2}$/
+  if (!/^\d{4}$/.test(year) || !digits.test(day)) return null
+  let month: number
+  if (digits.test(parts[monthAt])) {
+    month = Number(parts[monthAt])
+  } else {
+    const wanted = parts[monthAt].toLowerCase().replace(/\.$/, '')
+    month = monthShortNames().indexOf(wanted) + 1
+    if (month === 0) return null
+  }
+  return civilDay(Number(year), month, Number(day))
 }
 
 export function formatTime(

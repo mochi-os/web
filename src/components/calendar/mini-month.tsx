@@ -2,48 +2,45 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useMemo, useState } from 'react'
-import { useLingui } from '@lingui/react/macro'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
-import { Button } from '../ui/button'
+import { DateHeader } from './date-header'
 import {
   addMonths,
   dayList,
-  daysBetween,
   monthOf,
+  monthsBetween,
   startOfMonth,
   startOfWeek,
   weekNumber,
+  yearOf,
 } from './layout'
+import { Wheel } from './wheel'
 
 export interface MiniMonthProps {
   /** The day the main view is showing; the mini month opens on its month. */
   selected: string
   /** Today in the user's own zone. */
   today: string
-  /** The span the main view covers, highlighted across the grid. */
-  highlight?: { from: string; days: number }
   /** Draws the ISO week number in each row's gutter. */
   weekNumbers?: boolean
   onSelect: (day: string) => void
   className?: string
 }
 
-/** A month at a glance: click a day to jump, chevrons to change month. */
+/** A month at a glance: click a day to jump, the header to change month or year. */
 export function MiniMonth({
   selected,
   today,
-  highlight,
   weekNumbers = true,
   onSelect,
   className,
 }: MiniMonthProps) {
-  const { t } = useLingui()
   const format = useFormat()
-  // The month shown follows the selection until the chevrons move it; picking
+  // The month shown follows the selection until the header moves it; picking
   // a day then puts the two back in step.
   const [offset, setOffset] = useState(0)
+  const [wheel] = useState(() => new Wheel())
   const anchor = addMonths(startOfMonth(selected), offset)
   const month = monthOf(anchor)
 
@@ -52,38 +49,26 @@ export function MiniMonth({
     [anchor, format.weekStartsOn]
   )
 
-  const covered = (day: string) =>
-    highlight !== undefined &&
-    daysBetween(highlight.from, day) >= 0 &&
-    daysBetween(highlight.from, day) < highlight.days
-
   return (
-    <div className={cn('px-1', className)}>
-      <div className='flex items-center justify-between gap-1'>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='size-6'
-          aria-label={t`Previous month`}
-          onClick={() => setOffset((value) => value - 1)}
-        >
-          <ChevronLeft className='size-4 rtl:rotate-180' />
-        </Button>
-        <span className='truncate text-xs font-medium'>
-          {format.formatMonthYear(
-            new Date(format.timestampAt(anchor, 720) * 1000)
-          )}
-        </span>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='size-6'
-          aria-label={t`Next month`}
-          onClick={() => setOffset((value) => value + 1)}
-        >
-          <ChevronRight className='size-4 rtl:rotate-180' />
-        </Button>
-      </div>
+    <div
+      className={cn('px-1', className)}
+      onWheel={(event) => {
+        const direction = wheel.step(event)
+        if (direction) setOffset((current) => current + direction)
+      }}
+    >
+      <DateHeader
+        month={month}
+        year={yearOf(anchor)}
+        onChange={(year, picked) =>
+          setOffset(
+            monthsBetween(
+              startOfMonth(selected),
+              `${year}-${picked < 10 ? '0' : ''}${picked}-01`
+            )
+          )
+        }
+      />
 
       <div
         className={cn(
@@ -95,9 +80,7 @@ export function MiniMonth({
         {days.slice(0, 7).map((day) => (
           <span key={day} className='text-muted-foreground'>
             {format
-              .formatWeekdayShort(
-                new Date(format.timestampAt(day, 720) * 1000)
-              )
+              .formatWeekdayShort(new Date(format.timestampAt(day, 720) * 1000))
               .slice(0, 2)}
           </span>
         ))}
@@ -108,7 +91,6 @@ export function MiniMonth({
             index={index}
             month={month}
             today={today}
-            covered={covered(day)}
             weekNumbers={weekNumbers}
             onSelect={(picked) => {
               setOffset(0)
@@ -126,7 +108,6 @@ function Cell({
   index,
   month,
   today,
-  covered,
   weekNumbers,
   onSelect,
 }: {
@@ -134,7 +115,6 @@ function Cell({
   index: number
   month: number
   today: string
-  covered: boolean
   weekNumbers: boolean
   onSelect: (day: string) => void
 }) {
@@ -150,7 +130,6 @@ function Cell({
         className={cn(
           'hover:bg-hover rounded-sm py-0.5',
           monthOf(day) !== month && 'text-muted-foreground/60',
-          covered && 'bg-accent',
           day === today && 'text-primary font-semibold'
         )}
       >

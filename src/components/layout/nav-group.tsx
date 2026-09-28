@@ -321,12 +321,17 @@ function SidebarMenuAction({ item }: { item: NavAction }) {
         isActive={item.isActive}
         role={item.checked === undefined ? undefined : 'checkbox'}
         aria-checked={item.checked}
+        data-drop={item.drop}
         onClick={() => {
           setOpenMobile(false)
           item.onClick()
         }}
         variant={item.variant}
-        className={item.className}
+        className={cn(
+          item.className,
+          item.drop !== undefined &&
+            'data-[over]:bg-primary/10 data-[over]:text-primary data-[over]:ring-primary/40 data-[over]:ring-2'
+        )}
       >
         <ItemIcon icon={item.icon} aggregate={item.aggregate} />
         <span className='min-w-0 flex-1 truncate text-start group-data-[collapsible=icon]:hidden'>

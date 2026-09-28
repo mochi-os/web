@@ -9,6 +9,7 @@ import { Button } from '../ui/button'
 import { IconButton } from '../icon-button'
 import { Switch } from '../ui/switch'
 import { Input } from '../ui/input'
+import { DatePicker } from '../ui/date-picker'
 import { Textarea } from '../ui/textarea'
 import { Progress } from '../ui/progress'
 import {
@@ -364,7 +365,6 @@ export function EntityFieldEditor({
             value={value}
             onChange={onChange}
             disabled={disabled}
-            immediate={immediate}
             onErrorChange={(hasError) => onValidationError?.(hasError)}
           />
         )
@@ -437,157 +437,35 @@ interface DateEditorProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
-  immediate?: boolean
   onErrorChange: (error: boolean) => void
 }
-
-// Settle time before a typed date is saved. Long enough to type the remaining
-// segments, short enough that a native picker selection (which never blurs)
-// still lands promptly.
-const DATE_COMMIT_DELAY = 600
 
 function DateEditor({
   value,
   onChange,
   disabled,
-  immediate,
   onErrorChange,
 }: DateEditorProps) {
-  const [localValue, setLocalValue] = useState(value)
   const [showError, setShowError] = useState(false)
-  const focusedRef = useRef(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const localValueRef = useRef(value)
-  // Read through refs so the debounced commit sees the current props, and so
-  // the resync effect below doesn't re-run on the parent's inline callbacks.
-  const valueRef = useRef(value)
-  valueRef.current = value
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const onErrorChangeRef = useRef(onErrorChange)
   onErrorChangeRef.current = onErrorChange
 
-  // Follow the record when it changes underneath us. An uncontrolled input
-  // cannot: once the user types into a date input the browser sets its
-  // dirty-value flag and ignores every later defaultValue. Skip while focused
-  // so an edit is not yanked.
-  useEffect(() => {
-    if (focusedRef.current) return
-    setLocalValue(value)
-    localValueRef.current = value
-    setShowError(false)
-    onErrorChangeRef.current(false)
-  }, [value])
-
-  const commit = (next: string) => {
-    if (next !== valueRef.current) onChangeRef.current(next)
-  }
-
-  const clearPending = () => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-      debounceRef.current = null
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-        // Flush the date the debounce was still holding, for the rare case of a
-        // typed (not picked) edit that unmounts before it settles.
-        if (localValueRef.current !== valueRef.current) {
-          onChangeRef.current(localValueRef.current)
-        }
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    const el = inputRef.current
-    if (!el) return
-    const handleNativeChange = () => {
-      clearPending()
-      if (el.validity.badInput) {
-        setShowError(true)
-        // Through the ref: this listener is installed once, so a direct call
-        // would freeze the first render's callback.
-        onErrorChangeRef.current(true)
-        return
-      }
-      setLocalValue(el.value)
-      localValueRef.current = el.value
-      commit(el.value)
-    }
-    el.addEventListener('change', handleNativeChange)
-    return () => el.removeEventListener('change', handleNativeChange)
-  }, [])
-
-  const handleFocus = () => {
-    focusedRef.current = true
-    // Drop a stale message from the previous edit. Clearing the last segment of
-    // a date takes its value from "" to "", which fires no change event, so an
-    // error raised while it was half-cleared would otherwise sit there.
-    if (showError) {
-      setShowError(false)
-      onErrorChange(false)
-    }
-  }
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    focusedRef.current = false
-    clearPending()
-    if (e.target.validity.badInput) {
-      setShowError(true)
-      onErrorChange(true)
-      return
-    }
-    setShowError(false)
-    onErrorChange(false)
-    commit(e.target.value)
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const badInput = e.target.validity.badInput
-    const next = e.target.value
-    setLocalValue(next)
-    localValueRef.current = next
-    // Surface bad input to the parent (via onValidationError, if it listens)
-    onErrorChange(badInput)
-    // Clear visible error when user starts editing again
-    if (showError && !badInput) setShowError(false)
-    if (badInput) {
-      clearPending()
-      return
-    }
-    // The create dialog holds the value in local form state, so waiting there
-    // would lose a date picked right before Create is pressed.
-    if (immediate) {
-      commit(next)
-      return
-    }
-    // Typing a date fires "input" per segment, so an intermediate combination -
-    // old month with new day - is briefly a valid date. Wait for the entry to
-    // settle; blur and a full picker or keyboard commit still land immediately.
-    clearPending()
-    debounceRef.current = setTimeout(() => {
-      debounceRef.current = null
-      commit(localValueRef.current)
-    }, DATE_COMMIT_DELAY)
-  }
-
   return (
     <div className='space-y-1'>
-      <Input
-        ref={inputRef}
-        type='date'
-        value={localValue}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onChange={handleChange}
+      <DatePicker
+        value={value}
         disabled={disabled}
-        className={`h-9 ${showError ? 'border-destructive' : ''}`}
+        onChange={(day) => {
+          setShowError(false)
+          onErrorChangeRef.current(false)
+          if (day !== value) onChangeRef.current(day)
+        }}
+        onInvalid={(invalid) => {
+          setShowError(invalid)
+          onErrorChangeRef.current(invalid)
+        }}
       />
       {showError && (
         <p className='text-xs text-destructive'>

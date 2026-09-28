@@ -182,6 +182,29 @@ describe('EntityObjectDetailPanel failure reporting', () => {
   })
 })
 
+describe('EntityObjectDetailPanel parent select', () => {
+  it('offers no "None" to a class that cannot sit at the top level', async () => {
+    renderPanel()
+
+    fireEvent.click(await screen.findByRole('combobox', { name: 'Parent' }))
+    await screen.findByRole('option', { name: 'Sibling' })
+
+    expect(screen.queryByRole('option', { name: 'None' })).toBeNull()
+  })
+
+  it('offers "None" to a class that may sit at the top level', async () => {
+    renderPanel({
+      design: createMockEntityDesign({ hierarchy: { task: ['', 'task'] } }),
+    })
+
+    fireEvent.click(await screen.findByRole('combobox', { name: 'Parent' }))
+
+    expect(
+      await screen.findByRole('option', { name: 'None' })
+    ).toBeInTheDocument()
+  })
+})
+
 describe('EntityObjectDetailPanel header', () => {
   it('prints no readable id for an app that does not number its objects', async () => {
     renderPanel()

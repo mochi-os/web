@@ -389,6 +389,12 @@ export function EntityObjectDetailPanel<
       )
   }, [objectsData, data, design.hierarchy, design.classes, prefix])
 
+  // "None" moves the object to the top level, which the server refuses for a
+  // class the hierarchy does not allow there.
+  const canBeTopLevel = data
+    ? (design.hierarchy[data.object.class] || []).includes('')
+    : false
+
   const currentParent = useMemo(() => {
     if (!data?.object.parent || !objectsData) return null
     return objectsData.find((obj) => obj.id === data.object.parent)
@@ -647,9 +653,11 @@ export function EntityObjectDetailPanel<
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='_none_'>
-                          <Trans>None</Trans>
-                        </SelectItem>
+                        {canBeTopLevel && (
+                          <SelectItem value='_none_'>
+                            <Trans>None</Trans>
+                          </SelectItem>
+                        )}
                         {validParentOptions.map((obj) => (
                           <SelectItem key={obj.id} value={obj.id}>
                             {objectTitle(obj)}
