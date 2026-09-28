@@ -15,7 +15,13 @@ import {
   CommandItem,
   CommandList,
 } from './ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './ui/dialog'
 import { TimezoneMap } from './timezone-map'
 import { t } from '@lingui/core/macro'
 
@@ -39,7 +45,7 @@ function getBrowserTimezone(): string {
   }
 }
 
-interface TimezoneSelectProps {
+interface TimezoneOptions {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
@@ -53,15 +59,31 @@ interface TimezoneSelectProps {
    * sits beneath a time field rather than in a row of its own.
    */
   compact?: boolean
-  /** The trigger's accessible name, when its text alone does not say what it sets. */
-  label?: string
   id?: string
 }
+
+/**
+ * What the zone is for, which heads the dialog: the trigger's `label`, or a
+ * `title` where the trigger shows only its value and a label beside it names
+ * the field.
+ */
+type TimezoneSelectProps = TimezoneOptions &
+  (
+    | {
+        /** The trigger's accessible name, when its text alone does not say what it sets. */
+        label: string
+        title?: string
+      }
+    | { label?: string; title: string }
+  )
 
 /**
  * A time zone chosen from a world map or a searchable list. The map fills the
  * chosen zone, tints the one pointed at and names it with its current time;
  * the list beneath is the keyboard path and the only one on narrow screens.
+ * They open in a dialog of their own, which a popover beside the field could
+ * not hold: the map alone is a third of a laptop screen, and a popover runs
+ * off the window wherever the field sits.
  */
 export function TimezoneSelect({
   value,
@@ -70,6 +92,7 @@ export function TimezoneSelect({
   auto = true,
   compact = false,
   label,
+  title,
   id,
 }: TimezoneSelectProps) {
   const { t: t_ } = useLingui()
@@ -103,8 +126,8 @@ export function TimezoneSelect({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         {compact ? (
           <Button
             id={id}
@@ -135,21 +158,28 @@ export function TimezoneSelect({
             <ChevronsUpDown className='ms-2 h-4 w-4 shrink-0 opacity-50' />
           </Button>
         )}
-      </PopoverTrigger>
-      <PopoverContent
-        className='w-[min(720px,calc(100vw-2rem))] p-0'
-        align='start'
+      </DialogTrigger>
+      {/* A fixed height, so the dialog holds still while a search shortens
+          the list. The map gives up width before the list gives up rows: at
+          2.4 times as wide as it is tall, it is never taller than a third of
+          the window. */}
+      <DialogContent
+        aria-describedby={undefined}
+        className='h-[min(calc(100svh-2rem),760px)] gap-0 overflow-hidden p-0 sm:max-w-[720px]'
       >
+        <DialogHeader className='px-4 pt-4 pb-2 pe-12'>
+          <DialogTitle>{title ?? label}</DialogTitle>
+        </DialogHeader>
         <TimezoneMap
           value={chosen}
           hovered={hovered}
           onHover={setHovered}
           onSelect={choose}
-          className='hidden p-2 pb-0 sm:block'
+          className='mx-auto hidden w-full max-w-[calc(33svh*2.4)] shrink-0 px-2 sm:block'
         />
-        <Command>
+        <Command className='min-h-0 flex-1'>
           <CommandInput placeholder={t`Search time zone...`} />
-          <CommandList>
+          <CommandList className='max-h-full min-h-0 flex-1'>
             <CommandEmpty>
               <Trans>No time zone found.</Trans>
             </CommandEmpty>
@@ -213,7 +243,7 @@ export function TimezoneSelect({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   )
 }

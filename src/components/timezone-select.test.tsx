@@ -21,7 +21,12 @@ function show(
 ) {
   render(
     <I18nProvider i18n={i18n}>
-      <TimezoneSelect value='Europe/London' onChange={vi.fn()} {...props} />
+      <TimezoneSelect
+        value='Europe/London'
+        onChange={vi.fn()}
+        title='Time zone'
+        {...props}
+      />
     </I18nProvider>
   )
   // The trigger, read before the list opens: the list's search box is a
@@ -46,6 +51,40 @@ describe('TimezoneSelect', () => {
     const trigger = show({ compact: true, label: 'Start time zone' })
     expect(trigger.getAttribute('aria-label')).toBe('Start time zone')
     expect(trigger.textContent).toBe('London')
+  })
+
+  it('opens in a dialog headed by what the zone is for', async () => {
+    fireEvent.click(show())
+    expect(
+      await screen.findByRole('dialog', { name: 'Time zone' })
+    ).toBeTruthy()
+    cleanup()
+    fireEvent.click(
+      show({ compact: true, label: 'Start time zone', title: undefined })
+    )
+    expect(
+      await screen.findByRole('dialog', { name: 'Start time zone' })
+    ).toBeTruthy()
+  })
+
+  it('holds the map and the list at a fixed height inside the window, the list taking the rest', async () => {
+    fireEvent.click(show())
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.className).toContain('h-[min(calc(100svh-2rem),760px)]')
+    // The list scrolls within whatever the map and the search leave, rather
+    // than at a height of its own that the window may not have.
+    const list = dialog.querySelector('[cmdk-list]')!
+    expect(list.className).toContain('flex-1')
+    expect(list.className).toContain('min-h-0')
+    expect(list.className).not.toContain('max-h-[300px]')
+    // The map narrows to stay within a third of the window's height.
+    const map = await waitFor(() => {
+      const found =
+        screen.getByTestId('timezone-map').parentElement?.parentElement
+      if (!found) throw new Error('the map has not loaded')
+      return found
+    })
+    expect(map.className).toContain('max-w-[calc(33svh*2.4)]')
   })
 
   it('offers the browser zone for a preference and not for an event', async () => {
@@ -134,7 +173,12 @@ describe('the list', () => {
   it('names a chosen sea zone the same way on the button', () => {
     render(
       <I18nProvider i18n={i18n}>
-        <TimezoneSelect value='Etc/GMT-8' onChange={vi.fn()} auto={false} />
+        <TimezoneSelect
+          value='Etc/GMT-8'
+          onChange={vi.fn()}
+          auto={false}
+          title='Time zone'
+        />
       </I18nProvider>
     )
     expect(screen.getByRole('combobox').textContent).toContain('UTC+8')
