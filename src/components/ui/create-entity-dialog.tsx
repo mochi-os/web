@@ -55,6 +55,8 @@ export interface CreateEntityDialogProps {
   title: string
   /** The noun as it reads mid-sentence ("wiki"); it is never re-cased here. */
   entityLabel: string
+  /** The longest name, in characters, the app accepts, where it is below core's 1000. */
+  maximum?: number
   // Optional fields
   showDescription?: boolean
   descriptionLabel?: string
@@ -88,6 +90,7 @@ export function CreateEntityDialog({
   icon: Icon,
   title,
   entityLabel,
+  maximum,
   showDescription,
   descriptionLabel = t`Description`,
   showPrivacyToggle,
@@ -208,7 +211,11 @@ export function CreateEntityDialog({
                     <Trans>{entityLabel} name</Trans>
                   </FormLabel>
                   <FormControl>
-                    <Input disabled={isPending} {...field} />
+                    <Input
+                      disabled={isPending}
+                      maxLength={maximum}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

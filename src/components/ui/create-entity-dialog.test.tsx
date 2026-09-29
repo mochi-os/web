@@ -10,7 +10,7 @@ import {
   DISALLOWED_NAME_CHARS,
 } from './create-entity-dialog'
 
-function show() {
+function show(maximum?: number) {
   const onSubmit = vi.fn(async (_values: { name: string }) => {})
   render(
     <I18nProvider i18n={i18n}>
@@ -19,6 +19,7 @@ function show() {
         onOpenChange={() => {}}
         title='Create wiki'
         entityLabel='wiki'
+        maximum={maximum}
         onSubmit={onSubmit}
         hideTrigger
       />
@@ -51,6 +52,16 @@ describe('CreateEntityDialog', () => {
     fireEvent.change(box, { target: { value: '<b>' } })
     await waitFor(() => expect(create).toBeDisabled())
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it("stops the name at the app's own maximum when it sets one", () => {
+    show(100)
+    expect(screen.getByRole('textbox')).toHaveAttribute('maxlength', '100')
+  })
+
+  it('leaves the name to the shared limit when the app sets none', () => {
+    show()
+    expect(screen.getByRole('textbox')).not.toHaveAttribute('maxlength')
   })
 
   it('shares the pattern the app settings pages check', () => {
