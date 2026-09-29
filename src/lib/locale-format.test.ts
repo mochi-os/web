@@ -3,14 +3,20 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
+import names from '../data/timezone-names.json'
 import {
+  currentZone,
+  dayPeriods,
+  formatClock,
   formatDate,
+  formatHour,
   formatTime,
   formatDateTime,
   formatRelativeTime,
   formatUserTimestamp,
   formatWeekdayDay,
   formatLongDate,
+  parseClock,
   parseDate,
 } from './locale-format'
 
@@ -100,14 +106,14 @@ describe("the browser's region reaches the formatters under a base language", ()
     expect(formatWeekdayDay(TUESDAY, 'UTC')).toBe('Tue 22')
     expect(formatLongDate(TUESDAY, 'UTC')).toContain('22 September 2026')
     expect(formatDate(TUESDAY, 'D MMM YYYY', 'UTC')).toBe('22 Sept 2026')
-    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00 pm')
+    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00\u202fpm')
   })
 
   it('reads American under en with an American browser', () => {
     load('en')
     speaks('en-US')
     expect(formatWeekdayDay(TUESDAY, 'UTC')).toBe('22 Tue')
-    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00 PM')
+    expect(formatTime(TUESDAY, '12h', 'UTC')).toBe('12:00:00\u202fPM')
   })
 
   it('keeps the interface language when the browser speaks another', () => {
@@ -126,7 +132,7 @@ describe("the browser's region reaches the formatters under a base language", ()
 describe('meridiem follows the active language', () => {
   it('is AM/PM under en', () => {
     load('en')
-    expect(formatTime(MARCH, '12h')).toBe('3:30:00 PM')
+    expect(formatTime(MARCH, '12h')).toBe('3:30:00\u202fPM')
   })
 
   it('is not the English marker under a language that uses its own', () => {
@@ -140,6 +146,55 @@ describe('meridiem follows the active language', () => {
   it('does not touch 24h time, which has no marker', () => {
     load('ja')
     expect(formatTime(MARCH, '24h')).toBe('15:30:00')
+  })
+})
+
+// The clock as each language writes its short time: where the period goes,
+// the language's word for the part of the day, and what separates hours from
+// minutes. The server writes a reminder's time the same way.
+describe('the clock is written as the language writes it', () => {
+  const at = (hours: number, minutes: number) =>
+    new Date(Date.UTC(2026, 2, 14, hours, minutes, 0))
+
+  it('puts the period where the language puts it', () => {
+    load('ja')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('午後3:30')
+    expect(formatTime(at(15, 30), '12h', 'UTC')).toBe('午後3:30:00')
+    load('ko')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('PM 3:30')
+    load('en-us')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('3:30\u202fPM')
+  })
+
+  it("uses the language's words for the parts of the day", () => {
+    load('zh-hant')
+    expect(formatClock(at(0, 30), '12h', 'UTC')).toBe('凌晨12:30')
+    load('bg')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('3:30 ч. pm')
+    load('ar')
+    expect(formatClock(at(15, 30), '12h', 'UTC')).toBe('3:30 م')
+  })
+
+  it('separates hours from minutes as the language does', () => {
+    load('da')
+    expect(formatClock(at(15, 30), '24h', 'UTC')).toBe('15.30')
+    load('fr-ca')
+    expect(formatClock(at(15, 30), '24h', 'UTC')).toBe('15 h 30')
+  })
+
+  it('keeps the digits 0-9 and the minutes two of them', () => {
+    load('fa')
+    expect(formatClock(at(15, 30), '24h', 'UTC')).toBe('15:30')
+    load('yo')
+    expect(formatClock(at(15, 4), '24h', 'UTC')).toBe('15:04')
+  })
+
+  it("writes a whole hour on the 12-hour clock as the language's hour", () => {
+    load('en-us')
+    expect(formatHour(at(15, 0), '12h', 'UTC')).toBe('3\u202fPM')
+    load('ja')
+    expect(formatHour(at(15, 0), '12h', 'UTC')).toBe('午後3時')
+    expect(formatHour(at(15, 30), '12h', 'UTC')).toBe('午後3:30')
   })
 })
 
@@ -216,8 +271,8 @@ describe('the timezone preference reaches the rendered value', () => {
   })
 
   it('applies the zone to the 12-hour clock and its meridiem', () => {
-    expect(formatTime(INSTANT, '12h', 'UTC')).toBe('3:30:00 PM')
-    expect(formatTime(INSTANT, '12h', 'Asia/Tokyo')).toBe('12:30:00 AM')
+    expect(formatTime(INSTANT, '12h', 'UTC')).toBe('3:30:00\u202fPM')
+    expect(formatTime(INSTANT, '12h', 'Asia/Tokyo')).toBe('12:30:00\u202fAM')
   })
 
   it('applies the zone to the month name form', () => {
@@ -242,7 +297,7 @@ describe('the timezone preference reaches the rendered value', () => {
     // The month-name and meridiem forms build their own Intl formatters,
     // which used to throw where the numeric forms already degraded.
     expect(formatDate(local, 'D MMM YYYY', 'Not/AZone')).toBe('14 Mar 2026')
-    expect(formatTime(local, '12h', 'Not/AZone')).toBe('3:30:00 PM')
+    expect(formatTime(local, '12h', 'Not/AZone')).toBe('3:30:00\u202fPM')
   })
 })
 
@@ -334,5 +389,117 @@ describe("parseDate reads the user's own format", () => {
     expect(parseDate('22/09', 'DD/MM/YYYY')).toBeNull()
     expect(parseDate('', 'DD/MM/YYYY')).toBeNull()
     expect(parseDate('yesterday', 'DD/MM/YYYY')).toBeNull()
+  })
+})
+
+// These tests run on Node, whose zone data names zones as Chrome does:
+// Asia/Calcutta, never Asia/Kolkata.
+describe('a zone by its current name', () => {
+  it('reads an old name as the current one', () => {
+    expect(currentZone('Asia/Calcutta')).toBe('Asia/Kolkata')
+    expect(currentZone('Europe/Kiev')).toBe('Europe/Kyiv')
+    expect(currentZone('America/Buenos_Aires')).toBe(
+      'America/Argentina/Buenos_Aires'
+    )
+    expect(currentZone('America/Coral_Harbour')).toBe('America/Atikokan')
+    expect(currentZone('Pacific/Truk')).toBe('Pacific/Chuuk')
+  })
+
+  it('keeps a current name, and resolves any other alias of a drawn zone', () => {
+    expect(currentZone('Asia/Kolkata')).toBe('Asia/Kolkata')
+    expect(currentZone('Europe/London')).toBe('Europe/London')
+    expect(currentZone('US/Eastern')).toBe('America/New_York')
+  })
+
+  it('reads a zone too small for the map as the one it is drawn within', () => {
+    expect(currentZone('Europe/Busingen')).toBe('Europe/Zurich')
+    expect(currentZone('Europe/Vatican')).toBe('Europe/Rome')
+  })
+
+  it('leaves a zone the map does not draw as it is', () => {
+    for (const zone of [
+      'UTC',
+      'Etc/GMT',
+      'Etc/GMT-8',
+      'Antarctica/Troll',
+      'Not/AZone',
+    ]) {
+      expect(currentZone(zone)).toBe(zone)
+    }
+  })
+
+  it('finds every zone the browser lists on the map, but those below its southern edge', () => {
+    const drawn = new Set(names.zones)
+    const missing = Intl.supportedValuesOf('timeZone').filter(
+      (zone) =>
+        !drawn.has(currentZone(zone)) &&
+        !zone.startsWith('Antarctica/') &&
+        zone !== 'UTC'
+    )
+    expect(missing).toEqual([])
+  })
+})
+
+describe('a time typed by hand', () => {
+  beforeEach(() => load('en'))
+
+  it('reads hours and minutes however they are separated, or run together', () => {
+    expect(parseClock('9')).toBe(9 * 60)
+    expect(parseClock('930')).toBe(9 * 60 + 30)
+    expect(parseClock('0930')).toBe(9 * 60 + 30)
+    expect(parseClock('9:30')).toBe(9 * 60 + 30)
+    expect(parseClock('21.45')).toBe(21 * 60 + 45)
+    expect(parseClock('14h30')).toBe(14 * 60 + 30)
+    expect(parseClock('14h')).toBe(14 * 60)
+    expect(parseClock(' 23:59 ')).toBe(23 * 60 + 59)
+    expect(parseClock('0:00')).toBe(0)
+  })
+
+  it('puts a time with a period on the 12-hour clock', () => {
+    expect(parseClock('9:30 pm')).toBe(21 * 60 + 30)
+    expect(parseClock('9:30PM')).toBe(21 * 60 + 30)
+    expect(parseClock('9 p.m.')).toBe(21 * 60)
+    expect(parseClock('2p')).toBe(14 * 60)
+    expect(parseClock('12 am')).toBe(0)
+    expect(parseClock('12:15 pm')).toBe(12 * 60 + 15)
+    expect(parseClock('11:59 AM')).toBe(11 * 60 + 59)
+  })
+
+  it("reads the language's own word for the part of the day", () => {
+    load('ja')
+    const { am, pm } = dayPeriods()
+    expect(am).toBe('午前')
+    expect(pm).toBe('午後')
+    expect(parseClock('午後3:04')).toBe(15 * 60 + 4)
+    expect(parseClock('午前 9:05')).toBe(9 * 60 + 5)
+  })
+
+  it('reads what the clock writes, on either clock', () => {
+    for (const minutes of [
+      0,
+      9 * 60 + 5,
+      12 * 60,
+      13 * 60 + 30,
+      23 * 60 + 55,
+    ]) {
+      const at = new Date(Date.UTC(2000, 0, 1, 0, minutes))
+      expect(parseClock(formatClock(at, '24h', 'UTC'))).toBe(minutes)
+      expect(parseClock(formatClock(at, '12h', 'UTC'))).toBe(minutes)
+    }
+  })
+
+  it('is null for text that is not a time', () => {
+    for (const text of [
+      '',
+      'soon',
+      '24:00',
+      '9:60',
+      '13 pm',
+      '0 am',
+      '12345',
+      '9:30 tomorrow',
+    ]) {
+      expect(parseClock(text)).toBeNull()
+    }
   })
 })

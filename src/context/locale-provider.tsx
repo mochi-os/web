@@ -8,11 +8,12 @@ import {
   onShellMessage,
   isInShell,
 } from '../lib/shell-bridge'
-import type {
-  DateFormat,
-  TimeFormat,
-  TimestampDisplay,
-  NumberFormat,
+import {
+  currentZone,
+  type DateFormat,
+  type TimeFormat,
+  type TimestampDisplay,
+  type NumberFormat,
 } from '../lib/locale-format'
 import { setActiveLocale } from './i18n-provider'
 import {
@@ -189,15 +190,16 @@ export function detectUnits(): 'metric' | 'imperial' | 'usa' {
   return 'metric'
 }
 
-function detectTimezone(): string {
+// The device's zone by its current name: Chrome still gives Asia/Calcutta.
+export function detectTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone
+    return currentZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
   } catch {
     return 'UTC'
   }
 }
 
-function resolveLocale(raw: LocalePreferences): ResolvedLocale {
+export function resolveLocale(raw: LocalePreferences): ResolvedLocale {
   return {
     dateFormat:
       raw.date_format === 'auto'
@@ -220,7 +222,8 @@ function resolveLocale(raw: LocalePreferences): ResolvedLocale {
       raw.units === 'auto'
         ? detectUnits()
         : (raw.units as 'metric' | 'imperial' | 'usa'),
-    timezone: raw.timezone === 'auto' ? detectTimezone() : raw.timezone,
+    timezone:
+      raw.timezone === 'auto' ? detectTimezone() : currentZone(raw.timezone),
     maps: mapService(raw.maps),
     flights: flightService(raw.flights),
   }

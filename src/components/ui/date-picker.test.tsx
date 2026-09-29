@@ -42,6 +42,16 @@ describe('DatePicker', () => {
     expect((input as HTMLInputElement).value).toBe('2026-09-22')
   })
 
+  it('shows a value that is not a day as it was written', () => {
+    const { input } = show('19850412')
+    expect((input as HTMLInputElement).value).toBe('19850412')
+  })
+
+  it('shows a day without its year as it was written', () => {
+    const { input } = show('--04-12')
+    expect((input as HTMLInputElement).value).toBe('--04-12')
+  })
+
   it('reports a typed day as soon as it is complete, and not before', () => {
     const { input, onChange, onInvalid } = show('')
     fireEvent.focus(input)
@@ -84,6 +94,16 @@ describe('DatePicker', () => {
       </I18nProvider>
     )
     expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('2027-01-05')
+  })
+
+  it('opens the month grid on this month for a value that is not a day, and a pick replaces it', async () => {
+    const { onChange } = show('--04-12')
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a date' }))
+    expect(await screen.findByRole('button', { name: 'Next year' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '15' }))
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.stringMatching(/^\d{4}-\d{2}-15$/)
+    )
   })
 
   it('opens a month grid whose header steps months and years, and picks a day from it', async () => {

@@ -26,6 +26,8 @@ export interface DatePickerProps {
   'aria-label'?: string
 }
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
 /**
  * A day typed in the user's own date format, or picked from a month grid
  * whose header steps months and years on their own, opened from the calendar
@@ -45,8 +47,12 @@ export function DatePicker({
   const { t } = useLingui()
   const format = useFormat()
   const { dateFormat } = useLocale().locale
+  // A value that is not a day, such as a birthday stored without its year,
+  // reads as it was written: formatting it as a date would throw.
   const show = (day: string) =>
-    day ? format.formatDate(new Date(format.timestampAt(day, 720) * 1000)) : ''
+    DAY.test(day)
+      ? format.formatDate(new Date(format.timestampAt(day, 720) * 1000))
+      : day
 
   const [text, setText] = useState(() => show(value))
   const [invalid, setInvalid] = useState(false)
@@ -133,7 +139,7 @@ export function DatePicker({
         </PopoverTrigger>
         <PopoverContent align='end' className='w-64 p-2'>
           <MiniMonth
-            selected={value || today}
+            selected={DAY.test(value) ? value : today}
             today={today}
             weekNumbers={false}
             onSelect={pick}
