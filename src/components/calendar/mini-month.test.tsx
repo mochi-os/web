@@ -59,6 +59,27 @@ describe('MiniMonth wheel', () => {
     expect(screen.getByRole('button', { name: 'August' })).toBeTruthy()
   })
 
+  it('leaves the month alone while the year list scrolls', async () => {
+    show('2026-09-22')
+    fireEvent.click(screen.getByRole('button', { name: '2026' }))
+    fireEvent.wheel(await screen.findByRole('option', { name: '2028' }), {
+      deltaY: 100,
+    })
+    // The year list is modal, which hides the header from the tree.
+    expect(
+      screen.getByRole('button', { name: 'September', hidden: true })
+    ).toBeTruthy()
+  })
+
+  it('leaves the month alone while the month list scrolls', async () => {
+    show('2026-09-22')
+    fireEvent.click(screen.getByRole('button', { name: 'September' }))
+    fireEvent.wheel(await screen.findByRole('option', { name: 'March' }), {
+      deltaY: 100,
+    })
+    expect(screen.getByRole('button', { name: 'September' })).toBeTruthy()
+  })
+
   it('stays on a delta under the threshold', () => {
     fireEvent.wheel(show('2026-09-22'), { deltaY: 5 })
     expect(screen.getByRole('button', { name: 'September' })).toBeTruthy()
