@@ -14,12 +14,12 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog'
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from './ui/responsive-dialog'
 import type { PlaceData, PhotonPlace } from '../types/places'
 import { t } from '@lingui/core/macro'
 
@@ -122,17 +122,17 @@ export function TravellingPicker({
   const canConfirm = origin && destination
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className='sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col'>
-        <DialogHeader>
-          <DialogTitle className='flex items-center gap-2'>
+    <ResponsiveDialog open={open} onOpenChange={handleClose}>
+      <ResponsiveDialogContent className='sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col'>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className='flex items-center gap-2'>
             <Plane className='h-5 w-5' />
             <Trans>Travelling</Trans>
-          </DialogTitle>
-          <DialogDescription className='sr-only'>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className='sr-only'>
             <Trans>Set origin and destination</Trans>
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className='space-y-4 overflow-y-auto flex-1 min-h-0 px-1'>
           {/* Origin field */}
@@ -305,7 +305,7 @@ export function TravellingPicker({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

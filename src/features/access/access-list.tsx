@@ -21,17 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '../../components/ui/alert-dialog'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 import {
   Tooltip,
   TooltipContent,
@@ -118,6 +108,7 @@ export function AccessList({
   bordered = false,
 }: AccessListProps) {
   const [updatingSubject, setUpdatingSubject] = useState<string | null>(null)
+  const [removeSubject, setRemoveSubject] = useState<string | null>(null)
 
   const handleLevelChange = async (subject: string, newLevel: string) => {
     setUpdatingSubject(subject)
@@ -132,6 +123,7 @@ export function AccessList({
     setUpdatingSubject(subject)
     try {
       await onRevoke(subject)
+      setRemoveSubject(null)
     } finally {
       setUpdatingSubject(null)
     }
@@ -204,115 +196,107 @@ export function AccessList({
       subjectPriority(a, aData.owner) - subjectPriority(b, bData.owner)
   )
 
-  return (
-    <Table bordered={bordered}>
-      <TableHeader>
-        <TableRow>
-          <TableHead>
-            <Trans>Subject</Trans>
-          </TableHead>
-          <TableHead>
-            <Trans>Access level</Trans>
-          </TableHead>
-          <TableHead className='w-[50px]'></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sortedSubjects.map(([subject, data]) => {
-          // For hierarchical model, use the first (and only) rule
-          // For permission model, this would need different handling
-          const rule = data.rules[0]
-          const currentLevel = getRuleLevel(rule)
-          const isUpdating = updatingSubject === subject
-          const isOwner = data.owner
+  const removeData = removeSubject ? subjectData.get(removeSubject) : null
 
-          return (
-            <TableRow key={subject}>
-              <TableCell>
-                <div className='flex items-center gap-2'>
-                  {getSubjectIcon(subject)}
-                  <span className='font-medium'>
-                    {formatSubject(subject, data.name)}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                {isOwner ? (
-                  <span className='text-sm'>
-                    <Trans>Owner</Trans>
-                  </span>
-                ) : (
-                  <Select
-                    value={currentLevel}
-                    onValueChange={(newLevel) =>
-                      void handleLevelChange(subject, newLevel)
-                    }
-                    disabled={isUpdating}
-                  >
-                    <SelectTrigger
-                      style={{ minWidth: selectWidth }}
-                      className='h-8 -ms-3 max-w-full'
+  return (
+    <>
+      <Table bordered={bordered}>
+        <TableHeader>
+          <TableRow>
+            <TableHead>
+              <Trans>Subject</Trans>
+            </TableHead>
+            <TableHead>
+              <Trans>Access level</Trans>
+            </TableHead>
+            <TableHead className='w-[50px]'></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedSubjects.map(([subject, data]) => {
+            // For hierarchical model, use the first (and only) rule
+            // For permission model, this would need different handling
+            const rule = data.rules[0]
+            const currentLevel = getRuleLevel(rule)
+            const isUpdating = updatingSubject === subject
+            const isOwner = data.owner
+
+            return (
+              <TableRow key={subject}>
+                <TableCell>
+                  <div className='flex items-center gap-2'>
+                    {getSubjectIcon(subject)}
+                    <span className='font-medium'>
+                      {formatSubject(subject, data.name)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {isOwner ? (
+                    <span className='text-sm'>
+                      <Trans>Owner</Trans>
+                    </span>
+                  ) : (
+                    <Select
+                      value={currentLevel}
+                      onValueChange={(newLevel) =>
+                        void handleLevelChange(subject, newLevel)
+                      }
+                      disabled={isUpdating}
                     >
-                      <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {levels.map((level) => (
-                        <SelectItem key={level.value} value={level.value}>
-                          {level.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </TableCell>
-              <TableCell>
-                {!isOwner && (
-                  <AlertDialog>
+                      <SelectTrigger
+                        style={{ minWidth: selectWidth }}
+                        className='h-8 -ms-3 max-w-full'
+                      >
+                        <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {levels.map((level) => (
+                          <SelectItem key={level.value} value={level.value}>
+                            {level.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {!isOwner && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            disabled={isUpdating}
-                            aria-label={t`Remove access rule`}
-                          >
-                            <X className='h-4 w-4' />
-                          </Button>
-                        </AlertDialogTrigger>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          disabled={isUpdating}
+                          aria-label={t`Remove access rule`}
+                          onClick={() => setRemoveSubject(subject)}
+                        >
+                          <X className='h-4 w-4' />
+                        </Button>
                       </TooltipTrigger>
                       <TooltipContent>{t`Remove access rule`}</TooltipContent>
                     </Tooltip>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          <Trans>Remove access?</Trans>
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          <Trans>
-                            Remove access rule for "
-                            {formatSubject(subject, data.name)}"?
-                          </Trans>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>
-                          <Trans>Cancel</Trans>
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => void handleRevoke(subject)}
-                        >
-                          <Trans>Remove</Trans>
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+                  )}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+
+      <ConfirmDialog
+        open={!!removeSubject}
+        onOpenChange={(open) => {
+          if (!open) setRemoveSubject(null)
+        }}
+        title={t`Remove access?`}
+        desc={t`Remove access rule for "${formatSubject(removeSubject ?? '', removeData?.name)}"?`}
+        confirmText={t`Remove`}
+        isLoading={!!updatingSubject && updatingSubject === removeSubject}
+        handleConfirm={() => {
+          if (removeSubject) void handleRevoke(removeSubject)
+        }}
+      />
+    </>
   )
 }

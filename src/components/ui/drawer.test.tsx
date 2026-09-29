@@ -8,7 +8,13 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '../../context/theme-provider'
 import { toast } from '../../lib/toast-utils'
-import { Drawer, DrawerContent, DrawerTitle } from './drawer'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from './drawer'
 import { Toaster } from './sonner'
 
 function Fixture({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
@@ -69,5 +75,47 @@ describe('DrawerContent beside a toast', () => {
     press(screen.getByText('elsewhere'))
 
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+})
+
+// Header, body and footer share one edge only while the drawer owns the side
+// inset. Padding moved back onto the children covers the first body block and
+// nothing after it, and a width a caller meant for the desktop dialog pins a
+// narrow sheet to the left edge between 640 and 767px.
+describe('DrawerContent layout', () => {
+  it('owns the side inset and ignores caller widths', async () => {
+    render(
+      <ThemeProvider>
+        <Drawer open direction='bottom'>
+          <DrawerContent className='sm:max-w-md'>
+            <DrawerHeader>
+              <DrawerTitle>Edit</DrawerTitle>
+            </DrawerHeader>
+            <p>First</p>
+            <p>Second</p>
+            <DrawerFooter>
+              <button type='button'>Save</button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </ThemeProvider>
+    )
+    await settle()
+
+    const content = document.querySelector('[data-slot=drawer-content]')!
+    const header = document.querySelector('[data-slot=drawer-header]')!
+    const footer = document.querySelector('[data-slot=drawer-footer]')!
+    expect(content.className).toMatch(/(^|\s)px-4(\s|$)/)
+    expect(content.className).toContain(
+      'data-[vaul-drawer-direction=bottom]:max-w-none'
+    )
+    // vaul's ::after strip would otherwise scroll into view below the footer.
+    expect(content.className).toMatch(/(^|\s)after:hidden(\s|$)/)
+    for (const part of [header, footer]) {
+      expect(part.className).not.toMatch(/(^|\s)(p|px)-\d/)
+    }
+    expect(
+      document.querySelector('[data-slot=drawer-handle]')?.nextElementSibling
+    ).toBe(header)
   })
 })

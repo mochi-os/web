@@ -13,12 +13,12 @@ import { MapView } from './map-view'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog'
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from './ui/responsive-dialog'
 import type { PlaceData, PhotonPlace } from '../types/places'
 
 export interface PlacePickerProps {
@@ -66,14 +66,14 @@ export function PlacePicker({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className='sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col'>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className='sr-only'>
+    <ResponsiveDialog open={open} onOpenChange={handleClose}>
+      <ResponsiveDialogContent className='flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md'>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className='sr-only'>
             <Trans>Search for a place</Trans>
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className='space-y-4 overflow-y-auto flex-1 min-h-0 p-1'>
           {/* Search input */}
@@ -154,7 +154,7 @@ export function PlacePicker({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

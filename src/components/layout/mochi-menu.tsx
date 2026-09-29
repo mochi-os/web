@@ -213,7 +213,7 @@ export function MochiMenu({
                   <Trans>Menu</Trans>
                 </DrawerTitle>
               </DrawerHeader>
-              <div className='px-4 pb-4'>{menuContent}</div>
+              <div>{menuContent}</div>
             </DrawerContent>
           </Drawer>
         ) : (
