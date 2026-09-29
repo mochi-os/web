@@ -103,6 +103,12 @@ function DrawerContent({
           // and it padded a bordered or tinted block from the inside, leaving
           // its edge on the screen edge.
           'group/drawer-content bg-background fixed z-[60] flex h-auto flex-col overflow-y-auto px-4',
+          // vaul hangs an absolute ::after, twice the drawer's height, below
+          // it to cover the gap on an upward overdrag. Once the drawer is its
+          // own scroll container that strip counts as scrollable overflow, so
+          // every sheet scrolled on past its footer into blank space. Hiding
+          // it costs only that overdrag cover.
+          'after:hidden',
           // DialogContent spaces its blocks with gap-6. A plain gap here would
           // also land under the handle and above the footer, which carry their
           // own spacing, so only a body block that follows another body block

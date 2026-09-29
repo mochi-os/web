@@ -109,6 +109,8 @@ describe('DrawerContent layout', () => {
     expect(content.className).toContain(
       'data-[vaul-drawer-direction=bottom]:max-w-none'
     )
+    // vaul's ::after strip would otherwise scroll into view below the footer.
+    expect(content.className).toMatch(/(^|\s)after:hidden(\s|$)/)
     for (const part of [header, footer]) {
       expect(part.className).not.toMatch(/(^|\s)(p|px)-\d/)
     }
