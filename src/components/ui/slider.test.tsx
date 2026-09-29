@@ -78,3 +78,14 @@ describe('Slider', () => {
     expect(thumb).toHaveAttribute('data-disabled')
   })
 })
+
+// Inside a bottom sheet, vaul treats a drag on anything without this marker as
+// a drag on the sheet, so a thumb drag could close the sheet.
+describe('Slider inside a drawer', () => {
+  it('opts out of drawer dragging', () => {
+    const { container } = render(<Slider aria-label='Volume' value={[50]} />)
+    expect(container.querySelector('[data-slot=slider]')).toHaveAttribute(
+      'data-vaul-no-drag'
+    )
+  })
+})

@@ -31,8 +31,11 @@ function Slider({
   )
 
   return (
+    // data-vaul-no-drag: inside a bottom sheet, vaul otherwise reads the
+    // vertical part of a thumb drag as a drag on the sheet and can close it.
     <SliderPrimitive.Root
       data-slot='slider'
+      data-vaul-no-drag=''
       defaultValue={defaultValue}
       value={value}
       min={min}
