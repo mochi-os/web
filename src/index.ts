@@ -140,6 +140,7 @@ export * from './components/calendar/month-grid'
 export * from './components/calendar/mini-month'
 export * from './components/calendar/date-header'
 export * from './components/ui/date-picker'
+export * from './components/ui/time-picker'
 export type {
   SidebarData,
   NavItem,

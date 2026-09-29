@@ -86,11 +86,12 @@ describe('MonthGrid all-day placement', () => {
         />
       </I18nProvider>
     )
-    const bar = screen.getByRole('button', { name: /Laundry/ })
-    // One column wide, starting in the second column: Tuesday the 22nd.
-    // jsdom rounds the percentage; one column is 14.28…%, two would be 28.57…%.
-    expect(bar.style.width).toMatch(/^calc\(14\.28\d*% - 4px\)$/)
-    expect(bar.style.insetInlineStart).toMatch(/^calc\(14\.28\d*% \+ 2px\)$/)
+    const bars = screen.getAllByRole('button', { name: /Laundry/ })
+    // Tuesday the 22nd alone.
+    expect(bars).toHaveLength(1)
+    expect(bars[0].closest('[data-day]')!.getAttribute('data-day')).toBe(
+      '2026-09-22'
+    )
   })
 })
 
@@ -321,30 +322,36 @@ describe('MonthGrid day lists', () => {
   })
 })
 
-describe('MonthGrid bars', () => {
-  const day = (hour: number) => Date.UTC(2026, 8, 23, hour) / 1000
-  // All-day events on the 23rd, one bar row each.
+describe('MonthGrid day stacking', () => {
+  const day = (date: number, hour: number) =>
+    Date.UTC(2026, 8, date, hour) / 1000
+  // All-day events on the 23rd, one line each.
   const holidays = (count: number) =>
     Array.from({ length: count }, (_, index) => ({
       key: `holiday${index}`,
       title: `Holiday ${index}`,
       colour: '#22c55e',
-      start: day(0),
-      finish: day(24),
+      start: day(23, 0),
+      finish: day(24, 0),
       allday: true,
       date: '2026-09-23',
     }))
-  const standup = {
-    key: 'standup',
-    title: 'Standup',
+  const timed = (key: string, date: number, hour: number) => ({
+    key,
+    title: key,
     colour: '#60a5fa',
-    start: Date.UTC(2026, 8, 24, 9) / 1000,
-    finish: Date.UTC(2026, 8, 24, 10) / 1000,
+    start: day(date, hour),
+    finish: day(date, hour + 1),
     allday: false,
-  }
+  })
 
   /** Draws one week in a row `height` pixels tall. */
-  function draw(events: CalendarEvent[], height: number, onStep = vi.fn()) {
+  function draw(
+    events: CalendarEvent[],
+    height = 600,
+    allday?: 'first' | 'last',
+    onStep = vi.fn()
+  ) {
     const tall = vi
       .spyOn(Element.prototype, 'clientHeight', 'get')
       .mockImplementation(function (this: Element) {
@@ -357,6 +364,7 @@ describe('MonthGrid bars', () => {
           month={9}
           events={events}
           today='2026-09-22'
+          allday={allday}
           onSelect={vi.fn()}
           onCreate={vi.fn()}
           onMove={vi.fn()}
@@ -366,47 +374,142 @@ describe('MonthGrid bars', () => {
       </I18nProvider>
     )
     tall.mockRestore()
-    const band = container.querySelector('[data-band]') as HTMLElement
-    const list = container.querySelector('[data-list]') as HTMLElement | null
-    return { container, band, list, onStep }
+    return { container, onStep }
   }
 
-  it('gives the bars all the height they need while they fit', () => {
-    const { band, list } = draw([...holidays(3), standup], 600)
-    expect(band.style.height).toBe('84px')
-    expect(list!.style.top).toBe('112px')
+  /** A day's groups, top to bottom, each as the keys it lists. */
+  const groups = (container: HTMLElement, date: string) =>
+    [...cell(container, date).querySelectorAll('[data-band], [data-list]')].map(
+      (group) =>
+        [...group.querySelectorAll('[data-key]')].map(
+          (entry) => (entry as HTMLElement).dataset.key
+        )
+    )
+  const band = (container: HTMLElement, date: string) =>
+    cell(container, date).querySelector('[data-band]') as HTMLElement
+  const list = (container: HTMLElement, date: string) =>
+    cell(container, date).querySelector('[data-list]') as HTMLElement
+
+  it("starts a day's timed events at its top, whatever the week's other days hold", () => {
+    const { container } = draw([...holidays(3), timed('standup', 24, 9)])
+    expect(groups(container, '2026-09-24')).toEqual([['standup']])
+    expect(band(container, '2026-09-24')).toBeNull()
+    // Nothing in the day sits above its list.
+    expect(list(container, '2026-09-24').previousElementSibling).toBeNull()
+    expect(list(container, '2026-09-24').style.top).toBe('')
   })
 
-  it('leaves each day room for one timed event, the rest of the bars scrolling', () => {
-    const { band, list } = draw([...holidays(4), standup], 150)
-    // 150 less the day number, the margin and one event.
-    expect(band.style.height).toBe('80px')
-    expect(band.classList.contains('overflow-y-auto')).toBe(true)
-    expect(band.querySelectorAll('[data-key]')).toHaveLength(4)
-    expect(list!.style.top).toBe('108px')
+  it('draws a multi-day event on every day it covers, a timed one saying its start on its first day', () => {
+    const retreat = {
+      key: 'retreat',
+      title: 'Retreat',
+      colour: '#16a34a',
+      start: day(22, 0),
+      finish: day(25, 0),
+      allday: true,
+      date: '2026-09-22',
+    }
+    const flight = {
+      ...timed('flight', 25, 22),
+      finish: day(26, 6),
+    }
+    const { container } = draw([retreat, flight])
+    for (const date of ['2026-09-22', '2026-09-23', '2026-09-24'])
+      expect(groups(container, date)).toEqual([['retreat']])
+    expect(groups(container, '2026-09-21')).toEqual([])
+    expect(groups(container, '2026-09-25')).toEqual([['flight']])
+    expect(band(container, '2026-09-25').textContent).toMatch(/22:00/)
+    expect(groups(container, '2026-09-26')).toEqual([['flight']])
+    expect(band(container, '2026-09-26').textContent).not.toMatch(/\d\d:\d\d/)
   })
 
-  it('lets the bars take the whole day in a week with no timed events', () => {
-    const { band } = draw(holidays(5), 150)
-    expect(band.style.height).toBe('120px')
+  it('puts all-day events above the timed ones, or below them when asked', () => {
+    const day23 = [...holidays(1), timed('standup', 23, 9)]
+    expect(groups(draw(day23).container, '2026-09-23')).toEqual([
+      ['holiday0'],
+      ['standup'],
+    ])
+    cleanup()
+    expect(groups(draw(day23, 600, 'last').container, '2026-09-23')).toEqual([
+      ['standup'],
+      ['holiday0'],
+    ])
   })
 
-  it('always shows at least one bar', () => {
-    const { band } = draw([...holidays(3), standup], 60)
-    expect(band.style.height).toBe('28px')
+  it('runs each group by start, all-day first at the same start, then by title', () => {
+    const late = { ...timed('flight', 22, 20), finish: day(23, 6) }
+    // Timed over midnight, starting when the holidays do, and named so that
+    // only its being timed puts it after them.
+    const overnight = {
+      ...timed('night', 23, 0),
+      title: 'Arrival',
+      finish: day(24, 2),
+    }
+    const { container } = draw([
+      timed('b', 23, 9),
+      timed('a', 23, 9),
+      timed('early', 23, 7),
+      overnight,
+      ...holidays(2).reverse(),
+      late,
+    ])
+    expect(groups(container, '2026-09-23')).toEqual([
+      ['flight', 'holiday0', 'holiday1', 'night'],
+      ['early', 'a', 'b'],
+    ])
   })
 
-  it('scrolls the bars under the wheel instead of paging when they overflow', () => {
-    const { band, onStep } = draw([...holidays(4), standup], 150)
-    Object.defineProperty(band, 'clientHeight', {
+  it('gives the first group its whole height while it leaves room for one of the second', () => {
+    const { container } = draw([...holidays(3), timed('standup', 23, 9)], 600)
+    // 600 less the day number and the margin, less one timed event.
+    expect(band(container, '2026-09-23').style.maxHeight).toBe('530px')
+    expect(list(container, '2026-09-23').classList.contains('flex-1')).toBe(
+      true
+    )
+  })
+
+  it('holds the first group to leave room for one of the second, the rest of it scrolling', () => {
+    const { container } = draw([...holidays(4), timed('standup', 23, 9)], 150)
+    const bars = band(container, '2026-09-23')
+    // 150 less the day number, the margin and one timed event.
+    expect(bars.style.maxHeight).toBe('80px')
+    expect(bars.classList.contains('overflow-y-auto')).toBe(true)
+    expect(bars.querySelectorAll('[data-key]')).toHaveLength(4)
+    cleanup()
+    const last = draw([...holidays(4), timed('standup', 23, 9)], 150, 'last')
+    // With the timed ones first, room is left for one all-day line.
+    expect(list(last.container, '2026-09-23').style.maxHeight).toBe('92px')
+  })
+
+  it('lets the first group take the whole day when there is no second', () => {
+    const { container } = draw(holidays(5), 150)
+    const bars = band(container, '2026-09-23')
+    expect(bars.style.maxHeight).toBe('')
+    expect(bars.classList.contains('flex-1')).toBe(true)
+  })
+
+  it('always shows at least one of the first group', () => {
+    const { container } = draw([...holidays(3), timed('standup', 23, 9)], 60)
+    expect(band(container, '2026-09-23').style.maxHeight).toBe('28px')
+  })
+
+  it('scrolls a held group under the wheel instead of paging when it overflows', () => {
+    const { container, onStep } = draw(
+      [...holidays(4), timed('standup', 23, 9)],
+      150,
+      'first',
+      vi.fn()
+    )
+    const bars = band(container, '2026-09-23')
+    Object.defineProperty(bars, 'clientHeight', {
       configurable: true,
       value: 80,
     })
-    Object.defineProperty(band, 'scrollHeight', {
+    Object.defineProperty(bars, 'scrollHeight', {
       configurable: true,
       value: 112,
     })
-    fireEvent.wheel(band.querySelector('[data-key]')!, { deltaY: 100 })
+    fireEvent.wheel(bars.querySelector('[data-key]')!, { deltaY: 100 })
     expect(onStep).not.toHaveBeenCalled()
   })
 })

@@ -11,11 +11,10 @@ import {
 } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { Bell, Copy, Repeat, Repeat2 } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { cn, naturalCompare } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import {
   addDays,
-  barRows,
   coveredDays,
   daysBetween,
   finished,
@@ -23,8 +22,6 @@ import {
   shiftedEvent,
   weekNumber,
   weekRows,
-  type Bar,
-  type BarPlacement,
 } from './layout'
 import {
   arm,
@@ -41,6 +38,7 @@ import { useEventTooltip } from './tooltip'
 import { Wheel } from './wheel'
 import type { CalendarEvent, DayMove } from './types'
 
+// An all-day or multi-day event's one line.
 const BAR = 28
 // A timed event's two lines: its title, then its time and marks.
 const CHIP = 40
@@ -56,6 +54,11 @@ export interface MonthGridProps {
   today: string
   /** Draws the ISO week number in each row's gutter. */
   weekNumbers?: boolean
+  /**
+   * Where a day's all-day and multi-day events go among its timed ones:
+   * above them, the default, or below.
+   */
+  allday?: 'first' | 'last'
   /** The occurrence whose summary or editor is open, drawn tinted. */
   selected?: string
   onSelect: (key: string, anchor: HTMLElement) => void
@@ -78,6 +81,11 @@ interface Dragging {
   day: string
   /** Where it started, so a drop that never left it writes nothing. */
   from: string
+  /**
+   * The first day of the occurrence, which moves by as many days as the
+   * pointer does; a multi-day one may be taken by any of its days.
+   */
+  start: string
   /** Alt held: a copy lands there and the original stays. */
   copy: boolean
   /** A calendar outside the grid under the pointer, which takes the chip. */
@@ -92,6 +100,7 @@ export function MonthGrid({
   events,
   today,
   weekNumbers,
+  allday = 'first',
   selected,
   onSelect,
   onCreate,
@@ -139,21 +148,9 @@ export function MonthGrid({
     []
   )
 
-  /**
-   * The height a week's bars take: all of them while they fit, else what
-   * leaves each day room for one timed event, or the whole day where the
-   * week has none, and never less than one bar; the rest scroll.
-   */
-  const band = (bars: number, timed: boolean) =>
-    Math.min(
-      bars * BAR,
-      Math.max(BAR, rowHeight - HEADER - 2 - (timed ? CHIP : 0))
-    )
-
   // The dragged occurrence as it would land on the day under the pointer,
-  // laid out like any other so it takes a row of its own, spans every day it
-  // covers and wraps across weeks; nothing while it has not left its day or
-  // hovers a calendar row.
+  // laid out like any other so it shows on every day it would cover;
+  // nothing while it has not left its day or hovers a calendar row.
   const tentative = useMemo(() => {
     if (!dragging || dragging.calendar || dragging.day === dragging.from)
       return null
@@ -169,47 +166,65 @@ export function MonthGrid({
     [events, tentative]
   )
 
-  const bars = useMemo(() => {
-    const whole = laid.filter(
-      (event) =>
-        event.allday ||
-        format.zonedDay(new Date(event.start * 1000)) !==
-          format.zonedDay(new Date((event.finish - 1) * 1000))
-    )
-    const source: Bar[] = whole.map((event) => ({
-      key: event.key,
-      ...coveredDays(event, format.zonedDay),
-    }))
-    const byKey = new Map(whole.map((event) => [event.key, event]))
-    return rows.map((week) => {
-      const placed: { placement: BarPlacement; event: CalendarEvent }[] = []
-      for (const placement of barRows(week, source)) {
-        const event = byKey.get(placement.key)
-        if (event) placed.push({ placement, event })
+  // Each day's occurrences in the two groups a cell draws: bars for the
+  // all-day and multi-day ones, one on every day they cover, and chips for
+  // the timed ones within a day. Each group runs by start, all-day before
+  // timed at the same start, then by title; the lifted copy leads its group
+  // wherever it falls, so the days it would land on show it.
+  const lists = useMemo(() => {
+    const out = new Map<
+      string,
+      { bars: CalendarEvent[]; chips: CalendarEvent[] }
+    >()
+    const first = days[0]
+    const last = days[days.length - 1]
+    if (!first || !last) return out
+    const slot = (day: string) => {
+      let list = out.get(day)
+      if (!list) {
+        list = { bars: [], chips: [] }
+        out.set(day, list)
       }
-      return placed
-    })
-  }, [laid, rows, format])
-
-  // Timed occurrences that begin and end on the same day, by day; the
-  // dragged one first, so its cell always shows it.
-  const chips = useMemo(() => {
-    const out = new Map<string, CalendarEvent[]>()
-    for (const event of laid) {
-      if (event.allday) continue
-      const day = format.zonedDay(new Date(event.start * 1000))
-      if (day !== format.zonedDay(new Date((event.finish - 1) * 1000))) continue
-      const list = out.get(day)
-      if (list) list.push(event)
-      else out.set(day, [event])
+      return list
     }
+    for (const event of laid) {
+      const begins = format.zonedDay(new Date(event.start * 1000))
+      const ends = format.zonedDay(new Date((event.finish - 1) * 1000))
+      if (!event.allday && begins === ends) {
+        slot(begins).chips.push(event)
+        continue
+      }
+      const covered = coveredDays(event, format.zonedDay)
+      const to = covered.finish < last ? covered.finish : last
+      for (
+        let day = covered.start > first ? covered.start : first;
+        day <= to;
+        day = addDays(day, 1)
+      )
+        slot(day).bars.push(event)
+    }
+    const leads = (event: CalendarEvent) =>
+      event.key === tentative?.key ? 1 : 0
+    const order = (a: CalendarEvent, b: CalendarEvent) =>
+      leads(b) - leads(a) ||
+      a.start - b.start ||
+      Number(b.allday) - Number(a.allday) ||
+      naturalCompare(a.title, b.title)
     for (const list of out.values()) {
-      list.sort((a, b) => a.start - b.start)
-      const index = list.findIndex((event) => event.key === tentative?.key)
-      if (index > 0) list.unshift(...list.splice(index, 1))
+      list.bars.sort(order)
+      list.chips.sort(order)
     }
     return out
-  }, [laid, tentative, format])
+  }, [laid, days, tentative, format])
+
+  /**
+   * The most height a day's first group may take when the day has a second:
+   * what leaves room for one of the second's entries, and never less than
+   * one of its own; the rest of it scrolls. With no second group it takes
+   * the whole day.
+   */
+  const hold = (own: number, other: number) =>
+    Math.max(own, rowHeight - HEADER - 2 - other)
 
   // --- Dragging a chip onto another day ---
 
@@ -264,7 +279,7 @@ export function MonthGrid({
       if (!current.keyboard) swallow()
       onMove({
         key: current.event.key,
-        day: current.from,
+        day: current.start,
         copy: current.copy,
         calendar: current.calendar,
       })
@@ -272,7 +287,11 @@ export function MonthGrid({
     }
     if (current.day === current.from) return
     if (!current.keyboard) swallow()
-    onMove({ key: current.event.key, day: current.day, copy: current.copy })
+    onMove({
+      key: current.event.key,
+      day: addDays(current.start, daysBetween(current.from, current.day)),
+      copy: current.copy,
+    })
   }, [onMove])
 
   const cancel = useCallback(() => {
@@ -339,28 +358,18 @@ export function MonthGrid({
     }
   }, [pointing])
 
-  // The dragged chip is drawn first in the day it would land on, so that
-  // day's list shows its top however far it was scrolled.
-  const destination = dragging && !dragging.calendar ? dragging.day : null
+  // The lifted copy leads its group in every day it would cover, so each
+  // of those lists shows its top however far it was scrolled.
   useEffect(() => {
-    if (!destination) return
-    const list = body.current?.querySelector<HTMLElement>(
-      `[data-day="${destination}"] [data-list]`
+    if (!tentative) return
+    const copies = body.current?.querySelectorAll<HTMLElement>(
+      '[data-testid="ghost"]'
     )
-    if (list) list.scrollTop = 0
-  }, [destination])
-
-  // A bar lifted onto a week whose bars scroll is kept in view there.
-  useEffect(() => {
-    const element = ghost.current
-    const parent = element?.closest<HTMLElement>('[data-band]')
-    if (!element || !parent) return
-    const top = element.offsetTop
-    const bottom = top + element.offsetHeight
-    if (top < parent.scrollTop) parent.scrollTop = top
-    else if (bottom > parent.scrollTop + parent.clientHeight)
-      parent.scrollTop = bottom - parent.clientHeight
-  }, [bars, tentative])
+    for (const element of copies ?? []) {
+      const list = element.closest<HTMLElement>('[data-list], [data-band]')
+      if (list) list.scrollTop = 0
+    }
+  }, [lists, tentative])
 
   // A keyboard drag keeps focus on the chip as it moves, and gives it back
   // to the chip when it ends.
@@ -382,10 +391,15 @@ export function MonthGrid({
     }
   }, [dragging])
 
+  /** The first day of an occurrence taken by its entry on `day`. */
+  const firstDay = (item: CalendarEvent, day: string, bar: boolean) =>
+    bar ? coveredDays(item, format.zonedDay).start : day
+
   const startMove = (
     event: React.PointerEvent,
     item: CalendarEvent,
-    day: string
+    day: string,
+    start: string
   ) => {
     if (item.readonly) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
@@ -404,6 +418,7 @@ export function MonthGrid({
         event: item,
         day,
         from: day,
+        start,
         copy: point.current.alt,
         keyboard: false,
       }
@@ -421,7 +436,8 @@ export function MonthGrid({
   const keyed = (
     event: React.KeyboardEvent,
     item: CalendarEvent,
-    day: string
+    day: string,
+    start: string
   ) => {
     const current = draggingRef.current
     const own =
@@ -461,6 +477,7 @@ export function MonthGrid({
       event: item,
       day,
       from: day,
+      start,
       copy: false,
       keyboard: true,
     }
@@ -515,15 +532,26 @@ export function MonthGrid({
     </>
   )
 
+  /** Whether this is the lifted copy, drawn where it would land. */
+  const carried = (event: CalendarEvent) =>
+    dragging !== null && event.key === tentative?.key
+
+  // Focus follows the lifted copy of a keyboard drag to the day it is on,
+  // which is the one of its entries that takes the ghost reference.
+  const ghostRef = (day: string) =>
+    dragging && day === dragging.day ? ghost : undefined
+
   const chipButton = (event: CalendarEvent, day: string) =>
-    dragging && event.key === tentative?.key ? (
+    dragging && carried(event) ? (
       <div
         key={event.key}
-        ref={ghost}
+        ref={ghostRef(day)}
         tabIndex={-1}
         data-testid='ghost'
-        onKeyDown={(pointer) => keyed(pointer, dragging.event, dragging.from)}
-        className='bg-surface-2 pointer-events-none flex w-full flex-col justify-center overflow-hidden rounded-md border px-2 text-start text-sm leading-5 shadow-md outline-none'
+        onKeyDown={(pointer) =>
+          keyed(pointer, dragging.event, dragging.from, dragging.start)
+        }
+        className='bg-surface-2 pointer-events-none flex w-full shrink-0 flex-col justify-center overflow-hidden rounded-md border px-2 text-start text-sm leading-5 shadow-md outline-none'
         style={{ height: `${CHIP - 2}px` }}
       >
         {chipContent(event, true)}
@@ -535,16 +563,16 @@ export function MonthGrid({
         data-key={event.key}
         onPointerDown={(pointer) => {
           pointer.stopPropagation()
-          startMove(pointer, event, day)
+          startMove(pointer, event, day, day)
         }}
         onClick={(pointer) => {
           pointer.stopPropagation()
           onSelect(event.key, pointer.currentTarget)
         }}
-        onKeyDown={(pointer) => keyed(pointer, event, day)}
+        onKeyDown={(pointer) => keyed(pointer, event, day, day)}
         title={tooltip(event)}
         className={cn(
-          'hover:bg-hover flex w-full flex-col justify-center overflow-hidden rounded-md px-2 text-start text-sm leading-5',
+          'hover:bg-hover flex w-full shrink-0 flex-col justify-center overflow-hidden rounded-md px-2 text-start text-sm leading-5',
           faded(event) ? 'opacity-40' : over(event) && 'opacity-60',
           event.readonly ? 'cursor-pointer' : 'cursor-grab',
           event.key === selected && 'bg-primary/10'
@@ -554,6 +582,61 @@ export function MonthGrid({
         {chipContent(event, false)}
       </button>
     )
+
+  // An all-day or multi-day occurrence, on one line in each day it covers;
+  // a timed one says its start on its first day.
+  const barButton = (event: CalendarEvent, day: string) => {
+    const start = firstDay(event, day, true)
+    return dragging && carried(event) ? (
+      <div
+        key={event.key}
+        ref={ghostRef(day)}
+        tabIndex={-1}
+        data-testid='ghost'
+        onKeyDown={(pointer) =>
+          keyed(pointer, dragging.event, dragging.from, dragging.start)
+        }
+        className='bg-surface-2 pointer-events-none flex w-full shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-2 text-start text-sm shadow-md outline-none'
+        style={{ height: `${BAR - 2}px` }}
+      >
+        <EventDot event={event} />
+        {dragging.copy && (
+          <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
+        )}
+        <EventTitle event={event} className='flex-1 font-medium' />
+      </div>
+    ) : (
+      <button
+        key={event.key}
+        type='button'
+        data-key={event.key}
+        onPointerDown={(pointer) => {
+          pointer.stopPropagation()
+          startMove(pointer, event, day, start)
+        }}
+        onClick={(pointer) => {
+          pointer.stopPropagation()
+          onSelect(event.key, pointer.currentTarget)
+        }}
+        onKeyDown={(pointer) => keyed(pointer, event, day, start)}
+        className={cn(
+          'hover:bg-hover flex w-full shrink-0 items-center gap-1.5 overflow-hidden rounded-md px-2 text-start text-sm',
+          faded(event) ? 'opacity-40' : over(event) && 'opacity-60',
+          event.readonly ? 'cursor-pointer' : 'cursor-grab',
+          event.key === selected && 'bg-primary/10'
+        )}
+        style={{ height: `${BAR - 2}px` }}
+        title={tooltip(event)}
+      >
+        <EventDot event={event} />
+        <EventTitle event={event} className='flex-1' />
+        <EventMarks event={event} />
+        {!event.allday && day === start && (
+          <span className='text-muted-foreground shrink-0'>{clock(event)}</span>
+        )}
+      </button>
+    )
+  }
 
   return (
     <div
@@ -585,187 +668,111 @@ export function MonthGrid({
         data-testid='weeks'
         className='flex min-h-0 flex-1 flex-col'
       >
-        {rows.map((week, rowIndex) => {
-          const placements = bars[rowIndex] ?? []
-          const barCount = placements.reduce(
-            (most, item) => Math.max(most, item.placement.row + 1),
-            0
-          )
-          const height = band(
-            barCount,
-            week.some((day) => chips.has(day))
-          )
-          return (
-            <div key={week[0]} className='flex min-h-0 flex-1 border-b'>
-              {weekNumbers && (
-                <div className='text-muted-foreground w-8 shrink-0 pt-1 text-center text-[0.6875rem]'>
-                  {weekNumber(week[0])}
-                </div>
-              )}
-              <div className='relative grid flex-1 grid-cols-7'>
-                {week.map((day) => {
-                  const outside = month !== undefined && monthOf(day) !== month
-                  const list = chips.get(day) ?? []
-                  const landing =
-                    dragging && !dragging.calendar && dragging.day === day
-                      ? dragging
-                      : null
-                  return (
-                    <div
-                      key={day}
-                      data-day={day}
-                      className={cn(
-                        'hover:bg-hover/40 relative min-h-0 cursor-pointer border-s first:border-s-0',
-                        outside && 'bg-muted/30',
-                        landing && 'bg-primary/10'
-                      )}
-                      onClick={(pointer) => {
-                        // Empty space in the cell, below its events too.
-                        const target = pointer.target as Element
-                        if (
-                          target === pointer.currentTarget ||
-                          target.hasAttribute('data-list')
-                        )
-                          onCreate(day)
-                      }}
-                    >
-                      <div
-                        className={cn(
-                          'flex justify-end px-1 py-0.5',
-                          day === today && 'bg-primary text-primary-foreground'
-                        )}
-                      >
-                        <button
-                          type='button'
-                          onClick={() => onDay(day)}
-                          className={cn(
-                            'hover:bg-hover rounded-full px-1.5 text-sm',
-                            outside && 'text-muted-foreground',
-                            day === today &&
-                              'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
-                          )}
-                        >
-                          {format.formatDayNumber(
-                            new Date(format.timestampAt(day, 720) * 1000)
-                          )}
-                        </button>
-                      </div>
-                      {list.length > 0 && (
-                        <div
-                          data-list
-                          className='absolute inset-x-0.5 bottom-0.5 overflow-y-auto overscroll-contain'
-                          style={{ top: `${HEADER + height}px` }}
-                        >
-                          {list.map((event) => chipButton(event, day))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {placements.length > 0 && (
+        {rows.map((week) => (
+          <div key={week[0]} className='flex min-h-0 flex-1 border-b'>
+            {weekNumbers && (
+              <div className='text-muted-foreground w-8 shrink-0 pt-1 text-center text-[0.6875rem]'>
+                {weekNumber(week[0])}
+              </div>
+            )}
+            <div className='grid flex-1 grid-cols-7'>
+              {week.map((day) => {
+                const outside = month !== undefined && monthOf(day) !== month
+                const list = lists.get(day)
+                const bars = {
+                  events: list?.bars ?? [],
+                  line: BAR,
+                  draw: barButton,
+                  band: true,
+                }
+                const chips = {
+                  events: list?.chips ?? [],
+                  line: CHIP,
+                  draw: chipButton,
+                  band: false,
+                }
+                // Both groups stack from the top of the day; the first is held
+                // so one of the second stays in view.
+                const [upper, lower] =
+                  allday === 'last' ? [chips, bars] : [bars, chips]
+                const groups = [upper, lower].filter(
+                  (group) => group.events.length > 0
+                )
+                const landing =
+                  dragging && !dragging.calendar && dragging.day === day
+                    ? dragging
+                    : null
+                return (
                   <div
-                    data-band
-                    className='pointer-events-none absolute inset-x-0 overflow-y-auto overscroll-contain'
-                    style={{ top: `${HEADER}px`, height: `${height}px` }}
+                    key={day}
+                    data-day={day}
+                    className={cn(
+                      'hover:bg-hover/40 flex min-h-0 cursor-pointer flex-col border-s first:border-s-0',
+                      outside && 'bg-muted/30',
+                      landing && 'bg-primary/10'
+                    )}
+                    onClick={(pointer) => {
+                      // Anywhere in the cell but on an event or its number.
+                      if (!(pointer.target as Element).closest('button'))
+                        onCreate(day)
+                    }}
                   >
                     <div
-                      className='relative'
-                      style={{ height: `${barCount * BAR}px` }}
-                    >
-                      {placements.map(({ placement, event }) =>
-                        dragging && event.key === tentative?.key ? (
-                          <div
-                            key={`${placement.key}:${placement.column}`}
-                            ref={ghost}
-                            tabIndex={-1}
-                            data-testid='ghost'
-                            onKeyDown={(pointer) =>
-                              keyed(pointer, dragging.event, dragging.from)
-                            }
-                            className={cn(
-                              'bg-surface-2 pointer-events-none absolute z-20 flex items-center gap-1.5 overflow-hidden border px-2 text-start text-sm shadow-md outline-none',
-                              placement.before ? 'rounded-e-md' : 'rounded-md'
-                            )}
-                            style={{
-                              insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,
-                              width: `calc(${(placement.span / 7) * 100}% - 4px)`,
-                              top: `${placement.row * BAR}px`,
-                              height: `${BAR - 2}px`,
-                            }}
-                          >
-                            <EventDot event={event} />
-                            {dragging.copy && (
-                              <Copy
-                                className='size-3 shrink-0'
-                                aria-label={t`Copy`}
-                              />
-                            )}
-                            <EventTitle
-                              event={event}
-                              className='flex-1 font-medium'
-                            />
-                          </div>
-                        ) : (
-                          <button
-                            key={placement.key}
-                            type='button'
-                            data-key={event.key}
-                            onPointerDown={(pointer) => {
-                              pointer.stopPropagation()
-                              startMove(
-                                pointer,
-                                event,
-                                coveredDays(event, format.zonedDay).start
-                              )
-                            }}
-                            onClick={(pointer) => {
-                              pointer.stopPropagation()
-                              onSelect(event.key, pointer.currentTarget)
-                            }}
-                            onKeyDown={(pointer) =>
-                              keyed(
-                                pointer,
-                                event,
-                                coveredDays(event, format.zonedDay).start
-                              )
-                            }
-                            className={cn(
-                              'hover:bg-hover pointer-events-auto absolute flex items-center gap-1.5 overflow-hidden px-2 text-start text-sm',
-                              placement.before ? 'rounded-e-md' : 'rounded-md',
-                              faded(event)
-                                ? 'opacity-40'
-                                : over(event) && 'opacity-60',
-                              event.readonly ? 'cursor-pointer' : 'cursor-grab',
-                              event.key === selected && 'bg-primary/10'
-                            )}
-                            style={{
-                              insetInlineStart: `calc(${(placement.column / 7) * 100}% + 2px)`,
-                              width: `calc(${(placement.span / 7) * 100}% - 4px)`,
-                              top: `${placement.row * BAR}px`,
-                              height: `${BAR - 2}px`,
-                            }}
-                            title={tooltip(event)}
-                          >
-                            <EventDot event={event} />
-                            <EventTitle event={event} className='flex-1' />
-                            <EventMarks event={event} />
-                            {/* A timed run of days reads its start where it begins. */}
-                            {!event.allday && !placement.before && (
-                              <span className='text-muted-foreground shrink-0'>
-                                {clock(event)}
-                              </span>
-                            )}
-                          </button>
-                        )
+                      className={cn(
+                        'flex shrink-0 justify-end px-1 py-0.5',
+                        day === today && 'bg-primary text-primary-foreground'
                       )}
+                    >
+                      <button
+                        type='button'
+                        onClick={() => onDay(day)}
+                        className={cn(
+                          'hover:bg-hover rounded-full px-1.5 text-sm',
+                          outside && 'text-muted-foreground',
+                          day === today &&
+                            'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
+                        )}
+                      >
+                        {format.formatDayNumber(
+                          new Date(format.timestampAt(day, 720) * 1000)
+                        )}
+                      </button>
+                    </div>
+                    <div className='flex min-h-0 flex-1 flex-col px-0.5 pb-0.5'>
+                      {groups.map((group, index) => {
+                        const held = index === 0 && groups.length > 1
+                        return (
+                          <div
+                            key={group.band ? 'bars' : 'chips'}
+                            {...(group.band
+                              ? { 'data-band': '' }
+                              : { 'data-list': '' })}
+                            className={cn(
+                              'flex flex-col gap-0.5 overflow-y-auto overscroll-contain',
+                              held ? 'shrink-0' : 'min-h-0 flex-1',
+                              held && 'pb-0.5'
+                            )}
+                            style={
+                              held
+                                ? {
+                                    maxHeight: `${hold(group.line, groups[1].line)}px`,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {group.events.map((event) =>
+                              group.draw(event, day)
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
-                )}
-              </div>
+                )
+              })}
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
       {dragging && !dragging.calendar && (
         <span className='sr-only' aria-live='polite'>
@@ -776,7 +783,7 @@ export function MonthGrid({
   )
 }
 
-/** Whether a wheel over this element scrolls a day's events or a week's bars. */
+/** Whether a wheel over this element scrolls one of a day's lists. */
 function scrolls(target: EventTarget) {
   if (!(target instanceof Element)) return false
   const list = target.closest<HTMLElement>('[data-list], [data-band]')
