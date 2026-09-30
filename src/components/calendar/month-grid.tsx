@@ -218,7 +218,10 @@ export function MonthGrid({
     return out
   }, [laid, days, tentative, format])
 
-  useLayoutEffect(() => {
+  // How many of each day's events its cell cuts off, wholly or in part,
+  // counted from where each one sits rather than from a line height, so a gap,
+  // the font size or the cell's own scroll cannot throw the count.
+  const measure = useCallback(() => {
     const next = new Map<string, number>()
     for (const cell of body.current?.querySelectorAll<HTMLElement>(
       '[data-day]'
@@ -229,13 +232,14 @@ export function MonthGrid({
       for (const group of cell.querySelectorAll<HTMLElement>(
         '[data-band], [data-list]'
       )) {
-        const line = group.hasAttribute('data-band') ? BAR : CHIP
-        const count = group.querySelectorAll('[data-key]').length
-        if (group.clientHeight > 0 && group.scrollHeight > group.clientHeight) {
-          hidden += Math.min(
-            count,
-            Math.ceil((group.scrollHeight - group.clientHeight) / (line + 2))
-          )
+        if (group.clientHeight === 0) continue
+        if (group.scrollHeight <= group.clientHeight) continue
+        const box = group.getBoundingClientRect()
+        for (const item of group.querySelectorAll<HTMLElement>('[data-key]')) {
+          const rect = item.getBoundingClientRect()
+          if (rect.top < box.top - 0.5 || rect.bottom > box.bottom + 0.5) {
+            hidden++
+          }
         }
       }
       if (hidden) next.set(day, hidden)
@@ -248,7 +252,21 @@ export function MonthGrid({
         return current
       return next
     })
-  }, [lists, rowHeight, overflow])
+  }, [])
+
+  useLayoutEffect(() => measure(), [measure, lists, rowHeight, overflow])
+
+  // A cell scrolled by hand shows other events, so its count follows. The
+  // grid's own scroll moves every cell together and changes no count.
+  useEffect(() => {
+    const element = body.current
+    if (!element) return
+    const scrolled = (event: Event) => {
+      if (event.target !== element) measure()
+    }
+    element.addEventListener('scroll', scrolled, true)
+    return () => element.removeEventListener('scroll', scrolled, true)
+  }, [measure])
 
   /**
    * The most height a day's first group may take when the day has a second:

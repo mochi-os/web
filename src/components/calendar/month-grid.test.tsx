@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
@@ -40,48 +40,83 @@ const cell = (container: HTMLElement, day: string) =>
   container.querySelector(`[data-day="${day}"]`) as HTMLElement
 
 describe('MonthGrid', () => {
-  it('shows the hidden count and opens its day when a cell overflows', () => {
+  describe('the hidden count', () => {
     const day = '2026-09-23'
     const start = Date.UTC(2026, 8, 23, 9) / 1000
-    const events: CalendarEvent[] = Array.from({ length: 5 }, (_, index) => ({
+    // A 78 px list holding 25 chips of 38 px, 2 px apart: two show whole.
+    const events: CalendarEvent[] = Array.from({ length: 25 }, (_, index) => ({
       key: `event-${index}`,
       title: `Event ${index}`,
       colour: '#60a5fa',
-      start: start + index * 3600,
-      finish: start + (index + 1) * 3600,
+      start: start + index * 60,
+      finish: start + index * 60 + 30,
       allday: false,
     }))
-    const height = vi
-      .spyOn(Element.prototype, 'clientHeight', 'get')
-      .mockImplementation(function (this: Element) {
-        if ((this as HTMLElement).dataset?.testid === 'weeks') return 160
-        if ((this as HTMLElement).dataset?.list !== undefined) return 84
-        return 0
-      })
-    const scroll = vi
-      .spyOn(Element.prototype, 'scrollHeight', 'get')
-      .mockImplementation(function (this: Element) {
-        if ((this as HTMLElement).dataset?.list !== undefined) return 210
-        return 0
-      })
-    const onDay = vi.fn()
-    render(
-      <I18nProvider i18n={i18n}>
-        <MonthGrid
-          days={WEEK}
-          events={events}
-          today={day}
-          onSelect={vi.fn()}
-          onCreate={vi.fn()}
-          onMove={vi.fn()}
-          onDay={onDay}
-        />
-      </I18nProvider>
-    )
-    height.mockRestore()
-    scroll.mockRestore()
-    fireEvent.click(screen.getByRole('button', { name: '+3 more' }))
-    expect(onDay).toHaveBeenCalledWith(day)
+    const scroll = { top: 0 }
+    const spies: { mockRestore: () => void }[] = []
+
+    beforeEach(() => {
+      scroll.top = 0
+      const list = (element: Element) =>
+        (element as HTMLElement).dataset?.list !== undefined
+      spies.push(
+        vi
+          .spyOn(Element.prototype, 'clientHeight', 'get')
+          .mockImplementation(function (this: Element) {
+            return list(this) ? 78 : 0
+          }),
+        vi
+          .spyOn(Element.prototype, 'scrollHeight', 'get')
+          .mockImplementation(function (this: Element) {
+            return list(this) ? 25 * 38 + 24 * 2 : 0
+          }),
+        vi
+          .spyOn(Element.prototype, 'getBoundingClientRect')
+          .mockImplementation(function (this: Element) {
+            if (list(this)) return { top: 0, bottom: 78 } as DOMRect
+            const key = (this as HTMLElement).dataset?.key ?? ''
+            const index = Number(key.replace('event-', ''))
+            if (!key.startsWith('event-'))
+              return { top: 0, bottom: 0 } as DOMRect
+            const top = index * 40 - scroll.top
+            return { top, bottom: top + 38 } as DOMRect
+          })
+      )
+    })
+
+    afterEach(() => {
+      spies.splice(0).forEach((spy) => spy.mockRestore())
+    })
+
+    const draw = (onDay = vi.fn()) =>
+      render(
+        <I18nProvider i18n={i18n}>
+          <MonthGrid
+            days={WEEK}
+            events={events}
+            today={day}
+            onSelect={vi.fn()}
+            onCreate={vi.fn()}
+            onMove={vi.fn()}
+            onDay={onDay}
+          />
+        </I18nProvider>
+      )
+
+    it('counts every event the cell cuts off, and opens its day', () => {
+      const onDay = vi.fn()
+      draw(onDay)
+      fireEvent.click(screen.getByRole('button', { name: '+23 more' }))
+      expect(onDay).toHaveBeenCalledWith(day)
+    })
+
+    it('follows the cell when it is scrolled', () => {
+      const { container } = draw()
+      // Half a chip down: the first is cut at the top, the third at the bottom.
+      scroll.top = 20
+      fireEvent.scroll(container.querySelector('[data-list]')!)
+      expect(screen.getByRole('button', { name: '+24 more' })).toBeTruthy()
+    })
   })
 
   it("puts today's number inside a band in the primary colour across its cell", () => {
