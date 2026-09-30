@@ -90,4 +90,31 @@ describe('CreateEntityDialog', () => {
       screen.getByText('Allow anyone to search for Wiki')
     ).toBeInTheDocument()
   })
+
+  it('stays open with the name typed when the create fails, rather than rejecting', async () => {
+    const onSubmit = vi.fn(async () => {
+      throw new Error('refused')
+    })
+    render(
+      <I18nProvider i18n={i18n}>
+        <CreateEntityDialog
+          open
+          onOpenChange={() => {}}
+          title='Create wiki'
+          entityLabel='wiki'
+          onSubmit={onSubmit}
+          hideTrigger
+        />
+      </I18nProvider>
+    )
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Notes' },
+    })
+    const create = screen.getByRole('button', { name: 'Create wiki' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(create).toBeEnabled())
+    expect(screen.getByRole('textbox')).toHaveValue('Notes')
+  })
 })
