@@ -58,6 +58,8 @@ interface FindEntityPageProps {
   recommendationsError?: unknown
   /** Retry callback for failed recommendations */
   onRetryRecommendations?: () => void
+  /** Text to start with, such as a share link a notification opened the page with */
+  initialQuery?: string
 }
 
 export function FindEntityPage({
@@ -77,11 +79,12 @@ export function FindEntityPage({
   isRecommendationsError = false,
   recommendationsError,
   onRetryRecommendations,
+  initialQuery = '',
 }: FindEntityPageProps) {
   usePageTitle(title)
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState(initialQuery)
+  const [debouncedSearch, setDebouncedSearch] = useState(initialQuery)
   const [pendingEntityId, setPendingEntityId] = useState<string | null>(null)
 
   // A pasted link - mochi://<peer>/<entity> (a private entity reached by peer)
