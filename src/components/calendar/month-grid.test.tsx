@@ -40,6 +40,50 @@ const cell = (container: HTMLElement, day: string) =>
   container.querySelector(`[data-day="${day}"]`) as HTMLElement
 
 describe('MonthGrid', () => {
+  it('shows the hidden count and opens its day when a cell overflows', () => {
+    const day = '2026-09-23'
+    const start = Date.UTC(2026, 8, 23, 9) / 1000
+    const events: CalendarEvent[] = Array.from({ length: 5 }, (_, index) => ({
+      key: `event-${index}`,
+      title: `Event ${index}`,
+      colour: '#60a5fa',
+      start: start + index * 3600,
+      finish: start + (index + 1) * 3600,
+      allday: false,
+    }))
+    const height = vi
+      .spyOn(Element.prototype, 'clientHeight', 'get')
+      .mockImplementation(function (this: Element) {
+        if ((this as HTMLElement).dataset?.testid === 'weeks') return 160
+        if ((this as HTMLElement).dataset?.list !== undefined) return 84
+        return 0
+      })
+    const scroll = vi
+      .spyOn(Element.prototype, 'scrollHeight', 'get')
+      .mockImplementation(function (this: Element) {
+        if ((this as HTMLElement).dataset?.list !== undefined) return 210
+        return 0
+      })
+    const onDay = vi.fn()
+    render(
+      <I18nProvider i18n={i18n}>
+        <MonthGrid
+          days={WEEK}
+          events={events}
+          today={day}
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={onDay}
+        />
+      </I18nProvider>
+    )
+    height.mockRestore()
+    scroll.mockRestore()
+    fireEvent.click(screen.getByRole('button', { name: '+3 more' }))
+    expect(onDay).toHaveBeenCalledWith(day)
+  })
+
   it("puts today's number inside a band in the primary colour across its cell", () => {
     const today = cell(show('2026-09-22'), '2026-09-22')
     const number = today.querySelector('button') as HTMLElement
