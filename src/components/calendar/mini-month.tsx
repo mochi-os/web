@@ -53,6 +53,10 @@ export function MiniMonth({
     <div
       className={cn('px-1', className)}
       onWheel={(event) => {
+        // React delivers a wheel inside the month and year menus here too,
+        // through their portals: scrolling a menu's list must not turn the
+        // month beneath it.
+        if (!event.currentTarget.contains(event.target as Node)) return
         const direction = wheel.step(event)
         if (direction) setOffset((current) => current + direction)
       }}
