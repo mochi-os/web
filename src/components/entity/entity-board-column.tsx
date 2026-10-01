@@ -765,6 +765,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
         title={t`Delete column`}
         desc={t`Are you sure you want to delete the "${name}" column? This cannot be undone.`}
         confirmText={t`Delete`}
+        icon={<Trash2 className='size-4' />}
         destructive
         isLoading={isDeleting}
         handleConfirm={async () => {

@@ -105,3 +105,122 @@ describe('StepUpDialog abandoned OAuth ceremony', () => {
     await waitFor(() => expect(onVerified).toHaveBeenCalledWith('good-proof'))
   })
 })
+
+// A client whose OAuth verify never finishes on its own, recording the signal
+// the dialog hands it.
+function waitingClient(): { client: StepUpClient; signals: AbortSignal[] } {
+  const signals: AbortSignal[] = []
+  return {
+    signals,
+    client: {
+      methods: async () => ['oauth'],
+      send: async () => {},
+      verifyEmail: async () => ({ token: '' }),
+      verifyTotp: async () => ({ token: '' }),
+      passkeyBegin: async () => ({ ceremony: '', options: {} }),
+      passkeyFinish: async () => ({ token: '' }),
+      oauthProviders: async () => ['github'],
+      oauthVerify: (_provider, signal) => {
+        signals.push(signal)
+        return new Promise(() => {})
+      },
+    } as StepUpClient,
+  }
+}
+
+describe('StepUpDialog OAuth wait', () => {
+  it('stops the wait when the dialog is dismissed', async () => {
+    const { client, signals } = waitingClient()
+    const { rerender } = view(
+      <StepUpDialog
+        open
+        onOpenChange={() => {}}
+        title='Confirm'
+        client={client}
+        onVerified={vi.fn()}
+      />
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /github/i }))
+    await waitFor(() => expect(signals).toHaveLength(1))
+    expect(signals[0].aborted).toBe(false)
+
+    rerender(
+      <I18nProvider i18n={i18n}>
+        <StepUpDialog
+          open={false}
+          onOpenChange={() => {}}
+          title='Confirm'
+          client={client}
+          onVerified={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    // The client polls until this signal aborts: two minutes of requests
+    // otherwise, for a ceremony nobody is waiting on.
+    expect(signals[0].aborted).toBe(true)
+  })
+
+  it('stops the wait when the dialog is unmounted', async () => {
+    const { client, signals } = waitingClient()
+    const { unmount } = view(
+      <StepUpDialog
+        open
+        onOpenChange={() => {}}
+        title='Confirm'
+        client={client}
+        onVerified={vi.fn()}
+      />
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /github/i }))
+    await waitFor(() => expect(signals).toHaveLength(1))
+    unmount()
+    expect(signals[0].aborted).toBe(true)
+  })
+
+  it('keeps Cancel available while waiting for the popup', async () => {
+    const { client } = waitingClient()
+    const onOpenChange = vi.fn()
+    view(
+      <StepUpDialog
+        open
+        onOpenChange={onOpenChange}
+        title='Confirm'
+        client={client}
+        onVerified={vi.fn()}
+      />
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /github/i }))
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    expect(cancel).not.toBeDisabled()
+    fireEvent.click(cancel)
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+})
+
+describe('StepUpDialog deferred proof', () => {
+  it('spends an earned proof once, so a retry earns a fresh one', async () => {
+    const { client, resolve } = deferredClient()
+    // The caller's action fails after the server has spent the proof.
+    const onVerified = vi.fn(async () => {})
+    view(
+      <StepUpDialog
+        open
+        onOpenChange={() => {}}
+        title='Confirm'
+        client={client}
+        onVerified={onVerified}
+        submitLabel='Download'
+      />
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /github/i }))
+    resolve('proof')
+    const download = await screen.findByRole('button', { name: 'Download' })
+    fireEvent.click(download)
+    await waitFor(() => expect(onVerified).toHaveBeenCalledWith('proof'))
+    // Pressing Download again must not resend the spent proof.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Download' })).toBeNull()
+    )
+    expect(onVerified).toHaveBeenCalledTimes(1)
+  })
+})

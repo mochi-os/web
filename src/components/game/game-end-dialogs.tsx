@@ -10,6 +10,7 @@
 // file that carries lingui macros, so these msgids reach every app's catalogs.
 
 import { useLingui } from '@lingui/react/macro'
+import { Flag, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '../confirm-dialog'
 
 interface GameEndDialogProps {
@@ -38,6 +39,7 @@ export function GameResignDialog({
           : t`Are you sure you want to resign?`
       }
       confirmText={t`Resign`}
+      icon={<Flag className='size-4' />}
       destructive
       handleConfirm={onConfirm}
       isLoading={isPending}
@@ -59,6 +61,7 @@ export function GameDeleteDialog({
       title={t`Delete game?`}
       desc={t`This permanently deletes the game and its chat. This cannot be undone.`}
       confirmText={t`Delete`}
+      icon={<Trash2 className='size-4' />}
       destructive
       handleConfirm={onConfirm}
       isLoading={isPending}

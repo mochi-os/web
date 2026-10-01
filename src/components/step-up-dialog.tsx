@@ -36,9 +36,10 @@ export interface StepUpClient {
   passkeyBegin: () => Promise<{ ceremony: string; options: unknown }>
   passkeyFinish: (ceremony: string, assertion: unknown) => Promise<StepUpResult>
   // Linked OAuth providers (e.g. ['google']) the user can re-verify with, and
-  // the popup verification that returns a proof for the oauth factor.
+  // the popup verification that returns a proof for the oauth factor. The
+  // dialog aborts `signal` when it is dismissed, so the wait stops with it.
   oauthProviders: () => Promise<string[]>
-  oauthVerify: (provider: string) => Promise<StepUpResult>
+  oauthVerify: (provider: string, signal: AbortSignal) => Promise<StepUpResult>
 }
 
 // Re-verifies the user with their login factors and hands the caller a
@@ -73,6 +74,9 @@ export function StepUpDialog({
   const [emailCode, setEmailCode] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [busy, setBusy] = useState(false)
+  // Waiting on an OAuth popup, which the user may abandon: unlike a code or
+  // passkey check, that wait can last minutes, so Cancel stays available.
+  const [waiting, setWaiting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   // A proof earned before the caller's extra input (e.g. the export
@@ -81,14 +85,20 @@ export function StepUpDialog({
   // waits for everything required.
   const [earnedToken, setEarnedToken] = useState<string | null>(null)
 
-  // Bumped on every open and close. An OAuth verify polls for up to two minutes
-  // and dismissing the dialog does not stop it, so the generation is captured
-  // before the await and compared after: a stale result is discarded.
+  // Bumped on every open and close. The generation is captured before an OAuth
+  // verify's await and compared after, so a result that lands after the dialog
+  // was dismissed or reopened is discarded.
   const generation = useRef(0)
+  // The OAuth verify in flight, aborted on every open and close and on unmount
+  // so its polling stops with the dialog.
+  const oauth = useRef<AbortController | null>(null)
+  useEffect(() => () => oauth.current?.abort(), [])
 
   // On open: learn the user's factors and, if email is one, send the code.
   useEffect(() => {
     generation.current += 1
+    oauth.current?.abort()
+    oauth.current = null
     if (!open) return
     let cancelled = false
     setLoading(true)
@@ -101,6 +111,7 @@ export function StepUpDialog({
     // OAuth verify can leave busy=true and grey out every control. Nothing is
     // in progress at open time, so clear it.
     setBusy(false)
+    setWaiting(false)
     setEarnedToken(null)
     ;(async () => {
       try {
@@ -207,18 +218,26 @@ export function StepUpDialog({
 
   const verifyOauth = async (provider: string) => {
     setBusy(true)
+    setWaiting(true)
     setError('')
     const mine = generation.current
+    const controller = new AbortController()
+    oauth.current = controller
     try {
-      const result = await client.oauthVerify(provider)
+      const result = await client.oauthVerify(provider, controller.signal)
       // Dismissed, or reopened for something else, while the popup was open.
       if (generation.current !== mine) return
+      setWaiting(false)
       await apply(result, !!submitLabel)
     } catch {
       if (generation.current !== mine) return
       setError(t`Couldn't verify with that account. Please try again.`)
     } finally {
-      if (generation.current === mine) setBusy(false)
+      if (oauth.current === controller) oauth.current = null
+      if (generation.current === mine) {
+        setBusy(false)
+        setWaiting(false)
+      }
     }
   }
 
@@ -241,13 +260,17 @@ export function StepUpDialog({
 
   // The footer action button: if a proof was already earned (e.g. via OAuth or
   // passkey before the passphrase was set), run the action with it now;
-  // otherwise verify whichever code the user has filled.
+  // otherwise verify whichever code the user has filled. The proof is single
+  // use - the server spends it whether or not the action then succeeds - so it
+  // is dropped here, and a retry earns a fresh one.
   const submitFooter = async () => {
     if (earnedToken) {
+      const token = earnedToken
+      setEarnedToken(null)
       setBusy(true)
       setError('')
       try {
-        await onVerified(earnedToken)
+        await onVerified(token)
       } finally {
         setBusy(false)
       }
@@ -387,7 +410,7 @@ export function StepUpDialog({
           <Button
             variant='outline'
             onClick={() => handleOpenChange(false)}
-            disabled={busy}
+            disabled={busy && !waiting}
           >
             <Trans>Cancel</Trans>
           </Button>

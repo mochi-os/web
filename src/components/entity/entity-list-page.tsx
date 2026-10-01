@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ellipsis, Plus, type LucideIcon } from 'lucide-react'
+import { Ellipsis, LogOut, Plus, type LucideIcon } from 'lucide-react'
 import { Main } from '../layout/main'
 import { PageHeader } from '../layout/page-header'
 import { Button } from '../ui/button'
@@ -204,6 +204,7 @@ export function EntityListPage<Row extends EntityListRow>({
         title={labels.unsubscribe}
         desc={labels.unsubscribeConfirmation}
         confirmText={labels.unsubscribe}
+        icon={<LogOut className='size-4' />}
         destructive
         isLoading={unsubscribeMutation.isPending}
         handleConfirm={async () => {

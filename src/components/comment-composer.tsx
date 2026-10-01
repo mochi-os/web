@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
-import { Paperclip, Send, X } from 'lucide-react'
+import { Paperclip, Send, Trash2, X } from 'lucide-react'
 import { ConfirmDialog } from './confirm-dialog'
 import {
   AttachmentComposer,
@@ -326,6 +326,7 @@ export function useDiscardGuard({
       title={t`Discard draft?`}
       desc={desc}
       confirmText={t`Discard`}
+      icon={<Trash2 className='size-4' />}
       destructive
       handleConfirm={() => {
         setConfirming(false)

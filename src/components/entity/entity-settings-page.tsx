@@ -393,6 +393,7 @@ export function EntitySettingsPage<
                 title={labels.deleteTitle}
                 desc={labels.deleteDescription(container.name)}
                 confirmText={labels.deleteConfirm}
+                icon={<Trash2 className='size-4' />}
                 destructive
                 handleConfirm={handleDelete}
                 isLoading={isDeleting}

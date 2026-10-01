@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { Trans } from '@lingui/react/macro'
-import { User, UsersRound, Globe, Users, X } from 'lucide-react'
+import { User, UsersRound, Globe, Users, X, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import {
@@ -292,6 +292,7 @@ export function AccessList({
         title={t`Remove access?`}
         desc={t`Remove access rule for "${formatSubject(removeSubject ?? '', removeData?.name)}"?`}
         confirmText={t`Remove`}
+        icon={<Trash2 className='size-4' />}
         isLoading={!!updatingSubject && updatingSubject === removeSubject}
         handleConfirm={() => {
           if (removeSubject) void handleRevoke(removeSubject)
