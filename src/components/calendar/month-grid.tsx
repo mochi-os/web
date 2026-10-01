@@ -28,8 +28,10 @@ import {
   Hold,
   hover,
   PAGE_EDGE,
+  runEnds,
   swallow,
   target,
+  type Choosing,
   type Point,
 } from './gesture'
 import { EventDot } from './event-dot'
@@ -99,24 +101,11 @@ interface Dragging {
   keyboard: boolean
 }
 
-/** A run of days being picked for a new event. */
-interface Choosing {
-  /** The day the pointer went down on. */
-  anchor: string
-  /** The day under the pointer now. */
-  day: string
-}
-
 /** The day cell under a point, if any. */
 function dayAt(x: number, y: number): string | null {
   if (typeof document.elementFromPoint !== 'function') return null
   const under = document.elementFromPoint(x, y)?.closest('[data-day]')
   return under?.getAttribute('data-day') ?? null
-}
-
-/** The first and last day of a run picked from either end. */
-function span({ anchor, day }: Choosing): [string, string] {
-  return anchor <= day ? [anchor, day] : [day, anchor]
 }
 
 export function MonthGrid({
@@ -590,7 +579,7 @@ export function MonthGrid({
     // The release is followed by a click on the cell under it, which would
     // create on that one day as well.
     swallow()
-    const [first, last] = span(current)
+    const [first, last] = runEnds(current)
     if (first === last) onCreate(first)
     else onCreateRange?.(first, last)
   }
@@ -634,7 +623,7 @@ export function MonthGrid({
   /** Whether a day falls in the run being picked. */
   const picked = (day: string) => {
     if (!choosing) return false
-    const [first, last] = span(choosing)
+    const [first, last] = runEnds(choosing)
     return day >= first && day <= last
   }
 

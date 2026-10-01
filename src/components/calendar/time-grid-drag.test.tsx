@@ -129,6 +129,8 @@ beforeEach(() => {
           return rect(0, TOP, 756, 600)
         case 'hours':
           return rect(LEFT, TOP, 700, 1920)
+        case 'band':
+          return rect(LEFT, 60, 700, 32)
         default:
           return rect(0, 0, 756, 700)
       }
@@ -575,5 +577,97 @@ describe('TimeGrid keyboard', () => {
     expect(onStep).not.toHaveBeenCalled()
     fireEvent.keyDown(ghost()!, { key: 'ArrowLeft' })
     expect(onStep).toHaveBeenCalledWith(-1)
+  })
+})
+
+describe('TimeGrid picking days in the all-day band', () => {
+  const band = () => screen.getByTestId('band')
+  const picked = () => screen.queryByTestId('picked')
+
+  it('picks the days a mouse drag crosses, drawing the run on the way', () => {
+    const onCreateRange = vi.fn()
+    const { onCreate } = show([], { onCreateRange })
+    fireEvent.pointerDown(band(), pointer('mouse', x('2026-09-22'), 70))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-25'), 70))
+    expect(picked()).not.toBeNull()
+    // From the second day, four days wide.
+    expect(parseFloat(picked()!.style.insetInlineStart)).toBeCloseTo(
+      (1 / 7) * 100,
+      2
+    )
+    expect(picked()!.style.width).toMatch(/^calc\(57\.14\d*% - 2px\)$/)
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-25'), 70))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-22', '2026-09-25')
+    expect(picked()).toBeNull()
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('gives the run in order when dragged backwards', () => {
+    const onCreateRange = vi.fn()
+    show([], { onCreateRange })
+    fireEvent.pointerDown(band(), pointer('mouse', x('2026-09-26'), 70))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-23'), 70))
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-23'), 70))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-23', '2026-09-26')
+  })
+
+  it('creates on the one day clicked', () => {
+    const onCreateRange = vi.fn()
+    show([], { onCreateRange })
+    fireEvent.pointerDown(band(), pointer('mouse', x('2026-09-24'), 70))
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-24'), 70))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-24', '2026-09-24')
+  })
+
+  it('drops the run on Escape', () => {
+    const onCreateRange = vi.fn()
+    show([], { onCreateRange })
+    fireEvent.pointerDown(band(), pointer('mouse', x('2026-09-22'), 70))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-25'), 70))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(picked()).toBeNull()
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-25'), 70))
+    expect(onCreateRange).not.toHaveBeenCalled()
+  })
+
+  it('picks under a finger only after the hold, so a swipe still scrolls', () => {
+    const onCreateRange = vi.fn()
+    show([], { onCreateRange })
+    fireEvent.pointerDown(band(), pointer('touch', x('2026-09-22'), 70))
+    fireEvent.pointerMove(window, pointer('touch', x('2026-09-25'), 70))
+    act(() => {
+      vi.advanceTimersByTime(TOUCH_HOLD_MS)
+    })
+    expect(picked()).toBeNull()
+    fireEvent.pointerUp(window, pointer('touch', x('2026-09-25'), 70))
+    expect(onCreateRange).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(band(), pointer('touch', x('2026-09-22'), 70))
+    act(() => {
+      vi.advanceTimersByTime(TOUCH_HOLD_MS)
+    })
+    expect(picked()).not.toBeNull()
+    fireEvent.pointerMove(window, pointer('touch', x('2026-09-25'), 70))
+    fireEvent.pointerUp(window, pointer('touch', x('2026-09-25'), 70))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-22', '2026-09-25')
+  })
+
+  it('moves a bar rather than picking from it', () => {
+    const onCreateRange = vi.fn()
+    const { onMove } = show([party], { onCreateRange })
+    fireEvent.pointerDown(block('Party'), pointer('mouse', x('2026-09-24'), 70))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-26'), 70))
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-26'), 70))
+    expect(picked()).toBeNull()
+    expect(onCreateRange).not.toHaveBeenCalled()
+    expect(onMove).toHaveBeenCalled()
+  })
+
+  it('picks nothing without a range handler', () => {
+    show([])
+    fireEvent.pointerDown(band(), pointer('mouse', x('2026-09-22'), 70))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-25'), 70))
+    expect(picked()).toBeNull()
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-25'), 70))
   })
 })

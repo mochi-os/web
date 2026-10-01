@@ -24,6 +24,19 @@ export interface Point {
   alt: boolean
 }
 
+/** A run of days being picked for a new event, from either end. */
+export interface Choosing {
+  /** The day the pointer went down on. */
+  anchor: string
+  /** The day under the pointer now. */
+  day: string
+}
+
+/** The first and last day of a run picked from either end. */
+export function runEnds({ anchor, day }: Choosing): [string, string] {
+  return anchor <= day ? [anchor, day] : [day, anchor]
+}
+
 interface Down {
   pointerId: number
   pointerType: string

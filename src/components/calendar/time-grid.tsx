@@ -25,8 +25,10 @@ import {
   hover,
   PAGE_EDGE,
   scroll,
+  runEnds,
   swallow,
   target,
+  type Choosing,
   type Point,
 } from './gesture'
 import { EventDot } from './event-dot'
@@ -67,6 +69,12 @@ export interface TimeGridProps {
   onSelect: (key: string, anchor: HTMLElement) => void
   /** A drag across empty grid, in unix seconds. */
   onCreate: (start: number, finish: number) => void
+  /**
+   * A click or a drag across the all-day band, with the first and last day
+   * it covers; the two are the same for a click. Without it the band creates
+   * nothing.
+   */
+  onCreateRange?: (first: string, last: string) => void
   /** A block dragged to a new time or calendar, or its end dragged. */
   onMove: (move: EventMove) => void
   /** A day header clicked. */
@@ -136,6 +144,7 @@ export function TimeGrid({
   selected,
   onSelect,
   onCreate,
+  onCreateRange,
   onMove,
   onDay,
   onStep,
@@ -148,6 +157,7 @@ export function TimeGrid({
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const columns = useRef<HTMLDivElement>(null)
+  const band = useRef<HTMLDivElement>(null)
   const ghost = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
   const [minute, setMinute] = useState(() => Math.floor(Date.now() / 1000))
@@ -162,6 +172,9 @@ export function TimeGrid({
   const refocus = useRef<string | null>(null)
   const dragRef = useRef<Drag | null>(null)
   dragRef.current = drag
+  const [choosing, setChoosing] = useState<Choosing | null>(null)
+  const choosingRef = useRef<Choosing | null>(null)
+  choosingRef.current = choosing
 
   // The current-time line only has to be right to the minute.
   useEffect(() => {
@@ -628,6 +641,109 @@ export function TimeGrid({
   // the day now under the pointer at the next move; until then it is not
   // drawn.
 
+  // --- Picking days in the all-day band ---
+
+  const choose = (next: Choosing | null) => {
+    choosingRef.current = next
+    setChoosing(next)
+  }
+
+  /** The band's day under a point, by its column. */
+  const bandDayAt = (clientX: number): string | null => {
+    const element = band.current
+    if (!element || days.length === 0) return null
+    const rect = element.getBoundingClientRect()
+    const across = rtl() ? rect.right - clientX : clientX - rect.left
+    const width = rect.width / days.length
+    const index = Math.min(
+      days.length - 1,
+      Math.max(0, Math.floor(across / width))
+    )
+    return days[index]
+  }
+
+  /**
+   * Arms a pick on an empty part of the band: a click creates on its one
+   * day, and a mouse that moves, or a finger after the hold, picks a run.
+   */
+  const startChoose = (event: React.PointerEvent) => {
+    if (!onCreateRange) return
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    if ((event.target as Element).closest('button')) return
+    const day = bandDayAt(event.clientX)
+    if (!day) return
+    down(event)
+    arming.current = arm(
+      event,
+      (moved) => {
+        arming.current = null
+        const under = moved ? bandDayAt(moved.clientX) : null
+        choose({ anchor: day, day: under ?? day })
+      },
+      () => {
+        arming.current = null
+        onCreateRange(day, day)
+      }
+    )
+  }
+
+  const chosen = () => {
+    const current = choosingRef.current
+    if (!current) return
+    choose(null)
+    // The release is followed by a click on whatever lies under it.
+    swallow()
+    const [first, last] = runEnds(current)
+    onCreateRange?.(first, last)
+  }
+  const picking = useRef(chosen)
+  picking.current = chosen
+
+  const active = choosing !== null
+  useEffect(() => {
+    if (!active) return
+    const move = (event: PointerEvent) => {
+      const current = choosingRef.current
+      const day = bandDayAt(event.clientX)
+      if (current && day && day !== current.day) choose({ ...current, day })
+    }
+    const up = (event: PointerEvent) => {
+      move(event)
+      picking.current()
+    }
+    const lost = () => choose(null)
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') lost()
+    }
+    const still = (event: TouchEvent) => event.preventDefault()
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', lost)
+    window.addEventListener('keydown', key)
+    if (touch.current)
+      document.addEventListener('touchmove', still, { passive: false })
+    document.body.style.setProperty('user-select', 'none')
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', lost)
+      window.removeEventListener('keydown', key)
+      document.removeEventListener('touchmove', still)
+      document.body.style.removeProperty('user-select')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bandDayAt reads refs and the days only
+  }, [active])
+
+  /** Where the run being picked sits across the band, if one is. */
+  const picked = (() => {
+    if (!choosing) return null
+    const [first, last] = runEnds(choosing)
+    const from = days.indexOf(first)
+    const to = days.indexOf(last)
+    if (from < 0 || to < 0) return null
+    return { from, span: to - from + 1 }
+  })()
+
   // --- Starting drags ---
 
   const down = (event: React.PointerEvent) => {
@@ -1026,14 +1142,27 @@ export function TimeGrid({
           {t`All day`}
         </div>
         <div
-          className='relative flex-1'
+          ref={band}
+          data-testid='band'
+          className={cn('relative flex-1', onCreateRange && 'cursor-pointer')}
           style={{ minHeight: `${Math.max(1, bandRows) * 28 + 4}px` }}
+          onPointerDown={startChoose}
         >
           <div className='absolute inset-0 grid' style={gridTemplate}>
             {days.map((day) => (
               <div key={day} className='border-s first:border-s-0' />
             ))}
           </div>
+          {picked && (
+            <div
+              data-testid='picked'
+              className='bg-primary/15 border-primary/60 pointer-events-none absolute inset-y-0.5 z-10 rounded-md border'
+              style={{
+                insetInlineStart: `${(picked.from / days.length) * 100}%`,
+                width: `calc(${(picked.span / days.length) * 100}% - 2px)`,
+              }}
+            />
+          )}
           {bars.map(({ placement, event }) => {
             if (lifted && event.key === landing?.key) {
               return (
