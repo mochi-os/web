@@ -256,6 +256,7 @@ export * from './hooks/use-logout'
 export * from './hooks/use-verify-session'
 export * from './hooks/use-shell-overlay'
 export * from './hooks/use-shell-immersive'
+export * from './hooks/use-leave-guard'
 export * from './hooks/use-video-thumbnail'
 export * from './hooks/use-place-search'
 export * from './hooks/use-lightbox-hash'
@@ -316,6 +317,8 @@ export {
   shellSetSidebarState,
   shellSetSidebarPresent,
   shellSetImmersive,
+  shellSetUnsaved,
+  shellAnswerLeave,
   shellSetLocale,
   shellSetLanguage,
   shellSetAvatar,
