@@ -52,14 +52,9 @@ const EXPAND_OPACITY = {
     'opacity-0 group-hover/bubble:opacity-100 group-data-[active=true]/bubble:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 transition-opacity',
 } as const
 
-// The container is a plain row: transient actions render bare (per-button
-// hover feedback only). The pill shell lives on ActionPillSticky, so stored
-// state (reaction chips, votes) keeps the chip idiom while actions carry no
-// background of their own.
+// The container is a plain row: actions and stored state (reactions, votes)
+// render bare, with per-button hover feedback only.
 const INLINE_BASE = 'inline-flex shrink-0 items-center gap-1 leading-none'
-
-const STICKY_SHELL =
-  'rounded-full border border-border/50 bg-muted/40 p-0.5 shadow-sm'
 
 type ActionPillProps = ComponentProps<'div'> & {
   /** Sticky content present (reactions/votes) — shell stays open; actions may expand. */
@@ -135,11 +130,7 @@ function ActionPillSticky({
   return (
     <div
       data-slot='action-pill-sticky'
-      className={cn(
-        'flex items-center gap-0.5 leading-none',
-        STICKY_SHELL,
-        className
-      )}
+      className={cn('flex items-center gap-0.5 leading-none', className)}
       {...props}
     >
       {children}

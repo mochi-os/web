@@ -55,6 +55,8 @@ export interface CreateEntityDialogProps {
   title: string
   /** The noun as it reads mid-sentence ("wiki"); it is never re-cased here. */
   entityLabel: string
+  /** The longest name, in characters, the app accepts, where it is below core's 1000. */
+  maximum?: number
   // Optional fields
   showDescription?: boolean
   descriptionLabel?: string
@@ -88,6 +90,7 @@ export function CreateEntityDialog({
   icon: Icon,
   title,
   entityLabel,
+  maximum,
   showDescription,
   descriptionLabel = t`Description`,
   showPrivacyToggle,
@@ -142,18 +145,26 @@ export function CreateEntityDialog({
 
   const handleSubmit = async (values: FormValues) => {
     const { name, description, allowSearch, ...rest } = values
-    await onSubmit({
-      name: name.trim(),
-      description: showDescription ? description?.trim() : undefined,
-      privacy: showPrivacyToggle
-        ? allowSearch
-          ? 'public'
-          : 'private'
-        : undefined,
-      colour: showColour ? colour : undefined,
-      toggles:
-        extraToggles.length > 0 ? (rest as Record<string, boolean>) : undefined,
-    })
+    try {
+      await onSubmit({
+        name: name.trim(),
+        description: showDescription ? description?.trim() : undefined,
+        privacy: showPrivacyToggle
+          ? allowSearch
+            ? 'public'
+            : 'private'
+          : undefined,
+        colour: showColour ? colour : undefined,
+        toggles:
+          extraToggles.length > 0
+            ? (rest as Record<string, boolean>)
+            : undefined,
+      })
+    } catch {
+      // The caller has said what failed; the dialog stays open with what was
+      // typed, so it can be tried again.
+      return
+    }
     form.reset()
     setColour(defaultColour)
     setIsOpen(false)
@@ -208,7 +219,11 @@ export function CreateEntityDialog({
                     <Trans>{entityLabel} name</Trans>
                   </FormLabel>
                   <FormControl>
-                    <Input disabled={isPending} {...field} />
+                    <Input
+                      disabled={isPending}
+                      maxLength={maximum}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

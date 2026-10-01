@@ -10,7 +10,7 @@ import {
   DISALLOWED_NAME_CHARS,
 } from './create-entity-dialog'
 
-function show() {
+function show(maximum?: number) {
   const onSubmit = vi.fn(async (_values: { name: string }) => {})
   render(
     <I18nProvider i18n={i18n}>
@@ -19,6 +19,7 @@ function show() {
         onOpenChange={() => {}}
         title='Create wiki'
         entityLabel='wiki'
+        maximum={maximum}
         onSubmit={onSubmit}
         hideTrigger
       />
@@ -53,6 +54,16 @@ describe('CreateEntityDialog', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it("stops the name at the app's own maximum when it sets one", () => {
+    show(100)
+    expect(screen.getByRole('textbox')).toHaveAttribute('maxlength', '100')
+  })
+
+  it('leaves the name to the shared limit when the app sets none', () => {
+    show()
+    expect(screen.getByRole('textbox')).not.toHaveAttribute('maxlength')
+  })
+
   it('shares the pattern the app settings pages check', () => {
     expect(DISALLOWED_NAME_CHARS.test("it's")).toBe(false)
     expect(DISALLOWED_NAME_CHARS.test('a<b')).toBe(true)
@@ -78,5 +89,32 @@ describe('CreateEntityDialog', () => {
     expect(
       screen.getByText('Allow anyone to search for Wiki')
     ).toBeInTheDocument()
+  })
+
+  it('stays open with the name typed when the create fails, rather than rejecting', async () => {
+    const onSubmit = vi.fn(async () => {
+      throw new Error('refused')
+    })
+    render(
+      <I18nProvider i18n={i18n}>
+        <CreateEntityDialog
+          open
+          onOpenChange={() => {}}
+          title='Create wiki'
+          entityLabel='wiki'
+          onSubmit={onSubmit}
+          hideTrigger
+        />
+      </I18nProvider>
+    )
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Notes' },
+    })
+    const create = screen.getByRole('button', { name: 'Create wiki' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(create).toBeEnabled())
+    expect(screen.getByRole('textbox')).toHaveValue('Notes')
   })
 })

@@ -21,6 +21,8 @@ export interface SystemSettingsData {
   /** Local libp2p peer ID and its fingerprint, shown on the System Status
    * page so the operator can copy them. */
   server?: { id: string; fingerprint?: string }
+  /** The themes default_theme may name, for its picker. */
+  themes?: ThemeInfo[]
 }
 
 export interface ThemeInfo {
@@ -42,8 +44,11 @@ export interface ThemeInfo {
 }
 
 export interface PreferencesData {
+  // preferences.theme is the theme the user chose, or "" when they follow
+  // default_theme, the server's.
   preferences: Record<string, string>
   themes?: ThemeInfo[]
+  default_theme?: string
   // Per-density CSS-var bundles emitted by mochi.app.presets().
   // Keyed by "compact" / "comfortable" / "spacious"; each value maps
   // every CSS custom property the preset defines to its computed value.

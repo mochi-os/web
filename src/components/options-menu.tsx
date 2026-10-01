@@ -57,6 +57,8 @@ interface OptionsMenuProps {
   createRssToken: (entity: string, mode: 'posts' | 'all') => Promise<string>
   /** Revokes the entity's RSS token. */
   revokeRssToken: (entity: string) => Promise<void>
+  /** The app's own entries, placed after Moderation. */
+  children?: ReactNode
 }
 
 /**
@@ -76,6 +78,7 @@ export function OptionsMenu({
   createShareLink,
   createRssToken,
   revokeRssToken,
+  children,
 }: OptionsMenuProps) {
   const { t } = useLingui()
   const rssEntity = entityId || (showRss ? '*' : null)
@@ -158,6 +161,7 @@ export function OptionsMenu({
               <Trans>Moderation</Trans>
             </DropdownMenuItem>
           )}
+          {children}
           {rssEntity && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
