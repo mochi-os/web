@@ -16,6 +16,7 @@ import {
   formatUserTimestamp,
   formatWeekdayDay,
   formatLongDate,
+  formatMonthName,
   parseClock,
   parseDate,
 } from './locale-format'
@@ -62,6 +63,47 @@ describe('month names follow the active language', () => {
     load('ja')
     expect(formatDate(MARCH, 'YYYY-MM-DD')).toBe('2026-03-14')
     expect(formatDate(MARCH, 'DD/MM/YYYY')).toBe('14/03/2026')
+  })
+})
+
+describe('a month named on its own is in the nominative', () => {
+  it('names a Greek month as a heading does, not as inside a date', () => {
+    load('el')
+    // The plain long month in Greek is the genitive, "Μαρτίου".
+    expect(formatMonthName(MARCH)).toBe('Μάρτιος')
+  })
+
+  it('keeps the plain name where it is already the nominative', () => {
+    load('ru')
+    expect(formatMonthName(MARCH)).toBe('март')
+    load('en')
+    expect(formatMonthName(MARCH)).toBe('March')
+  })
+
+  it('keeps a capital where the plain name stands alone with one', () => {
+    load('vi')
+    expect(formatMonthName(MARCH)).toBe('Tháng 3')
+  })
+})
+
+describe('a month named inside a sentence', () => {
+  it('is in lower case where the language writes it so', () => {
+    load('vi')
+    expect(formatMonthName(MARCH, undefined, { inline: true })).toBe('tháng 3')
+    load('kk')
+    expect(formatMonthName(MARCH, undefined, { inline: true })).toBe('наурыз')
+  })
+
+  it('is the nominative in Greek', () => {
+    load('el')
+    expect(formatMonthName(MARCH, undefined, { inline: true })).toBe('Μάρτιος')
+  })
+
+  it('keeps the plain name where the month is a bare number', () => {
+    load('ja')
+    expect(formatMonthName(MARCH, undefined, { inline: true })).toBe('3月')
+    load('de')
+    expect(formatMonthName(MARCH, undefined, { inline: true })).toBe('März')
   })
 })
 
