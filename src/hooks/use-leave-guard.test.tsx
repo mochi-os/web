@@ -96,6 +96,15 @@ describe('useLeaveGuard', () => {
     expect(state.proceed).not.toHaveBeenCalled()
   })
 
+  it('lets the page leave after it saves, without asking', () => {
+    const { result } = renderHook(() => useLeaveGuard(true))
+    expect(state.block!({ current: here, next: away })).toBe(true)
+    act(() => result.current.release())
+    expect(state.block!({ current: here, next: away })).toBe(false)
+    expect(state.beforeunload!()).toBe(false)
+    expect(state.unsaved).toHaveBeenLastCalledWith(false)
+  })
+
   it("resolves the router's own hold through the blocker", () => {
     state.status = 'blocked'
     const { result } = renderHook(() => useLeaveGuard(true))

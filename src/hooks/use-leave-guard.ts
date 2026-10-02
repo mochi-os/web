@@ -24,7 +24,9 @@ type Place = { pathname: string }
  * of path, so a page keeping its own state in the search moves within itself.
  *
  * While `asking`, the page shows its confirmation: `proceed` leaves, `stay`
- * stays.
+ * stays. A page that saves and then navigates calls `release` first, so its
+ * own navigation is not held: the edits it just saved still differ from what
+ * it loaded until the next render.
  */
 export function useLeaveGuard(
   unsaved: boolean,
@@ -76,6 +78,10 @@ export function useLeaveGuard(
         setAsked(false)
         shellAnswerLeave(false)
       }
+    },
+    release: () => {
+      held.current = false
+      shellSetUnsaved(false)
     },
   }
 }
