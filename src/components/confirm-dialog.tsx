@@ -11,6 +11,7 @@ type ConfirmDialogProps = {
   desc: React.JSX.Element | string
   cancelBtnText?: string
   confirmText?: React.ReactNode
+  icon?: React.ReactNode
   destructive?: boolean
   handleConfirm: () => void
   isLoading?: boolean

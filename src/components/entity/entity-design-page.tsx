@@ -276,6 +276,7 @@ export function EntityDesignPage<
         title={labels.replaceTitle}
         desc={labels.replaceDescription(pendingImport?.label)}
         confirmText={labels.replaceConfirm}
+        icon={<Upload className='size-4' />}
         handleConfirm={handleConfirmImport}
         isLoading={importing}
       >

@@ -367,9 +367,36 @@ export function formatWeekdayDay(date: Date, timezone?: string): string {
   }).format(date)
 }
 
-/** The month's full name on its own, as a mini-month heading reads it. */
-export function formatMonthName(date: Date, timezone?: string): string {
-  return calendarFormatter('month', timezone, { month: 'long' }).format(date)
+/**
+ * The month's full name, as a heading or a pick list reads it, or with
+ * `inline` as it reads inside a sentence. The month inside "month year" is
+ * the form running text takes: the nominative in Greek, whose plain long
+ * month is the genitive ("Μαρτίου", "of March"), and lower case in the
+ * languages whose plain month is capitalised to stand alone ("Tháng 3" in
+ * Vietnamese, "Наурыз" in Kazakh). A heading takes that form only where it
+ * is a different word from the plain one, not merely a different case.
+ * Chinese and Japanese write the month as a bare number there, so they keep
+ * the plain name.
+ */
+export function formatMonthName(
+  date: Date,
+  timezone?: string,
+  options: { inline?: boolean } = {}
+): string {
+  const plain = calendarFormatter('month', timezone, { month: 'long' }).format(
+    date
+  )
+  const running = calendarFormatter('monthYear', timezone, {
+    month: 'long',
+    year: 'numeric',
+  })
+    .formatToParts(date)
+    .find((part) => part.type === 'month')?.value
+  if (!running || !/\p{L}/u.test(running)) return plain
+  if (options.inline) return running
+  return running.toLocaleLowerCase() !== plain.toLocaleLowerCase()
+    ? running
+    : plain
 }
 
 /** The day of the month as a bare number, for a grid cell. */

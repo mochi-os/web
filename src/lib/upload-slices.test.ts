@@ -113,6 +113,12 @@ describe('uploadSlices', () => {
 
     it('holds across randomised uploads', () => {
       const random = makeRandom(20260810)
+      // Checked with plain comparisons and reported once: a hundred thousand
+      // expect calls made this the suite's slowest test, and a failure here
+      // names the run, step and sizes that broke the property.
+      const failures: object[] = []
+      const fail = (rule: string, detail: object) =>
+        failures.push({ rule, ...detail })
 
       for (let run = 0; run < 300; run++) {
         const count = 1 + Math.floor(random() * 8)
@@ -131,29 +137,35 @@ describe('uploadSlices', () => {
 
         for (let step = 0; step <= steps; step++) {
           const sent = Math.round((total * step) / steps)
-          const slices = uploadSlices(sent, total, sizes)
-          expect(slices).not.toBeNull()
-          const list = slices!
+          const shape = { run, step, sizes, total, sent }
+          const list = uploadSlices(sent, total, sizes)
+          if (!list) {
+            fail('no slices', shape)
+            break
+          }
 
           const seen = states(list)!
           const firstWaiting = seen.indexOf('waiting')
           const lastSent = seen.lastIndexOf('sent')
 
           list.forEach((slice, i) => {
-            expect(slice.fraction).toBeGreaterThanOrEqual(0)
-            expect(slice.fraction).toBeLessThanOrEqual(1)
-            if (slice.state === 'sent') expect(slice.fraction).toBe(1)
-            if (slice.state === 'waiting') expect(slice.fraction).toBe(0)
+            if (slice.fraction < 0 || slice.fraction > 1)
+              fail('fraction out of range', { ...shape, i, slice })
+            if (slice.state === 'sent' && slice.fraction !== 1)
+              fail('sent but not full', { ...shape, i, slice })
+            if (slice.state === 'waiting' && slice.fraction !== 0)
+              fail('waiting but started', { ...shape, i, slice })
             // Never goes backwards as the counter climbs.
-            expect(slice.fraction).toBeGreaterThanOrEqual(previous[i])
+            if (slice.fraction < previous[i])
+              fail('went backwards', { ...shape, i, slice, was: previous[i] })
           })
 
           // At most one file is on the wire at a time.
-          expect(
-            seen.filter((s) => s === 'uploading').length
-          ).toBeLessThanOrEqual(1)
+          if (seen.filter((s) => s === 'uploading').length > 1)
+            fail('two uploading', { ...shape, seen })
           // Ordered sent… uploading… waiting, with no interleaving.
-          if (firstWaiting !== -1) expect(lastSent).toBeLessThan(firstWaiting)
+          if (firstWaiting !== -1 && lastSent > firstWaiting)
+            fail('out of order', { ...shape, seen })
 
           previous = list.map((slice) => slice.fraction)
         }
@@ -161,9 +173,13 @@ describe('uploadSlices', () => {
         // The request finishing has to leave every file finished, or a bar
         // sits short of full while the upload is demonstrably over.
         const done = uploadSlices(total, total, sizes)!
-        expect(done.every((slice) => slice.state === 'sent')).toBe(true)
-        expect(done.every((slice) => slice.fraction === 1)).toBe(true)
+        if (
+          !done.every((slice) => slice.state === 'sent' && slice.fraction === 1)
+        )
+          fail('unfinished at the end', { run, sizes, total, done })
       }
+
+      expect(failures).toEqual([])
     })
   })
 })

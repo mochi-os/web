@@ -249,6 +249,7 @@ export function OptionsMenu({
         // nothing else in the interface says so.
         desc={t`Anything subscribed to this feed will stop receiving it. You can copy a new URL afterwards.`}
         confirmText={t`Revoke`}
+        icon={<Link2 className='size-4' />}
         destructive
         handleConfirm={() => void handleRevokeRss()}
       />

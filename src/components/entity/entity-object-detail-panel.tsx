@@ -755,6 +755,7 @@ export function EntityObjectDetailPanel<
         title={t`Delete item`}
         desc={t`Are you sure you want to delete "${title}"? This action cannot be undone.`}
         confirmText={t`Delete`}
+        icon={<Trash2 className='size-4' />}
         destructive
         isLoading={deleteMutation.isPending}
         handleConfirm={() => deleteMutation.mutate()}

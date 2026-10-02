@@ -354,6 +354,7 @@ export function EntityCommentThread({
         title={t`Delete comment`}
         desc={t`Are you sure you want to delete this comment? This will also delete all replies.`}
         confirmText={t`Delete`}
+        icon={<Trash2 className='size-4' />}
         destructive
         handleConfirm={() => {
           onDelete(comment.id)

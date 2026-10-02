@@ -1523,6 +1523,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         title={labels.unsubscribeTitle}
         desc={labels.unsubscribeDescription}
         confirmText={labels.unsubscribe}
+        icon={<LogOut className='size-4' />}
         handleConfirm={() => void handleUnsubscribe()}
         isLoading={unsubscribeMutation.isPending}
       />

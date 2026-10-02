@@ -311,6 +311,7 @@ export function EntityObjectAttachments({
         title={t`Delete attachment`}
         desc={t`Are you sure you want to delete "${deleteTarget?.name}"?`}
         confirmText={t`Delete`}
+        icon={<Trash2 className='size-4' />}
         destructive
         isLoading={deleteMutation.isPending}
         handleConfirm={() => {

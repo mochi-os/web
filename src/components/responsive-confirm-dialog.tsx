@@ -25,6 +25,8 @@ type ResponsiveConfirmDialogProps = {
   desc: React.JSX.Element | string
   cancelBtnText?: string
   confirmText?: React.ReactNode
+  // The confirm button's leading icon, swapped for the spinner while loading.
+  icon?: React.ReactNode
   destructive?: boolean
   handleConfirm: () => void
   isLoading?: boolean
@@ -40,6 +42,7 @@ export function ResponsiveConfirmDialog(props: ResponsiveConfirmDialogProps) {
     children,
     className,
     confirmText,
+    icon,
     cancelBtnText,
     destructive,
     isLoading,
@@ -72,6 +75,7 @@ export function ResponsiveConfirmDialog(props: ResponsiveConfirmDialogProps) {
             onClick={handleConfirm}
             disabled={disabled}
             loading={isLoading}
+            icon={icon}
           >
             {confirmText ?? t`Continue`}
           </Button>

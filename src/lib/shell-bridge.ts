@@ -248,6 +248,22 @@ export function shellNavigateBack(): void {
   window.parent.postMessage({ type: 'navigate-back' }, shellOrigin())
 }
 
+/**
+ * Tell the shell whether the page holds unsaved edits. While it does, the
+ * shell asks the page ('leave-request') before back, forward or a cross-app
+ * link replaces the frame, and prompts before an unload.
+ */
+export function shellSetUnsaved(unsaved: boolean): void {
+  if (!isInShell()) return
+  window.parent.postMessage({ type: 'unsaved', value: unsaved }, shellOrigin())
+}
+
+/** Answer the shell's 'leave-request': leave, or stay on the page. */
+export function shellAnswerLeave(proceed: boolean): void {
+  if (!isInShell()) return
+  window.parent.postMessage({ type: 'leave-answer', proceed }, shellOrigin())
+}
+
 /** Send a cross-app navigation event to the shell */
 export function shellNavigateExternal(url: string): void {
   if (!isInShell()) {

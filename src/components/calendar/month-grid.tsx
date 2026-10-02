@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { useLingui } from '@lingui/react/macro'
+import { Plural, useLingui } from '@lingui/react/macro'
 import { Bell, Copy, Repeat, Repeat2 } from 'lucide-react'
 import { cn, naturalCompare } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
@@ -915,7 +915,11 @@ export function MonthGrid({
                         className='text-primary shrink-0 px-1 py-0.5 text-start text-xs font-medium hover:underline'
                         onClick={() => onDay(day)}
                       >
-                        {t`+${overflow.get(day)} more`}
+                        <Plural
+                          value={overflow.get(day) ?? 0}
+                          one='+# more'
+                          other='+# more'
+                        />
                       </button>
                     )}
                   </div>
