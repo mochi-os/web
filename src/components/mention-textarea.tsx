@@ -129,7 +129,9 @@ export const MentionTextarea = forwardRef<
   const autoResize = useCallback((el: HTMLTextAreaElement | null) => {
     if (el) {
       el.style.height = 'auto'
-      el.style.height = el.scrollHeight + 'px'
+      // The height includes the border and the scroll height does not.
+      el.style.height =
+        el.scrollHeight + el.offsetHeight - el.clientHeight + 'px'
     }
   }, [])
 

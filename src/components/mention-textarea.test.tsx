@@ -81,3 +81,37 @@ describe('MentionTextarea Enter handling while the dropdown is open', () => {
     expect(textarea.value).toBe('@Al')
   })
 })
+
+describe('MentionTextarea sizing', () => {
+  it('grows to its content and its border, so it does not scroll', () => {
+    // jsdom lays nothing out: 96px of content and padding, 2px of border.
+    const prototype = HTMLTextAreaElement.prototype
+    const names = ['scrollHeight', 'offsetHeight', 'clientHeight'] as const
+    const saved = names.map((name) =>
+      Object.getOwnPropertyDescriptor(prototype, name)
+    )
+    const sizes = { scrollHeight: 96, offsetHeight: 42, clientHeight: 40 }
+    for (const name of names) {
+      Object.defineProperty(prototype, name, {
+        configurable: true,
+        get: () => sizes[name],
+      })
+    }
+    try {
+      render(
+        <MentionTextarea
+          value={'one\ntwo\nthree\nfour'}
+          onValueChange={() => {}}
+          people={people}
+        />
+      )
+      expect(screen.getByRole('textbox').style.height).toBe('98px')
+    } finally {
+      names.forEach((name, index) => {
+        const descriptor = saved[index]
+        if (descriptor) Object.defineProperty(prototype, name, descriptor)
+        else delete (prototype as unknown as Record<string, unknown>)[name]
+      })
+    }
+  })
+})

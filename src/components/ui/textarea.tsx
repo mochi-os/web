@@ -15,7 +15,10 @@ function Textarea({
   const autoResize = React.useCallback((el: HTMLTextAreaElement | null) => {
     if (el) {
       el.style.height = 'auto'
-      el.style.height = el.scrollHeight + 'px'
+      // The height includes the border and the scroll height does not, so
+      // the box is sized to both or it scrolls by its border's width.
+      el.style.height =
+        el.scrollHeight + el.offsetHeight - el.clientHeight + 'px'
     }
   }, [])
 

@@ -277,37 +277,42 @@ export function ColourPicker({
     )
   }
 
+  const swatches = PRESET_COLOURS.map((c) => (
+    <button
+      key={c}
+      type='button'
+      className={cn(
+        'rounded-full border border-border',
+        // Beside the toggle, a line of swatches is as tall as the toggle.
+        collapsible ? 'my-1 size-6' : 'size-7',
+        isSelected(c) &&
+          'ring-2 ring-foreground ring-offset-2 ring-offset-background'
+      )}
+      style={{ backgroundColor: c }}
+      onClick={() => {
+        const newHsv = hexToHsv(c)
+        setHsv(newHsv)
+        setHexInput(c)
+        onChange(c)
+      }}
+    />
+  ))
+
   return (
     <div className={className}>
-      {/* Preset swatches */}
-      <div className='flex flex-wrap gap-2'>
-        {PRESET_COLOURS.map((c) => (
-          <button
-            key={c}
-            type='button'
-            className={`size-7 rounded-full border border-border ${
-              isSelected(c)
-                ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
-                : ''
-            }`}
-            style={{ backgroundColor: c }}
-            onClick={() => {
-              const newHsv = hexToHsv(c)
-              setHsv(newHsv)
-              setHexInput(c)
-              onChange(c)
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Compact controls: custom-colour toggle + actions (collapsible mode only) */}
-      {collapsible && (
-        <div className='mt-3 flex items-center gap-2'>
+      {collapsible ? (
+        // The swatches wrap among themselves, so the custom-colour toggle
+        // stays on their first line however narrow the row.
+        <div className='flex items-start gap-2'>
+          <div className='flex min-w-0 flex-wrap items-center gap-x-1.5'>
+            {swatches}
+          </div>
           <Button
             type='button'
             variant='outline'
             size='sm'
+            className='shrink-0'
+            aria-expanded={advancedOpen}
             onClick={() => setAdvancedOpen((o) => !o)}
           >
             {hasValue && (
@@ -324,21 +329,20 @@ export function ColourPicker({
               )}
             />
           </Button>
-          {((onClear && hasValue) || actions) && (
-            <div className='ms-auto flex items-center gap-2'>
-              {onClear && hasValue && (
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  onClick={onClear}
-                >
-                  <Trans>Clear</Trans>
-                </Button>
-              )}
-              {actions}
-            </div>
+        </div>
+      ) : (
+        <div className='flex flex-wrap items-center gap-2'>{swatches}</div>
+      )}
+
+      {/* Compact controls: clear + actions (collapsible mode only) */}
+      {collapsible && ((onClear && hasValue) || actions) && (
+        <div className='mt-3 flex items-center justify-end gap-2'>
+          {onClear && hasValue && (
+            <Button type='button' variant='outline' size='sm' onClick={onClear}>
+              <Trans>Clear</Trans>
+            </Button>
           )}
+          {actions}
         </div>
       )}
 
