@@ -391,7 +391,7 @@ export function EntityTreeView<TObject extends EntityObject>({
             groupField,
             groupOptions,
             design,
-            t`No status`
+            t`[not set]`
           )
         : [],
     [objects, groupField, groupOptions, design]

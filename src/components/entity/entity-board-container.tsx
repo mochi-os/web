@@ -954,7 +954,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
           >
             <EntityBoardColumn
               id=''
-              name={t`No status`}
+              name={t`[not set]`}
               objects={[]}
               fields={visibleFields}
               options={classOptions}
@@ -1005,7 +1005,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
       {!isReordering && objectsByStatus['']?.length > 0 && (
         <EntityBoardColumn
           id=''
-          name={t`No status`}
+          name={t`[not set]`}
           objects={applyPreviewToList(objectsByStatus[''])}
           fields={visibleFields}
           options={classOptions}

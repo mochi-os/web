@@ -113,4 +113,28 @@ describe('EntityTreeView', () => {
     // The task class's fields would otherwise head the table.
     expect(screen.queryByText('Priority')).toBeNull()
   })
+
+  it('groups rows with no value under "[not set]"', async () => {
+    const objects = [
+      createMockEntityObject({ id: 'a', values: { title: 'Placed', status: 'todo' } }),
+      createMockEntityObject({ id: 'b', values: { title: 'Loose' } }),
+    ]
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        statusField='status'
+        onCardClick={vi.fn()}
+        onReorder={vi.fn()}
+        onReparent={vi.fn()}
+      />
+    )
+    await screen.findByText('Loose')
+    expect(screen.getByText('[not set]')).toBeTruthy()
+    expect(screen.queryByText('No status')).toBeNull()
+  })
 })
