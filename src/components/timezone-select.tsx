@@ -79,6 +79,8 @@ interface TimezoneOptions {
    * sits beneath a time field rather than in a row of its own.
    */
   compact?: boolean
+  /** Classes for the trigger, such as a width to share with the fields beside it. */
+  className?: string
   id?: string
 }
 
@@ -113,6 +115,7 @@ export function TimezoneSelect({
   compact = false,
   label,
   title,
+  className,
   id,
 }: TimezoneSelectProps) {
   const { t: t_ } = useLingui()
@@ -160,7 +163,10 @@ export function TimezoneSelect({
             role='combobox'
             aria-expanded={open}
             aria-label={label}
-            className='text-muted-foreground h-7 gap-1 px-1.5 text-xs font-normal'
+            className={cn(
+              'text-muted-foreground h-7 gap-1 px-1.5 text-xs font-normal',
+              className
+            )}
             disabled={disabled}
           >
             <Globe className='size-3.5 shrink-0' aria-hidden />
@@ -174,7 +180,7 @@ export function TimezoneSelect({
             role='combobox'
             aria-expanded={open}
             aria-label={label}
-            className='w-full justify-between'
+            className={cn('w-full justify-between', className)}
             disabled={disabled}
           >
             <span className='truncate'>{displayValue}</span>
