@@ -54,6 +54,15 @@ describe('TimezoneSelect', () => {
     expect(trigger.textContent).toBe('London')
   })
 
+  it('shows a compact zone as a field, its globe after the city as a date shows its calendar', () => {
+    const trigger = show({ compact: true, label: 'Start time zone' })
+    // Outlined, at the height of the fields it sits beside.
+    expect(trigger.className).toContain('border-border')
+    expect(trigger.className).not.toContain('h-7')
+    expect(trigger.firstElementChild?.textContent).toBe('London')
+    expect(trigger.lastElementChild?.tagName.toLowerCase()).toBe('svg')
+  })
+
   it('opens in a dialog headed by what the zone is for', async () => {
     fireEvent.click(show())
     expect(

@@ -75,8 +75,9 @@ interface TimezoneOptions {
    */
   auto?: boolean
   /**
-   * A small, quiet trigger showing only the zone's city, for a control that
-   * sits beneath a time field rather than in a row of its own.
+   * A field showing only the zone's city, with a globe where the date and time
+   * fields beside it show their own icons, for a control that sits beside a
+   * time field rather than in a row of its own.
    */
   compact?: boolean
   /** Classes for the trigger, such as a width to share with the fields beside it. */
@@ -158,19 +159,18 @@ export function TimezoneSelect({
           <Button
             id={id}
             type='button'
-            variant='ghost'
-            size='sm'
+            variant='outline'
             role='combobox'
             aria-expanded={open}
             aria-label={label}
-            className={cn(
-              'text-muted-foreground h-7 gap-1 px-1.5 text-xs font-normal',
-              className
-            )}
+            className={cn('justify-between gap-2 px-3 font-normal', className)}
             disabled={disabled}
           >
-            <Globe className='size-3.5 shrink-0' aria-hidden />
             <span className='truncate'>{zoneCity(chosen)}</span>
+            <Globe
+              className='text-muted-foreground size-4 shrink-0'
+              aria-hidden
+            />
           </Button>
         ) : (
           <Button
