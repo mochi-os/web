@@ -190,6 +190,49 @@ export function EntityCommentThread({
               <Trans>(edited)</Trans>
             </span>
           )}
+          {/* Phones: the menu ends the name row. A row of its own under the
+              text would cost every comment a line for one icon. */}
+          {!readOnly && (
+            <div className='ms-auto md:hidden'>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type='button'
+                    aria-label={t`Comment actions`}
+                    className='text-muted-foreground hover:bg-hover -my-1 rounded-full p-1 transition-colors'
+                  >
+                    <MoreHorizontal className='size-4' />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  <DropdownMenuItem onClick={() => onStartReply(comment.id)}>
+                    <Reply className='me-2 size-4' />
+                    <Trans>Reply</Trans>
+                  </DropdownMenuItem>
+                  {canEdit && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditing(true)
+                        setEditBody(comment.content)
+                      }}
+                    >
+                      <Pencil className='me-2 size-4' />
+                      <Trans>Edit</Trans>
+                    </DropdownMenuItem>
+                  )}
+                  {canDelete && (
+                    <DropdownMenuItem
+                      className='text-destructive focus:text-destructive'
+                      onClick={() => setDeleting(true)}
+                    >
+                      <Trash2 className='me-2 size-4' />
+                      <Trans>Delete</Trans>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
 
         {editing ? (
@@ -246,8 +289,8 @@ export function EntityCommentThread({
         />
 
         {!readOnly && (
-          <div className='flex min-h-7 items-center gap-2 pt-0.5'>
-            {/* Desktop: hover-reveal inline actions */}
+          <div className='hidden min-h-7 items-center gap-2 pt-0.5 md:flex'>
+            {/* From md up: inline actions, revealed on hover */}
             <div className='pointer-events-none hidden items-center gap-1 opacity-0 transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 md:flex'>
               <button
                 type='button'
@@ -289,45 +332,6 @@ export function EntityCommentThread({
                 </button>
               )}
             </div>
-
-            {/* Mobile: always-visible dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type='button'
-                  aria-label={t`Comment actions`}
-                  className='text-muted-foreground hover:bg-hover rounded-full p-1 transition-colors md:hidden'
-                >
-                  <MoreHorizontal className='size-4' />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='start'>
-                <DropdownMenuItem onClick={() => onStartReply(comment.id)}>
-                  <Reply className='me-2 size-4' />
-                  <Trans>Reply</Trans>
-                </DropdownMenuItem>
-                {canEdit && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setEditing(true)
-                      setEditBody(comment.content)
-                    }}
-                  >
-                    <Pencil className='me-2 size-4' />
-                    <Trans>Edit</Trans>
-                  </DropdownMenuItem>
-                )}
-                {canDelete && (
-                  <DropdownMenuItem
-                    className='text-destructive focus:text-destructive'
-                    onClick={() => setDeleting(true)}
-                  >
-                    <Trash2 className='me-2 size-4' />
-                    <Trans>Delete</Trans>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         )}
       </div>
