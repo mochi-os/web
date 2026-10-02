@@ -597,7 +597,7 @@ function ChecklistEditor({
                 variant='ghost'
                 label={t`Remove item`}
                 onClick={() => removeItem(item.id)}
-                className='size-6 shrink-0 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-destructive transition-opacity'
+                className='size-6 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-destructive transition-opacity'
               >
                 <Trash2 className='h-3.5 w-3.5' />
               </IconButton>

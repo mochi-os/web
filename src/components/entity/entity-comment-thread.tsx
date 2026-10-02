@@ -248,7 +248,7 @@ export function EntityCommentThread({
         {!readOnly && (
           <div className='flex min-h-7 items-center gap-2 pt-0.5'>
             {/* Desktop: hover-reveal inline actions */}
-            <div className='pointer-events-none hidden items-center gap-1 opacity-0 transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100 md:flex'>
+            <div className='pointer-events-none hidden items-center gap-1 opacity-0 transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 md:flex'>
               <button
                 type='button'
                 className='text-muted-foreground hover:bg-hover hover:text-foreground inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs transition-colors'
