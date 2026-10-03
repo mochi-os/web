@@ -18,8 +18,9 @@ export interface MemberListMember {
 
 export interface MemberListProps {
   members: MemberListMember[]
-  // Marks this member's row "(you)". Leave it out where the row already says
-  // Owner and only the owner can see the list; it would restate the tag.
+  // Marks this member's row "(you)" and pins it under the owner. Leave it out
+  // where the row already says Owner and only the owner can see the list; it
+  // would restate the tag.
   currentUserId?: string
   // Pinned first, tagged Owner, never removable.
   ownerId?: string
@@ -64,9 +65,11 @@ export function MemberList({
       [...members].sort((a, b) => {
         if (a.id === ownerId) return -1
         if (b.id === ownerId) return 1
+        if (a.id === currentUserId) return -1
+        if (b.id === currentUserId) return 1
         return naturalCompare(a.name || a.id, b.name || b.id)
       }),
-    [members, ownerId]
+    [members, ownerId, currentUserId]
   )
 
   if (error) {

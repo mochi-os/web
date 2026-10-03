@@ -534,19 +534,21 @@ function EntityAccessTab<TDetails>({
   }
 
   return (
-    <Section title={labels.accessManagement}>
+    <Section
+      title={labels.accessManagement}
+      action={
+        <Button
+          onClick={() => setDialogOpen(true)}
+          size='sm'
+          variant='outline'
+          disabled={!canManageRules}
+        >
+          <Plus className='me-2 size-4' />
+          {labels.addRule}
+        </Button>
+      }
+    >
       <div className='space-y-4'>
-        <div className='flex justify-end'>
-          <Button
-            onClick={() => setDialogOpen(true)}
-            size='sm'
-            disabled={!canManageRules}
-          >
-            <Plus className='h-4 w-4 me-2' />
-            {labels.addRule}
-          </Button>
-        </div>
-
         <AccessDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}

@@ -28,8 +28,10 @@ import {
   Hold,
   hover,
   PAGE_EDGE,
+  runEnds,
   swallow,
   target,
+  type Choosing,
   type Point,
 } from './gesture'
 import { EventDot } from './event-dot'
@@ -64,6 +66,11 @@ export interface MonthGridProps {
   onSelect: (key: string, anchor: HTMLElement) => void
   /** An empty cell clicked. */
   onCreate: (day: string) => void
+  /**
+   * A drag across empty cells, with the first and last day it covers. Without
+   * it a drag does nothing and only a click creates.
+   */
+  onCreateRange?: (first: string, last: string) => void
   /** A chip dragged onto another day or calendar. */
   onMove: (move: DayMove) => void
   /** A day number clicked. */
@@ -94,6 +101,13 @@ interface Dragging {
   keyboard: boolean
 }
 
+/** The day cell under a point, if any. */
+function dayAt(x: number, y: number): string | null {
+  if (typeof document.elementFromPoint !== 'function') return null
+  const under = document.elementFromPoint(x, y)?.closest('[data-day]')
+  return under?.getAttribute('data-day') ?? null
+}
+
 export function MonthGrid({
   days,
   month,
@@ -104,6 +118,7 @@ export function MonthGrid({
   selected,
   onSelect,
   onCreate,
+  onCreateRange,
   onMove,
   onDay,
   onStep,
@@ -119,6 +134,9 @@ export function MonthGrid({
   const [dragging, setDragging] = useState<Dragging | null>(null)
   const draggingRef = useRef<Dragging | null>(null)
   draggingRef.current = dragging
+  const [choosing, setChoosing] = useState<Choosing | null>(null)
+  const choosingRef = useRef<Choosing | null>(null)
+  choosingRef.current = choosing
   const point = useRef<Point>({ x: 0, y: 0, alt: false })
   const touch = useRef(false)
   const edge = useRef(new Hold())
@@ -279,13 +297,6 @@ export function MonthGrid({
 
   // --- Dragging a chip onto another day ---
 
-  /** The day cell under a point, if any. */
-  const dayAt = (x: number, y: number): string | null => {
-    if (typeof document.elementFromPoint !== 'function') return null
-    const under = document.elementFromPoint(x, y)?.closest('[data-day]')
-    return under?.getAttribute('data-day') ?? null
-  }
-
   /** The page a chip resting at the grid's top or bottom wants. */
   const edgeAt = (x: number, y: number) => {
     const bounds = body.current?.getBoundingClientRect()
@@ -317,7 +328,6 @@ export function MonthGrid({
     if (next === draggingRef.current) return
     draggingRef.current = next
     setDragging(next)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- advance reads refs only
   }, [])
 
   const finish = useCallback(() => {
@@ -535,6 +545,86 @@ export function MonthGrid({
     const next = addDays(base.day, shift)
     if (!days.includes(next)) onStep?.(shift < 0 ? -1 : 1)
     setDragging({ ...base, day: next })
+  }
+
+  // --- Dragging across empty cells to pick a new event's days ---
+
+  const choose = (next: Choosing | null) => {
+    choosingRef.current = next
+    setChoosing(next)
+  }
+
+  /**
+   * Arms a pick on an empty part of a cell: a mouse picks once it has moved,
+   * a finger after the hold, so a click still creates on its one day and a
+   * swipe still scrolls.
+   */
+  const startChoose = (event: React.PointerEvent, day: string) => {
+    if (!onCreateRange) return
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    if ((event.target as Element).closest('button')) return
+    touch.current = event.pointerType === 'touch'
+    arming.current?.()
+    arming.current = arm(event, (moved) => {
+      arming.current = null
+      const under = moved ? dayAt(moved.clientX, moved.clientY) : null
+      choose({ anchor: day, day: under ?? day })
+    })
+  }
+
+  const chosen = () => {
+    const current = choosingRef.current
+    if (!current) return
+    choose(null)
+    // The release is followed by a click on the cell under it, which would
+    // create on that one day as well.
+    swallow()
+    const [first, last] = runEnds(current)
+    if (first === last) onCreate(first)
+    else onCreateRange?.(first, last)
+  }
+  const picking = useRef(chosen)
+  picking.current = chosen
+
+  const active = choosing !== null
+  useEffect(() => {
+    if (!active) return
+    const move = (event: PointerEvent) => {
+      const current = choosingRef.current
+      const day = dayAt(event.clientX, event.clientY)
+      if (current && day && day !== current.day) choose({ ...current, day })
+    }
+    const up = (event: PointerEvent) => {
+      move(event)
+      picking.current()
+    }
+    const lost = () => choose(null)
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') lost()
+    }
+    const still = (event: TouchEvent) => event.preventDefault()
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', lost)
+    window.addEventListener('keydown', key)
+    if (touch.current)
+      document.addEventListener('touchmove', still, { passive: false })
+    document.body.style.setProperty('user-select', 'none')
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', lost)
+      window.removeEventListener('keydown', key)
+      document.removeEventListener('touchmove', still)
+      document.body.style.removeProperty('user-select')
+    }
+  }, [active])
+
+  /** Whether a day falls in the run being picked. */
+  const picked = (day: string) => {
+    if (!choosing) return false
+    const [first, last] = runEnds(choosing)
+    return day >= first && day <= last
   }
 
   const weekdayNames = useMemo(
@@ -760,8 +850,9 @@ export function MonthGrid({
                     className={cn(
                       'hover:bg-hover/40 flex min-h-0 cursor-pointer flex-col border-s first:border-s-0',
                       outside && 'bg-muted/30',
-                      landing && 'bg-primary/10'
+                      (landing || picked(day)) && 'bg-primary/10'
                     )}
+                    onPointerDown={(pointer) => startChoose(pointer, day)}
                     onClick={(pointer) => {
                       // Anywhere in the cell but on an event or its number.
                       if (!(pointer.target as Element).closest('button'))

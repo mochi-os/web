@@ -62,10 +62,12 @@ const frame = () => {
   })
 }
 
-function show(events: CalendarEvent[]) {
+function show(events: CalendarEvent[], range = true) {
   const onMove = vi.fn<(move: DayMove) => void>()
   const onSelect = vi.fn()
   const onStep = vi.fn()
+  const onCreate = vi.fn<(day: string) => void>()
+  const onCreateRange = vi.fn<(first: string, last: string) => void>()
   container = render(
     <I18nProvider i18n={i18n}>
       <MonthGrid
@@ -74,14 +76,15 @@ function show(events: CalendarEvent[]) {
         events={events}
         today='2026-09-21'
         onSelect={onSelect}
-        onCreate={vi.fn()}
+        onCreate={onCreate}
+        onCreateRange={range ? onCreateRange : undefined}
         onMove={onMove}
         onDay={vi.fn()}
         onStep={onStep}
       />
     </I18nProvider>
   ).container
-  return { onMove, onSelect, onStep }
+  return { onMove, onSelect, onStep, onCreate, onCreateRange }
 }
 
 const cell = (day: string) =>
@@ -447,5 +450,121 @@ describe('MonthGrid keyboard', () => {
     const { onStep } = show([meeting])
     fireEvent.keyDown(chip('Standup'), { key: 'ArrowUp' })
     expect(onStep).toHaveBeenCalledWith(-1)
+  })
+})
+
+describe('MonthGrid picking days', () => {
+  /** Whether a day is drawn as part of the run being picked. */
+  const lit = (day: string) => cell(day).classList.contains('bg-primary/10')
+
+  it('picks the days a mouse drag crosses, drawing them on the way', () => {
+    const { onCreate, onCreateRange } = show([])
+    over('2026-09-23')
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('mouse', 250, 300))
+    over('2026-09-30')
+    fireEvent.pointerMove(window, pointer('mouse', 250, 400))
+    expect(lit('2026-09-23')).toBe(true)
+    expect(lit('2026-09-27')).toBe(true)
+    expect(lit('2026-09-30')).toBe(true)
+    expect(lit('2026-09-22')).toBe(false)
+    expect(lit('2026-10-01')).toBe(false)
+    fireEvent.pointerUp(window, pointer('mouse', 250, 400))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-23', '2026-09-30')
+    expect(lit('2026-09-23')).toBe(false)
+    fireEvent.click(cell('2026-09-30'))
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('gives the run in order when dragged backwards', () => {
+    const { onCreateRange } = show([])
+    fireEvent.pointerDown(cell('2026-09-25'), pointer('mouse', 450, 300))
+    over('2026-09-22')
+    fireEvent.pointerMove(window, pointer('mouse', 150, 300))
+    fireEvent.pointerUp(window, pointer('mouse', 150, 300))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-22', '2026-09-25')
+  })
+
+  it('creates on the one day when the drag ends where it began', () => {
+    const { onCreate, onCreateRange } = show([])
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('mouse', 250, 300))
+    over('2026-09-24')
+    fireEvent.pointerMove(window, pointer('mouse', 350, 300))
+    over('2026-09-23')
+    fireEvent.pointerMove(window, pointer('mouse', 250, 300))
+    fireEvent.pointerUp(window, pointer('mouse', 250, 300))
+    fireEvent.click(cell('2026-09-23'))
+    expect(onCreateRange).not.toHaveBeenCalled()
+    expect(onCreate).toHaveBeenCalledTimes(1)
+    expect(onCreate).toHaveBeenCalledWith('2026-09-23')
+  })
+
+  it('leaves a click a click', () => {
+    const { onCreate, onCreateRange } = show([])
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('mouse', 250, 300))
+    fireEvent.pointerMove(window, pointer('mouse', 252, 301))
+    fireEvent.pointerUp(window, pointer('mouse', 252, 301))
+    fireEvent.click(cell('2026-09-23'))
+    expect(lit('2026-09-23')).toBe(false)
+    expect(onCreateRange).not.toHaveBeenCalled()
+    expect(onCreate).toHaveBeenCalledWith('2026-09-23')
+  })
+
+  it('drops the run on Escape', () => {
+    const { onCreate, onCreateRange } = show([])
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('mouse', 250, 300))
+    over('2026-09-25')
+    fireEvent.pointerMove(window, pointer('mouse', 450, 300))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(lit('2026-09-24')).toBe(false)
+    fireEvent.pointerUp(window, pointer('mouse', 450, 300))
+    expect(onCreateRange).not.toHaveBeenCalled()
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('picks under a finger only after the hold, so a swipe still scrolls', () => {
+    const { onCreateRange } = show([])
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('touch', 250, 300))
+    over('2026-09-25')
+    fireEvent.pointerMove(window, pointer('touch', 450, 300))
+    act(() => {
+      vi.advanceTimersByTime(TOUCH_HOLD_MS)
+    })
+    fireEvent.pointerUp(window, pointer('touch', 450, 300))
+    expect(onCreateRange).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('touch', 250, 300))
+    act(() => {
+      vi.advanceTimersByTime(TOUCH_HOLD_MS)
+    })
+    expect(lit('2026-09-23')).toBe(true)
+    fireEvent.pointerMove(window, pointer('touch', 450, 300))
+    fireEvent.pointerUp(window, pointer('touch', 450, 300))
+    expect(onCreateRange).toHaveBeenCalledWith('2026-09-23', '2026-09-25')
+  })
+
+  it('starts no run from an event or a day number', () => {
+    const { onCreateRange, onMove } = show([meeting])
+    fireEvent.pointerDown(chip('Standup'), pointer('mouse', 150, 300))
+    over('2026-09-24')
+    fireEvent.pointerMove(window, pointer('mouse', 350, 300))
+    fireEvent.pointerUp(window, pointer('mouse', 350, 300))
+    expect(onMove).toHaveBeenCalled()
+
+    const number = cell('2026-09-23').querySelector('button') as HTMLElement
+    fireEvent.pointerDown(number, pointer('mouse', 250, 210))
+    over('2026-09-25')
+    fireEvent.pointerMove(window, pointer('mouse', 450, 300))
+    expect(lit('2026-09-25')).toBe(false)
+    fireEvent.pointerUp(window, pointer('mouse', 450, 300))
+    expect(onCreateRange).not.toHaveBeenCalled()
+  })
+
+  it('picks nothing without a range handler', () => {
+    show([], false)
+    fireEvent.pointerDown(cell('2026-09-23'), pointer('mouse', 250, 300))
+    over('2026-09-25')
+    fireEvent.pointerMove(window, pointer('mouse', 450, 300))
+    expect(lit('2026-09-24')).toBe(false)
+    fireEvent.pointerUp(window, pointer('mouse', 450, 300))
   })
 })
