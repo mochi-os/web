@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import { DateHeader } from './date-header'
 import {
+  addDays,
   addMonths,
   dayList,
   monthOf,
@@ -125,8 +126,11 @@ function Cell({
   const format = useFormat()
   return (
     <>
+      {/* The row's middle day is in the ISO week most of it is in. */}
       {weekNumbers && index % 7 === 0 && (
-        <span className='text-muted-foreground/70'>{weekNumber(day)}</span>
+        <span data-testid='week-number' className='text-muted-foreground/70'>
+          {weekNumber(addDays(day, 3))}
+        </span>
       )}
       <button
         type='button'

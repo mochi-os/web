@@ -699,3 +699,44 @@ describe('MonthGrid event states', () => {
     ).toBe(false)
   })
 })
+
+describe('MonthGrid week numbers', () => {
+  const label = (first: string) => {
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(`${first}T00:00:00Z`)
+      day.setUTCDate(day.getUTCDate() + index)
+      return day.toISOString().slice(0, 10)
+    })
+    render(
+      <I18nProvider i18n={i18n}>
+        <MonthGrid
+          days={days}
+          month={10}
+          events={[]}
+          today='2026-10-07'
+          weekNumbers
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    return screen.getByTestId('week-number').textContent
+  }
+
+  afterEach(cleanup)
+
+  it('names the ISO week most of a Sunday-first row is in', () => {
+    // Sunday 4 to Saturday 10 October: Monday on is week 41.
+    expect(label('2026-10-04')).toBe('41')
+  })
+
+  it('names the ISO week most of a Saturday-first row is in', () => {
+    expect(label('2026-10-03')).toBe('41')
+  })
+
+  it('names a Monday-first row by its own week, as before', () => {
+    expect(label('2026-10-05')).toBe('41')
+  })
+})

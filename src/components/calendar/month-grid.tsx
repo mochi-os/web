@@ -812,8 +812,13 @@ export function MonthGrid({
         {rows.map((week) => (
           <div key={week[0]} className='flex min-h-0 flex-1 border-b'>
             {weekNumbers && (
-              <div className='text-muted-foreground w-8 shrink-0 pt-1 text-center text-[0.6875rem]'>
-                {weekNumber(week[0])}
+              <div
+                data-testid='week-number'
+                className='text-muted-foreground w-8 shrink-0 pt-1 text-center text-[0.6875rem]'
+              >
+                {/* The middle day is in the ISO week most of the row is in,
+                    whichever day the week starts on. */}
+                {weekNumber(week[Math.min(3, week.length - 1)])}
               </div>
             )}
             <div className='grid flex-1 grid-cols-7'>
