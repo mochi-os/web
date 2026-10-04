@@ -133,6 +133,22 @@ type Drag =
 type Move = Extract<Drag, { mode: 'move' }>
 type Resize = Extract<Drag, { mode: 'resize' }>
 
+/**
+ * The day a moved bar from the band begins on: its own first day, shifted by
+ * as many days as the pointer has gone from the day it took hold of, so a bar
+ * held by a later day, or one that began before the days shown, does not jump
+ * to start under the pointer. A block lifted from the grid begins on the day
+ * it is dropped on.
+ */
+function opening(
+  current: Move,
+  zonedDay: (date: Date, zone?: string) => string
+): string {
+  if (!current.from.band) return current.day
+  const first = coveredDays(current.event, zonedDay).start
+  return addDays(first, daysBetween(current.from.day, current.day))
+}
+
 export function TimeGrid({
   days,
   events,
@@ -500,10 +516,11 @@ export function TimeGrid({
         return
       }
       if (current.band) {
+        const first = opening(current, format.zonedDay)
         onMove({
           key,
-          start: format.timestampAt(current.day, 0),
-          finish: format.timestampAt(addDays(current.day, 1), 0),
+          start: format.timestampAt(first, 0),
+          finish: format.timestampAt(addDays(first, 1), 0),
           allday: true,
           copy: current.copy,
         })
@@ -810,6 +827,9 @@ export function TimeGrid({
     if (!at) return
     down(event)
     const grab = band ? 0 : snap(at.minutes, SNAP) - start
+    // A bar is held by the day under the pointer, which may be any of its
+    // days, and moves by as many days as the pointer goes from there.
+    const held = band ? at.day : day
     arming.current = arm(event, (moved) => {
       if (moved)
         point.current = {
@@ -821,7 +841,7 @@ export function TimeGrid({
       lift({
         mode: 'move',
         event: item,
-        day,
+        day: held,
         start,
         band,
         // A bar dragged into the grid takes the default length there.
@@ -831,7 +851,7 @@ export function TimeGrid({
           : Math.max(MINIMUM * 60, item.finish - item.start),
         zone: item.zone,
         grab,
-        from: { day, start, band },
+        from: { day: held, start, band },
         moved: false,
         copy: point.current.alt,
         keyboard: false,
@@ -1028,7 +1048,7 @@ export function TimeGrid({
     if (current.mode === 'create') return ''
     if (current.mode === 'move' && current.calendar) return ''
     if (current.mode === 'move' && current.band) {
-      return t`Moving to ${dayName(current.day)}`
+      return t`Moving to ${dayName(opening(current, format.zonedDay))}`
     }
     const day = dayName(current.day)
     const [from, to] = span(current)

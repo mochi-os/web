@@ -410,6 +410,75 @@ describe('TimeGrid dragging between the band and the grid', () => {
       copy: false,
     })
   })
+
+  const retreat: CalendarEvent = {
+    key: 'e3',
+    title: 'Retreat',
+    colour: '#16a34a',
+    start: at('2026-09-24', 0),
+    finish: at('2026-09-26', 0),
+    allday: true,
+    date: '2026-09-24',
+  }
+
+  it('leaves a bar held by a later day where it is while the pointer stays on that day', () => {
+    const { onMove } = show([retreat])
+    fireEvent.pointerDown(
+      block('Retreat'),
+      pointer('mouse', x('2026-09-25'), 50)
+    )
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-25') + 12, 52))
+    expect(ghost()).toBeNull()
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-25') + 12, 52))
+    expect(onMove).not.toHaveBeenCalled()
+  })
+
+  it('moves a bar held by a later day by as many days as the pointer goes', () => {
+    const { onMove } = show([retreat])
+    fireEvent.pointerDown(
+      block('Retreat'),
+      pointer('mouse', x('2026-09-25'), 50)
+    )
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-26'), 50))
+    // One day on: Friday and Saturday, not Saturday and Sunday.
+    const lifted = ghost()!
+    expect(lifted.style.insetInlineStart).toMatch(/^57\.14\d*%$/)
+    expect(lifted.style.width).toMatch(/^calc\(28\.57\d*% - 2px\)$/)
+    expect(document.querySelector('[aria-live]')!.textContent).toContain('25')
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-26'), 50))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e3',
+      start: at('2026-09-25', 0),
+      finish: at('2026-09-26', 0),
+      allday: true,
+      copy: false,
+    })
+  })
+
+  it('moves a bar that began before the days shown by the days the pointer goes', () => {
+    const trip: CalendarEvent = {
+      key: 'e4',
+      title: 'Trip',
+      colour: '#16a34a',
+      start: at('2026-09-19', 0),
+      finish: at('2026-09-23', 0),
+      allday: true,
+      date: '2026-09-19',
+    }
+    const { onMove } = show([trip])
+    fireEvent.pointerDown(block('Trip'), pointer('mouse', x('2026-09-21'), 50))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-21') + 12, 52))
+    expect(ghost()).toBeNull()
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-22'), 50))
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-22'), 50))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e4',
+      start: at('2026-09-20', 0),
+      finish: at('2026-09-21', 0),
+      allday: true,
+      copy: false,
+    })
+  })
 })
 
 describe('TimeGrid copying and dropping elsewhere', () => {
