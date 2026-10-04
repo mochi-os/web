@@ -279,6 +279,41 @@ describe('barRows', () => {
   it('answers nothing for an empty week', () => {
     expect(barRows([], [{ key: 'a', start: '1', finish: '2' }])).toEqual([])
   })
+
+  describe('over a work week that skips a weekday', () => {
+    // Monday, Tuesday, Thursday and Friday: no Wednesday column.
+    const work = ['2026-09-14', '2026-09-15', '2026-09-17', '2026-09-18']
+    const one = (start: string, finish: string) =>
+      barRows(work, [{ key: 'a', start, finish }])
+
+    it('puts a bar in the column of its own day', () => {
+      expect(one('2026-09-17', '2026-09-17')).toEqual([
+        { key: 'a', column: 2, span: 1, row: 0, before: false, after: false },
+      ])
+    })
+
+    it('spans only the shown days a bar covers', () => {
+      expect(one('2026-09-15', '2026-09-17')).toEqual([
+        { key: 'a', column: 1, span: 2, row: 0, before: false, after: false },
+      ])
+    })
+
+    it('drops a bar on the hidden day alone', () => {
+      expect(one('2026-09-16', '2026-09-16')).toEqual([])
+    })
+
+    it('starts at the first column of a bar that began before the week', () => {
+      expect(one('2026-09-13', '2026-09-15')).toEqual([
+        { key: 'a', column: 0, span: 2, row: 0, before: true, after: false },
+      ])
+    })
+
+    it('runs to the last column of a bar that goes on past the week', () => {
+      expect(one('2026-09-17', '2026-09-20')).toEqual([
+        { key: 'a', column: 2, span: 2, row: 0, before: false, after: true },
+      ])
+    })
+  })
 })
 
 describe('snap', () => {

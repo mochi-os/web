@@ -392,7 +392,10 @@ export interface BarPlacement {
  * Stacks multi-day bars into the rows of one week, clipping each to the week
  * and never putting two overlapping bars in the same row. Bars are placed
  * longest first so the longest run sits at the top, and a bar outside the week
- * is dropped.
+ * is dropped. The week's days are its columns in order and need not follow
+ * one another, as a work week that skips a weekday does not: a bar runs from
+ * the first shown day it covers to the last, and one that covers none is
+ * dropped too.
  */
 export function barRows(week: string[], bars: Bar[]): BarPlacement[] {
   if (!week.length) return []
@@ -401,24 +404,19 @@ export function barRows(week: string[], bars: Bar[]): BarPlacement[] {
 
   const clipped = bars
     .map((bar) => {
-      const column = Math.max(0, daysBetween(first, bar.start))
-      const finish = Math.min(week.length - 1, daysBetween(first, bar.finish))
+      // The days are in order, so those up to the finish lead the week.
+      const column = week.findIndex((day) => daysBetween(bar.start, day) >= 0)
+      const finish =
+        week.filter((day) => daysBetween(day, bar.finish) >= 0).length - 1
       return {
         key: bar.key,
         column,
-        span: finish - column + 1,
+        span: column < 0 ? 0 : finish - column + 1,
         before: daysBetween(first, bar.start) < 0,
-        after: daysBetween(first, bar.finish) > week.length - 1,
-        start: bar.start,
-        finish: bar.finish,
+        after: daysBetween(last, bar.finish) > 0,
       }
     })
-    .filter(
-      (bar) =>
-        bar.span > 0 &&
-        daysBetween(bar.start, last) >= 0 &&
-        daysBetween(first, bar.finish) >= 0
-    )
+    .filter((bar) => bar.span > 0)
     .sort((a, b) => b.span - a.span || a.column - b.column)
 
   // rows[n] holds the columns already taken in stacked row n.
