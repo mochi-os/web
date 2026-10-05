@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Plural, useLingui } from '@lingui/react/macro'
+import { useLingui } from '@lingui/react/macro'
 import { Bell, Copy, Repeat, Repeat2 } from 'lucide-react'
 import { cn, naturalCompare } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
@@ -129,7 +129,6 @@ export function MonthGrid({
   const body = useRef<HTMLDivElement>(null)
   const ghost = useRef<HTMLDivElement>(null)
   const [rowHeight, setRowHeight] = useState(120)
-  const [overflow, setOverflow] = useState<Map<string, number>>(new Map())
   const [wheel] = useState(() => new Wheel())
   const [dragging, setDragging] = useState<Dragging | null>(null)
   const draggingRef = useRef<Dragging | null>(null)
@@ -235,56 +234,6 @@ export function MonthGrid({
     }
     return out
   }, [laid, days, tentative, format])
-
-  // How many of each day's events its cell cuts off, wholly or in part,
-  // counted from where each one sits rather than from a line height, so a gap,
-  // the font size or the cell's own scroll cannot throw the count.
-  const measure = useCallback(() => {
-    const next = new Map<string, number>()
-    for (const cell of body.current?.querySelectorAll<HTMLElement>(
-      '[data-day]'
-    ) ?? []) {
-      const day = cell.dataset.day
-      if (!day) continue
-      let hidden = 0
-      for (const group of cell.querySelectorAll<HTMLElement>(
-        '[data-band], [data-list]'
-      )) {
-        if (group.clientHeight === 0) continue
-        if (group.scrollHeight <= group.clientHeight) continue
-        const box = group.getBoundingClientRect()
-        for (const item of group.querySelectorAll<HTMLElement>('[data-key]')) {
-          const rect = item.getBoundingClientRect()
-          if (rect.top < box.top - 0.5 || rect.bottom > box.bottom + 0.5) {
-            hidden++
-          }
-        }
-      }
-      if (hidden) next.set(day, hidden)
-    }
-    setOverflow((current) => {
-      if (
-        current.size === next.size &&
-        [...next].every(([day, count]) => current.get(day) === count)
-      )
-        return current
-      return next
-    })
-  }, [])
-
-  useLayoutEffect(() => measure(), [measure, lists, rowHeight, overflow])
-
-  // A cell scrolled by hand shows other events, so its count follows. The
-  // grid's own scroll moves every cell together and changes no count.
-  useEffect(() => {
-    const element = body.current
-    if (!element) return
-    const scrolled = (event: Event) => {
-      if (event.target !== element) measure()
-    }
-    element.addEventListener('scroll', scrolled, true)
-    return () => element.removeEventListener('scroll', scrolled, true)
-  }, [measure])
 
   /**
    * The most height a day's first group may take when the day has a second:
@@ -914,19 +863,6 @@ export function MonthGrid({
                         )
                       })}
                     </div>
-                    {(overflow.get(day) ?? 0) > 0 && (
-                      <button
-                        type='button'
-                        className='text-primary shrink-0 px-1 py-0.5 text-start text-xs font-medium hover:underline'
-                        onClick={() => onDay(day)}
-                      >
-                        <Plural
-                          value={overflow.get(day) ?? 0}
-                          one='+# more'
-                          other='+# more'
-                        />
-                      </button>
-                    )}
                   </div>
                 )
               })}

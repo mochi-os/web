@@ -40,7 +40,7 @@ const cell = (container: HTMLElement, day: string) =>
   container.querySelector(`[data-day="${day}"]`) as HTMLElement
 
 describe('MonthGrid', () => {
-  describe('the hidden count', () => {
+  describe('a day too full for its cell', () => {
     const day = '2026-09-23'
     const start = Date.UTC(2026, 8, 23, 9) / 1000
     // A 78 px list holding 25 chips of 38 px, 2 px apart: two show whole.
@@ -103,19 +103,23 @@ describe('MonthGrid', () => {
         </I18nProvider>
       )
 
-    it('counts every event the cell cuts off, and opens its day', () => {
-      const onDay = vi.fn()
-      draw(onDay)
-      fireEvent.click(screen.getByRole('button', { name: '+23 more' }))
-      expect(onDay).toHaveBeenCalledWith(day)
-    })
-
-    it('follows the cell when it is scrolled', () => {
+    it('keeps every event in the list it scrolls, with no count of the rest', () => {
       const { container } = draw()
-      // Half a chip down: the first is cut at the top, the third at the bottom.
+      expect(
+        container.querySelectorAll(`[data-day="${day}"] [data-list] [data-key]`)
+      ).toHaveLength(25)
+      expect(screen.queryByRole('button', { name: /more/ })).toBeNull()
+      // Half a chip down, the cell still says nothing of what it cuts off.
       scroll.top = 20
       fireEvent.scroll(container.querySelector('[data-list]')!)
-      expect(screen.getByRole('button', { name: '+24 more' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: /more/ })).toBeNull()
+    })
+
+    it('opens the day from its number', () => {
+      const onDay = vi.fn()
+      draw(onDay)
+      fireEvent.click(screen.getByRole('button', { name: '23' }))
+      expect(onDay).toHaveBeenCalledWith(day)
     })
   })
 
