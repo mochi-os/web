@@ -281,17 +281,19 @@ describe('MonthGrid event appearance', () => {
       container.querySelector(`[data-key="${key}"]`) as HTMLElement
   }
 
-  it('reads a timed event as its dot and title, with its time on a line under the title', () => {
+  it('reads a timed event as its dot and time on one line, then its title on a line of its own', () => {
     const chip = draw()('standup')
     const [first, second] = Array.from(chip.children) as HTMLElement[]
     const dot = first.firstElementChild as HTMLElement
     expect(dot.getAttribute('aria-hidden')).toBe('true')
     expect(dot.classList.contains('rounded-full')).toBe(true)
     expect(dot.style.backgroundColor).toBe('rgb(96, 165, 250)')
-    expect(first.textContent).toBe('Standup')
-    expect(second.textContent).toMatch(/^\d{1,2}:\d{2}/)
-    // Aligned with the title, not the dot.
-    expect(second.classList.contains('ps-3.5')).toBe(true)
+    expect(first.textContent).toMatch(/^\d{1,2}:\d{2}/)
+    // The title has the whole line, with no dot before it.
+    expect(second.textContent).toBe('Standup')
+    expect(second.querySelector('[aria-hidden].rounded-full')).toBeNull()
+    // As far from the time as an all-day bar's dot is from its title.
+    expect(dot.classList.contains('me-0.5')).toBe(true)
     expect(chip.style.borderInlineStartColor).toBe('')
     expect(chip.style.backgroundColor).toBe('')
   })
@@ -316,13 +318,15 @@ describe('MonthGrid event appearance', () => {
     expect(find('standup').classList.contains('opacity-60')).toBe(false)
   })
 
-  it('puts the time, then the repeat mark, then the reminder under the title', () => {
+  it('puts the dot, the time, the repeat mark and the reminder above the title', () => {
     const chip = draw()('weekly')
-    const second = chip.children[1] as HTMLElement
-    const parts = Array.from(second.children) as HTMLElement[]
-    expect(parts[0].textContent).toMatch(/^\d{1,2}:\d{2}/)
-    expect(parts[1].getAttribute('aria-label')).toBe('Repeats')
-    expect(parts[2].getAttribute('aria-label')).toBe('Reminder')
+    const first = chip.children[0] as HTMLElement
+    const parts = Array.from(first.children) as HTMLElement[]
+    expect(parts[0].classList.contains('rounded-full')).toBe(true)
+    expect(parts[1].textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(parts[2].getAttribute('aria-label')).toBe('Repeats')
+    expect(parts[3].getAttribute('aria-label')).toBe('Reminder')
+    expect((chip.children[1] as HTMLElement).textContent).toBe('Weekly')
   })
 
   it('shows no reminder mark on an event without one', () => {

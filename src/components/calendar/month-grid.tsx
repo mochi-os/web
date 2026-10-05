@@ -600,12 +600,18 @@ export function MonthGrid({
   const clock = (event: CalendarEvent) =>
     format.formatClock(new Date(event.start * 1000), event.zone?.start)
 
-  // The title, then under it, aligned with it: the time, how it repeats,
-  // and whether it has a reminder.
+  // The dot, the time, how it repeats and whether it has a reminder, then
+  // under them the title, which has the line's whole width.
   const chipContent = (event: CalendarEvent, lifted: boolean) => (
     <>
+      <span className='text-muted-foreground flex items-center gap-1 text-xs leading-4'>
+        {/* As far from the time as an all-day bar's dot is from its title. */}
+        <EventDot event={event} className='me-0.5' />
+        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
+        {!lifted && <RepeatMark event={event} />}
+        {!lifted && <AlarmMark event={event} />}
+      </span>
       <span className='flex min-w-0 items-center gap-1.5'>
-        <EventDot event={event} />
         {lifted && dragging?.copy && (
           <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
         )}
@@ -613,11 +619,6 @@ export function MonthGrid({
           event={event}
           className={cn('flex-1', lifted && 'font-medium')}
         />
-      </span>
-      <span className='text-muted-foreground flex items-center gap-1 ps-3.5 text-xs leading-4'>
-        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
-        {!lifted && <RepeatMark event={event} />}
-        {!lifted && <AlarmMark event={event} />}
       </span>
     </>
   )
