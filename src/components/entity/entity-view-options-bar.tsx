@@ -3,13 +3,20 @@
 
 // View switcher, search, watched filter and sort for the object/class/field
 // apps. Desktop renders a PageUtilityBar; below the sm breakpoint the same
-// controls move into a bottom sheet behind one button.
+// controls move into the shared bottom drawer behind one button.
 
 import { useEffect, useState, useMemo } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
-import { Eye, SlidersHorizontal } from 'lucide-react'
+import { ArrowUpDown, Eye, SlidersHorizontal } from 'lucide-react'
 import { Button } from '../ui/button'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '../ui/drawer'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { PageUtilityBar } from '../layout/page-utility-bar'
@@ -22,15 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../ui/sheet'
 import { SortDirectionButton } from '../ui/sort-direction-button'
+import { Switch, SwitchLabel } from '../ui/switch'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
+import { SearchInput } from '../search-input'
 import { ViewTabs } from '../view-tabs'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import type { FilterState } from '../filter-bar'
@@ -50,7 +52,12 @@ function useBuiltInSortOptions(numbered: boolean, activeSortId: string) {
     () => [
       { id: 'rank', label: t`Manual` },
       ...(numbered || activeSortId === 'number'
-        ? [{ id: 'number', label: t({ message: 'Number', context: 'item number' }) }]
+        ? [
+            {
+              id: 'number',
+              label: t({ message: 'Number', context: 'item number' }),
+            },
+          ]
         : []),
       { id: 'created', label: t`Created` },
       { id: 'updated', label: t`Updated` },
@@ -91,7 +98,7 @@ export function EntityViewOptionsBar({
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false)
   const hasSearchValue = filters.search.trim().length > 0
 
-  // The sheet only mounts below `sm` and its overlay carries no responsive
+  // The drawer only opens below `sm` and its overlay carries no responsive
   // class, so leaving it open across the breakpoint dims the page with nothing
   // to dismiss. Close it on leaving compact.
   const { size } = useScreenSize()
@@ -120,6 +127,12 @@ export function EntityViewOptionsBar({
     return options
   }, [fields, activeSortId])
   const builtInSortOptions = useBuiltInSortOptions(numbered, activeSortId)
+
+  // Read through the same default the button shows. A view with no stored
+  // sort draws ascending, and comparing the missing value itself sent the
+  // first tap to ascending again, so it did nothing.
+  const nextDirection: EntitySortState['direction'] =
+    (sort?.direction || 'asc') === 'asc' ? 'desc' : 'asc'
 
   const updateSearch = (search: string) => {
     onFilterChange({ ...filters, search })
@@ -164,55 +177,58 @@ export function EntityViewOptionsBar({
         </div>
       </div>
 
-      <Sheet
+      <Drawer
         open={isCompact && isMobileControlsOpen}
         onOpenChange={setIsMobileControlsOpen}
+        direction='bottom'
       >
-        <SheetContent
-          side='bottom'
-          className='max-h-[80vh] gap-0 rounded-t-lg p-0'
-          onOpenAutoFocus={(event) => event.preventDefault()}
-        >
-          <SheetHeader>
-            <SheetTitle>
+        <DrawerContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DrawerHeader>
+            <DrawerTitle>
               <Trans>View controls</Trans>
-            </SheetTitle>
-            <SheetDescription className='sr-only'>
+            </DrawerTitle>
+            <DrawerDescription className='sr-only'>
               <Trans>Search, watch, and sort this view.</Trans>
-            </SheetDescription>
-          </SheetHeader>
-          <div className='space-y-5 overflow-y-auto p-4 pt-0'>
-            <div className='space-y-2'>
-              <Label htmlFor='entity-mobile-view-search'>
-                <Trans>Search</Trans>
-              </Label>
-              <Input
-                id='entity-mobile-view-search'
-                type='search'
-                placeholder={t`Search...`}
-                value={filters.search}
-                onChange={(e) => updateSearch(e.target.value)}
-              />
-            </div>
+            </DrawerDescription>
+          </DrawerHeader>
 
-            <Button
-              variant={filters.watched ? 'default' : 'outline'}
-              className='w-full justify-start'
-              aria-label={t`Toggle watched filter`}
-              onClick={() =>
-                onFilterChange({ ...filters, watched: !filters.watched })
+          <SearchInput
+            aria-label={t`Search`}
+            placeholder={t`Search...`}
+            value={filters.search}
+            onValueChange={updateSearch}
+          />
+
+          {/* One bordered group, a row per control, the control at the row's
+              end: the shape a phone's own settings use. */}
+          <div className='divide-y rounded-lg border'>
+            <SwitchLabel
+              className='min-h-12 px-3'
+              label={
+                <span className='flex items-center gap-2'>
+                  <Eye className='text-muted-foreground size-4 shrink-0' />
+                  <Trans>Watched only</Trans>
+                </span>
               }
             >
-              <Eye className='size-4' />
-              <Trans>Watched only</Trans>
-            </Button>
+              <Switch
+                checked={!!filters.watched}
+                onCheckedChange={(watched) =>
+                  onFilterChange({ ...filters, watched })
+                }
+              />
+            </SwitchLabel>
 
             {showSort && (
-              <div className='space-y-2'>
-                <Label>
+              <div className='flex min-h-12 items-center gap-2 px-3 py-1.5'>
+                <Label
+                  id='entity-mobile-view-sort'
+                  className='flex shrink-0 items-center gap-2 font-normal'
+                >
+                  <ArrowUpDown className='text-muted-foreground size-4 shrink-0' />
                   <Trans>Sort</Trans>
                 </Label>
-                <div className='flex items-center gap-2'>
+                <div className='ms-auto flex min-w-0 items-center gap-2'>
                   <Select
                     value={sort?.field || 'rank'}
                     onValueChange={(value) =>
@@ -222,7 +238,10 @@ export function EntityViewOptionsBar({
                       })
                     }
                   >
-                    <SelectTrigger className='min-w-0 flex-1'>
+                    <SelectTrigger
+                      aria-labelledby='entity-mobile-view-sort'
+                      className='max-w-44 min-w-0'
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -252,17 +271,17 @@ export function EntityViewOptionsBar({
                     onToggle={() =>
                       onSortChange({
                         field: sort?.field || 'rank',
-                        direction: sort?.direction === 'asc' ? 'desc' : 'asc',
+                        direction: nextDirection,
                       })
                     }
-                    size='sm'
+                    className='shrink-0'
                   />
                 </div>
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
 
       <PageUtilityBar compact scrollable className='hidden sm:block'>
         <ViewTabs
@@ -339,7 +358,7 @@ export function EntityViewOptionsBar({
                 onToggle={() =>
                   onSortChange({
                     field: sort?.field || 'rank',
-                    direction: sort?.direction === 'asc' ? 'desc' : 'asc',
+                    direction: nextDirection,
                   })
                 }
                 size='sm'

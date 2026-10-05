@@ -70,7 +70,9 @@ export function ViewTabs({
       className='no-scrollbar border-border gap-0 overflow-x-auto border-b'
     >
       <div className='flex min-w-max items-center gap-1'>
-        <TabsList className='w-auto border-b-0'>
+        {/* The wrapper draws the rule and does the scrolling here, so Add view
+            travels with the tabs. */}
+        <TabsList className='w-auto overflow-visible shadow-none'>
           {views.map((view) => (
             <TabsTrigger key={view.id} value={view.id} className='gap-2'>
               {getViewIcon(view.viewtype)}

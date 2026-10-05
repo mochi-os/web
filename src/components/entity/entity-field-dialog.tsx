@@ -20,7 +20,7 @@ import { Input } from '../ui/input'
 import { useFieldTypeLabels } from '../../hooks/use-field-type-labels'
 import { ENTITY_LIMIT } from '../../lib/entity-api'
 import { Label } from '../ui/label'
-import { Switch } from '../ui/switch'
+import { Switch, SwitchLabel } from '../ui/switch'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { Check, Minus, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { EntityField, EntityFieldOption } from '../../types/entity-object'
@@ -256,16 +256,12 @@ export function EditFieldDialog({
                 { id: 'required', label: <Trans>Required</Trans> },
                 { id: 'sort', label: <Trans>Allow sort by</Trans> },
               ].map((flag) => (
-                <label
-                  key={flag.id}
-                  className='flex items-center gap-2 text-sm cursor-pointer'
-                >
+                <SwitchLabel key={flag.id} label={flag.label}>
                   <Switch
                     checked={hasFlag(flag.id)}
                     onCheckedChange={(checked) => toggleFlag(flag.id, checked)}
                   />
-                  {flag.label}
-                </label>
+                </SwitchLabel>
               ))}
             </div>
           </div>

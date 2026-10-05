@@ -28,4 +28,32 @@ function Switch({
   )
 }
 
-export { Switch }
+// A switch with its words, as one tap target. From sm up the switch leads and
+// the words follow, as in a list of options. Below sm the words lead and the
+// switch sits at the end of the row, where a phone's own settings put it.
+function SwitchLabel({
+  label,
+  className,
+  children,
+  ...props
+}: Omit<React.ComponentProps<'label'>, 'children'> & {
+  label: React.ReactNode
+  /** The Switch itself. */
+  children: React.ReactNode
+}) {
+  return (
+    <label
+      data-slot='switch-label'
+      className={cn(
+        'flex cursor-pointer items-center gap-2 text-sm max-sm:flex-row-reverse max-sm:justify-between',
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <span className='min-w-0'>{label}</span>
+    </label>
+  )
+}
+
+export { Switch, SwitchLabel }
