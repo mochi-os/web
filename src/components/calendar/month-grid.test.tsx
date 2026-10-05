@@ -705,7 +705,7 @@ describe('MonthGrid event states', () => {
 })
 
 describe('MonthGrid week numbers', () => {
-  const label = (first: string) => {
+  const week = (first: string, today = '2026-10-07') => {
     const days = Array.from({ length: 7 }, (_, index) => {
       const day = new Date(`${first}T00:00:00Z`)
       day.setUTCDate(day.getUTCDate() + index)
@@ -717,7 +717,7 @@ describe('MonthGrid week numbers', () => {
           days={days}
           month={10}
           events={[]}
-          today='2026-10-07'
+          today={today}
           weekNumbers
           onSelect={vi.fn()}
           onCreate={vi.fn()}
@@ -726,8 +726,9 @@ describe('MonthGrid week numbers', () => {
         />
       </I18nProvider>
     )
-    return screen.getByTestId('week-number').textContent
+    return screen.getByTestId('week-number')
   }
+  const label = (first: string) => week(first).textContent
 
   afterEach(cleanup)
 
@@ -742,5 +743,29 @@ describe('MonthGrid week numbers', () => {
 
   it('names a Monday-first row by its own week, as before', () => {
     expect(label('2026-10-05')).toBe('41')
+  })
+
+  it("sits in the corner of the row's first day, before its date", () => {
+    const number = week('2026-10-05')
+    const day = number.closest('[data-day]')
+    expect(day?.getAttribute('data-day')).toBe('2026-10-05')
+    expect(number.nextElementSibling?.textContent).toBe('5')
+  })
+
+  it('takes no column of its own beside the days or the weekday names', () => {
+    week('2026-10-05')
+    const weeks = screen.getByTestId('weeks')
+    // A row holds the seven days alone, and so does the header above.
+    expect(weeks.firstElementChild?.childElementCount).toBe(1)
+    expect(weeks.firstElementChild?.firstElementChild?.childElementCount).toBe(
+      7
+    )
+    expect(weeks.previousElementSibling?.childElementCount).toBe(7)
+  })
+
+  it("reads on today's coloured header when the first day is today", () => {
+    const number = week('2026-10-05', '2026-10-05')
+    expect(number.classList.contains('text-muted-foreground')).toBe(false)
+    expect(number.classList.contains('text-primary-foreground/80')).toBe(true)
   })
 })
