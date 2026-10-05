@@ -40,11 +40,11 @@ export function Section({
     <Card className={cn('shadow-md', className)}>
       <CardHeader
         className={cn(
-          'flex flex-row items-start justify-between space-y-0',
+          'flex flex-row items-start justify-between gap-3 space-y-0',
           showContent ? 'border-b/60 border-b pb-2' : 'pb-2'
         )}
       >
-        <div className='space-y-1'>
+        <div className='min-w-0 space-y-1'>
           <CardTitle className='text-lg leading-tight'>{title}</CardTitle>
           {description && <CardDescription>{description}</CardDescription>}
         </div>
@@ -64,6 +64,12 @@ interface FieldRowProps {
   children: React.ReactNode
   className?: string
   description?: string
+  /**
+   * For a row whose control is a switch or another small control. Below sm
+   * the control sits at the end of the label's line instead of under it, the
+   * way a phone's own settings lay a toggle out. From sm up nothing changes.
+   */
+  inline?: boolean
 }
 
 export function FieldRow({
@@ -71,16 +77,27 @@ export function FieldRow({
   children,
   className,
   description,
+  inline = false,
 }: FieldRowProps) {
   return (
     <dl
       className={cn(
-        'm-0 grid grid-cols-1 items-start gap-2 py-2 sm:grid-cols-[300px_minmax(0,1fr)] sm:gap-5',
+        'm-0 grid gap-2 py-2 sm:grid-cols-[300px_minmax(0,1fr)] sm:items-start sm:gap-5',
+        inline
+          ? 'grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4'
+          : 'grid-cols-1 items-start',
         className
       )}
     >
       <dt className='flex min-h-9 flex-col justify-center'>
-        <span className='text-muted-foreground text-sm font-medium leading-none sm:leading-tight'>
+        <span
+          className={cn(
+            'text-muted-foreground text-sm font-medium sm:leading-tight',
+            // An inline label shares its line, so it wraps sooner and needs
+            // room between its lines.
+            inline ? 'leading-snug' : 'leading-none'
+          )}
+        >
           {label}
         </span>
         {description && (

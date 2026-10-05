@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { SortDirectionButton } from '../ui/sort-direction-button'
-import { Switch } from '../ui/switch'
+import { Switch, SwitchLabel } from '../ui/switch'
 import { naturalCompare } from '../../lib/utils'
 import { Check, GripVertical, Minus, MoreHorizontal, Plus } from 'lucide-react'
 import type {
@@ -367,16 +367,12 @@ export function ViewSheet({
             </Label>
             <div className='ps-4 space-y-1'>
               {classes.map((cls) => (
-                <label
-                  key={cls.id}
-                  className='flex items-center gap-2 text-sm cursor-pointer'
-                >
+                <SwitchLabel key={cls.id} label={cls.name}>
                   <Switch
                     checked={selectedClasses.includes(cls.id)}
                     onCheckedChange={() => toggleClass(cls.id)}
                   />
-                  {cls.name}
-                </label>
+                </SwitchLabel>
               ))}
             </div>
           </div>
@@ -510,7 +506,10 @@ export function ViewSheet({
                     }`}
                   >
                     <GripVertical className='size-4 text-muted-foreground shrink-0' />
+                    {/* Below sm the switch goes to the row's end, to line
+                        up with the fields that are switched off below. */}
                     <Switch
+                      className='max-sm:order-last max-sm:ms-auto'
                       checked
                       onCheckedChange={() => toggleViewField(field!.id)}
                     />
@@ -525,16 +524,16 @@ export function ViewSheet({
             {fields
               .filter((f) => !selectedFields.includes(f.id))
               .map((field) => (
-                <label
+                <SwitchLabel
                   key={field.id}
-                  className='flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer'
+                  label={field.name}
+                  className='px-3 py-1.5'
                 >
                   <Switch
                     checked={false}
                     onCheckedChange={() => toggleViewField(field.id)}
                   />
-                  {field.name}
-                </label>
+                </SwitchLabel>
               ))}
           </div>
         </div>

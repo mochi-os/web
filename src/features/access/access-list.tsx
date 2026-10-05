@@ -1,9 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { User, UsersRound, Globe, Users, X, Trash2 } from 'lucide-react'
+import { cn } from '../../lib/utils'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import {
@@ -200,8 +201,11 @@ export function AccessList({
 
   return (
     <>
-      <Table bordered={bordered}>
-        <TableHeader>
+      {/* Below sm the three columns do not fit beside each other, so each rule
+          becomes two lines: who it is for with Remove at the end, then the
+          level picker at full width. Same markup, laid out as a grid. */}
+      <Table bordered={bordered} className='max-sm:block'>
+        <TableHeader className='max-sm:sr-only'>
           <TableRow>
             <TableHead>
               <Trans>Subject</Trans>
@@ -212,7 +216,7 @@ export function AccessList({
             <TableHead className='w-[50px]'></TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className='max-sm:block'>
           {sortedSubjects.map(([subject, data]) => {
             // For hierarchical model, use the first (and only) rule
             // For permission model, this would need different handling
@@ -222,16 +226,24 @@ export function AccessList({
             const isOwner = data.owner
 
             return (
-              <TableRow key={subject}>
-                <TableCell>
-                  <div className='flex items-center gap-2'>
+              <TableRow
+                key={subject}
+                className={cn(
+                  'max-sm:grid max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:items-center max-sm:gap-x-2 max-sm:py-2',
+                  // Inside a Card the card pads the row; with its own border
+                  // the table has to.
+                  bordered && 'max-sm:px-3'
+                )}
+              >
+                <TableCell className='max-sm:block max-sm:min-w-0 max-sm:px-0 max-sm:py-1'>
+                  <div className='flex min-w-0 items-center gap-2'>
                     {getSubjectIcon(subject)}
-                    <span className='font-medium'>
+                    <span className='font-medium max-sm:truncate'>
                       {formatSubject(subject, data.name)}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className='max-sm:col-span-2 max-sm:row-start-2 max-sm:block max-sm:px-0 max-sm:py-1'>
                   {isOwner ? (
                     <span className='text-sm'>
                       <Trans>Owner</Trans>
@@ -245,8 +257,12 @@ export function AccessList({
                       disabled={isUpdating}
                     >
                       <SelectTrigger
-                        style={{ minWidth: selectWidth }}
-                        className='h-8 -ms-3 max-w-full'
+                        style={
+                          {
+                            '--access-select-width': `${selectWidth}px`,
+                          } as CSSProperties
+                        }
+                        className='h-8 max-w-full max-sm:w-full sm:-ms-3 sm:min-w-(--access-select-width)'
                       >
                         <SelectValue>{getLevelLabel(currentLevel)}</SelectValue>
                       </SelectTrigger>
@@ -260,7 +276,7 @@ export function AccessList({
                     </Select>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className='max-sm:col-start-2 max-sm:row-start-1 max-sm:block max-sm:p-0'>
                   {!isOwner && (
                     <Tooltip>
                       <TooltipTrigger asChild>

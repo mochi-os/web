@@ -13,9 +13,15 @@ const TabsVariantContext = React.createContext<TabsVariant>('segmented')
 const tabsListVariants = cva('text-muted-foreground inline-flex items-center', {
   variants: {
     variant: {
-      segmented: 'bg-muted h-9 w-fit justify-center rounded-lg p-[3px]',
+      // Both strips scroll sideways once their tabs outgrow a narrow screen,
+      // rather than pushing the page wider. A strip that fits is unchanged.
+      segmented:
+        'bg-muted no-scrollbar h-9 w-fit max-w-full justify-start overflow-x-auto rounded-lg p-[3px]',
+      // The rule under the strip is an inset shadow, not a border: a scroll
+      // container clips at its padding edge, so a tab could no longer lay its
+      // own underline over a real border.
       underline:
-        'border-border h-auto w-full justify-start gap-1 rounded-none border-b bg-transparent p-0',
+        'no-scrollbar h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 shadow-[inset_0_-1px_0_var(--border)]',
     },
   },
   defaultVariants: { variant: 'segmented' },
@@ -29,7 +35,7 @@ const tabsTriggerVariants = cva(
         segmented:
           'data-[state=active]:bg-background dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground h-[calc(100%-1px)] flex-1 rounded-md border border-transparent px-2 py-1 focus-visible:ring-[3px] focus-visible:outline-1 data-[state=active]:shadow-sm',
         underline:
-          'text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground focus-visible:ring-ring/40 focus-visible:rounded-t-sm focus-visible:ring-2 focus-visible:outline-none -mb-px rounded-none border-b-2 border-transparent px-4 py-2',
+          'text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground focus-visible:ring-ring/40 focus-visible:rounded-t-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none shrink-0 rounded-none border-b-2 border-transparent px-4 py-2',
       },
     },
     defaultVariants: { variant: 'segmented' },
@@ -61,8 +67,27 @@ function TabsList({
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
   const contextVariant = React.useContext(TabsVariantContext)
+  const listRef = React.useRef<HTMLDivElement>(null)
+
+  // Bring the active tab into view when the strip scrolls, so a tab opened
+  // from a link is not left off screen. Only the strip moves, never the page.
+  React.useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list || list.scrollWidth <= list.clientWidth) return
+    const active = list.querySelector<HTMLElement>('[data-state=active]')
+    if (!active) return
+    const listBox = list.getBoundingClientRect()
+    const tabBox = active.getBoundingClientRect()
+    if (tabBox.left < listBox.left) {
+      list.scrollLeft -= listBox.left - tabBox.left
+    } else if (tabBox.right > listBox.right) {
+      list.scrollLeft += tabBox.right - listBox.right
+    }
+  })
+
   return (
     <TabsPrimitive.List
+      ref={listRef}
       data-slot='tabs-list'
       className={cn(
         tabsListVariants({ variant: variant ?? contextVariant }),

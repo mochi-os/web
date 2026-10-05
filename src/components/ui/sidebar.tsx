@@ -254,6 +254,20 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          // Sheets ignore outside taps so a half-filled form is not lost. The
+          // navigation holds links only, so it closes on one, like any phone
+          // menu. Only a tap on the dimmed area counts: the header's own
+          // toggle sits outside the sheet, and closing on it here would have
+          // the toggle open the menu again at once.
+          onInteractOutside={(event) => {
+            const target = event.detail.originalEvent.target
+            if (
+              !(target instanceof Element) ||
+              !target.closest('[data-slot=sheet-overlay]')
+            ) {
+              event.preventDefault()
+            }
+          }}
         >
           <SheetHeader className='sr-only'>
             <SheetTitle>

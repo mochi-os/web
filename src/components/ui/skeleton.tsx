@@ -10,7 +10,7 @@ function Skeleton({
   return (
     <div
       data-slot='skeleton'
-      className={cn('bg-hover animate-pulse rounded-md', className)}
+      className={cn('bg-hover max-w-full animate-pulse rounded-md', className)}
       {...props}
     />
   )
