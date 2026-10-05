@@ -37,11 +37,11 @@ import { useEventTooltip } from './tooltip'
 import type { CalendarEvent, EventMove } from './types'
 
 const HOUR = 80
-// The shortest block still shows one line of text; a taller one adds the
-// time and place beneath the title.
+// The shortest block still shows one line of text: its dot, its start and
+// its title. One this tall puts its dot, time and marks on a line of their
+// own and its title beneath, and a taller one adds the place.
 const LINE = 24
-const TWO_LINES = 48
-// A week block's title, its time line and its location.
+const PAIR = 36
 const THREE_LINES = 56
 const SNAP = 15
 const MINIMUM = 15
@@ -1087,10 +1087,6 @@ export function TimeGrid({
       event.key === selected && 'bg-primary/10 border-primary'
     )
 
-  // A week's narrow columns give the time and the marks a line of their own
-  // under the title; a single day has room for them beside it.
-  const stacked = days.length > 1
-
   const gridTemplate = {
     // eslint-disable-next-line lingui/no-unlocalized-strings -- a CSS grid template, never shown to anyone
     gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
@@ -1382,16 +1378,12 @@ export function TimeGrid({
                           width: `calc(${100 / item.width}% - 2px)`,
                         }}
                       >
-                        {stacked ? (
+                        {((end - start) / 60) * HOUR >= PAIR ? (
                           <>
-                            <div className='flex items-center gap-1.5'>
-                              <EventDot event={item.event} />
-                              <EventTitle
-                                event={item.event}
-                                className='flex-1 font-medium'
-                              />
-                            </div>
-                            <div className='text-muted-foreground flex items-center gap-1 ps-3.5 text-xs leading-4'>
+                            <div className='text-muted-foreground flex items-center gap-1 text-xs leading-4'>
+                              {/* As far from the time as an all-day bar's
+                                  dot is from its title. */}
+                              <EventDot event={item.event} className='me-0.5' />
                               <span className='min-w-0 truncate'>
                                 {reading(item.event)}
                               </span>
@@ -1401,36 +1393,34 @@ export function TimeGrid({
                               />
                               <AlarmMark event={item.event} />
                             </div>
+                            <div className='flex'>
+                              <EventTitle
+                                event={item.event}
+                                className='flex-1 font-medium'
+                              />
+                            </div>
                             {((end - start) / 60) * HOUR >= THREE_LINES &&
                               item.event.location && (
-                                <div className='text-muted-foreground truncate ps-3.5 text-xs leading-4'>
+                                <div className='text-muted-foreground truncate text-xs leading-4'>
                                   {item.event.location}
                                 </div>
                               )}
                           </>
                         ) : (
-                          <>
-                            <div className='flex items-center gap-1.5'>
-                              <EventDot event={item.event} />
-                              <EventTitle
-                                event={item.event}
-                                className='flex-1 font-medium'
-                              />
-                              <EventMarks
-                                event={item.event}
-                                backwards={item.backwards}
-                              />
-                              <span className='text-muted-foreground shrink-0'>
-                                {reading(item.event)}
-                              </span>
-                            </div>
-                            {((end - start) / 60) * HOUR >= TWO_LINES &&
-                              item.event.location && (
-                                <div className='text-muted-foreground truncate text-xs'>
-                                  {item.event.location}
-                                </div>
-                              )}
-                          </>
+                          <div className='flex items-center gap-1.5'>
+                            <EventDot event={item.event} />
+                            <span className='text-muted-foreground shrink-0 text-xs'>
+                              {clock(item.event)}
+                            </span>
+                            <EventTitle
+                              event={item.event}
+                              className='flex-1 font-medium'
+                            />
+                            <EventMarks
+                              event={item.event}
+                              backwards={item.backwards}
+                            />
+                          </div>
                         )}
                         {!item.event.readonly && (
                           <div
@@ -1476,27 +1466,52 @@ export function TimeGrid({
                           )}px`,
                         }}
                       >
-                        <div className='flex items-center gap-1.5'>
-                          <EventDot event={lifted.event} />
-                          {lifted.mode === 'move' && lifted.copy && (
-                            <Copy
-                              className='size-3 shrink-0'
-                              aria-label={t`Copy`}
-                            />
-                          )}
-                          <EventTitle
-                            event={lifted.event}
-                            className='flex-1 font-medium'
-                          />
-                          {!stacked && (
-                            <span className='text-muted-foreground shrink-0'>
-                              {tentative(lifted)}
+                        {(((lifted.mode === 'move'
+                          ? lifted.start + lifted.length
+                          : lifted.finish) -
+                          lifted.start) /
+                          60) *
+                          HOUR >=
+                        PAIR ? (
+                          <>
+                            <div className='text-muted-foreground flex items-center gap-1 text-xs leading-4'>
+                              <EventDot
+                                event={lifted.event}
+                                className='me-0.5'
+                              />
+                              {lifted.mode === 'move' && lifted.copy && (
+                                <Copy
+                                  className='size-3 shrink-0'
+                                  aria-label={t`Copy`}
+                                />
+                              )}
+                              <span className='min-w-0 truncate'>
+                                {tentative(lifted)}
+                              </span>
+                            </div>
+                            <div className='flex'>
+                              <EventTitle
+                                event={lifted.event}
+                                className='flex-1 font-medium'
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div className='flex items-center gap-1.5'>
+                            <EventDot event={lifted.event} />
+                            {lifted.mode === 'move' && lifted.copy && (
+                              <Copy
+                                className='size-3 shrink-0'
+                                aria-label={t`Copy`}
+                              />
+                            )}
+                            <span className='text-muted-foreground shrink-0 text-xs'>
+                              {span(lifted)[0]}
                             </span>
-                          )}
-                        </div>
-                        {stacked && (
-                          <div className='text-muted-foreground truncate ps-3.5 text-xs leading-4'>
-                            {tentative(lifted)}
+                            <EventTitle
+                              event={lifted.event}
+                              className='flex-1 font-medium'
+                            />
                           </div>
                         )}
                       </div>
