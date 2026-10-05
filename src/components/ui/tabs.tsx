@@ -69,13 +69,18 @@ function TabsList({
   const contextVariant = React.useContext(TabsVariantContext)
   const listRef = React.useRef<HTMLDivElement>(null)
 
+  const shownRef = React.useRef<HTMLElement | null>(null)
+
   // Bring the active tab into view when the strip scrolls, so a tab opened
   // from a link is not left off screen. Only the strip moves, never the page.
+  // Once per active tab: this runs on every render, and a strip the user has
+  // swiped along must not jump back when something unrelated re-renders it.
   React.useLayoutEffect(() => {
     const list = listRef.current
     if (!list || list.scrollWidth <= list.clientWidth) return
     const active = list.querySelector<HTMLElement>('[data-state=active]')
-    if (!active) return
+    if (!active || active === shownRef.current) return
+    shownRef.current = active
     const listBox = list.getBoundingClientRect()
     const tabBox = active.getBoundingClientRect()
     if (tabBox.left < listBox.left) {

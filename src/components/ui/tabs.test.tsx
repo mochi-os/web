@@ -47,6 +47,29 @@ describe('TabsList', () => {
     expect(renderStrip('third').scrollLeft).toBe(200)
   })
 
+  it('leaves the strip where the user swiped it on a later render', () => {
+    layOut(500, 300)
+    const strip = (value: string) => (
+      <Tabs variant='underline' value={value}>
+        <TabsList>
+          <TabsTrigger value='first'>First</TabsTrigger>
+          <TabsTrigger value='third'>Third</TabsTrigger>
+        </TabsList>
+      </Tabs>
+    )
+    const { rerender } = render(strip('third'))
+    const list = screen.getByRole('tablist')
+    expect(list.scrollLeft).toBe(200)
+
+    list.scrollLeft = 0
+    rerender(strip('third'))
+    expect(list.scrollLeft).toBe(0)
+
+    rerender(strip('first'))
+    rerender(strip('third'))
+    expect(list.scrollLeft).toBe(200)
+  })
+
   it('leaves a strip that fits where it is', () => {
     layOut(300, 300)
     expect(renderStrip('third').scrollLeft).toBe(0)
