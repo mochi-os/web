@@ -195,7 +195,7 @@ export function EntityObjectAttachments({
                       <TooltipTrigger asChild>
                         <button
                           type='button'
-                          className='absolute -top-1.5 -right-1.5 hidden group-hover/item:flex [@media(hover:none)]:flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm'
+                          className='absolute -top-1.5 -right-1.5 hidden group-hover/item:flex group-focus-within/item:flex [@media(hover:none)]:flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm'
                           onClick={(e) => {
                             e.stopPropagation()
                             setDeleteTarget(att as AttachmentData)
@@ -247,7 +247,7 @@ export function EntityObjectAttachments({
                       <AttachmentAction
                         variant='ghost'
                         size='icon'
-                        className='opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-destructive'
+                        className='opacity-0 group-hover/attachment:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-muted-foreground hover:text-destructive'
                         onClick={() => setDeleteTarget(file)}
                       >
                         <Trash2 className='size-3' />

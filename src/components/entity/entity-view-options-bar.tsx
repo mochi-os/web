@@ -98,11 +98,14 @@ export function EntityViewOptionsBar({
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false)
   const hasSearchValue = filters.search.trim().length > 0
 
-  // The drawer only opens below `sm` and its overlay carries no responsive
-  // class, so leaving it open across the breakpoint dims the page with nothing
-  // to dismiss. Close it on leaving compact.
+  // Below `lg` the controls live in a drawer: from 640 px up the inline bar
+  // still needs about 950 px for the tabs, search, Watched and sort, so a
+  // tablet would scroll it sideways. The drawer only opens while compact and
+  // its overlay carries no responsive class, so leaving it open across the
+  // breakpoint dims the page with nothing to dismiss. Close it on leaving
+  // compact.
   const { size } = useScreenSize()
-  const isCompact = size === 'xs'
+  const isCompact = size === 'xs' || size === 'sm' || size === 'md'
   useEffect(() => {
     if (!isCompact) setIsMobileControlsOpen(false)
   }, [isCompact])
@@ -146,7 +149,7 @@ export function EntityViewOptionsBar({
 
   return (
     <>
-      <div className='sticky top-[calc(var(--sticky-top,0px)+56px)] z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 sm:hidden'>
+      <div className='sticky top-[calc(var(--sticky-top,0px)+56px)] z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 lg:hidden'>
         <div className='flex items-center'>
           <div className='min-w-0 flex-1 overflow-x-auto no-scrollbar'>
             <div className='flex min-w-max items-center px-4 py-2'>
@@ -283,7 +286,7 @@ export function EntityViewOptionsBar({
         </DrawerContent>
       </Drawer>
 
-      <PageUtilityBar compact scrollable className='hidden sm:block'>
+      <PageUtilityBar compact scrollable className='hidden lg:block'>
         <ViewTabs
           variant='pill'
           views={views}

@@ -68,4 +68,19 @@ describe('EntityCommentThread', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByRole('textbox')).toHaveAttribute('maxlength', '50000')
   })
+
+  it('puts the phone menu on the name row instead of a row of its own', () => {
+    // Asserted on classes: jsdom applies no media queries, so both layouts
+    // render here and only the classes say which one a phone gets.
+    show(comment('root'))
+    const menu = screen.getByRole('button', { name: 'Comment actions' })
+    const nameRow = screen.getByText('Ada').parentElement as HTMLElement
+    expect(nameRow.contains(menu)).toBe(true)
+    expect(menu.parentElement?.className).toContain('md:hidden')
+
+    const actionsRow = screen.getByRole('button', { name: 'Reply' })
+      .parentElement?.parentElement as HTMLElement
+    expect(actionsRow.className).toMatch(/(^|\s)hidden(\s|$)/)
+    expect(actionsRow.className).toContain('md:flex')
+  })
 })
