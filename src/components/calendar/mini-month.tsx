@@ -75,10 +75,14 @@ export function MiniMonth({
         }
       />
 
+      {/* Week numbers take a narrow gutter of their own: a cell this small
+          has no corner to spare for them, but a day's width is too much. */}
       <div
         className={cn(
           'mt-1 grid gap-px text-center text-[0.6875rem]',
-          weekNumbers ? 'grid-cols-8' : 'grid-cols-7'
+          weekNumbers
+            ? 'grid-cols-[1rem_repeat(7,minmax(0,1fr))]'
+            : 'grid-cols-7'
         )}
       >
         {weekNumbers && <span />}

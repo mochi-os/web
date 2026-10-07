@@ -54,7 +54,7 @@ export interface MonthGridProps {
   events: CalendarEvent[]
   /** Today in the user's own zone. */
   today: string
-  /** Draws the ISO week number in each row's gutter. */
+  /** Draws the ISO week number in the corner of each row's first day. */
   weekNumbers?: boolean
   /**
    * Where a day's all-day and multi-day events go among its timed ones:
@@ -600,12 +600,18 @@ export function MonthGrid({
   const clock = (event: CalendarEvent) =>
     format.formatClock(new Date(event.start * 1000), event.zone?.start)
 
-  // The title, then under it, aligned with it: the time, how it repeats,
-  // and whether it has a reminder.
+  // The dot, the time, how it repeats and whether it has a reminder, then
+  // under them the title, which has the line's whole width.
   const chipContent = (event: CalendarEvent, lifted: boolean) => (
     <>
+      <span className='text-muted-foreground flex items-center gap-1 text-xs leading-4'>
+        {/* As far from the time as an all-day bar's dot is from its title. */}
+        <EventDot event={event} className='me-0.5' />
+        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
+        {!lifted && <RepeatMark event={event} />}
+        {!lifted && <AlarmMark event={event} />}
+      </span>
       <span className='flex min-w-0 items-center gap-1.5'>
-        <EventDot event={event} />
         {lifted && dragging?.copy && (
           <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
         )}
@@ -613,11 +619,6 @@ export function MonthGrid({
           event={event}
           className={cn('flex-1', lifted && 'font-medium')}
         />
-      </span>
-      <span className='text-muted-foreground flex items-center gap-1 ps-3.5 text-xs leading-4'>
-        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
-        {!lifted && <RepeatMark event={event} />}
-        {!lifted && <AlarmMark event={event} />}
       </span>
     </>
   )
@@ -739,18 +740,15 @@ export function MonthGrid({
         if (direction) onStep?.(direction)
       }}
     >
-      <div className='flex border-b'>
-        {weekNumbers && <div className='w-8 shrink-0' />}
-        <div className='grid flex-1 grid-cols-7'>
-          {weekdayNames.map((name, index) => (
-            <div
-              key={index}
-              className='text-muted-foreground py-1 text-center text-xs'
-            >
-              {name}
-            </div>
-          ))}
-        </div>
+      <div className='grid grid-cols-7 border-b'>
+        {weekdayNames.map((name, index) => (
+          <div
+            key={index}
+            className='text-muted-foreground py-1 text-center text-xs'
+          >
+            {name}
+          </div>
+        ))}
       </div>
 
       <div
@@ -760,18 +758,8 @@ export function MonthGrid({
       >
         {rows.map((week) => (
           <div key={week[0]} className='flex min-h-0 flex-1 border-b'>
-            {weekNumbers && (
-              <div
-                data-testid='week-number'
-                className='text-muted-foreground w-8 shrink-0 pt-1 text-center text-[0.6875rem]'
-              >
-                {/* The middle day is in the ISO week most of the row is in,
-                    whichever day the week starts on. */}
-                {weekNumber(week[Math.min(3, week.length - 1)])}
-              </div>
-            )}
             <div className='grid flex-1 grid-cols-7'>
-              {week.map((day) => {
+              {week.map((day, column) => {
                 const outside = month !== undefined && monthOf(day) !== month
                 const list = lists.get(day)
                 const bars = {
@@ -815,10 +803,27 @@ export function MonthGrid({
                   >
                     <div
                       className={cn(
-                        'flex shrink-0 justify-end px-1 py-0.5',
+                        'flex shrink-0 items-center justify-end px-1 py-0.5',
                         day === today && 'bg-primary text-primary-foreground'
                       )}
                     >
+                      {/* The week number sits in the first day's corner,
+                          opposite its date, taking no width of its own. The
+                          middle day is in the ISO week most of the row is in,
+                          whichever day the week starts on. */}
+                      {weekNumbers && column === 0 && (
+                        <span
+                          data-testid='week-number'
+                          className={cn(
+                            'me-auto ps-0.5 text-[0.6875rem]',
+                            day === today
+                              ? 'text-primary-foreground/80'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {weekNumber(week[Math.min(3, week.length - 1)])}
+                        </span>
+                      )}
                       <button
                         type='button'
                         onClick={() => onDay(day)}

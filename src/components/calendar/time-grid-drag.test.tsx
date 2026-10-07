@@ -156,9 +156,10 @@ describe('TimeGrid dragging with a mouse', () => {
     expect(ghost()).toBeNull()
     fireEvent.pointerMove(window, pointer('mouse', x('2026-09-22'), y(570)))
     expect(ghost()).not.toBeNull()
-    // The dragged block reads the time it would land on, not where it was.
-    expect(ghost()!.textContent).toMatch(/09:30 to 10:30/)
-    expect(ghost()!.textContent).toMatch(/Standup/)
+    // The dragged block reads the time it would land on, not where it was,
+    // on the line above its title as a block at rest does.
+    expect(ghost()!.children[0].textContent).toMatch(/09:30 to 10:30/)
+    expect(ghost()!.children[1].textContent).toBe('Standup')
     fireEvent.pointerUp(window, pointer('mouse', x('2026-09-22'), y(570)))
     expect(onMove).toHaveBeenCalledWith({
       key: 'e1',

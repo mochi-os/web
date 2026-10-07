@@ -297,16 +297,19 @@ describe('TimeGrid event appearance', () => {
       container.querySelector(`[data-key="${key}"]`) as HTMLElement
   }
 
-  it('reads a week block as its dot and title, with its time on a line under the title, on a neutral card', () => {
+  it('reads a week block as its dot and time on one line, then its title on a line of its own, on a neutral card', () => {
     cleanup()
     const block = draw()('standup')
     const [first, second] = Array.from(block.children) as HTMLElement[]
     const dot = first.firstElementChild as HTMLElement
     expect(dot.classList.contains('rounded-full')).toBe(true)
     expect(dot.style.backgroundColor).toBe('rgb(96, 165, 250)')
-    expect(first.textContent).toBe('Standup')
-    expect(second.textContent).toMatch(/^\d{1,2}:\d{2}/)
-    expect(second.classList.contains('ps-3.5')).toBe(true)
+    // As far from the time as an all-day bar's dot is from its title.
+    expect(dot.classList.contains('me-0.5')).toBe(true)
+    expect(first.textContent).toMatch(/^\d{1,2}:\d{2}/)
+    // The title has the whole line, with no dot before it.
+    expect(second.textContent).toBe('Standup')
+    expect(second.querySelector('[aria-hidden].rounded-full')).toBeNull()
     expect(block.style.borderInlineStartColor).toBe('')
     expect(block.style.backgroundColor).toBe('')
     expect(block.classList.contains('bg-surface-2')).toBe(true)
@@ -333,16 +336,18 @@ describe('TimeGrid event appearance', () => {
     expect(find('standup').classList.contains('opacity-60')).toBe(false)
   })
 
-  it('puts the time, then the repeat mark, then the reminder under the title', () => {
+  it('puts the dot, the time, the repeat mark and the reminder above the title', () => {
     cleanup()
     const block = draw()('weekly')
-    const parts = Array.from(block.children[1].children) as HTMLElement[]
-    expect(parts[0].textContent).toMatch(/^\d{1,2}:\d{2}/)
-    expect(parts[1].getAttribute('aria-label')).toBe('Repeats')
-    expect(parts[2].getAttribute('aria-label')).toBe('Reminder')
+    const parts = Array.from(block.children[0].children) as HTMLElement[]
+    expect(parts[0].classList.contains('rounded-full')).toBe(true)
+    expect(parts[1].textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(parts[2].getAttribute('aria-label')).toBe('Repeats')
+    expect(parts[3].getAttribute('aria-label')).toBe('Reminder')
+    expect(block.children[1].textContent).toBe('Weekly')
   })
 
-  it('keeps a single day on one line: title, reminder, repeat mark, then the time at the end', () => {
+  it("puts a single day's block the same way as a week's: dot, time and marks above the title", () => {
     cleanup()
     const { container } = render(
       <I18nProvider i18n={i18n}>
@@ -361,12 +366,54 @@ describe('TimeGrid event appearance', () => {
       </I18nProvider>
     )
     const block = container.querySelector('[data-key="weekly"]') as HTMLElement
-    const parts = Array.from(block.firstElementChild!.children) as HTMLElement[]
-    const title = parts.findIndex((part) => part.textContent === 'Weekly')
-    expect(parts[title].classList.contains('flex-1')).toBe(true)
-    expect(parts[title + 1].getAttribute('aria-label')).toBe('Reminder')
-    expect(parts[title + 2].getAttribute('aria-label')).toBe('Repeats')
-    expect(parts[parts.length - 1].textContent).toMatch(/^\d{1,2}:\d{2}/)
+    const parts = Array.from(block.children[0].children) as HTMLElement[]
+    expect(parts[0].classList.contains('rounded-full')).toBe(true)
+    expect(parts[1].textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(parts[2].getAttribute('aria-label')).toBe('Repeats')
+    expect(parts[3].getAttribute('aria-label')).toBe('Reminder')
+    expect(block.children[1].textContent).toBe('Weekly')
+  })
+
+  it('keeps a block too short for two lines to one: dot, start, title, then its marks', () => {
+    cleanup()
+    const at = (hour: number, minute: number) =>
+      Date.UTC(2026, 8, 24, hour, minute) / 1000
+    const { container } = render(
+      <I18nProvider i18n={i18n}>
+        <TimeGrid
+          days={WEEK}
+          events={[
+            {
+              key: 'brief',
+              title: 'Brief',
+              colour: '#60a5fa',
+              start: at(9, 0),
+              finish: at(9, 15),
+              allday: false,
+              recurring: true,
+            },
+          ]}
+          duration={60}
+          hours={{ start: 8, finish: 17 }}
+          workdays={[1, 2, 3, 4, 5]}
+          today='2026-09-22'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    const block = container.querySelector('[data-key="brief"]') as HTMLElement
+    // One line of words, then the strip that takes the end.
+    expect(block.children).toHaveLength(2)
+    expect(block.children[1].getAttribute('role')).toBe('presentation')
+    const parts = Array.from(block.children[0].children) as HTMLElement[]
+    expect(parts[0].classList.contains('rounded-full')).toBe(true)
+    // The start alone: the block's height says how long it is.
+    expect(parts[1].textContent).toMatch(/^\d{1,2}:\d{2}$/)
+    expect(parts[2].textContent).toBe('Brief')
+    expect(parts[3].getAttribute('aria-label')).toBe('Repeats')
   })
 
   it('shows no reminder mark on an event without one', () => {
@@ -482,17 +529,16 @@ describe('TimeGrid event states', () => {
     expect(find('called').classList.contains('bg-primary/10')).toBe(false)
   })
 
-  it("reads a week block's time as a range under its title", () => {
+  it("reads a week block's time as a range above its title", () => {
     const block = draw()('maybe')
-    expect(block.children[1].textContent).toMatch(
+    expect(block.children[0].textContent).toMatch(
       /^\d{1,2}:\d{2} to \d{1,2}:\d{2}$/
     )
   })
 
-  it("reads a single day's block time as a range at the end of its line", () => {
+  it("reads a single day's block time as a range above its title", () => {
     const block = draw(['2026-09-24'])('maybe')
-    const parts = Array.from(block.firstElementChild!.children)
-    expect(parts[parts.length - 1].textContent).toMatch(
+    expect(block.children[0].textContent).toMatch(
       /^\d{1,2}:\d{2} to \d{1,2}:\d{2}$/
     )
   })

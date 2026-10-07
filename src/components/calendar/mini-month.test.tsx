@@ -128,4 +128,13 @@ describe('MiniMonth week numbers', () => {
     month(1)
     expect(numbers().slice(0, 2)).toEqual(['40', '41'])
   })
+
+  it('keeps the numbers to a narrow gutter, not a column as wide as a day', () => {
+    month(1)
+    const grid = screen.getAllByTestId('week-number')[0].parentElement!
+    expect(grid.classList.contains('grid-cols-8')).toBe(false)
+    expect(
+      grid.classList.contains('grid-cols-[1rem_repeat(7,minmax(0,1fr))]')
+    ).toBe(true)
+  })
 })
