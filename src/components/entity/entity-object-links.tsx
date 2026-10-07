@@ -290,7 +290,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
                 <TooltipTrigger asChild>
                   <button
                     type='button'
-                    className='hidden group-hover:inline-flex [@media(hover:none)]:inline-flex ms-auto text-muted-foreground hover:text-destructive shrink-0'
+                    className='inline-flex opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 ms-auto text-muted-foreground hover:text-destructive shrink-0'
                     onClick={() =>
                       deleteLinkMutation.mutate({
                         source: link.source,

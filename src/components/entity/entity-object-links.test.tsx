@@ -33,6 +33,6 @@ describe('EntityObjectLinks', () => {
     const grid = row.closest('.grid') as HTMLElement
     expect(grid.className).toContain('grid-cols-[120px_minmax(0,1fr)]')
     const remove = row.querySelector('button') as HTMLElement
-    expect(remove.className).toContain('[@media(hover:none)]:inline-flex')
+    expect(remove.className).toContain('[@media(hover:none)]:opacity-100')
   })
 })

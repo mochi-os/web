@@ -58,6 +58,7 @@ import type { EntityBoardContainerProps } from './entity-board-container'
 import type { EntityCreateObjectDialogProps } from './entity-create-object-dialog'
 import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
+import { EntityContentScroller } from './entity-content-scroller'
 import { useEntityWebsocket } from '../../hooks/use-entity-websocket'
 import { useKeyboardShortcuts } from '../../hooks/use-keyboard-shortcuts'
 import { usePageTitle } from '../../hooks/use-page-title'
@@ -1407,73 +1408,58 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         )}
       <Main fluid className='flex flex-col min-h-0 min-w-0 flex-1 !p-0'>
         {/* Content area */}
-        <div
-          data-slot='entity-content-scroll-area'
-          // The list's side gutter is a margin on the scroller, not padding
-          // inside it, so the pinned columns stop at the gutter instead of
-          // sliding to the screen edge when the table scrolls sideways.
-          className={
-            activeView?.viewtype === 'list'
-              ? 'flex-1 min-h-0 overflow-auto mx-4'
-              : 'flex-1 min-h-0 overflow-x-auto'
-          }
+        <EntityContentScroller
+          layout={activeView?.viewtype === 'list' ? 'list' : 'board'}
+          bare={!populated || objectsLoading}
         >
           {!populated || objectsLoading ? (
             <LoadingContent />
           ) : activeView?.viewtype === 'list' ? (
-            <div className='py-4'>
-              {renderTree({
-                objects: filteredObjects,
-                peopleMap,
-                viewFields: activeView?.fields,
-                viewClasses: activeView?.classes,
-                statusField: activeView?.columns,
-                borderField: activeView?.border,
-                sort,
-                onCardClick: handleCardClick,
-                onReparent: canWrite(access) ? handleReparent : undefined,
-                onReorder: canWrite(access) ? handleReorder : undefined,
-                onMoveObject: canWrite(access)
-                  ? handleListMoveObject
-                  : undefined,
-                selectedObjectId,
-                onCreateClick: canCreate(access)
-                  ? handleOpenCreateDialog
-                  : undefined,
-              })}
-            </div>
+            renderTree({
+              objects: filteredObjects,
+              peopleMap,
+              viewFields: activeView?.fields,
+              viewClasses: activeView?.classes,
+              statusField: activeView?.columns,
+              borderField: activeView?.border,
+              sort,
+              onCardClick: handleCardClick,
+              onReparent: canWrite(access) ? handleReparent : undefined,
+              onReorder: canWrite(access) ? handleReorder : undefined,
+              onMoveObject: canWrite(access) ? handleListMoveObject : undefined,
+              selectedObjectId,
+              onCreateClick: canCreate(access)
+                ? handleOpenCreateDialog
+                : undefined,
+            })
           ) : (
-            <div className='px-4 w-fit min-w-full'>
-              {renderBoard({
-                objects: filteredObjects,
-                statusField: columnField,
-                rowField,
-                borderField: activeView?.border,
-                viewFields: activeView?.fields,
-                viewClasses: activeView?.classes,
-                sort,
-                peopleMap,
-                onCardClick: handleCardClick,
-                onCardDoubleClick: canCreate(access)
-                  ? handleCreateChild
-                  : undefined,
-                onCreateClick: canCreate(access)
-                  ? handleCreateClick
-                  : undefined,
-                onMoveObject: canWrite(access) ? handleMoveObject : undefined,
-                onReparentObject: canWrite(access) ? handleReparent : undefined,
-                onRenameColumn: canDesign(access)
-                  ? handleRenameColumn
-                  : undefined,
-                onDeleteColumn: canDesign(access)
-                  ? handleDeleteColumn
-                  : undefined,
-                isReordering: isReorderingColumns,
-                onReorderColumns: handleReorderColumns,
-              })}
-            </div>
+            renderBoard({
+              objects: filteredObjects,
+              statusField: columnField,
+              rowField,
+              borderField: activeView?.border,
+              viewFields: activeView?.fields,
+              viewClasses: activeView?.classes,
+              sort,
+              peopleMap,
+              onCardClick: handleCardClick,
+              onCardDoubleClick: canCreate(access)
+                ? handleCreateChild
+                : undefined,
+              onCreateClick: canCreate(access) ? handleCreateClick : undefined,
+              onMoveObject: canWrite(access) ? handleMoveObject : undefined,
+              onReparentObject: canWrite(access) ? handleReparent : undefined,
+              onRenameColumn: canDesign(access)
+                ? handleRenameColumn
+                : undefined,
+              onDeleteColumn: canDesign(access)
+                ? handleDeleteColumn
+                : undefined,
+              isReordering: isReorderingColumns,
+              onReorderColumns: handleReorderColumns,
+            })
           )}
-        </div>
+        </EntityContentScroller>
       </Main>
 
       {/* Object detail dialog */}

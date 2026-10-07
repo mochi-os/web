@@ -9,6 +9,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { ViewTabs } from '../view-tabs'
 import { EntityBoardContainer } from './entity-board-container'
+import { EntityContentScroller } from './entity-content-scroller'
 import { EntityTreeView } from './entity-tree-view'
 import type { EntityDesign, EntityObject } from '../../types/entity-object'
 
@@ -78,9 +79,13 @@ export function EntityDesignPreview<TObject extends EntityObject>({
           />
         </div>
       </div>
-      <div className='flex-1 p-4 overflow-auto'>
-        {selectedView ? (
-          selectedView.viewtype === 'board' ? (
+      {selectedView ? (
+        // The same scroller as the real page, so pinned columns and the
+        // sticky header behave as they will once the design ships.
+        <EntityContentScroller
+          layout={selectedView.viewtype === 'board' ? 'board' : 'list'}
+        >
+          {selectedView.viewtype === 'board' ? (
             <EntityBoardContainer
               design={design}
               containerId={boardContainerId}
@@ -108,13 +113,13 @@ export function EntityDesignPreview<TObject extends EntityObject>({
               onCardClick={noop}
               preview
             />
-          )
-        ) : (
-          <div className='text-sm text-muted-foreground text-center py-8'>
-            <Trans>No views</Trans>
-          </div>
-        )}
-      </div>
+          )}
+        </EntityContentScroller>
+      ) : (
+        <div className='text-sm text-muted-foreground text-center py-8'>
+          <Trans>No views</Trans>
+        </div>
+      )}
     </div>
   )
 }

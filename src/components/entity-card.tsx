@@ -60,7 +60,7 @@ export function EntityCard({
           )}
         </div>
       </div>
-      <div className='flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all'>
+      <div className='flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-all'>
         <Button
           size='sm'
           disabled={isPending}
