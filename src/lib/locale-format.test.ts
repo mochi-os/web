@@ -8,9 +8,11 @@ import {
   currentZone,
   dayPeriods,
   formatClock,
+  formatClockRange,
   formatDate,
   formatHour,
   formatTime,
+  formatRange,
   formatDateTime,
   formatRelativeTime,
   formatUserTimestamp,
@@ -543,5 +545,61 @@ describe('a time typed by hand', () => {
     ]) {
       expect(parseClock(text)).toBeNull()
     }
+  })
+})
+
+describe('a span of time is written as the language writes a range', () => {
+  const at = (day: number, hours: number, minutes = 0) =>
+    new Date(Date.UTC(2026, 2, day, hours, minutes))
+
+  it('writes the clock times of a span within a day, a shared period once', () => {
+    load('en-us')
+    expect(formatClockRange(at(14, 9), at(14, 10, 30), '24h', 'UTC')).toBe(
+      '09:00\u2009–\u200910:30'
+    )
+    expect(formatClockRange(at(14, 9), at(14, 10, 30), '12h', 'UTC')).toBe(
+      '9:00\u2009–\u200910:30\u202fAM'
+    )
+    load('de')
+    expect(formatClockRange(at(14, 9), at(14, 10, 30), '24h', 'UTC')).toBe(
+      '09:00–10:30 Uhr'
+    )
+  })
+
+  it('writes clock times alone for a span ending at midnight', () => {
+    load('en-us')
+    expect(formatClockRange(at(14, 22), at(15, 0), '24h', 'UTC')).toBe(
+      '22:00\u2009–\u200900:00'
+    )
+  })
+
+  it('reads each end in its own zone', () => {
+    load('en-us')
+    // 15:00 in London is 00:00 the next day in Tokyo.
+    expect(
+      formatClockRange(at(14, 15), at(14, 23), '24h', 'Europe/London', 'Asia/Tokyo')
+    ).toBe('15:00\u2009–\u200908:00')
+  })
+
+  it('joins two ends as the language joins a range of dates and times', () => {
+    load('en-us')
+    expect(formatRange('Tue 22', 'Thu 24')).toMatch(/^Tue 22\s–\sThu 24$/)
+    load('ja')
+    expect(formatRange('22日', '24日')).toBe('22日～24日')
+    load('fa')
+    expect(formatRange('a', 'b')).toBe('a تا b')
+  })
+
+  it('keeps no bracket of the pattern for one end in the joint', () => {
+    // Basque writes "2000/01/01 (00:00) – 2001/02/02 (01:01)".
+    load('eu')
+    expect(formatRange('a', 'b')).toMatch(/^a\s–\sb$/)
+  })
+
+  it('ends the first line at the joint when broken', () => {
+    load('en-us')
+    expect(formatRange('Tue 22', 'Thu 24', true)).toMatch(/^Tue 22\s–\nThu 24$/)
+    load('ja')
+    expect(formatRange('22日', '24日', true)).toBe('22日～\n24日')
   })
 })

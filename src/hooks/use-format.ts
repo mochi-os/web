@@ -13,6 +13,8 @@ import {
   formatFileSize,
   formatList,
   formatClock,
+  formatClockRange,
+  formatRange,
   formatHour,
   formatWeekday,
   formatWeekdayShort,
@@ -62,6 +64,23 @@ export function useFormat() {
       // calendar shows events in their zones; "" means the user's.
       formatClock: (date: Date, zone?: string) =>
         formatClock(date, locale.timeFormat, zone || locale.timezone),
+      // The clock times of a span within a day, each end in its own zone
+      // when given.
+      formatClockRange: (
+        from: Date,
+        to: Date,
+        zones?: { start?: string; finish?: string }
+      ) =>
+        formatClockRange(
+          from,
+          to,
+          locale.timeFormat,
+          zones?.start || locale.timezone,
+          zones?.finish || zones?.start || locale.timezone
+        ),
+      // Two ends already written, joined as the language joins a range.
+      formatRange: (start: string, finish: string, broken?: boolean) =>
+        formatRange(start, finish, broken),
       formatHour: (date: Date) =>
         formatHour(date, locale.timeFormat, locale.timezone),
       formatWeekday: (date: Date) => formatWeekday(date, locale.timezone),

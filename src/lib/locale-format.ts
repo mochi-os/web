@@ -459,6 +459,133 @@ export function formatClock(
   return clockText(date, timeFormat, timezone, 'short')
 }
 
+// A part of a formatted range, which says which end it belongs to. The range
+// methods are looked up structurally, as in formatDayRange: the apps compile
+// against an ES2020 library that does not declare them.
+type RangePart = {
+  type: string
+  value: string
+  source: 'startRange' | 'endRange' | 'shared'
+}
+type Ranging = Intl.DateTimeFormat & {
+  formatRangeToParts?: (from: Date, to: Date) => RangePart[]
+}
+
+// Minutes and seconds two digits each, as clockText writes them.
+function padded(parts: { type: string; value: string }[]): string {
+  return parts
+    .map((part) =>
+      part.type === 'minute' || part.type === 'second'
+        ? part.value.padStart(2, '0')
+        : part.value
+    )
+    .join('')
+}
+
+// A range as the language writes it, or the two ends joined by a dash where
+// the engine has no ranges or refuses this one (an end the clock puts before
+// the start).
+function ranged(formatter: Intl.DateTimeFormat, from: Date, to: Date): string {
+  try {
+    const parts = (formatter as Ranging).formatRangeToParts?.(from, to)
+    if (parts) return padded(parts)
+  } catch {
+    // Fall through to the plain join.
+  }
+  const begins = padded(formatter.formatToParts(from))
+  const ends = padded(formatter.formatToParts(to))
+  return `${begins} – ${ends}`
+}
+
+// The clock reading [date] has in [zone], on a fixed day in UTC: two of them
+// make a range of clock times alone, which an end at midnight or in a zone
+// already on the next day cannot turn into one of dates.
+function clockOf(date: Date, zone?: string): Date {
+  const parts = zonedParts(date, zone)
+  const hour = parts ? parts.hour : date.getHours()
+  const minute = parts ? parts.minute : date.getMinutes()
+  return new Date(Date.UTC(2000, 0, 1, hour, minute))
+}
+
+/**
+ * The clock times of a span within one day, as the language writes them on
+ * the chosen clock: "09:00 – 10:30", "9:00 – 10:30 AM" with a shared period
+ * once, "22:00 – 00:00" for one ending at midnight. Each end is read in its
+ * own zone, [startZone] and [finishZone].
+ */
+export function formatClockRange(
+  from: Date,
+  to: Date,
+  timeFormat: TimeFormat,
+  startZone?: string,
+  finishZone: string | undefined = startZone
+): string {
+  const formatter = dateFormatter(tag(), 'UTC', {
+    timeStyle: 'short',
+    hourCycle: timeFormat === '12h' ? 'h12' : 'h23',
+    numberingSystem: 'latn',
+  })
+  return ranged(formatter, clockOf(from, startZone), clockOf(to, finishZone))
+}
+
+// The joint a language puts between the two ends of a range of dates and
+// times, read from the engine's own range of two instants a year apart, so
+// no part is shared. Brackets and full stops at its edges belong to the
+// pattern for one end (Basque closes its time in brackets), not to the joint.
+const joints = new Map<string, string>()
+function joint(): string {
+  const language = tag()
+  let found = joints.get(language)
+  if (found !== undefined) return found
+  found = ' – '
+  try {
+    const formatter = dateFormatter(language, 'UTC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      numberingSystem: 'latn',
+    }) as Ranging
+    const parts = formatter.formatRangeToParts?.(
+      new Date(Date.UTC(2000, 0, 1)),
+      new Date(Date.UTC(2001, 1, 2, 1, 1))
+    )
+    if (parts) {
+      const last = parts.map((part) => part.source).lastIndexOf('startRange')
+      const first = parts.findIndex((part) => part.source === 'endRange')
+      const between = parts
+        .slice(last + 1, first)
+        .map((part) => part.value)
+        .join('')
+        .replace(/^[\p{Ps}\p{Pe}\p{Po}]+|[\p{Ps}\p{Pe}\p{Po}]+$/gu, '')
+      if (last >= 0 && first > last && between.trim()) found = between
+    }
+  } catch {
+    // Keep the dash.
+  }
+  joints.set(language, found)
+  return found
+}
+
+/**
+ * The two ends of a span, each already written, joined as the language joins
+ * a range of dates and times: " – " in English, "～" in Japanese, " تا " in
+ * Persian. [broken] ends the first line at the joint and puts the second end
+ * on the next.
+ */
+export function formatRange(
+  start: string,
+  finish: string,
+  broken = false
+): string {
+  const between = joint()
+  return broken
+    ? `${start}${between.trimEnd()}\n${finish}`
+    : `${start}${between}${finish}`
+}
+
 /**
  * A time-grid axis label: "08:00", or "8 AM" where a whole hour needs no
  * minutes.
