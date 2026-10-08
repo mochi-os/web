@@ -102,6 +102,7 @@ export function useFormat() {
       timestampAt: (day: string, minutes: number, zone?: string) =>
         timestampAt(day, minutes, zone || locale.timezone),
       weekStartsOn: locale.weekStartsOn,
+      dateFormat: locale.dateFormat,
       timezone: locale.timezone,
       units: locale.units,
     }),
