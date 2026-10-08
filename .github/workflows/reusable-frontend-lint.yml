@@ -231,15 +231,21 @@ jobs:
 
       - name: Check i18n source-en purity
         run: |
-          # `en` is the source locale — Lingui expects msgstr to be empty so
-          # source text falls through. A populated en/messages.po breaks
-          # fallback semantics.
+          # Lingui fills source-locale msgstr with msgid. An empty or identical
+          # value keeps the source text; a different value changes it.
           python3 - <<'PY'
-          import re, sys
+          import ast, re, sys
           from pathlib import Path
           ENTRY_RE = re.compile(r'msgid\s+(?P<id>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)\nmsgstr\s+(?P<str>"(?:[^"\\]|\\.)*"(?:\n"(?:[^"\\]|\\.)*")*)', re.M)
           def parse(s):
-              return ''.join(re.findall(r'"((?:[^"\\]|\\.)*)"', s)).replace('\\n','\n').replace('\\"','"').replace('\\\\','\\')
+              return ''.join(ast.literal_eval(part) for part in re.findall(r'"(?:[^"\\]|\\.)*"', s))
+          def invalid(src, tgt):
+              return bool(src and tgt and src != tgt)
+          assert not invalid(parse('"Hello"'), parse('"Hello"'))
+          assert not invalid(parse('"Hello"'), parse('""'))
+          assert not invalid(parse('"Line\\n"\n"two"'), parse('"Line\\ntwo"'))
+          assert invalid(parse('"Hello"'), parse('"Hallo"'))
+          assert invalid(parse('"Line\\ntwo"'), parse('"Line\\nthree"'))
           violations = 0
           for po in Path('.').rglob('locales/en/messages.po'):
               if 'node_modules' in po.parts:
@@ -247,12 +253,12 @@ jobs:
               text = po.read_text(encoding='utf-8', errors='replace')
               for m in ENTRY_RE.finditer(text):
                   src, tgt = parse(m.group('id')), parse(m.group('str'))
-                  if src and tgt:
+                  if invalid(src, tgt):
                       line = text.count('\n', 0, m.start()) + 1
-                      print(f"::error file={po},line={line}::populated msgstr in en source: {tgt[:60]}")
+                      print(f"::error file={po},line={line}::en source differs from msgid: {tgt[:60]}")
                       violations += 1
           if violations:
-              print(f"\n{violations} en-source violations (en/messages.po should have empty msgstrs)", file=sys.stderr)
+              print(f"\n{violations} en-source violations (msgstr must be empty or match msgid)", file=sys.stderr)
               sys.exit(1)
           PY
 

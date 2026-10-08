@@ -216,12 +216,19 @@ function FileHeader({
 function UnifiedView({
   file,
   hunkHeaders = true,
+  textSize = 'xs',
 }: {
   file: DiffFile
   hunkHeaders?: boolean
+  textSize?: 'xs' | 'sm'
 }) {
   return (
-    <table className='w-full border-collapse font-mono text-xs'>
+    <table
+      className={cn(
+        'w-full border-collapse font-mono',
+        textSize === 'sm' ? 'text-sm' : 'text-xs'
+      )}
+    >
       {/* Each hunk is its own tbody; a wrapping tbody would nest them. */}
       {file.hunks.map((hunk, hi) => {
         const groups = pairLines(hunk.lines)
@@ -326,12 +333,19 @@ function UnifiedGroup({
 function SplitView({
   file,
   hunkHeaders = true,
+  textSize = 'xs',
 }: {
   file: DiffFile
   hunkHeaders?: boolean
+  textSize?: 'xs' | 'sm'
 }) {
   return (
-    <table className='w-full border-collapse font-mono text-xs'>
+    <table
+      className={cn(
+        'w-full border-collapse font-mono',
+        textSize === 'sm' ? 'text-sm' : 'text-xs'
+      )}
+    >
       {/* Each hunk is its own tbody; a wrapping tbody would nest them. */}
       {file.hunks.map((hunk, hi) => {
         const groups = pairLines(hunk.lines)
@@ -474,6 +488,7 @@ export function DiffFileView({
   words,
   hunkHeaders,
   prose,
+  textSize = 'xs',
 }: {
   file: DiffFile
   viewStyle: DiffViewStyle
@@ -485,6 +500,8 @@ export function DiffFileView({
    * inside one only when the word alone is wider than the column.
    */
   prose?: boolean
+  /** Keeps written text comfortable to read when the default is too small. */
+  textSize?: 'xs' | 'sm'
 }) {
   return (
     <WordsContext.Provider value={words}>
@@ -495,9 +512,17 @@ export function DiffFileView({
         )}
       >
         {viewStyle === 'split' ? (
-          <SplitView file={file} hunkHeaders={hunkHeaders} />
+          <SplitView
+            file={file}
+            hunkHeaders={hunkHeaders}
+            textSize={textSize}
+          />
         ) : (
-          <UnifiedView file={file} hunkHeaders={hunkHeaders} />
+          <UnifiedView
+            file={file}
+            hunkHeaders={hunkHeaders}
+            textSize={textSize}
+          />
         )}
       </div>
     </WordsContext.Provider>

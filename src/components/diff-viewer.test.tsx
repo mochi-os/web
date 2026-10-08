@@ -146,6 +146,15 @@ describe('DiffFileView', () => {
     )
   })
 
+  it('can keep prose comparisons at the existing readable text size', () => {
+    const { container } = render(
+      <DiffFileView file={file} viewStyle='unified' prose textSize='sm' />
+    )
+    const table = container.querySelector('table')
+    expect(table).toHaveClass('text-sm')
+    expect(table).not.toHaveClass('text-xs')
+  })
+
   it('leaves the hunk header out when asked, in both layouts', () => {
     const { rerender } = render(
       <DiffFileView file={file} viewStyle='unified' hunkHeaders={false} />
