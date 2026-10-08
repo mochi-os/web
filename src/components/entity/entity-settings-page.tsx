@@ -298,15 +298,18 @@ export function EntitySettingsPage<
         icon={<Settings className='size-4 md:size-5' />}
         back={{ label: labels.back, onFallback: onBack }}
       />
-      <Main className='space-y-6'>
-        {/* Tabs - only show for owners */}
-        {isOwner && (
-          <Tabs
-            variant='underline'
-            value={activeTab}
-            onValueChange={(value) => onTabChange(value as EntitySettingsTab)}
-          >
-            <TabsList>
+      <Main>
+        {/* The panels sit inside Tabs with the strip: a sticky strip only
+            holds for as long as its parent is on screen. */}
+        <Tabs
+          variant='underline'
+          value={activeTab}
+          onValueChange={(value) => onTabChange(value as EntitySettingsTab)}
+          className='gap-6'
+        >
+          {/* Tabs - only show for owners */}
+          {isOwner && (
+            <TabsList sticky>
               <TabsTrigger value='general' className='gap-2'>
                 <Settings className='h-4 w-4' />
                 {labels.settings}
@@ -316,100 +319,100 @@ export function EntitySettingsPage<
                 {labels.access}
               </TabsTrigger>
             </TabsList>
-          </Tabs>
-        )}
+          )}
 
-        {/* Tab content */}
-        <div className='pt-2'>
-          {tab === 'general' && (
-            <div className='space-y-6'>
-              <Section title={labels.identity}>
-                <div className='divide-y-0'>
-                  <EditableFieldRow
-                    label={labels.name}
-                    value={container.name}
-                    canEdit={!!isOwner}
-                    onSave={(value) => handleUpdate({ name: value })}
-                    validate={validateName}
-                    emphasize
-                  />
+          {/* Tab content */}
+          <div className='pt-2'>
+            {tab === 'general' && (
+              <div className='space-y-6'>
+                <Section title={labels.identity}>
+                  <div className='divide-y-0'>
+                    <EditableFieldRow
+                      label={labels.name}
+                      value={container.name}
+                      canEdit={!!isOwner}
+                      onSave={(value) => handleUpdate({ name: value })}
+                      validate={validateName}
+                      emphasize
+                    />
 
-                  <EditableFieldRow
-                    label={labels.description}
-                    value={container.description}
-                    canEdit={!!isOwner}
-                    onSave={(value) => handleUpdate({ description: value })}
-                    multiline
-                    maxLength={ENTITY_LIMIT.description}
-                  />
+                    <EditableFieldRow
+                      label={labels.description}
+                      value={container.description}
+                      canEdit={!!isOwner}
+                      onSave={(value) => handleUpdate({ description: value })}
+                      multiline
+                      maxLength={ENTITY_LIMIT.description}
+                    />
 
-                  {renderIdentityExtras?.({
-                    container,
-                    canEdit: !!isOwner,
-                    onUpdate: handleUpdate,
-                  })}
+                    {renderIdentityExtras?.({
+                      container,
+                      canEdit: !!isOwner,
+                      onUpdate: handleUpdate,
+                    })}
 
-                  <FieldRow label={labels.entityId}>
-                    <DataChip value={container.id} truncate='middle' />
-                  </FieldRow>
-
-                  {container.fingerprint && (
-                    <FieldRow label={labels.fingerprint}>
-                      <DataChip
-                        value={container.fingerprint}
-                        truncate='middle'
-                      />
+                    <FieldRow label={labels.entityId}>
+                      <DataChip value={container.id} truncate='middle' />
                     </FieldRow>
-                  )}
 
-                  {container.server && (
-                    <FieldRow label={labels.server}>
-                      <DataChip value={container.server} />
-                    </FieldRow>
-                  )}
-                </div>
-              </Section>
+                    {container.fingerprint && (
+                      <FieldRow label={labels.fingerprint}>
+                        <DataChip
+                          value={container.fingerprint}
+                          truncate='middle'
+                        />
+                      </FieldRow>
+                    )}
 
-              {isOwner && (
-                <Section
-                  title={labels.deleteSection}
-                  action={
-                    <Button
-                      variant='outline'
-                      onClick={() => setShowDeleteDialog(true)}
-                      disabled={isDeleting}
-                      size='sm'
-                    >
-                      <Trash2 className='size-4 me-2' />
-                      {labels.delete}
-                    </Button>
-                  }
+                    {container.server && (
+                      <FieldRow label={labels.server}>
+                        <DataChip value={container.server} />
+                      </FieldRow>
+                    )}
+                  </div>
+                </Section>
+
+                {isOwner && (
+                  <Section
+                    title={labels.deleteSection}
+                    action={
+                      <Button
+                        variant='outline'
+                        onClick={() => setShowDeleteDialog(true)}
+                        disabled={isDeleting}
+                        size='sm'
+                      >
+                        <Trash2 className='size-4 me-2' />
+                        {labels.delete}
+                      </Button>
+                    }
+                  />
+                )}
+
+                <ConfirmDialog
+                  open={showDeleteDialog}
+                  onOpenChange={setShowDeleteDialog}
+                  title={labels.deleteTitle}
+                  desc={labels.deleteDescription(container.name)}
+                  confirmText={labels.deleteConfirm}
+                  icon={<Trash2 className='size-4' />}
+                  destructive
+                  handleConfirm={handleDelete}
+                  isLoading={isDeleting}
                 />
-              )}
-
-              <ConfirmDialog
-                open={showDeleteDialog}
-                onOpenChange={setShowDeleteDialog}
-                title={labels.deleteTitle}
-                desc={labels.deleteDescription(container.name)}
-                confirmText={labels.deleteConfirm}
-                icon={<Trash2 className='size-4' />}
-                destructive
-                handleConfirm={handleDelete}
-                isLoading={isDeleting}
+              </div>
+            )}
+            {tab === 'access' && (
+              <EntityAccessTab
+                containerId={container.id}
+                accessRulesKey={accessRulesKey}
+                api={api}
+                labels={labels}
+                accessLevels={accessLevels}
               />
-            </div>
-          )}
-          {tab === 'access' && (
-            <EntityAccessTab
-              containerId={container.id}
-              accessRulesKey={accessRulesKey}
-              api={api}
-              labels={labels}
-              accessLevels={accessLevels}
-            />
-          )}
-        </div>
+            )}
+          </div>
+        </Tabs>
       </Main>
     </>
   )

@@ -5,6 +5,7 @@ import * as React from 'react'
 import * as TabsPrimitive from '@radix-ui/react-tabs'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
+import { StickyBar } from '../layout/sticky-bar'
 
 type TabsVariant = 'segmented' | 'underline'
 
@@ -63,10 +64,17 @@ function Tabs({
 function TabsList({
   className,
   variant,
+  sticky = false,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
-  VariantProps<typeof tabsListVariants>) {
+  VariantProps<typeof tabsListVariants> & {
+    // Keeps the strip in view under the page header while the panels scroll.
+    // The panels must sit inside the same Tabs as the strip: sticky only
+    // holds for as long as its parent is on screen.
+    sticky?: boolean
+  }) {
   const contextVariant = React.useContext(TabsVariantContext)
+  const resolvedVariant = variant ?? contextVariant
   const listRef = React.useRef<HTMLDivElement>(null)
 
   const shownRef = React.useRef<HTMLElement | null>(null)
@@ -90,16 +98,29 @@ function TabsList({
     }
   })
 
-  return (
+  const list = (
     <TabsPrimitive.List
       ref={listRef}
       data-slot='tabs-list'
-      className={cn(
-        tabsListVariants({ variant: variant ?? contextVariant }),
-        className
-      )}
+      className={cn(tabsListVariants({ variant: resolvedVariant }), className)}
       {...props}
     />
+  )
+  if (!sticky) return list
+
+  // Negative margin with matching padding leaves the strip where it was and
+  // lets the bar's background cover the gap above it, so nothing shows between
+  // the header and the strip. The pill has no rule of its own to end on, so it
+  // gets the same below.
+  return (
+    <StickyBar
+      className={cn(
+        '-mt-2 pt-2',
+        resolvedVariant === 'segmented' && '-mb-2 pb-2'
+      )}
+    >
+      {list}
+    </StickyBar>
   )
 }
 

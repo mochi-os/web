@@ -75,6 +75,7 @@ export {
 export * from './components/layout/authenticated-layout'
 export * from './components/layout/page-header'
 export * from './components/layout/page-utility-bar'
+export * from './components/layout/sticky-bar'
 export * from './components/layout/game-header'
 export * from './components/layout/game-header-stats'
 export * from './components/layout/game-layout'
