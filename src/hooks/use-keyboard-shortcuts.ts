@@ -59,6 +59,10 @@ export function useKeyboardShortcuts({
       // Don't handle other shortcuts in inputs
       if (isInput) return
 
+      // A key a focused control has already handled, an arrow moving through
+      // an open select's options, is not also a shortcut.
+      if (e.defaultPrevented) return
+
       // Don't handle single-key shortcuts when modifier keys are held
       if (e.ctrlKey || e.metaKey || e.altKey) return
 

@@ -53,6 +53,17 @@ describe('TimeGrid', () => {
     }
   })
 
+  it('draws no line across today at the present moment', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-22T12:00:00Z'))
+    try {
+      show('2026-09-22')
+      expect(document.querySelector('[class*="red-"]')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('names each column with the weekday and the day on one line', () => {
     show('2026-09-22')
     const header = screen.getByRole('button', { name: /22/ })
