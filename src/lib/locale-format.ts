@@ -267,13 +267,13 @@ export function currentZone(zone: string): string {
  * is UTC-5.
  */
 export function seaTimezones(): string[] {
+  const base = 'Etc/GMT' // eslint-disable-line lingui/no-unlocalized-strings -- a zone identifier, not text
   const out: string[] = []
   for (let offset = -12; offset <= 12; offset++) {
-    // eslint-disable-next-line lingui/no-unlocalized-strings -- zone identifiers, not text
     out.push(
       offset === 0
-        ? 'Etc/GMT'
-        : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`
+        ? base
+        : `${base}${offset > 0 ? '-' : '+'}${Math.abs(offset)}`
     )
   }
   return out
