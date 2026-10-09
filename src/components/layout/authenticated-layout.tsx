@@ -239,7 +239,7 @@ export function AuthenticatedLayout({
             className={cn(
               '@container/content',
               'flex-1 h-full overflow-auto',
-              !inShell && 'pt-12 md:pt-0'
+              !inShell && 'pt-12 md:pt-0 max-md:[--sticky-top:3rem]'
             )}
           >
             {children ?? <Outlet />}

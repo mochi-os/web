@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { BackButton, type HeaderBackConfig } from './back-button'
 import { PageUtilityBar } from './page-utility-bar'
 import { cn } from '../../lib/utils'
@@ -25,8 +25,34 @@ export function PageHeader({
   menuAction,
   back,
 }: PageHeaderProps) {
+  const headerRef = useRef<HTMLElement>(null)
+
+  // Publish the header's height, so a StickyBar pins directly under it. The
+  // height is not a constant: it differs between phone and desktop, and grows
+  // with a description or a row of actions on a phone.
+  useLayoutEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const root = document.documentElement
+    const publish = () => {
+      root.style.setProperty(
+        '--page-header-height',
+        `${header.getBoundingClientRect().height}px`
+      )
+    }
+    publish()
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish)
+    observer?.observe(header)
+    return () => {
+      observer?.disconnect()
+      root.style.removeProperty('--page-header-height')
+    }
+  }, [])
+
   return (
     <header
+      ref={headerRef}
       className='bg-background sticky top-[var(--sticky-top,0px)] z-30 border-b'
       style={{ paddingRight: 'var(--removed-body-scroll-bar-size, 0px)' }}
     >
