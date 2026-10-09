@@ -1,7 +1,6 @@
 // Copyright © 2026 Mochisoft OÜ
-// SPDX-License-Identifier: AGPL-3.0-only
-// This file is part of Mochi, licensed under the GNU AGPL v3 with the
-// Mochi Application Interface Exception - see license.txt and license-exception.md.
+// SPDX-License-Identifier: Apache-2.0
+
 import { i18n } from '@lingui/core'
 import { I18nProvider } from '@lingui/react'
 import { fireEvent, render as baseRender, screen } from '@testing-library/react'
