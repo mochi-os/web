@@ -252,6 +252,7 @@ export {
 } from './hooks/use-query-with-error'
 export { default as useDialogState } from './hooks/use-dialog-state'
 export * from './hooks/use-screen-size'
+export * from './hooks/use-notification-category-picker'
 export * from './hooks/use-push'
 export * from './hooks/use-page-title'
 export * from './hooks/useAuth'
