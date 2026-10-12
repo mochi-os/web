@@ -40,6 +40,22 @@ describe('useKeyboardShortcuts', () => {
     document.body.dispatchEvent(event)
   }
 
+  it('leaves a key a focused control has already handled', () => {
+    renderHook(() => useKeyboardShortcuts(defaultCallbacks))
+
+    // An open select moving to its next option: the select prevents the
+    // default, and the arrow must not also step to the next item.
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+    event.preventDefault()
+    document.body.dispatchEvent(event)
+
+    expect(defaultCallbacks.onSelectNext).not.toHaveBeenCalled()
+  })
+
   it("should call onCreateNew when 'c' is pressed", () => {
     renderHook(() => useKeyboardShortcuts(defaultCallbacks))
 

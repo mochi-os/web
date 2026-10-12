@@ -803,7 +803,7 @@ export function MonthGrid({
                   >
                     <div
                       className={cn(
-                        'flex shrink-0 items-center justify-end px-1 py-0.5',
+                        'flex shrink-0 items-center justify-end px-1 py-px',
                         day === today && 'bg-primary text-primary-foreground'
                       )}
                     >
@@ -828,7 +828,7 @@ export function MonthGrid({
                         type='button'
                         onClick={() => onDay(day)}
                         className={cn(
-                          'hover:bg-hover rounded-full px-1.5 text-sm',
+                          'hover:bg-hover rounded-full px-1.5 text-sm/4.5',
                           outside && 'text-muted-foreground',
                           day === today &&
                             'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
@@ -839,7 +839,7 @@ export function MonthGrid({
                         )}
                       </button>
                     </div>
-                    <div className='flex min-h-0 flex-1 flex-col px-0.5 pb-0.5'>
+                    <div className='flex min-h-0 flex-1 flex-col px-0.5 pt-1 pb-0.5'>
                       {groups.map((group, index) => {
                         const held = index === 0 && groups.length > 1
                         return (

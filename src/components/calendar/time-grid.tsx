@@ -192,7 +192,7 @@ export function TimeGrid({
   const choosingRef = useRef<Choosing | null>(null)
   choosingRef.current = choosing
 
-  // The current-time line only has to be right to the minute.
+  // Which occurrences are over only has to be right to the minute.
   useEffect(() => {
     const timer = window.setInterval(
       () => setMinute(Math.floor(Date.now() / 1000)),
@@ -1056,7 +1056,6 @@ export function TimeGrid({
   }
 
   const nowDay = format.zonedDay(new Date(minute * 1000))
-  const nowMinutes = format.zonedMinutes(new Date(minute * 1000))
 
   /** An event's start, in its own zone when it has one. */
   const clock = (event: CalendarEvent) =>
@@ -1525,15 +1524,6 @@ export function TimeGrid({
                         height: `${(Math.max(SNAP, Math.abs(drag.finish - drag.start)) / 60) * HOUR}px`,
                       }}
                     />
-                  )}
-
-                  {day === nowDay && (
-                    <div
-                      className='pointer-events-none absolute inset-x-0 z-30 border-t-2 border-red-500'
-                      style={{ top: `${(nowMinutes / 60) * HOUR}px` }}
-                    >
-                      <span className='absolute -top-1 -start-1 size-2 rounded-full bg-red-500' />
-                    </div>
                   )}
                 </div>
               )
