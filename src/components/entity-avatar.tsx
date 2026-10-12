@@ -103,7 +103,9 @@ export function EntityAvatar({
       height={px}
       onError={() => setFailed(true)}
       className={cn(
-        'border-border inline-block shrink-0 rounded-full border object-cover',
+        // max-w-none: the base img rule (max-width: 100%) would narrow the avatar
+        // to an oval inside a parent smaller than it, like a collapsed sidebar row.
+        'border-border inline-block max-w-none shrink-0 rounded-full border object-cover',
         className
       )}
       style={{ width: px, height: px, ...ringStyle }}

@@ -14,7 +14,7 @@ import {
 } from './sidebar'
 
 describe('Sidebar', () => {
-  it("trims the active item's start padding, whichever side that is", () => {
+  it('marks the active item with colour alone, no bar on its start edge', () => {
     render(
       <I18nProvider i18n={i18n}>
         <SidebarProvider>
@@ -27,8 +27,13 @@ describe('Sidebar', () => {
       </I18nProvider>
     )
     const button = screen.getByRole('button', { name: 'Feeds' })
-    expect(button.className).toContain('data-[active=true]:ps-[6px]')
-    expect(button.className).not.toContain('pl-[6px]')
+    expect(button.className).toContain('data-[active=true]:bg-sidebar-active')
+    expect(button.className).toContain('data-[active=true]:text-primary')
+    // A start border curled on the rounded button and squeezed the icon when
+    // collapsed, and a separate bar was clipped at full radius.
+    expect(button.className).not.toContain('border-s-')
+    expect(button.className).not.toContain('before:')
+    expect(button.closest('li')!.className).not.toContain('before:')
   })
 
   it('labels the rail with the same sentence-case phrase as the trigger', () => {
