@@ -29,6 +29,8 @@ interface GameRouteLayoutProps<G extends GameSummary> {
   gameTitle: (game: G) => string
   /** Short marker on an entry, e.g. words' "!" for the games awaiting you. */
   badge?: (game: G) => string | undefined
+  /** Whether a game is still being played. Defaults to status 'active'. */
+  isLive?: (game: G) => boolean
   labels: GameLayoutLabels
   /** The app's NewGame dialog. Rendered inside the provider it reads from. */
   newGameDialog?: ReactNode
@@ -41,6 +43,7 @@ function GameRouteLayoutInner<G extends GameSummary>({
   opponentId,
   gameTitle,
   badge,
+  isLive,
   labels,
   children,
 }: Omit<GameRouteLayoutProps<G>, 'newGameDialog'>) {
@@ -63,6 +66,7 @@ function GameRouteLayoutInner<G extends GameSummary>({
       gameTitle={gameTitle}
       opponentId={opponentId}
       badge={badge}
+      isLive={isLive}
       onNewGame={openNewGameDialog}
       websocketStatus={gameId ? websocketStatusMeta : null}
       labels={labels}

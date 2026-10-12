@@ -90,6 +90,12 @@ interface GameLayoutProps<G extends GameSummary> {
   gameTitle: (game: G) => string
   /** Short marker on an entry, e.g. words' "!" for the games awaiting you. */
   badge?: (game: G) => string | undefined
+  /**
+   * Whether a game is still being played, which decides the group it is listed
+   * under. Defaults to status 'active'. go passes its own: a game in 'scoring'
+   * is waiting on both players and is not over.
+   */
+  isLive?: (game: G) => boolean
   labels: GameLayoutLabels
   onNewGame: () => void
   /** Connection dot in the sidebar footer. Omit to hide it. */
@@ -103,6 +109,7 @@ export function GameLayout<G extends GameSummary>({
   opponentId,
   gameTitle,
   badge,
+  isLive,
   labels,
   onNewGame,
   websocketStatus,
@@ -112,8 +119,9 @@ export function GameLayout<G extends GameSummary>({
 
   const sidebarData: SidebarData = useMemo(() => {
     const sorted = [...games].sort((a, b) => b.updated - a.updated)
-    const activeGames = sorted.filter((g) => g.status === 'active')
-    const completedGames = sorted.filter((g) => g.status !== 'active')
+    const live = isLive ?? ((g: G) => g.status === 'active')
+    const activeGames = sorted.filter((g) => live(g))
+    const completedGames = sorted.filter((g) => !live(g))
 
     const entry = (game: G) => ({
       title: gameTitle(game),
@@ -165,6 +173,7 @@ export function GameLayout<G extends GameSummary>({
     opponentId,
     gameTitle,
     badge,
+    isLive,
     onNewGame,
     active,
     completed,
