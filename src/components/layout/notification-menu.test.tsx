@@ -175,3 +175,38 @@ describe('MochiMenu notification affordance', () => {
     expect(screen.queryByLabelText(/unread/i)).not.toBeInTheDocument()
   })
 })
+
+// -/list sends rows oldest first; NotificationList is where every consumer
+// (the bell today, any future one) gets them newest first instead.
+describe('notification order', () => {
+  function row(content: string, created: number): Notification {
+    return {
+      id: content,
+      app: 'feeds',
+      topic: 'invite',
+      object: content,
+      content,
+      link: '',
+      read: 0,
+      created,
+    } as Notification
+  }
+
+  it('shows the newest notification first regardless of list order', () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <NotificationsSection
+          onClose={() => {}}
+          notifications={[row('oldest', 1), row('newest', 3), row('middle', 2)]}
+          markAsRead={() => {}}
+          markAllAsRead={() => {}}
+        />
+      </I18nProvider>
+    )
+
+    const order = screen
+      .getAllByText(/oldest|middle|newest/)
+      .map((el) => el.textContent)
+    expect(order).toEqual(['newest', 'middle', 'oldest'])
+  })
+})

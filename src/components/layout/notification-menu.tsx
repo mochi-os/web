@@ -138,9 +138,15 @@ export function NotificationList({
     )
   }
 
+  // The list route sends the rows oldest first (its own expiry walk reads the
+  // same order). Newest first reads as a feed instead of a queue to clear from
+  // the top; sorted here so the standalone page can show the same order from
+  // its own copy of the rows.
+  const sorted = [...notifications].sort((a, b) => b.created - a.created)
+
   return (
     <div className={cn('divide-y divide-border/40', className)}>
-      {notifications.map((notification) => (
+      {sorted.map((notification) => (
         <NotificationItem
           key={notification.id}
           notification={notification}
