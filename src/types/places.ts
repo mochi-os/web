@@ -3,6 +3,8 @@
 
 // Place data for checkin/travelling features
 
+import type { Quote } from '../components/quote-card'
+
 export interface PlaceData {
   name: string
   lat: number
@@ -16,6 +18,8 @@ export interface PostData {
   travelling?: { origin: PlaceData; destination: PlaceData }
   memory?: { year: number; years_ago: number }
   rss?: { title: string; link: string; html: string; image?: string }
+  // The post on another network the post's first link quotes.
+  quote?: Quote
 }
 
 // Photon API response types

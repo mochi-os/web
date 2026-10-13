@@ -29,6 +29,7 @@ export interface ChatWebsocketMessagePayload {
   name?: string
   created?: number
   attachments?: unknown[]
+  quote?: unknown
   [key: string]: unknown
 }
 
