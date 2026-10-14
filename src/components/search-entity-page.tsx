@@ -63,6 +63,9 @@ interface FindEntityPageProps {
   /** Rendered above the results for the settled query: what the app finds
    * beyond the directory, such as a person on another network. */
   supplement?: (query: string) => ReactNode
+  /** Rendered above the recommendations while nothing is searched: what the
+   * app offers besides the directory, such as the user's accounts elsewhere. */
+  aside?: ReactNode
 }
 
 export function FindEntityPage({
@@ -84,6 +87,7 @@ export function FindEntityPage({
   onRetryRecommendations,
   initialQuery = '',
   supplement,
+  aside,
 }: FindEntityPageProps) {
   usePageTitle(title)
 
@@ -247,6 +251,8 @@ export function FindEntityPage({
                   </p>
                 </div>
               )}
+
+            {!debouncedSearch && aside}
 
             {!debouncedSearch && (
               <div>
