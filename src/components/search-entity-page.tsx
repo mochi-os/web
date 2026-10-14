@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { t } from '@lingui/core/macro'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Loader2, type LucideIcon } from 'lucide-react'
@@ -60,6 +60,12 @@ interface FindEntityPageProps {
   onRetryRecommendations?: () => void
   /** Text to start with, such as a share link a notification opened the page with */
   initialQuery?: string
+  /** Rendered above the results for the settled query: what the app finds
+   * beyond the directory, such as a person on another network. */
+  supplement?: (query: string) => ReactNode
+  /** Rendered above the recommendations while nothing is searched: what the
+   * app offers besides the directory, such as the user's accounts elsewhere. */
+  aside?: ReactNode
 }
 
 export function FindEntityPage({
@@ -80,6 +86,8 @@ export function FindEntityPage({
   recommendationsError,
   onRetryRecommendations,
   initialQuery = '',
+  supplement,
+  aside,
 }: FindEntityPageProps) {
   usePageTitle(title)
 
@@ -175,6 +183,8 @@ export function FindEntityPage({
           </div>
 
           <div className='space-y-6'>
+            {debouncedSearch.trim() && supplement?.(debouncedSearch.trim())}
+
             {isLink && isResolving && (
               <div className='flex items-center justify-center py-8'>
                 <Loader2 className='text-muted-foreground size-5 animate-spin' />
@@ -241,6 +251,8 @@ export function FindEntityPage({
                   </p>
                 </div>
               )}
+
+            {!debouncedSearch && aside}
 
             {!debouncedSearch && (
               <div>
