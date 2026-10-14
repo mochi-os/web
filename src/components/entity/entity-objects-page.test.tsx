@@ -322,4 +322,81 @@ describe('EntityObjectsPage', () => {
     await screen.findByText('Acme Holdings')
     expect(screen.getByTestId('detail-panel')).toHaveTextContent('none')
   })
+
+  describe('search', () => {
+    // The bar is a stub that types a query; the board lists what survives.
+    const searchSlots = (query: string) => ({
+      renderViewOptionsBar: ({
+        filters,
+        onFilterChange,
+      }: {
+        filters: { search: string; watched: boolean }
+        onFilterChange: (f: { search: string; watched: boolean }) => void
+      }) => (
+        <button onClick={() => onFilterChange({ ...filters, search: query })}>
+          type
+        </button>
+      ),
+      renderBoard: ({ objects }: { objects: EntityObject[] }) => (
+        <ul data-testid='board'>
+          {objects.map((o) => (
+            <li key={o.id}>{o.values.title}</li>
+          ))}
+        </ul>
+      ),
+    })
+
+    async function searchFor(
+      query: string,
+      overrides: Partial<Parameters<typeof EntityObjectsPage>[0]> = {},
+      objects?: EntityObject[]
+    ) {
+      renderPage({ ...searchSlots(query), ...overrides } as never, objects)
+      fireEvent.click(await screen.findByRole('button', { name: 'type' }))
+      return screen.getByTestId('board')
+    }
+
+    it('finds items by the option name the board shows', async () => {
+      const board = await searchFor('in progress')
+      expect(board).toHaveTextContent('Task 2')
+      expect(board).not.toHaveTextContent('Task 1')
+      expect(board).not.toHaveTextContent('Task 3')
+    })
+
+    it('does not match the option id the server stores', async () => {
+      const board = await searchFor('in_progress')
+      expect(board).not.toHaveTextContent('Task')
+    })
+
+    it('finds items by the name of the person they belong to', async () => {
+      const base = createMockEntityDesign()
+      const design = {
+        ...base,
+        fields: {
+          task: [
+            ...base.fields.task,
+            {
+              ...base.fields.task[0],
+              id: 'owner',
+              name: 'Owner',
+              fieldtype: 'user',
+            },
+          ],
+        },
+      }
+      const objects = createMockEntityObjects(2)
+      objects[1].values.owner = 'u-7f3a'
+      const api = makeApi(objects)
+      api.listPeople = vi.fn(async () => ({
+        data: { people: [{ id: 'u-7f3a', name: 'Ada Lovelace' }] },
+      })) as never
+      renderPage({ design, api, ...searchSlots('lovelace') } as never, objects)
+      await waitFor(() => expect(api.listPeople).toHaveBeenCalled())
+      fireEvent.click(await screen.findByRole('button', { name: 'type' }))
+      await waitFor(() =>
+        expect(screen.getByTestId('board')).toHaveTextContent('Task 2')
+      )
+      expect(screen.getByTestId('board')).not.toHaveTextContent('Task 1')
+    })
+  })
 })

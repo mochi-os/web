@@ -44,6 +44,7 @@ import {
   type EntityTitleObject,
 } from '../../lib/entity-title'
 import { canWrite, canComment } from '../../lib/entity-access'
+import { countEntityDescendants } from '../../lib/entity-tree'
 import { useShellOverlay } from '../../hooks/use-shell-overlay'
 import { EntityFieldEditor } from './entity-field-editor'
 import {
@@ -52,6 +53,7 @@ import {
 } from './entity-comment-list'
 import {
   EntityActivityList,
+  type EntityActivityListLabels,
   type EntityActivityListProps,
 } from './entity-activity-list'
 import {
@@ -161,7 +163,15 @@ export interface EntityObjectDetailPanelProps<
   prefix?: string
   /** Extra tabs, inserted between Comments and Activity. */
   extraTabs?: (detail: TDetail) => EntityObjectDetailTab[]
+  /** Wording each app passes, so the shared catalog does not grow. */
+  labels?: EntityObjectDetailPanelLabels
   onClose: () => void
+}
+
+export interface EntityObjectDetailPanelLabels {
+  /** Delete confirm for an item with items under it, which go too. */
+  deleteWithChildren?: (title: string, count: number) => string
+  activity?: EntityActivityListLabels
 }
 
 export function EntityObjectDetailPanel<
@@ -175,6 +185,7 @@ export function EntityObjectDetailPanel<
   api,
   prefix,
   extraTabs,
+  labels,
   onClose,
 }: EntityObjectDetailPanelProps<TObject, TDetail>) {
   useShellOverlay(!!objectId)
@@ -394,6 +405,22 @@ export function EntityObjectDetailPanel<
   const canBeTopLevel = data
     ? (design.hierarchy[data.object.class] || []).includes('')
     : false
+
+  // The server deletes everything under an item with it, so the confirm says
+  // how much goes. Counted only while the confirm is open.
+  const descendantCount = useMemo(
+    () =>
+      showDeleteDialog && objectId && objectsData
+        ? countEntityDescendants(objectsData, objectId)
+        : 0,
+    [showDeleteDialog, objectId, objectsData]
+  )
+
+  const peopleNames = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const person of peopleData ?? []) map[person.id] = person.name
+    return map
+  }, [peopleData])
 
   const currentParent = useMemo(() => {
     if (!data?.object.parent || !objectsData) return null
@@ -741,6 +768,14 @@ export function EntityObjectDetailPanel<
                   containerId={containerId}
                   objectId={objectId}
                   fields={classFields}
+                  options={classOptions}
+                  people={peopleNames}
+                  objectTitle={(id) => {
+                    const target = objectsData?.find((o) => o.id === id)
+                    return target ? objectTitle(target) : undefined
+                  }}
+                  classes={design.classes}
+                  labels={labels?.activity}
                   listActivity={api.listActivity}
                 />
               </div>
@@ -753,7 +788,11 @@ export function EntityObjectDetailPanel<
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title={t`Delete item`}
-        desc={t`Are you sure you want to delete "${title}"? This action cannot be undone.`}
+        desc={
+          descendantCount > 0 && labels?.deleteWithChildren
+            ? labels.deleteWithChildren(title, descendantCount)
+            : t`Are you sure you want to delete "${title}"? This action cannot be undone.`
+        }
         confirmText={t`Delete`}
         icon={<Trash2 className='size-4' />}
         destructive

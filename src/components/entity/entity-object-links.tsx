@@ -62,7 +62,9 @@ export interface EntityObjectLinksProps<TObject extends EntityObject> {
   ) => Promise<unknown>
 }
 
-function useLinkTypeLabels(): Record<string, string> {
+// Exported for the activity list's link entries. It stays in this file: the
+// catalogs record each message's file, so moving it would rewrite every app's.
+export function useLinkTypeLabels(): Record<string, string> {
   const { t } = useLingui()
   return useMemo(
     () => ({
