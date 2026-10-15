@@ -47,6 +47,7 @@ import {
   type EntityTitleObject,
 } from '../../lib/entity-title'
 import { canWrite, canComment } from '../../lib/entity-access'
+import { countEntityDescendants } from '../../lib/entity-tree'
 import { useShellOverlay } from '../../hooks/use-shell-overlay'
 import { EntityFieldEditor } from './entity-field-editor'
 import {
@@ -174,6 +175,9 @@ export interface EntityObjectDetailPanelProps<
 
 export interface EntityObjectDetailPanelLabels {
   copyLink?: string
+  /** Delete confirm for an item with items under it, which the server
+   *  deletes with it. Without it the plain confirm shows. */
+  deleteWithChildren?: (title: string, count: number) => string
 }
 
 export function EntityObjectDetailPanel<
@@ -408,6 +412,16 @@ export function EntityObjectDetailPanel<
   const canBeTopLevel = data
     ? (design.hierarchy[data.object.class] || []).includes('')
     : false
+
+  // The server deletes everything under an item with it, so the confirm says
+  // how much goes. Counted only while the confirm is open.
+  const descendantCount = useMemo(
+    () =>
+      showDeleteDialog && objectId && objectsData
+        ? countEntityDescendants(objectsData, objectId)
+        : 0,
+    [showDeleteDialog, objectId, objectsData]
+  )
 
   const currentParent = useMemo(() => {
     if (!data?.object.parent || !objectsData) return null
@@ -788,7 +802,11 @@ export function EntityObjectDetailPanel<
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title={t`Delete item`}
-        desc={t`Are you sure you want to delete "${title}"? This action cannot be undone.`}
+        desc={
+          descendantCount > 0 && labels?.deleteWithChildren
+            ? labels.deleteWithChildren(title, descendantCount)
+            : t`Are you sure you want to delete "${title}"? This action cannot be undone.`
+        }
         confirmText={t`Delete`}
         icon={<Trash2 className='size-4' />}
         destructive

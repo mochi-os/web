@@ -175,6 +175,35 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     )
   })
 
+  describe('delete confirm', () => {
+    const deleteWithChildren = (title: string, count: number) =>
+      `Delete "${title}" and ${count} under it?`
+
+    it('says how many items go with it, at every depth', async () => {
+      const child = createMockEntityObject({ id: 'c1', parent: 'obj-1' })
+      const grandchild = createMockEntityObject({ id: 'c2', parent: 'c1' })
+      const unrelated = createMockEntityObject({ id: 'c3', parent: 'obj-2' })
+      vi.mocked(api.listObjects).mockResolvedValue({
+        data: { objects: [object, sibling, child, grandchild, unrelated] },
+      } as never)
+      renderPanel({ labels: { deleteWithChildren } })
+
+      fireEvent.click(await screen.findByLabelText('Delete item'))
+      expect(
+        await screen.findByText('Delete "Original" and 2 under it?')
+      ).toBeInTheDocument()
+    })
+
+    it('keeps the plain confirm for an item with nothing under it', async () => {
+      renderPanel({ labels: { deleteWithChildren } })
+
+      fireEvent.click(await screen.findByLabelText('Delete item'))
+      expect(
+        await screen.findByText(/Are you sure you want to delete "Original"/)
+      ).toBeInTheDocument()
+    })
+  })
+
   it('says so when the reparent is refused', async () => {
     vi.mocked(api.updateObject).mockRejectedValue({ response: { status: 409 } })
     renderPanel()
