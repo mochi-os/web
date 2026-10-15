@@ -309,6 +309,7 @@ export {
   isDomainEntityRouting,
   getEntityFingerprint,
   normalizeEntityUrl,
+  absoluteRouteUrl,
 } from './lib/app-path'
 export {
   isInShell,

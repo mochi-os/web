@@ -16,7 +16,26 @@ vi.mock('../../lib/shell-bridge', async (importOriginal) => ({
 
 i18n.loadAndActivate({ locale: 'en', messages: {} })
 
+function renderButton() {
+  return render(
+    <I18nProvider i18n={i18n}>
+      <CopyButton value='x' icon={<span data-testid='own-icon' />} />
+    </I18nProvider>
+  )
+}
+
 describe('CopyButton', () => {
+  it('shows a passed icon in place of the copy icon', () => {
+    renderButton()
+    expect(screen.getByTestId('own-icon')).toBeInTheDocument()
+  })
+
+  it('still shows the tick after a copy, whatever the icon', async () => {
+    renderButton()
+    fireEvent.click(screen.getByRole('button'))
+    await waitFor(() => expect(screen.queryByTestId('own-icon')).toBeNull())
+  })
+
   it('still copies when a wrapper passes its own click handler', async () => {
     const { shellClipboardWrite } = await import('../../lib/shell-bridge')
     const wrapperClick = vi.fn()

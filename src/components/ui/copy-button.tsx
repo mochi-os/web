@@ -19,6 +19,8 @@ interface CopyButtonProps
   successMessage?: string
   errorMessage?: string
   onCopyError?: () => void
+  /** Shown until a copy succeeds, in place of the copy icon. */
+  icon?: React.ReactNode
 }
 
 export function CopyButton({
@@ -26,6 +28,7 @@ export function CopyButton({
   successMessage = t`Copied to clipboard`,
   errorMessage = t`Failed to copy`,
   onCopyError,
+  icon,
   onClick,
   className,
   variant = 'ghost',
@@ -64,7 +67,7 @@ export function CopyButton({
       {copied ? (
         <Check className='h-3.5 w-3.5 text-success' />
       ) : (
-        <Copy className='h-3.5 w-3.5' />
+        (icon ?? <Copy className='h-3.5 w-3.5' />)
       )}
       <span className='sr-only'>
         <Trans>Copy</Trans>

@@ -22,6 +22,13 @@ import type { EntityObject } from '../../types/entity-object'
 import { GitMerge } from 'lucide-react'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
+const { clipboardWrite } = vi.hoisted(() => ({
+  clipboardWrite: vi.fn(async () => true),
+}))
+vi.mock('../../lib/shell-bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/shell-bridge')>()),
+  shellClipboardWrite: clipboardWrite,
+}))
 vi.mock('../../lib/toast-utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/toast-utils')>()
   return { toast: { ...actual.toast, error: toastError } }
@@ -235,6 +242,27 @@ describe('EntityObjectDetailPanel header', () => {
 
     expect(await screen.findByText('Original')).toBeInTheDocument()
     expect(screen.queryByText('Try again')).toBeNull()
+  })
+})
+
+describe('EntityObjectDetailPanel copy link', () => {
+  it('copies the address the app builds for the item', async () => {
+    renderPanel({
+      itemUrl: (id) => `https://example.org/crm/fp/${id}`,
+      labels: { copyLink: 'Copy link' },
+    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy link' }))
+    await waitFor(() =>
+      expect(clipboardWrite).toHaveBeenCalledWith(
+        'https://example.org/crm/fp/obj-1'
+      )
+    )
+  })
+
+  it('offers no copy without an address or a label', async () => {
+    renderPanel({ itemUrl: (id) => id })
+    await screen.findByDisplayValue('Original')
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull()
   })
 })
 

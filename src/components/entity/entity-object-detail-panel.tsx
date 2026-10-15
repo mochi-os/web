@@ -17,12 +17,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Eye,
   EyeOff,
+  Link,
   Trash2,
   MessageSquare,
   Activity,
   Settings2,
 } from 'lucide-react'
 import { Button } from '../ui/button'
+import { CopyButton } from '../ui/copy-button'
 import { ConfirmDialog } from '../confirm-dialog'
 import { SidePanel, SidePanelBody, SidePanelHeader } from '../ui/side-panel'
 import {
@@ -162,7 +164,16 @@ export interface EntityObjectDetailPanelProps<
   prefix?: string
   /** Extra tabs, inserted between Comments and Activity. */
   extraTabs?: (detail: TDetail) => EntityObjectDetailTab[]
+  /** The item's full address. With `labels.copyLink`, the header offers a
+   *  button that copies it. */
+  itemUrl?: (objectId: string) => string
+  /** Wording each app passes, so the shared catalog does not grow. */
+  labels?: EntityObjectDetailPanelLabels
   onClose: () => void
+}
+
+export interface EntityObjectDetailPanelLabels {
+  copyLink?: string
 }
 
 export function EntityObjectDetailPanel<
@@ -176,6 +187,8 @@ export function EntityObjectDetailPanel<
   api,
   prefix,
   extraTabs,
+  itemUrl,
+  labels,
   onClose,
 }: EntityObjectDetailPanelProps<TObject, TDetail>) {
   useShellOverlay(!!objectId)
@@ -511,6 +524,18 @@ export function EntityObjectDetailPanel<
       <SidePanelHeader
         actions={
           <>
+            {itemUrl && labels?.copyLink && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <CopyButton
+                    value={itemUrl(object.id)}
+                    icon={<Link className='size-4' />}
+                    aria-label={labels.copyLink}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{labels.copyLink}</TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
