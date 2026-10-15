@@ -26,6 +26,7 @@ export function CopyButton({
   successMessage = t`Copied to clipboard`,
   errorMessage = t`Failed to copy`,
   onCopyError,
+  onClick,
   className,
   variant = 'ghost',
   size = 'icon',
@@ -50,12 +51,15 @@ export function CopyButton({
       variant={variant}
       size={size}
       className={cn('size-8 shrink-0', className)}
+      {...props}
+      // After the spread, and calling a passed handler too: a Tooltip trigger
+      // injects its own onClick, which used to replace the copy entirely.
       onClick={(e) => {
+        onClick?.(e)
         e.preventDefault()
         e.stopPropagation()
         handleCopy()
       }}
-      {...props}
     >
       {copied ? (
         <Check className='h-3.5 w-3.5 text-success' />
