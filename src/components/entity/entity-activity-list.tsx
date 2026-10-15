@@ -10,6 +10,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useLingui } from '@lingui/react/macro'
 import { Activity } from 'lucide-react'
 import { ActivityTimeline } from '../activity-timeline'
+import { GeneralError } from '../../features/errors/general-error'
 import { EmptyState } from '../ui/empty-state'
 import { EntityAvatar } from '../entity-avatar'
 import { ListSkeleton } from '../ui/list-skeleton'
@@ -53,6 +54,9 @@ export function EntityActivityList({
   const {
     data,
     isLoading,
+    isError,
+    error,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -111,6 +115,20 @@ export function EntityActivityList({
 
   if (isLoading) {
     return <ListSkeleton count={3} variant='simple' height='h-10' />
+  }
+
+  // A failed first load is not an empty history.
+  if (isError && activities.length === 0) {
+    return (
+      <GeneralError
+        error={error}
+        minimal
+        mode='inline'
+        reset={() => {
+          void refetch()
+        }}
+      />
+    )
   }
 
   if (activities.length === 0) {

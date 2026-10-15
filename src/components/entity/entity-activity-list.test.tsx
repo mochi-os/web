@@ -87,4 +87,18 @@ describe('EntityActivityList', () => {
     expect(screen.getByText('Moved')).toBeInTheDocument()
     expect(screen.queryByText('Changed')).toBeNull()
   })
+
+  it('says the load failed rather than that there is no activity', async () => {
+    render(
+      <EntityActivityList
+        containerId='c1'
+        objectId='o1'
+        listActivity={vi.fn(async () => {
+          throw new Error('Server unreachable')
+        })}
+      />
+    )
+    expect(await screen.findByText(/Server unreachable/)).toBeInTheDocument()
+    expect(screen.queryByText('No activity yet')).toBeNull()
+  })
 })
