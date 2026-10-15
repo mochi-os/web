@@ -457,6 +457,10 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const [collapsedColumns, setCollapsedColumns] = useShellStorage<
     Record<string, Record<string, string[]>>
   >(`${storagePrefix}:board:collapsed`, {})
+  // Folded swimlane rows, kept the same way: by board, then by row field.
+  const [collapsedRows, setCollapsedRows] = useShellStorage<
+    Record<string, Record<string, string[]>>
+  >(`${storagePrefix}:board:collapsedRows`, {})
 
   const dismissBoardHint = () => {
     setHintDismissed(true)
@@ -1477,6 +1481,23 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                     [columnField]: current.includes(columnId)
                       ? current.filter((c) => c !== columnId)
                       : [...current, columnId],
+                  },
+                })
+              },
+              collapsedRows: rowField
+                ? collapsedRows[containerId]?.[rowField]
+                : undefined,
+              onToggleRowCollapsed: (rowId) => {
+                if (!rowField) return
+                const board = collapsedRows[containerId] ?? {}
+                const current = board[rowField] ?? []
+                setCollapsedRows({
+                  ...collapsedRows,
+                  [containerId]: {
+                    ...board,
+                    [rowField]: current.includes(rowId)
+                      ? current.filter((r) => r !== rowId)
+                      : [...current, rowId],
                   },
                 })
               },

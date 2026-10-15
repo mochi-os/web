@@ -15,6 +15,7 @@ import {
   useRef,
 } from 'react'
 import { useLingui } from '@lingui/react/macro'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { rankCompare } from '../../lib/rank'
 import { sortEntityObjects } from '../../lib/entity-sort'
@@ -89,6 +90,9 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
   /** Column ids shown collapsed, on flat and swimlane boards alike. */
   collapsedColumns?: string[]
   onToggleColumnCollapsed?: (columnId: string) => void
+  /** Swimlane row ids shown folded to a single line. */
+  collapsedRows?: string[]
+  onToggleRowCollapsed?: (rowId: string) => void
   collapseLabels?: EntityBoardCollapseLabels
 }
 
@@ -116,6 +120,8 @@ export function EntityBoardContainer<TObject extends EntityObject>({
   collapsedColumns,
   onToggleColumnCollapsed,
   collapseLabels,
+  collapsedRows,
+  onToggleRowCollapsed,
   preview,
 }: EntityBoardContainerProps<TObject>) {
   const { t } = useLingui()
@@ -344,6 +350,12 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     !isReordering &&
     !preview &&
     !!collapsedColumns?.includes(columnId)
+  const isRowCollapsed = (rowId: string) =>
+    !!onToggleRowCollapsed &&
+    !!collapseLabels &&
+    !isReordering &&
+    !preview &&
+    !!collapsedRows?.includes(rowId)
 
   // Group top-level objects by status (flat mode) and sort
   const objectsByStatus = useMemo(() => {
@@ -882,6 +894,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
           rows={previewRows}
           preview={preview}
           collapsed={isCollapsed(status.id)}
+          collapsedRows={rows
+            ?.filter((r) => isRowCollapsed(r.id))
+            .map((r) => r.id)}
           onToggleCollapsed={
             onToggleColumnCollapsed
               ? () => onToggleColumnCollapsed(status.id)
@@ -927,30 +942,78 @@ export function EntityBoardContainer<TObject extends EntityObject>({
             ),
             ...(hasNoStatusSwimlane ? ['18rem'] : []),
           ].join(' '),
-          gridTemplateRows: `auto repeat(${swimlaneRows.length}, 1fr)`,
+          // A folded row shrinks to its label; open rows share the height.
+          gridTemplateRows: [
+            'auto',
+            ...swimlaneRows.map((row) =>
+              isRowCollapsed(row.id) ? 'auto' : '1fr'
+            ),
+          ].join(' '),
         }}
       >
         {/* Row indicators in left column */}
-        {swimlaneRows.map((row, r) => (
-          <div
-            key={`label-${row.id}`}
-            className={cn(
-              'flex items-start gap-2 pt-2 pe-3',
-              r < swimlaneRows.length - 1 && 'border-b'
-            )}
-            style={{ gridColumn: 1, gridRow: r + 2 }}
-          >
-            {row.colour && (
-              <div
-                className='w-2.5 h-2.5 rounded-full shrink-0 mt-0.5'
-                style={{ backgroundColor: row.colour }}
-              />
-            )}
-            <span className='text-xs text-muted-foreground font-medium whitespace-nowrap'>
-              {row.label}
-            </span>
-          </div>
-        ))}
+        {swimlaneRows.map((row, r) => {
+          const folded = isRowCollapsed(row.id)
+          const label = (
+            <>
+              {row.colour && (
+                <div
+                  className='w-2.5 h-2.5 rounded-full shrink-0 mt-0.5'
+                  style={{ backgroundColor: row.colour }}
+                />
+              )}
+              <span className='text-xs text-muted-foreground font-medium whitespace-nowrap'>
+                {row.label}
+              </span>
+            </>
+          )
+          return (
+            <div
+              key={`label-${row.id}`}
+              className={cn(
+                'group/row flex items-start gap-2 pt-2 pe-3',
+                r < swimlaneRows.length - 1 && 'border-b'
+              )}
+              style={{ gridColumn: 1, gridRow: r + 2 }}
+            >
+              {onToggleRowCollapsed &&
+              collapseLabels &&
+              !isReordering &&
+              !preview ? (
+                <button
+                  type='button'
+                  onClick={() => onToggleRowCollapsed(row.id)}
+                  aria-expanded={!folded}
+                  aria-label={
+                    folded
+                      ? collapseLabels.expand(row.label)
+                      : collapseLabels.collapse(row.label)
+                  }
+                  className='-ms-1 flex items-start gap-1.5 rounded px-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                >
+                  {folded ? (
+                    <ChevronRight className='size-3.5 shrink-0 text-muted-foreground rtl:rotate-180' />
+                  ) : (
+                    // Shown on hover, and always on touch screens and keyboard
+                    // focus. A folded row keeps its chevron, so the way back
+                    // is never hidden.
+                    <ChevronDown className='size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:none)]:opacity-100' />
+                  )}
+                  {label}
+                  {folded && (
+                    <span className='text-xs tabular-nums text-muted-foreground'>
+                      {Object.values(
+                        objectsByRowAndStatus[row.id] ?? {}
+                      ).reduce((sum, cards) => sum + cards.length, 0)}
+                    </span>
+                  )}
+                </button>
+              ) : (
+                label
+              )}
+            </div>
+          )
+        })}
 
         {/* Board columns */}
         {columnsToRender.map((status, c) =>

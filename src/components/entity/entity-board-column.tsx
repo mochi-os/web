@@ -103,6 +103,8 @@ export interface EntityBoardColumnProps<TObject extends EntityObject> {
   preview?: boolean
   /** Shown as a narrow strip with its name and count. */
   collapsed?: boolean
+  /** Swimlane rows folded to a single line: their cells show no cards. */
+  collapsedRows?: string[]
   /** Collapsing is offered only when this and the labels are both passed. */
   onToggleCollapsed?: () => void
   collapseLabels?: EntityBoardCollapseLabels
@@ -148,6 +150,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   rows,
   preview,
   collapsed,
+  collapsedRows,
   onToggleCollapsed,
   collapseLabels,
 }: EntityBoardColumnProps<TObject>) {
@@ -172,6 +175,8 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   const objectCountRef = useRef(objects.length)
   objectCountRef.current = objects.length
   const collapsedRef = useRef(false)
+  const collapsedRowsRef = useRef(collapsedRows)
+  collapsedRowsRef.current = collapsedRows
   const isDragOverRef = useRef(false)
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const dropModeRef = useRef<'between' | 'on'>('between')
@@ -404,9 +409,16 @@ export function EntityBoardColumn<TObject extends EntityObject>({
         for (const section of sections) {
           const rect = section.getBoundingClientRect()
           if (mouseY >= rect.top && mouseY <= rect.bottom) {
-            dropRowRef.current = section.getAttribute('data-row-id') || ''
-            const cards = section.querySelectorAll(':scope > [data-card-id]')
-            dropIndexRef.current = calculateDropIndex(cards)
+            const rowId = section.getAttribute('data-row-id') || ''
+            dropRowRef.current = rowId
+            if (collapsedRowsRef.current?.includes(rowId)) {
+              // A folded row shows no cards, so a drop lands at its end.
+              dropIndexRef.current =
+                rowsRef.current.find((r) => r.id === rowId)?.objects.length ?? 0
+            } else {
+              const cards = section.querySelectorAll(':scope > [data-card-id]')
+              dropIndexRef.current = calculateDropIndex(cards)
+            }
             break
           }
         }
@@ -894,7 +906,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
               index < rows.length - 1 && 'border-b'
             )}
             onDoubleClick={
-              onCreateInRow && !preview
+              onCreateInRow && !preview && !collapsedRows?.includes(row.id)
                 ? (e) => {
                     if (
                       e.target === e.currentTarget ||
@@ -907,7 +919,8 @@ export function EntityBoardColumn<TObject extends EntityObject>({
                 : undefined
             }
           >
-            {renderCardsWithGap(row.objects, row.id)}
+            {!collapsedRows?.includes(row.id) &&
+              renderCardsWithGap(row.objects, row.id)}
           </div>
         ))
       ) : (

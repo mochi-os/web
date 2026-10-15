@@ -374,6 +374,54 @@ describe('EntityObjectsPage', () => {
       expect(screen.getByTestId('collapsed')).toHaveTextContent('none')
     })
 
+    it('remembers a folded row for this board only', async () => {
+      const rowsSlot = {
+        renderBoard: ({
+          collapsedRows,
+          onToggleRowCollapsed,
+        }: {
+          collapsedRows?: string[]
+          onToggleRowCollapsed?: (id: string) => void
+        }) => (
+          <div data-testid='board'>
+            <span data-testid='rows'>
+              {(collapsedRows ?? []).join(',') || 'none'}
+            </span>
+            <button onClick={() => onToggleRowCollapsed?.('high')}>fold</button>
+          </div>
+        ),
+      }
+      const swimlanes = createMockEntityDesign({
+        views: [
+          createMockEntityView({
+            id: 'board',
+            name: 'Board',
+            viewtype: 'board',
+            columns: 'status',
+            rows: 'priority',
+          }),
+        ],
+      })
+      const first = renderPage({ design: swimlanes, ...rowsSlot } as never)
+      fireEvent.click(await screen.findByRole('button', { name: 'fold' }))
+      expect(screen.getByTestId('rows')).toHaveTextContent('high')
+      first.unmount()
+
+      const again = renderPage({ design: swimlanes, ...rowsSlot } as never)
+      await waitFor(() =>
+        expect(screen.getByTestId('rows')).toHaveTextContent('high')
+      )
+      again.unmount()
+
+      renderPage({
+        design: swimlanes,
+        containerId: 'c2',
+        ...rowsSlot,
+      } as never)
+      await screen.findByTestId('board')
+      expect(screen.getByTestId('rows')).toHaveTextContent('none')
+    })
+
     it('expands the column again on a second toggle', async () => {
       renderPage({ design, ...boardSlot } as never)
       const toggle = await screen.findByRole('button', { name: 'toggle' })

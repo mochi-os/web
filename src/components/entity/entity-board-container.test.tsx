@@ -6,6 +6,7 @@ import {
   render,
   screen,
   fireEvent,
+  createEvent,
   createMockEntityDesign,
   createMockEntityObject,
 } from './entity-test-utils'
@@ -182,6 +183,107 @@ describe('EntityBoardContainer', () => {
       expect(onMoveObject).toHaveBeenCalled()
       const [objectId, column, , row] = onMoveObject.mock.calls[0]
       expect([objectId, column, row]).toEqual(['a', 'done', 'high'])
+    })
+  })
+
+  describe('folding a swimlane row', () => {
+    const collapseLabels = {
+      collapse: (name: string) => `Collapse ${name}`,
+      expand: (name: string) => `Expand ${name}`,
+    }
+    const objects = [
+      createMockEntityObject({
+        id: 'a',
+        values: { title: 'First', status: 'todo', priority: 'high' },
+      }),
+      createMockEntityObject({
+        id: 'b',
+        values: { title: 'Second', status: 'done', priority: 'high' },
+      }),
+      createMockEntityObject({
+        id: 'c',
+        values: { title: 'Third', status: 'todo', priority: 'low' },
+      }),
+    ]
+
+    function renderRows(extra: Record<string, unknown> = {}) {
+      const onToggleRow = vi.fn()
+      render(
+        <EntityBoardContainer
+          design={createMockEntityDesign()}
+          containerId='c1'
+          fallbackTitle={(object) => object.id}
+          objects={objects}
+          statusField='status'
+          rowField='priority'
+          onToggleColumnCollapsed={vi.fn()}
+          onToggleRowCollapsed={onToggleRow}
+          collapseLabels={collapseLabels}
+          {...extra}
+        />
+      )
+      return onToggleRow
+    }
+
+    it('offers to fold a row and says which one', async () => {
+      const onToggleRow = renderRows()
+      const button = await screen.findByRole('button', {
+        name: 'Collapse High',
+      })
+      expect(button).toHaveAttribute('aria-expanded', 'true')
+      fireEvent.click(button)
+      expect(onToggleRow).toHaveBeenCalledWith('high')
+    })
+
+    it('hides a folded row in every column and shows its count', async () => {
+      renderRows({ collapsedRows: ['high'] })
+      const button = await screen.findByRole('button', { name: 'Expand High' })
+      expect(button).toHaveAttribute('aria-expanded', 'false')
+      expect(button).toHaveTextContent('High2')
+      expect(screen.queryByText('a')).toBeNull()
+      expect(screen.queryByText('b')).toBeNull()
+      // The low row is untouched.
+      expect(screen.getByText('c')).toBeTruthy()
+
+      const grid = button.closest<HTMLElement>('.grid')
+      expect(grid?.style.gridTemplateRows).toBe('auto auto 1fr 1fr')
+    })
+
+    it('offers no row toggle without labels to name it', async () => {
+      renderRows({ collapseLabels: undefined })
+      await screen.findByText('High')
+      expect(screen.queryByRole('button', { name: /High/ })).toBeNull()
+    })
+
+    it('keeps a dropped card in a folded row, at its end', async () => {
+      const onMoveObject = vi.fn()
+      renderRows({ collapsedRows: ['high'], onMoveObject })
+      await screen.findByRole('button', { name: 'Expand High' })
+      const cell = document.querySelector<HTMLElement>(
+        '[data-row-id="high"]'
+      ) as HTMLElement
+      cell.getBoundingClientRect = () =>
+        ({ top: 0, bottom: 100, left: 0, right: 100 }) as DOMRect
+      const dataTransfer = {
+        types: [
+          'text/plain',
+          'application/x-mochi-class-task',
+          'application/x-mochi-id-c',
+        ],
+        getData: () => 'c',
+        dropEffect: 'move',
+      }
+      // jsdom's drag events carry no pointer position, so set it by hand.
+      const over = createEvent.dragOver(cell, { dataTransfer })
+      Object.defineProperty(over, 'clientY', { value: 50 })
+      fireEvent(cell, over)
+      fireEvent.drop(cell, { dataTransfer })
+
+      expect(onMoveObject).toHaveBeenCalled()
+      const [objectId, column, rank, row] = onMoveObject.mock.calls[0]
+      expect([objectId, column, row]).toEqual(['c', 'todo', 'high'])
+      // After "a", the one card the folded cell holds.
+      expect(rank).toBe(2)
     })
   })
 })
