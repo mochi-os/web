@@ -239,15 +239,38 @@ describe('EntityObjectDetailPanel header', () => {
 })
 
 describe('EntityObjectDetailPanel tabs', () => {
-  it('shows properties, comments and activity by default', async () => {
+  it('shows properties, comments and activity as tabs', async () => {
     renderPanel()
     await screen.findByDisplayValue('Original')
 
-    expect(
-      screen.getByRole('button', { name: /Properties/ })
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Comments/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Activity/ })).toBeInTheDocument()
+    expect(screen.getByRole('tablist')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Properties/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('tab', { name: /Comments/ })).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
+    expect(screen.getByRole('tab', { name: /Activity/ })).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      screen.getByRole('tab', { name: /Properties/ }).id
+    )
+  })
+
+  it('moves between tabs with the arrow keys', async () => {
+    renderPanel()
+    await screen.findByDisplayValue('Original')
+
+    const properties = screen.getByRole('tab', { name: /Properties/ })
+    properties.focus()
+    fireEvent.keyDown(properties, { key: 'ArrowRight' })
+
+    // Radix moves focus on the next tick.
+    const comments = screen.getByRole('tab', { name: /Comments/ })
+    await waitFor(() => expect(comments).toHaveFocus())
+    expect(comments).toHaveAttribute('aria-selected', 'true')
   })
 
   it('puts an extra tab between comments and activity and renders it when picked', async () => {
@@ -264,7 +287,7 @@ describe('EntityObjectDetailPanel tabs', () => {
     await screen.findByDisplayValue('Original')
 
     const names = screen
-      .getAllByRole('button')
+      .getAllByRole('tab')
       .map((b) => b.textContent ?? '')
       .filter((n) => /Properties|Comments|Merge requests|Activity/.test(n))
     expect(names[0]).toContain('Properties')
@@ -272,7 +295,8 @@ describe('EntityObjectDetailPanel tabs', () => {
     expect(names[2]).toContain('Merge requests (2)')
     expect(names[3]).toContain('Activity')
 
-    fireEvent.click(screen.getByRole('button', { name: /Merge requests/ }))
+    // Radix selects a tab on mouse down, not on click.
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Merge requests/ }))
     expect(await screen.findByText('request panel')).toBeInTheDocument()
   })
 
@@ -285,8 +309,8 @@ describe('EntityObjectDetailPanel tabs', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole('button', { name: /Comments \(3\)/ })
-      ).toBeInTheDocument()
+        screen.getByRole('tab', { name: /Comments \(3\)/ })
+      ).toHaveAttribute('aria-selected', 'true')
     )
   })
 })

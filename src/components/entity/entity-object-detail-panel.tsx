@@ -34,8 +34,9 @@ import {
 } from '../ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ListSkeleton } from '../ui/list-skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { GeneralError } from '../../features/errors/general-error'
-import { cn, naturalCompare } from '../../lib/utils'
+import { naturalCompare } from '../../lib/utils'
 import { toast } from '../../lib/toast-utils'
 import { getErrorMessage } from '../../lib/handle-server-error'
 import { textUnchanged } from '../../lib/change-detection'
@@ -481,7 +482,6 @@ export function EntityObjectDetailPanel<
       icon: <Activity className='size-4' />,
     },
   ]
-  const activeExtraTab = appTabs.find((tab) => tab.id === activeTab)
 
   const handleFieldChange = (fieldId: string, value: string) => {
     if (textUnchanged(value, data.values[fieldId] ?? '')) return
@@ -572,118 +572,51 @@ export function EntityObjectDetailPanel<
         </div>
       </SidePanelHeader>
 
-      {/* Tabs */}
-      <div className='border-b shrink-0'>
-        <div className='flex gap-1 px-6 overflow-x-auto no-scrollbar'>
+      {/* Tabs. The root is display: contents, so the strip and the body stay
+          direct children of the panel's own layout. */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        variant='underline'
+        className='contents'
+      >
+        <TabsList className='shrink-0 px-6'>
           {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'relative flex shrink-0 items-center gap-2 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                activeTab === tab.id
-                  ? 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
+            <TabsTrigger key={tab.id} value={tab.id} className='gap-2'>
               {tab.icon}
               {tab.label}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
-      </div>
+        </TabsList>
 
-      {/* Tab content — deferred until the open slide settles so cold queries
+        {/* Tab content — deferred until the open slide settles so cold queries
             don't reflow the animating panel (first-open jank). */}
-      <SidePanelBody>
-        {!slideSettled ? (
-          <div className='max-w-2xl space-y-6'>
-            <ListSkeleton variant='simple' height='h-12' count={4} />
-          </div>
-        ) : (
-          <>
-            <div
-              className='max-w-2xl space-y-6'
-              hidden={activeTab !== 'properties'}
-            >
-              {titleField && (
-                <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
-                  <label className='text-sm font-medium text-muted-foreground pt-2'>
-                    {titleField.name}
-                  </label>
-                  <EntityFieldEditor
-                    field={titleField}
-                    value={data.values[titleField.id] || ''}
-                    options={classOptions[titleField.id] || []}
-                    onChange={(value) =>
-                      handleFieldChange(titleField.id, value)
-                    }
-                    readOnly={!canWrite(access)}
-                    hideLabel
-                    localPeople={peopleData}
-                    searchUsers={searchUsers}
-                    personAsset={personAsset}
-                  />
-                </div>
-              )}
-
-              {(validParentOptions.length > 0 || currentParent) && (
-                <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
-                  <label className='text-sm font-medium text-muted-foreground pt-2'>
-                    <Trans>Parent</Trans>
-                  </label>
-                  {!canWrite(access) ? (
-                    <span className='text-sm h-9 flex items-center'>
-                      {currentParent ? objectTitle(currentParent) : t`None`}
-                    </span>
-                  ) : (
-                    <Select
-                      value={object.parent || '_none_'}
-                      onValueChange={(value) => {
-                        const newParent = value === '_none_' ? '' : value
-                        if (textUnchanged(newParent, object.parent ?? ''))
-                          return
-                        updateParentMutation.mutate(newParent)
-                      }}
-                      disabled={updateParentMutation.isPending}
-                    >
-                      <SelectTrigger className='w-full' aria-label={t`Parent`}>
-                        <SelectValue placeholder={t`None`}>
-                          {currentParent ? objectTitle(currentParent) : t`None`}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {canBeTopLevel && (
-                          <SelectItem value='_none_'>
-                            <Trans>None</Trans>
-                          </SelectItem>
-                        )}
-                        {validParentOptions.map((obj) => (
-                          <SelectItem key={obj.id} value={obj.id}>
-                            {objectTitle(obj)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
-
-              {classFields
-                .filter((f) => f.id !== cls?.title)
-                .map((field) => (
-                  <div
-                    key={field.id}
-                    className='grid grid-cols-[120px_1fr] gap-4 items-start'
-                  >
+        <SidePanelBody>
+          {!slideSettled ? (
+            <div className='max-w-2xl space-y-6'>
+              <ListSkeleton variant='simple' height='h-12' count={4} />
+            </div>
+          ) : (
+            <>
+              {/* Mounted while hidden, like comments below. */}
+              <TabsContent
+                value='properties'
+                forceMount
+                hidden={activeTab !== 'properties'}
+                className='max-w-2xl space-y-6'
+              >
+                {titleField && (
+                  <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
                     <label className='text-sm font-medium text-muted-foreground pt-2'>
-                      {field.name}
+                      {titleField.name}
                     </label>
                     <EntityFieldEditor
-                      field={field}
-                      value={data.values[field.id] || ''}
-                      options={classOptions[field.id] || []}
-                      onChange={(value) => handleFieldChange(field.id, value)}
+                      field={titleField}
+                      value={data.values[titleField.id] || ''}
+                      options={classOptions[titleField.id] || []}
+                      onChange={(value) =>
+                        handleFieldChange(titleField.id, value)
+                      }
                       readOnly={!canWrite(access)}
                       hideLabel
                       localPeople={peopleData}
@@ -691,63 +624,140 @@ export function EntityObjectDetailPanel<
                       personAsset={personAsset}
                     />
                   </div>
-                ))}
+                )}
 
-              <EntityObjectAttachments
-                containerId={containerId}
-                objectId={objectId}
-                readOnly={!canWrite(access)}
-                listAttachments={api.listAttachments}
-                uploadAttachments={api.uploadAttachments}
-                deleteAttachment={api.deleteAttachment}
-              />
+                {(validParentOptions.length > 0 || currentParent) && (
+                  <div className='grid grid-cols-[120px_1fr] gap-4 items-start'>
+                    <label className='text-sm font-medium text-muted-foreground pt-2'>
+                      <Trans>Parent</Trans>
+                    </label>
+                    {!canWrite(access) ? (
+                      <span className='text-sm h-9 flex items-center'>
+                        {currentParent ? objectTitle(currentParent) : t`None`}
+                      </span>
+                    ) : (
+                      <Select
+                        value={object.parent || '_none_'}
+                        onValueChange={(value) => {
+                          const newParent = value === '_none_' ? '' : value
+                          if (textUnchanged(newParent, object.parent ?? ''))
+                            return
+                          updateParentMutation.mutate(newParent)
+                        }}
+                        disabled={updateParentMutation.isPending}
+                      >
+                        <SelectTrigger
+                          className='w-full'
+                          aria-label={t`Parent`}
+                        >
+                          <SelectValue placeholder={t`None`}>
+                            {currentParent
+                              ? objectTitle(currentParent)
+                              : t`None`}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {canBeTopLevel && (
+                            <SelectItem value='_none_'>
+                              <Trans>None</Trans>
+                            </SelectItem>
+                          )}
+                          {validParentOptions.map((obj) => (
+                            <SelectItem key={obj.id} value={obj.id}>
+                              {objectTitle(obj)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
 
-              <EntityObjectLinks
-                containerId={containerId}
-                objectId={objectId}
-                outgoing={data.outgoing}
-                incoming={data.incoming}
-                prefix={prefix}
-                classes={design.classes}
-                readOnly={!canWrite(access)}
-                listObjects={api.listObjects}
-                createLink={api.createLink}
-                deleteLink={api.deleteLink}
-              />
-            </div>
+                {classFields
+                  .filter((f) => f.id !== cls?.title)
+                  .map((field) => (
+                    <div
+                      key={field.id}
+                      className='grid grid-cols-[120px_1fr] gap-4 items-start'
+                    >
+                      <label className='text-sm font-medium text-muted-foreground pt-2'>
+                        {field.name}
+                      </label>
+                      <EntityFieldEditor
+                        field={field}
+                        value={data.values[field.id] || ''}
+                        options={classOptions[field.id] || []}
+                        onChange={(value) => handleFieldChange(field.id, value)}
+                        readOnly={!canWrite(access)}
+                        hideLabel
+                        localPeople={peopleData}
+                        searchUsers={searchUsers}
+                        personAsset={personAsset}
+                      />
+                    </div>
+                  ))}
 
-            {activeExtraTab && (
-              <div className='max-w-2xl'>{activeExtraTab.content}</div>
-            )}
+                <EntityObjectAttachments
+                  containerId={containerId}
+                  objectId={objectId}
+                  readOnly={!canWrite(access)}
+                  listAttachments={api.listAttachments}
+                  uploadAttachments={api.uploadAttachments}
+                  deleteAttachment={api.deleteAttachment}
+                />
 
-            {/* Comments stay mounted so the draft survives tab switches —
+                <EntityObjectLinks
+                  containerId={containerId}
+                  objectId={objectId}
+                  outgoing={data.outgoing}
+                  incoming={data.incoming}
+                  prefix={prefix}
+                  classes={design.classes}
+                  readOnly={!canWrite(access)}
+                  listObjects={api.listObjects}
+                  createLink={api.createLink}
+                  deleteLink={api.deleteLink}
+                />
+              </TabsContent>
+
+              {appTabs.map((tab) => (
+                <TabsContent key={tab.id} value={tab.id} className='max-w-2xl'>
+                  {tab.content}
+                </TabsContent>
+              ))}
+
+              {/* Comments stay mounted so the draft survives tab switches —
                   same pattern as the properties tab. */}
-            <div className='max-w-2xl' hidden={activeTab !== 'comments'}>
-              <EntityCommentList
-                containerId={containerId}
-                objectId={objectId}
-                readOnly={!canComment(access)}
-                listComments={api.listComments}
-                listPeople={api.listPeople}
-                createComment={api.createComment}
-                updateComment={api.updateComment}
-                deleteComment={api.deleteComment}
-              />
-            </div>
+              <TabsContent
+                value='comments'
+                forceMount
+                hidden={activeTab !== 'comments'}
+                className='max-w-2xl'
+              >
+                <EntityCommentList
+                  containerId={containerId}
+                  objectId={objectId}
+                  readOnly={!canComment(access)}
+                  listComments={api.listComments}
+                  listPeople={api.listPeople}
+                  createComment={api.createComment}
+                  updateComment={api.updateComment}
+                  deleteComment={api.deleteComment}
+                />
+              </TabsContent>
 
-            {activeTab === 'activity' && (
-              <div className='max-w-2xl'>
+              <TabsContent value='activity' className='max-w-2xl'>
                 <EntityActivityList
                   containerId={containerId}
                   objectId={objectId}
                   fields={classFields}
                   listActivity={api.listActivity}
                 />
-              </div>
-            )}
-          </>
-        )}
-      </SidePanelBody>
+              </TabsContent>
+            </>
+          )}
+        </SidePanelBody>
+      </Tabs>
 
       <ConfirmDialog
         open={showDeleteDialog}
