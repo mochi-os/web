@@ -60,7 +60,6 @@ import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
 import { EntityContentScroller } from './entity-content-scroller'
 import { useEntityWebsocket } from '../../hooks/use-entity-websocket'
-import { useFormat } from '../../hooks/use-format'
 import { useKeyboardShortcuts } from '../../hooks/use-keyboard-shortcuts'
 import { usePageTitle } from '../../hooks/use-page-title'
 import { useShellStorage } from '../../hooks/use-shell-storage'
@@ -68,10 +67,6 @@ import { useSearch } from '../../context/search-provider'
 import { getAppPath } from '../../lib/app-path'
 import { arraysEqual } from '../../lib/change-detection'
 import { canCreate, canDesign, canWrite } from '../../lib/entity-access'
-import {
-  entitySearchText,
-  type EntityDisplayContext,
-} from '../../lib/entity-display'
 import { getErrorMessage } from '../../lib/handle-server-error'
 import { rankBetween, rankCompare } from '../../lib/rank'
 import { shellSaveBlob } from '../../lib/shell-bridge'
@@ -567,19 +562,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     return map
   }, [peopleData])
 
-  // Lookups that turn a stored value into the text the screen shows. Options
-  // are per class: two classes can share a field id with different options.
-  const { formatDate, formatNumber } = useFormat()
-  const displayContext = useCallback(
-    (obj: TObject, fieldId: string): EntityDisplayContext => ({
-      options: design.options[obj.class]?.[fieldId],
-      people: peopleMap,
-      formatDate,
-      formatNumber,
-    }),
-    [design.options, peopleMap, formatDate, formatNumber]
-  )
-
   // Check if an object is a descendant of a given ancestor
   const isDescendant = (
     obj: TObject,
@@ -913,18 +895,13 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       result = result.filter((obj) => viewClasses.includes(obj.class))
     }
 
-    // Apply search filter. It matches what the screen shows: option names and
-    // people's names, not the ids the server stores for them.
+    // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
       result = result.filter((obj) =>
-        (design.fields[obj.class] || []).some((field) => {
-          const raw = obj.values[field.id]
-          if (typeof raw !== 'string' || !raw) return false
-          return entitySearchText(field, raw, displayContext(obj, field.id))
-            .toLowerCase()
-            .includes(searchLower)
-        })
+        Object.values(obj.values).some(
+          (v) => typeof v === 'string' && v.toLowerCase().includes(searchLower)
+        )
       )
     }
 
@@ -935,14 +912,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     }
 
     return result
-  }, [
-    objectsData,
-    watchedIds,
-    filters,
-    activeView?.classes,
-    design.fields,
-    displayContext,
-  ])
+  }, [objectsData, watchedIds, filters, activeView?.classes])
 
   // Keyboard navigation helpers
   const handleSelectNext = useCallback(() => {
