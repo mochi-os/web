@@ -1,10 +1,11 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   render,
   screen,
+  fireEvent,
   createMockEntityDesign,
   createMockEntityObject,
 } from './entity-test-utils'
@@ -13,7 +14,10 @@ import { EntityBoardContainer } from './entity-board-container'
 describe('EntityBoardContainer', () => {
   it('names the column of cards with no value "[not set]", whatever field the board is on', async () => {
     const objects = [
-      createMockEntityObject({ id: 'a', values: { title: 'Placed', status: 'todo' } }),
+      createMockEntityObject({
+        id: 'a',
+        values: { title: 'Placed', status: 'todo' },
+      }),
       createMockEntityObject({ id: 'b', values: { title: 'Loose' } }),
     ]
     render(
@@ -32,8 +36,14 @@ describe('EntityBoardContainer', () => {
 
   it('names that column "[not set]" in swimlanes too', async () => {
     const objects = [
-      createMockEntityObject({ id: 'a', values: { title: 'Placed', status: 'todo', priority: 'high' } }),
-      createMockEntityObject({ id: 'b', values: { title: 'Loose', priority: 'high' } }),
+      createMockEntityObject({
+        id: 'a',
+        values: { title: 'Placed', status: 'todo', priority: 'high' },
+      }),
+      createMockEntityObject({
+        id: 'b',
+        values: { title: 'Loose', priority: 'high' },
+      }),
     ]
     render(
       <EntityBoardContainer
@@ -47,5 +57,131 @@ describe('EntityBoardContainer', () => {
     )
     expect(await screen.findByText('[not set]')).toBeTruthy()
     expect(screen.queryByText('No status')).toBeNull()
+  })
+
+  describe('collapsing a column', () => {
+    const collapseLabels = {
+      collapse: (name: string) => `Collapse ${name}`,
+      expand: (name: string) => `Expand ${name}`,
+    }
+    const objects = [
+      createMockEntityObject({
+        id: 'a',
+        values: { title: 'First', status: 'todo' },
+      }),
+      createMockEntityObject({
+        id: 'b',
+        values: { title: 'Second', status: 'todo' },
+      }),
+    ]
+
+    function renderBoard(extra: Record<string, unknown> = {}) {
+      const onToggle = vi.fn()
+      render(
+        <EntityBoardContainer
+          design={createMockEntityDesign()}
+          containerId='c1'
+          fallbackTitle={(object) => object.id}
+          objects={objects}
+          statusField='status'
+          onToggleColumnCollapsed={onToggle}
+          collapseLabels={collapseLabels}
+          {...extra}
+        />
+      )
+      return onToggle
+    }
+
+    it('shows each column count beside its name', async () => {
+      renderBoard()
+      const name = await screen.findByText('To Do')
+      expect(name.parentElement).toHaveTextContent('To Do2')
+    })
+
+    it('offers to collapse a column and says which one', async () => {
+      const onToggle = renderBoard()
+      const button = await screen.findByRole('button', {
+        name: 'Collapse To Do',
+      })
+      expect(button).toHaveAttribute('aria-expanded', 'true')
+      // Cards show their fallback title, the object id, in this fixture.
+      expect(screen.getByText('a')).toBeTruthy()
+      fireEvent.click(button)
+      expect(onToggle).toHaveBeenCalledWith('todo')
+    })
+
+    it('shows a collapsed column as its name and count, without its cards', async () => {
+      const onToggle = renderBoard({ collapsedColumns: ['todo'] })
+      const strip = await screen.findByRole('button', { name: 'Expand To Do' })
+      expect(strip).toHaveAttribute('aria-expanded', 'false')
+      expect(strip).toHaveTextContent('To Do2')
+      expect(screen.queryByText('a')).toBeNull()
+      expect(screen.queryByText('b')).toBeNull()
+      // The other columns are untouched.
+      expect(screen.getByRole('button', { name: 'Collapse Done' })).toBeTruthy()
+      fireEvent.click(strip)
+      expect(onToggle).toHaveBeenCalledWith('todo')
+    })
+
+    it('offers no collapse without labels to name the control', async () => {
+      renderBoard({ collapseLabels: undefined })
+      await screen.findByText('To Do')
+      expect(screen.queryByRole('button', { name: /Collapse/ })).toBeNull()
+    })
+
+    it('collapses swimlane columns too, narrowing them in the grid', async () => {
+      const onToggle = renderBoard({
+        rowField: 'priority',
+        collapsedColumns: ['todo'],
+      })
+      const strip = await screen.findByRole('button', { name: 'Expand To Do' })
+      expect(strip).toHaveTextContent('To Do2')
+      expect(screen.queryByText('a')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Collapse Done' })).toBeTruthy()
+
+      const grid = strip.closest<HTMLElement>('.grid')
+      expect(grid?.style.gridTemplateColumns).toBe(
+        'max-content 2.5rem 18rem 18rem'
+      )
+      fireEvent.click(strip)
+      expect(onToggle).toHaveBeenCalledWith('todo')
+    })
+
+    it('keeps a card in its own row when dropped on a collapsed swimlane column', async () => {
+      const onMoveObject = vi.fn()
+      const rowed = [
+        createMockEntityObject({
+          id: 'a',
+          values: { title: 'First', status: 'todo', priority: 'high' },
+        }),
+        createMockEntityObject({
+          id: 'b',
+          values: { title: 'Second', status: 'done', priority: 'high' },
+        }),
+      ]
+      renderBoard({
+        objects: rowed,
+        rowField: 'priority',
+        collapsedColumns: ['done'],
+        onMoveObject,
+      })
+      const strip = (await screen.findByRole('button', { name: 'Expand Done' }))
+        .parentElement as HTMLElement
+      const dataTransfer = {
+        types: [
+          'text/plain',
+          'application/x-mochi-class-task',
+          'application/x-mochi-id-a',
+        ],
+        getData: () => 'a',
+        dropEffect: 'move',
+      }
+      fireEvent.dragOver(strip, { dataTransfer, clientY: 10 })
+      fireEvent.drop(strip, { dataTransfer })
+
+      expect(onMoveObject).toHaveBeenCalled()
+      const [objectId, column, , row] = onMoveObject.mock.calls[0]
+      expect([objectId, column, row]).toEqual(['a', 'done', 'high'])
+    })
   })
 })

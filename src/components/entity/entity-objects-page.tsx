@@ -449,6 +449,15 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     false
   )
 
+  // Collapsed board columns, by board and then by column field: two views
+  // that group by the same field share them. One key for the whole app, since
+  // useShellStorage keeps its last value when the key changes and finds
+  // nothing stored, so a key per board would carry one board's columns onto
+  // the next on a board-to-board navigation.
+  const [collapsedColumns, setCollapsedColumns] = useShellStorage<
+    Record<string, Record<string, string[]>>
+  >(`${storagePrefix}:board:collapsed`, {})
+
   const dismissBoardHint = () => {
     setHintDismissed(true)
   }
@@ -1457,6 +1466,20 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 : undefined,
               isReordering: isReorderingColumns,
               onReorderColumns: handleReorderColumns,
+              collapsedColumns: collapsedColumns[containerId]?.[columnField],
+              onToggleColumnCollapsed: (columnId) => {
+                const board = collapsedColumns[containerId] ?? {}
+                const current = board[columnField] ?? []
+                setCollapsedColumns({
+                  ...collapsedColumns,
+                  [containerId]: {
+                    ...board,
+                    [columnField]: current.includes(columnId)
+                      ? current.filter((c) => c !== columnId)
+                      : [...current, columnId],
+                  },
+                })
+              },
             })
           )}
         </EntityContentScroller>

@@ -20,6 +20,7 @@ import { rankCompare } from '../../lib/rank'
 import { sortEntityObjects } from '../../lib/entity-sort'
 import {
   EntityBoardColumn,
+  type EntityBoardCollapseLabels,
   type EntityBoardColumnRow,
 } from './entity-board-column'
 import type {
@@ -85,6 +86,10 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
   isReordering?: boolean
   onReorderColumns?: (order: string[]) => void
   preview?: boolean
+  /** Column ids shown collapsed, on flat and swimlane boards alike. */
+  collapsedColumns?: string[]
+  onToggleColumnCollapsed?: (columnId: string) => void
+  collapseLabels?: EntityBoardCollapseLabels
 }
 
 export function EntityBoardContainer<TObject extends EntityObject>({
@@ -108,6 +113,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
   onDeleteColumn,
   isReordering,
   onReorderColumns,
+  collapsedColumns,
+  onToggleColumnCollapsed,
+  collapseLabels,
   preview,
 }: EntityBoardContainerProps<TObject>) {
   const { t } = useLingui()
@@ -327,6 +335,15 @@ export function EntityBoardContainer<TObject extends EntityObject>({
 
   // Columns to render (use reordered if in reorder mode)
   const columnsToRender = isReordering ? reorderedColumns : statusOptions
+
+  // Collapsed only where the column can show the control to undo it, so the
+  // swimlane grid and the column always agree on its width.
+  const isCollapsed = (columnId: string) =>
+    !!onToggleColumnCollapsed &&
+    !!collapseLabels &&
+    !isReordering &&
+    !preview &&
+    !!collapsedColumns?.includes(columnId)
 
   // Group top-level objects by status (flat mode) and sort
   const objectsByStatus = useMemo(() => {
@@ -864,6 +881,13 @@ export function EntityBoardContainer<TObject extends EntityObject>({
           isDragging={isDragging}
           rows={previewRows}
           preview={preview}
+          collapsed={isCollapsed(status.id)}
+          onToggleCollapsed={
+            onToggleColumnCollapsed
+              ? () => onToggleColumnCollapsed(status.id)
+              : undefined
+          }
+          collapseLabels={collapseLabels}
         />
       </div>
     )
@@ -889,15 +913,20 @@ export function EntityBoardContainer<TObject extends EntityObject>({
         (row) => (objectsByRowAndStatus[row.id]?.['']?.length || 0) > 0
       )
 
-    const totalCols = columnsToRender.length + (hasNoStatusSwimlane ? 1 : 0)
-
     return (
       <div
         ref={boardRef}
         className='grid pt-3 pb-2 gap-x-4'
         style={{
           height: boardHeight,
-          gridTemplateColumns: `max-content repeat(${totalCols}, 18rem)`,
+          // A collapsed column narrows to its strip; the rest keep 18rem.
+          gridTemplateColumns: [
+            'max-content',
+            ...columnsToRender.map((status) =>
+              isCollapsed(status.id) ? '2.5rem' : '18rem'
+            ),
+            ...(hasNoStatusSwimlane ? ['18rem'] : []),
+          ].join(' '),
           gridTemplateRows: `auto repeat(${swimlaneRows.length}, 1fr)`,
         }}
       >

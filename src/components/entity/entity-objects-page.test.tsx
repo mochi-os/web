@@ -322,4 +322,64 @@ describe('EntityObjectsPage', () => {
     await screen.findByText('Acme Holdings')
     expect(screen.getByTestId('detail-panel')).toHaveTextContent('none')
   })
+
+  describe('collapsed board columns', () => {
+    // The board is a stub that shows what it was told is collapsed and
+    // collapses "todo" when asked.
+    const boardSlot = {
+      renderBoard: ({
+        collapsedColumns,
+        onToggleColumnCollapsed,
+      }: {
+        collapsedColumns?: string[]
+        onToggleColumnCollapsed?: (id: string) => void
+      }) => (
+        <div data-testid='board'>
+          <span data-testid='collapsed'>
+            {(collapsedColumns ?? []).join(',') || 'none'}
+          </span>
+          <button onClick={() => onToggleColumnCollapsed?.('todo')}>
+            toggle
+          </button>
+        </div>
+      ),
+    }
+    const design = createMockEntityDesign({
+      views: [
+        createMockEntityView({
+          id: 'board',
+          name: 'Board',
+          viewtype: 'board',
+          columns: 'status',
+        }),
+      ],
+    })
+
+    it('remembers a collapsed column for this board only', async () => {
+      const first = renderPage({ design, ...boardSlot } as never)
+      fireEvent.click(await screen.findByRole('button', { name: 'toggle' }))
+      expect(screen.getByTestId('collapsed')).toHaveTextContent('todo')
+      first.unmount()
+
+      // Same board again: still collapsed.
+      const again = renderPage({ design, ...boardSlot } as never)
+      await waitFor(() =>
+        expect(screen.getByTestId('collapsed')).toHaveTextContent('todo')
+      )
+      again.unmount()
+
+      // Another board with the same columns: not collapsed.
+      renderPage({ design, containerId: 'c2', ...boardSlot } as never)
+      await screen.findByTestId('board')
+      expect(screen.getByTestId('collapsed')).toHaveTextContent('none')
+    })
+
+    it('expands the column again on a second toggle', async () => {
+      renderPage({ design, ...boardSlot } as never)
+      const toggle = await screen.findByRole('button', { name: 'toggle' })
+      fireEvent.click(toggle)
+      fireEvent.click(toggle)
+      expect(screen.getByTestId('collapsed')).toHaveTextContent('none')
+    })
+  })
 })
