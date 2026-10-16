@@ -45,6 +45,12 @@ export interface EntityApiShapes {
   listKey: string
 }
 
+/** Optional progress and stop for a long transfer, such as a full export. */
+export interface EntityTransferOptions {
+  onProgress?: (event: AxiosProgressEvent) => void
+  signal?: AbortSignal
+}
+
 export interface EntityApiConfig {
   request: AppClient
   endpoints: EntityEndpoints
@@ -659,9 +665,19 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
     // Export data as a zip container: a manifest plus one entry per attachment.
     // Fetched as a blob because the attachment bytes never become JSON - the
     // server streams them into the archive rather than base64-encoding them.
-    exportData: async (entityId: string): Promise<Blob> => {
+    exportData: async (
+      entityId: string,
+      options?: EntityTransferOptions
+    ): Promise<Blob> => {
+      // No timeout, like the imports: a large archive (100 MB and more) takes
+      // longer than the client's 30-second default to download, which
+      // aborted it after the server had already answered. The caller's signal
+      // is the way to stop it instead.
       const response = await request.get<Blob>(endpoints.dataExport(entityId), {
         responseType: 'blob',
+        timeout: 0,
+        onDownloadProgress: options?.onProgress,
+        signal: options?.signal,
       })
       return response as unknown as Blob
     },
@@ -671,9 +687,15 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
     // fetch bytes over P2P in bounded rounds; loop until remaining is zero,
     // then call exportData.
     warmExport: async (
-      entityId: string
+      entityId: string,
+      options?: Pick<EntityTransferOptions, 'signal'>
     ): Promise<{ data: { attachments: number; remaining: number } }> => {
-      return request.post(endpoints.dataExportWarm(entityId), {})
+      // A round can spend up to a minute fetching, past the 30-second default.
+      return request.post(
+        endpoints.dataExportWarm(entityId),
+        {},
+        { timeout: 0, signal: options?.signal }
+      )
     },
 
     // Import data from an export file. Uploaded as a multipart file part:
@@ -683,7 +705,8 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
       entityId: string,
       file: Blob,
       onProgress?: (event: AxiosProgressEvent) => void,
-      design?: boolean
+      design?: boolean,
+      signal?: AbortSignal
     ): Promise<{
       data: {
         objects: number
@@ -700,6 +723,7 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
       return request.post(endpoints.dataImport(entityId), form, {
         timeout: 0,
         onUploadProgress: onProgress,
+        signal,
       })
     },
 

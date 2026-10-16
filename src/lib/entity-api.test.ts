@@ -425,6 +425,35 @@ describe('createEntityApi', () => {
   // upload paths and left two of them untested, including the one whose bug it
   // names: a large import aborting mid-flight. Covered here so the value is
   // pinned everywhere it was set, not only where a test happened to exist.
+  // A 108 MB export answered 200 and was still cut off by the 30-second
+  // default, so a duplicate or a backup of a large container never finished.
+  describe('export timeouts', () => {
+    it('should lift the timeout when downloading an export', async () => {
+      vi.mocked(request.get).mockResolvedValue(new Blob(['zip']))
+
+      await api.exportData('proj123')
+
+      expect(request.get).toHaveBeenCalledWith(
+        expect.stringContaining('data/export'),
+        expect.objectContaining({ responseType: 'blob', timeout: 0 })
+      )
+    })
+
+    it('should lift the timeout for a warm-up round', async () => {
+      vi.mocked(request.post).mockResolvedValue({
+        data: { attachments: 0, remaining: 0 },
+      })
+
+      await api.warmExport('proj123')
+
+      expect(request.post).toHaveBeenCalledWith(
+        expect.stringContaining('data/export/warm'),
+        {},
+        expect.objectContaining({ timeout: 0 })
+      )
+    })
+  })
+
   describe('upload timeouts', () => {
     it('should lift the timeout when uploading attachments', async () => {
       vi.mocked(request.post).mockResolvedValue({ data: { attachments: [] } })
@@ -988,7 +1017,6 @@ describe('createEntityApi', () => {
 // methods no app suite has ever invoked; the gate fails when anything else
 // stops being reached.
 const NEVER_TESTED_ON_MAIN = [
-  'exportData',
   'exportDesign',
   'getAccessRules',
   'importDesign',
@@ -1004,11 +1032,10 @@ const NEVER_TESTED_ON_MAIN = [
   'share',
   'subscribe',
   'unsubscribe',
-  'warmExport',
 ] as const
 
 describe('shared client surface', () => {
-  it('invokes every client method except the 17 quoted separately', () => {
+  it('invokes every client method except the 15 quoted separately', () => {
     const surface = Object.keys(build())
     const missing = surface.filter(
       (name) =>
@@ -1025,12 +1052,12 @@ describe('shared client surface', () => {
 
   // Each of the 66 methods references exactly one member of the shared table
   // and no member is referenced twice, so reaching a method is reaching its
-  // route: 49 methods reached is 49 of the 66 routes, not 66.
-  it('reaches 49 of the 66 client methods, one route each', () => {
+  // route: 51 methods reached is 51 of the 66 routes, not 66.
+  it('reaches 51 of the 66 client methods, one route each', () => {
     const surface = Object.keys(build())
     expect(surface).toHaveLength(66)
     expect(Object.keys(entityEndpoints)).toHaveLength(66)
     expect(reached.size).toBe(surface.length - NEVER_TESTED_ON_MAIN.length)
-    expect(reached.size).toBe(49)
+    expect(reached.size).toBe(51)
   })
 })
