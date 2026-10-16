@@ -579,6 +579,18 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
       )
     },
 
+    // Copy attachments of other objects in the container onto an object
+    copyAttachments: async (
+      entityId: string,
+      objectId: string,
+      attachments: string[]
+    ): Promise<EntityAttachmentListResponse> => {
+      return request.post<EntityAttachmentListResponse>(
+        endpoints.attachmentCopy(entityId, objectId),
+        { attachments: attachments.join(',') }
+      )
+    },
+
     // ============= Watcher Methods =============
 
     // List watchers

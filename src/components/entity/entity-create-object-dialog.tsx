@@ -8,7 +8,7 @@
 import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { Paperclip, Plus, Upload } from 'lucide-react'
+import { Paperclip, Plus, Upload, X } from 'lucide-react'
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import type { AxiosProgressEvent } from 'axios'
 import { Button } from '../ui/button'
@@ -60,6 +60,10 @@ export interface EntityCreateObjectDialogProps<TObject extends EntityObject> {
   prefix?: string
   defaultFields?: { field: string; value: string }[]
   defaultParent?: string
+  /** The class the form opens on, when it can be created: a copy's. */
+  defaultClass?: string
+  /** Attachments of another object that Create copies onto the new one. */
+  copied?: { id: string; name: string }[]
   allowedClasses?: string[]
   onCreated?: (id: string, number?: number, readable?: string) => void
   /** Screen-reader only sheet title and description; each app words its own. */
@@ -91,6 +95,12 @@ export interface EntityCreateObjectDialogProps<TObject extends EntityObject> {
     files: File[],
     onProgress?: (event: AxiosProgressEvent) => void
   ) => Promise<unknown>
+  /** Copies attachments the container already holds onto an object. */
+  copyAttachments?: (
+    recordId: string,
+    objectId: string,
+    attachments: string[]
+  ) => Promise<unknown>
   searchUsers: (query: string) => Promise<{
     data: { results: { id: string; name: string; fingerprint: string }[] }
   }>
@@ -105,6 +115,8 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   prefix,
   defaultFields,
   defaultParent,
+  defaultClass,
+  copied,
   allowedClasses,
   onCreated,
   srTitle,
@@ -115,6 +127,7 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   createObject,
   setValue,
   uploadAttachments,
+  copyAttachments,
   searchUsers,
 }: EntityCreateObjectDialogProps<TObject>) {
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +135,8 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [parent, setParent] = useState('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  // The copied attachments the form still holds; any may be taken off.
+  const [copies, setCopies] = useState<{ id: string; name: string }[]>([])
   const pendingFilePreviewUrls = useImageObjectUrls(pendingFiles)
   const fileInputRef = useRef<HTMLInputElement>(null)
   // The object the current attempt created. A retry after a failed value
@@ -134,8 +149,14 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   } | null>(null)
   const { formatList } = useFormat()
 
+  // Whether the attempt under way has copied its attachments, so a retry
+  // after a later step failed does not copy them twice.
+  const copiedRef = useRef(false)
   useEffect(() => {
-    if (!open) createdRef.current = null
+    if (!open) {
+      createdRef.current = null
+      copiedRef.current = false
+    }
   }, [open])
 
   // One staging path for the picker and for a drop, so the two cannot come to
@@ -195,6 +216,8 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
     creatableClasses,
     defaultFields,
     defaultParent,
+    defaultClass,
+    copied,
     design,
     usableValue,
   })
@@ -202,6 +225,8 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
     creatableClasses,
     defaultFields,
     defaultParent,
+    defaultClass,
+    copied,
     design,
     usableValue,
   }
@@ -211,13 +236,19 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         creatableClasses,
         defaultFields,
         defaultParent,
+        defaultClass,
+        copied,
         design,
         usableValue,
       } = resetRef.current
-      const initialType = creatableClasses[0]?.id || ''
+      const initialType =
+        creatableClasses.find((c) => c.id === defaultClass)?.id ||
+        creatableClasses[0]?.id ||
+        ''
       setSelectedType(initialType)
       setParent(defaultParent || '')
       setPendingFiles([])
+      setCopies(copied ?? [])
       setError(null)
       // Initialize field values with defaults valid for the initial class
       const initialValues: Record<string, string> = {}
@@ -386,6 +417,16 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
         }
       }
 
+      // Copy the attachments the form kept from the object it copies
+      if (copies.length > 0 && copyAttachments && !copiedRef.current) {
+        await copyAttachments(
+          recordId,
+          objectId,
+          copies.map((attachment) => attachment.id)
+        )
+        copiedRef.current = true
+      }
+
       // Upload any attached files
       if (pendingFiles.length > 0) {
         await upload(
@@ -403,6 +444,7 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
     },
     onSuccess: (data) => {
       createdRef.current = null
+      copiedRef.current = false
       // Add new object to cache immediately for instant UI update
       queryClient.setQueryData(
         ['objects', containerId],
@@ -652,6 +694,39 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
                 <Trans>Files</Trans>
               </label>
               <div className='space-y-2 pt-1'>
+                {copies.length > 0 && (
+                  <ul className='space-y-1'>
+                    {copies.map((attachment) => {
+                      const name = attachment.name
+                      return (
+                        <li
+                          key={attachment.id}
+                          className='flex items-center gap-2 text-sm'
+                        >
+                          <Paperclip className='text-muted-foreground size-3.5 shrink-0' />
+                          <span className='min-w-0 flex-1 truncate'>
+                            {name}
+                          </span>
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='icon'
+                            className='size-6'
+                            aria-label={t`Remove ${name}`}
+                            disabled={createMutation.isPending}
+                            onClick={() =>
+                              setCopies((prev) =>
+                                prev.filter((kept) => kept.id !== attachment.id)
+                              )
+                            }
+                          >
+                            <X className='size-3.5' />
+                          </Button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
                 <ComposerAttachments
                   files={pendingFiles}
                   previewUrls={pendingFilePreviewUrls}

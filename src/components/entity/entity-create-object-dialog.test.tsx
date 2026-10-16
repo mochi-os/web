@@ -120,6 +120,85 @@ describe('EntityCreateObjectDialog', () => {
   })
 })
 
+// A copy of an object: the form opens on its class, and Create copies the
+// attachments it still carries onto the new object.
+describe('EntityCreateObjectDialog making a copy', () => {
+  const two = () =>
+    createMockEntityDesign({
+      classes: [
+        createMockEntityClass({ id: 'bug', name: 'Bug' }),
+        createMockEntityClass({ id: 'task', name: 'Task' }),
+      ],
+      fields: { bug: [], task: [] },
+      options: {},
+      hierarchy: { bug: [''], task: [''] },
+    })
+
+  const submit = async () => {
+    const create = await screen.findByRole('button', { name: 'Create' })
+    fireEvent.submit(create.closest('form') as HTMLFormElement)
+  }
+
+  it('opens on the class it is given, not the first', async () => {
+    const { createObject } = show({
+      design: two(),
+      defaultFields: [],
+      defaultClass: 'task',
+    })
+    await submit()
+    await waitFor(() => expect(createObject).toHaveBeenCalledTimes(1))
+    expect(createObject.mock.calls[0][1]).toMatchObject({ class: 'task' })
+  })
+
+  it('copies the attachments it carries onto the new object, less any taken off', async () => {
+    const copyAttachments = vi.fn(async (..._args: unknown[]) => ({}))
+    show({
+      copyAttachments,
+      copied: [
+        { id: 'a1', name: 'plan.png' },
+        { id: 'a2', name: 'notes.txt' },
+      ],
+    })
+    expect(await screen.findByText('plan.png')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove notes.txt' }))
+    expect(screen.queryByText('notes.txt')).toBeNull()
+    await submit()
+    await waitFor(() => expect(copyAttachments).toHaveBeenCalledTimes(1))
+    expect(copyAttachments).toHaveBeenCalledWith('r1', 'o1', ['a1'])
+  })
+
+  it('copies them once when a later step fails and Create is tried again', async () => {
+    const copyAttachments = vi.fn(async (..._args: unknown[]) => ({}))
+    const uploadAttachments = vi
+      .fn(async (..._args: unknown[]) => ({}))
+      .mockRejectedValueOnce(new Error('upload refused'))
+    show({
+      copyAttachments,
+      uploadAttachments,
+      copied: [{ id: 'a1', name: 'plan.png' }],
+    })
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'extra.txt')] },
+    })
+    await submit()
+    await waitFor(() => expect(uploadAttachments).toHaveBeenCalledTimes(1))
+    await submit()
+    await waitFor(() => expect(uploadAttachments).toHaveBeenCalledTimes(2))
+    expect(copyAttachments).toHaveBeenCalledTimes(1)
+  })
+
+  it('copies nothing for a new item that is no copy', async () => {
+    const copyAttachments = vi.fn(async (..._args: unknown[]) => ({}))
+    const { createObject } = show({ copyAttachments })
+    await submit()
+    await waitFor(() => expect(createObject).toHaveBeenCalledTimes(1))
+    expect(copyAttachments).not.toHaveBeenCalled()
+  })
+})
+
 // The board's list, which the dialog adds the new object to as soon as it is
 // made rather than waiting for a reload.
 describe('EntityCreateObjectDialog and the board list', () => {

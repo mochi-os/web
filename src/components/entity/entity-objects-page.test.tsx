@@ -19,7 +19,7 @@ import {
   type EntityObjectsPageLabels,
   type EntityObjectsPageContainer,
 } from './entity-objects-page'
-import type { EntityObject } from '../../types/entity-object'
+import type { EntityObject, EntityObjectCopy } from '../../types/entity-object'
 import { FileText } from 'lucide-react'
 import { SearchProvider } from '../../context/search-provider'
 import { toast } from '../../lib/toast-utils'
@@ -321,5 +321,77 @@ describe('EntityObjectsPage', () => {
     renderPage()
     await screen.findByText('Acme Holdings')
     expect(screen.getByTestId('detail-panel')).toHaveTextContent('none')
+  })
+  it("opens Copy in an object's panel as the new-item form, filled from the object, and a later New as a plain one", async () => {
+    const objects = createMockEntityObjects(3)
+    const seen: Record<string, unknown>[] = []
+    renderPage(
+      {
+        // The view shows only bugs; the copy is of a task, which keeps its class.
+        design: createMockEntityDesign({
+          views: [
+            createMockEntityView({
+              id: 'board',
+              viewtype: 'board',
+              classes: ['bug'],
+            }),
+          ],
+        }),
+        initialObjectId: objects[1].id,
+        renderDetailPanel: ({
+          objectId,
+          onCopy,
+        }: {
+          objectId: string | null
+          onCopy: (copy: EntityObjectCopy) => void
+        }) => (
+          <button
+            type='button'
+            data-testid='detail-panel'
+            onClick={() =>
+              onCopy({
+                class: 'task',
+                parent: 'p1',
+                values: { title: 'Original', status: 'done' },
+                attachments: [{ id: 'a1', name: 'plan.png' }],
+              })
+            }
+          >
+            {objectId ?? 'none'}
+          </button>
+        ),
+        renderCreateDialog: (props: Record<string, unknown>) => {
+          if (props.open) seen.push(props)
+          return <div data-testid='create-dialog' />
+        },
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByTestId('detail-panel'))
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    const copy = seen[seen.length - 1]
+    expect(copy).toMatchObject({
+      defaultClass: 'task',
+      defaultParent: 'p1',
+      defaultFields: [
+        { field: 'title', value: 'Original' },
+        { field: 'status', value: 'done' },
+      ],
+      copied: [{ id: 'a1', name: 'plan.png' }],
+      allowedClasses: undefined,
+    })
+    // The panel gave way to the form.
+    expect(screen.getByTestId('detail-panel')).toHaveTextContent('none')
+
+    seen.length = 0
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: /createAction/ }))[0]
+    )
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    const plain = seen[seen.length - 1]
+    expect(plain.defaultClass).toBeUndefined()
+    expect(plain.copied).toBeUndefined()
+    expect(plain.defaultParent).toBeUndefined()
+    expect(plain.allowedClasses).toEqual(['bug'])
   })
 })

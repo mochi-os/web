@@ -15,6 +15,7 @@ import { Trans } from '@lingui/react/macro'
 import { t } from '@lingui/core/macro'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  Copy,
   Eye,
   EyeOff,
   Trash2,
@@ -68,6 +69,7 @@ import type {
   EntityAccess,
   EntityDesign,
   EntityObject,
+  EntityObjectCopy,
   EntityObjectLink,
 } from '../../types/entity-object'
 
@@ -161,6 +163,8 @@ export interface EntityObjectDetailPanelProps<
   prefix?: string
   /** Extra tabs, inserted between Comments and Activity. */
   extraTabs?: (detail: TDetail) => EntityObjectDetailTab[]
+  /** Opens a copy of the object as a new item, which the form's Create makes. */
+  onCopy?: (copy: EntityObjectCopy) => void
   onClose: () => void
 }
 
@@ -175,6 +179,7 @@ export function EntityObjectDetailPanel<
   api,
   prefix,
   extraTabs,
+  onCopy,
   onClose,
 }: EntityObjectDetailPanelProps<TObject, TDetail>) {
   useShellOverlay(!!objectId)
@@ -448,6 +453,28 @@ export function EntityObjectDetailPanel<
   }
 
   const object = data.object
+
+  // A copy carries the object's class, parent and values as they stand, and
+  // its attachments, read afresh so none added meanwhile is left behind.
+  const copy = async (open: (copy: EntityObjectCopy) => void) => {
+    if (!objectId) return
+    try {
+      const attachments = await queryClient.fetchQuery({
+        queryKey: ['attachments', containerId, objectId],
+        queryFn: async () =>
+          (await api.listAttachments(containerId, objectId)).data.attachments,
+      })
+      open({
+        class: object.class,
+        parent: object.parent,
+        values: data.values,
+        attachments: attachments.map(({ id, name }) => ({ id, name })),
+      })
+    } catch (error) {
+      toast.error(getErrorMessage(error, t`Failed to load item`))
+    }
+  }
+
   const classFields = design.fields[object.class] || []
   const classOptions = design.options[object.class] || {}
   const cls = design.classes.find((c) => c.id === object.class)
@@ -533,6 +560,22 @@ export function EntityObjectDetailPanel<
                 {data.watching ? t`Stop watching` : t`Watch`}
               </TooltipContent>
             </Tooltip>
+            {canWrite(access) && onCopy && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='h-8 w-8 text-muted-foreground'
+                    onClick={() => void copy(onCopy)}
+                    aria-label={t`Copy`}
+                  >
+                    <Copy className='size-4' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t`Copy`}</TooltipContent>
+              </Tooltip>
+            )}
             {canWrite(access) && (
               <Tooltip>
                 <TooltipTrigger asChild>

@@ -74,6 +74,8 @@ export const entityEndpoints = {
     objectId: string,
     attachmentId: string
   ) => `${entityId}/-/objects/${objectId}/attachments/${attachmentId}/delete`,
+  attachmentCopy: (entityId: string, objectId: string) =>
+    `${entityId}/-/objects/${objectId}/attachments/copy`,
 
   // Activity endpoint
   activity: (entityId: string, objectId: string) =>
