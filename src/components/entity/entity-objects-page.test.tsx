@@ -249,6 +249,56 @@ describe('EntityObjectsPage', () => {
 
   // crm passes a csvExport binding and projects does not, so the entry has to
   // come and go with the prop rather than being built into the shared menu.
+  it('offers Duplicate only to an app that passes it', async () => {
+    const duplicate = {
+      menuAction: 'Duplicate',
+      api: {} as never,
+      create: vi.fn(),
+      remove: vi.fn(),
+      onDuplicated: vi.fn(),
+      labels: {
+        title: 'Duplicate CRM',
+        name: 'Name',
+        everything: 'Everything',
+        designOnly: 'Design only',
+        allowSearch: 'Allow anyone to search',
+        cancel: 'Cancel',
+        confirm: 'Duplicate',
+        duplicating: 'Duplicating',
+        duplicated: 'Duplicated',
+        failed: 'Failed',
+        defaultName: (name: string) => `Duplicate of ${name}`,
+        leftBehind: 'Left behind',
+      },
+    }
+    const { unmount } = renderPage({ duplicate } as never)
+    await openPageMenu()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Duplicate' }))
+    expect(
+      await screen.findByRole('dialog', { name: 'Duplicate CRM' })
+    ).toBeInTheDocument()
+    unmount()
+
+    const second = renderPage()
+    await openPageMenu()
+    await screen.findByRole('menuitem', { name: 'exportData' })
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).toBeNull()
+    second.unmount()
+
+    // A view-only subscriber may export, but is not offered a one-click copy.
+    renderPage({
+      duplicate,
+      container: {
+        ...container,
+        access: 'view',
+        owner: { local: false, name: 'Someone' },
+      },
+    } as never)
+    await openPageMenu()
+    await screen.findByRole('menuitem', { name: 'exportData' })
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).toBeNull()
+  })
+
   it('lists the CSV export only for an app that passes one', async () => {
     renderPage({
       csvExport: {

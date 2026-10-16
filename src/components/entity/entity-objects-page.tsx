@@ -19,6 +19,7 @@ import { useRouter } from '@tanstack/react-router'
 import {
   Check,
   Columns3,
+  Copy,
   Download,
   Ellipsis,
   FileDown,
@@ -59,6 +60,10 @@ import type { EntityCreateObjectDialogProps } from './entity-create-object-dialo
 import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
 import { EntityContentScroller } from './entity-content-scroller'
+import {
+  EntityDuplicateDialog,
+  type EntityDuplicateDialogProps,
+} from './entity-duplicate-dialog'
 import { useEntityWebsocket } from '../../hooks/use-entity-websocket'
 import { useKeyboardShortcuts } from '../../hooks/use-keyboard-shortcuts'
 import { usePageTitle } from '../../hooks/use-page-title'
@@ -68,6 +73,7 @@ import { getAppPath } from '../../lib/app-path'
 import { arraysEqual } from '../../lib/change-detection'
 import { canCreate, canDesign, canWrite } from '../../lib/entity-access'
 import { getErrorMessage } from '../../lib/handle-server-error'
+import { exportEntityArchive } from '../../lib/entity-export'
 import { rankBetween, rankCompare } from '../../lib/rank'
 import { shellSaveBlob } from '../../lib/shell-bridge'
 import { CopyButton } from '../ui/copy-button'
@@ -274,6 +280,12 @@ export type EntityObjectsCreateSlotProps<TObject extends EntityObject> = Omit<
   | 'searchUsers'
 >
 
+/** What the page needs from the app to offer Duplicate. */
+export type EntityObjectsPageDuplicate = Omit<
+  EntityDuplicateDialogProps,
+  'open' | 'onOpenChange' | 'sourceId' | 'sourceName'
+> & { menuAction: string }
+
 export interface EntityObjectsPageProps<TObject extends EntityObject> {
   /** The app's details object: classes, fields, options, views, hierarchy. */
   design: EntityDesign
@@ -303,6 +315,9 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   csvExport?: EntityObjectsCsvExport
   /** Design entry in the page menu, when the reader may design. */
   designMenuItem?: ReactNode
+  /** Offers Duplicate in the page menu: a copy of this container, with its
+   *  items or its design alone. */
+  duplicate?: EntityObjectsPageDuplicate
   settingsMenuItem: ReactNode
   renderViewOptionsBar: (props: EntityObjectsViewOptionsSlotProps) => ReactNode
   renderBoard: (props: EntityObjectsBoardSlotProps<TObject>) => ReactNode
@@ -335,6 +350,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   emptyViewClass,
   csvExport,
   designMenuItem,
+  duplicate,
   settingsMenuItem,
   renderViewOptionsBar,
   renderBoard,
@@ -366,16 +382,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   }, [api, container.id, shareFailed])
 
   const handleDataExport = useCallback(async () => {
-    // Remote containers fetch attachment bytes over P2P in bounded server-side
-    // rounds; warm until nothing remains so a large one's export doesn't time
-    // out. Each round covers up to a minute of fetching.
     const warming = toast.loading(labels.loading)
     try {
-      for (let round = 0; round < 120; round++) {
-        const warm = await api.warmExport(container.id)
-        if (!warm.data || warm.data.remaining === 0) break
-      }
-      const blob = await api.exportData(container.id)
+      const blob = await exportEntityArchive(api, container.id)
       const today = new Date().toISOString().split('T')[0]
       const slug = container.name
         .toLowerCase()
@@ -439,6 +448,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   // The object a new item copies, which the form opens filled from.
   const [createCopy, setCreateCopy] = useState<EntityObjectCopy | undefined>()
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
   const [showViewOptions, setShowViewOptions] = useShellStorage(
     `${storagePrefix}-view-options-expanded`,
     true
@@ -1362,6 +1372,14 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 <FileDown className='size-4 me-2' />
                 {labels.exportData}
               </DropdownMenuItem>
+              {/* People who can edit only: a view-only subscriber is not
+                  handed a one-click copy of someone else's data. */}
+              {duplicate && canWrite(access) && (
+                <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                  <Copy className='size-4 me-2' />
+                  {duplicate.menuAction}
+                </DropdownMenuItem>
+              )}
               {/* Canonical menu tail: Link, Design, Settings, Unsubscribe. */}
               {isOwner && (
                 <DropdownMenuItem onClick={() => void openLinkDialog()}>
@@ -1553,6 +1571,16 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               (activeView?.classes?.length ? activeView.classes : undefined),
           onCreated: handleObjectCreated,
         })}
+
+      {duplicate && canWrite(access) && (
+        <EntityDuplicateDialog
+          {...duplicate}
+          open={duplicateOpen}
+          onOpenChange={setDuplicateOpen}
+          sourceId={container.id}
+          sourceName={container.name}
+        />
+      )}
 
       <KeyboardShortcutsHelp
         open={showShortcutsHelp}

@@ -16,9 +16,12 @@ import { Progress } from './progress'
 export function UploadProgress({
   progress,
   className,
+  label,
 }: {
   progress: Upload | null
   className?: string
+  /** The bar's accessible name, for a transfer that is not only an upload. */
+  label?: string
 }) {
   const { t } = useLingui()
   const { formatFileSize } = useFormat()
@@ -31,7 +34,7 @@ export function UploadProgress({
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <Progress
-        aria-label={t`Upload progress`}
+        aria-label={label ?? t`Upload progress`}
         className='min-w-16 flex-1'
         value={determinate ? Math.round(fraction * 100) : null}
       />
