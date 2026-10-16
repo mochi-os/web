@@ -78,6 +78,7 @@ import type {
   EntityDesign,
   EntityField,
   EntityObject,
+  EntityObjectCopy,
   EntitySortState,
 } from '../../types/entity-object'
 
@@ -269,6 +270,7 @@ export type EntityObjectsCreateSlotProps<TObject extends EntityObject> = Omit<
   | 'createObject'
   | 'setValue'
   | 'uploadAttachments'
+  | 'copyAttachments'
   | 'searchUsers'
 >
 
@@ -310,6 +312,7 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   ) => ReactNode
   renderDetailPanel: (props: {
     objectId: string | null
+    onCopy: (copy: EntityObjectCopy) => void
     onClose: () => void
   }) => ReactNode
 }
@@ -433,6 +436,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const [createChildClasses, setCreateChildClasses] = useState<
     string[] | undefined
   >()
+  // The object a new item copies, which the form opens filled from.
+  const [createCopy, setCreateCopy] = useState<EntityObjectCopy | undefined>()
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const [showViewOptions, setShowViewOptions] = useShellStorage(
     `${storagePrefix}-view-options-expanded`,
@@ -1014,6 +1019,10 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     }
     setSelectedObjectId(null)
     setCreateDefaultFields(getDefaultColumnValue())
+    // Nothing of a child or a copy made before carries into a plain new item.
+    setCreateDefaultParent(undefined)
+    setCreateChildClasses(undefined)
+    setCreateCopy(undefined)
     setCreateDialogOpen(true)
   }, [design.classes.length, getDefaultColumnValue, noClasses])
 
@@ -1054,6 +1063,20 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     setCreateDefaultFields(fields)
     setCreateDefaultParent(undefined)
     setCreateChildClasses(undefined)
+    setCreateCopy(undefined)
+    setCreateDialogOpen(true)
+  }
+
+  // Copy in an object's panel: the panel gives way to the new-item form,
+  // filled from the object, which makes the copy only on Create.
+  const handleCopy = (copy: EntityObjectCopy) => {
+    setSelectedObjectId(null)
+    setCreateDefaultFields(
+      Object.entries(copy.values).map(([field, value]) => ({ field, value }))
+    )
+    setCreateDefaultParent(copy.parent || undefined)
+    setCreateChildClasses(undefined)
+    setCreateCopy(copy)
     setCreateDialogOpen(true)
   }
 
@@ -1073,6 +1096,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     setCreateDefaultFields(fields.length > 0 ? fields : undefined)
     setCreateDefaultParent(parent.id)
     setCreateChildClasses(childClasses)
+    setCreateCopy(undefined)
     setCreateDialogOpen(true)
   }
 
@@ -1509,6 +1533,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       {/* Object detail dialog */}
       {renderDetailPanel({
         objectId: selectedObjectId,
+        onCopy: handleCopy,
         onClose: () => setSelectedObjectId(null),
       })}
 
@@ -1518,9 +1543,14 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           onOpenChange: setCreateDialogOpen,
           defaultFields: createDefaultFields,
           defaultParent: createDefaultParent,
-          allowedClasses:
-            createChildClasses ||
-            (activeView?.classes?.length ? activeView.classes : undefined),
+          defaultClass: createCopy?.class,
+          copied: createCopy?.attachments,
+          // A copy keeps the class of the object it copies, whatever the
+          // view shows.
+          allowedClasses: createCopy
+            ? undefined
+            : createChildClasses ||
+              (activeView?.classes?.length ? activeView.classes : undefined),
           onCreated: handleObjectCreated,
         })}
 

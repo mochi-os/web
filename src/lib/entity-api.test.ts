@@ -967,6 +967,20 @@ describe('createEntityApi', () => {
       )
     })
   })
+
+  describe('copyAttachments', () => {
+    it('names the attachments to copy onto the object, comma-separated', async () => {
+      const mockResponse = { data: { attachments: [] } }
+      vi.mocked(request.post).mockResolvedValue(mockResponse)
+
+      await api.copyAttachments('proj123', 'obj2', ['att1', 'att2'])
+
+      expect(request.post).toHaveBeenCalledWith(
+        'proj123/-/objects/obj2/attachments/copy',
+        { attachments: 'att1,att2' }
+      )
+    })
+  })
 })
 
 // Surface gate. Cross-package coverage cannot be measured here, so reach over
@@ -1009,14 +1023,14 @@ describe('shared client surface', () => {
     expect(stale).toEqual([])
   })
 
-  // Each of the 65 methods references exactly one member of the shared table
+  // Each of the 66 methods references exactly one member of the shared table
   // and no member is referenced twice, so reaching a method is reaching its
-  // route: 48 methods reached is 48 of the 65 routes, not 65.
-  it('reaches 48 of the 65 client methods, one route each', () => {
+  // route: 49 methods reached is 49 of the 66 routes, not 66.
+  it('reaches 49 of the 66 client methods, one route each', () => {
     const surface = Object.keys(build())
-    expect(surface).toHaveLength(65)
-    expect(Object.keys(entityEndpoints)).toHaveLength(65)
+    expect(surface).toHaveLength(66)
+    expect(Object.keys(entityEndpoints)).toHaveLength(66)
     expect(reached.size).toBe(surface.length - NEVER_TESTED_ON_MAIN.length)
-    expect(reached.size).toBe(48)
+    expect(reached.size).toBe(49)
   })
 })

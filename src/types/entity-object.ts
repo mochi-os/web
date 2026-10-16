@@ -87,6 +87,17 @@ export interface EntityAttachment {
   created: number
 }
 
+/**
+ * What copying an object opens the new-item form on: the original's class,
+ * parent and values, and the attachments Create copies onto the new one.
+ */
+export interface EntityObjectCopy {
+  class: string
+  parent: string
+  values: Record<string, string>
+  attachments: { id: string; name: string }[]
+}
+
 export interface EntityComment {
   id: string
   parent: string

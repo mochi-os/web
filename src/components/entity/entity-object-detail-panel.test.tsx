@@ -218,6 +218,63 @@ describe('EntityObjectDetailPanel failure reporting', () => {
   })
 })
 
+describe('EntityObjectDetailPanel copy', () => {
+  it('offers Copy only where the copy can open and the reader may write', async () => {
+    renderPanel()
+    await screen.findByText('Original')
+    expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull()
+  })
+
+  it('offers no Copy to a reader who may not write', async () => {
+    renderPanel({ access: 'comment', onCopy: vi.fn() })
+    await screen.findByText('Original')
+    expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull()
+  })
+
+  it("opens the copy on the object's class, parent and values, and its attachments read afresh", async () => {
+    const onCopy = vi.fn()
+    api.getObject = vi.fn(async () => ({
+      data: detailFor({
+        object: { ...row(object), parent: 'obj-2' },
+        values: { title: 'Original', status: 'done' },
+      }),
+    }))
+    api.listAttachments = vi.fn(async () => ({
+      data: {
+        attachments: [
+          {
+            id: 'a1',
+            name: 'plan.png',
+            size: 4,
+            type: 'image/png',
+            created: 1,
+          },
+        ],
+      },
+    }))
+    renderPanel({ onCopy })
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }))
+    await waitFor(() => expect(onCopy).toHaveBeenCalledTimes(1))
+    expect(onCopy).toHaveBeenCalledWith({
+      class: 'task',
+      parent: 'obj-2',
+      values: { title: 'Original', status: 'done' },
+      attachments: [{ id: 'a1', name: 'plan.png' }],
+    })
+  })
+
+  it('says so when the attachments cannot be read, opening nothing', async () => {
+    const onCopy = vi.fn()
+    api.listAttachments = vi.fn(async () => {
+      throw new Error('down')
+    })
+    renderPanel({ onCopy })
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }))
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1))
+    expect(onCopy).not.toHaveBeenCalled()
+  })
+})
+
 describe('EntityObjectDetailPanel parent select', () => {
   it('offers no "None" to a class that cannot sit at the top level', async () => {
     renderPanel()

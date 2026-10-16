@@ -407,7 +407,15 @@ export * from './lib/safe-navigation'
 export * as push from './lib/push'
 
 // Types
-export type { PlaceData, PostData, PhotonPlace } from './types/places'
+export type {
+  PlaceData,
+  PostData,
+  PostEmoji,
+  PostMedia,
+  PostPerson,
+  PostPoll,
+  PhotonPlace,
+} from './types/places'
 export * from './types/settings'
 export * from './types/users'
 export * from './types/entity-object'
