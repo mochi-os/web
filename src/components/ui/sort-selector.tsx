@@ -13,9 +13,20 @@ import {
   SelectValue,
 } from './select'
 
-export type SortType = 'relevant' | 'ai' | 'interests' | 'new' | 'hot' | 'top'
+export type SortType =
+  | 'relevant'
+  | 'ai'
+  | 'interests'
+  | 'new'
+  | 'hot'
+  | 'top'
+  | 'active'
+  | 'scaled'
+  | 'controversial'
+  | 'old'
+  | 'comments'
 
-interface SortOption {
+export interface SortOption {
   value: SortType
   label: string
   icon: React.ReactNode
@@ -25,6 +36,8 @@ interface SortSelectorProps {
   value: SortType
   onValueChange: (value: SortType) => void
   options?: SortType[]
+  /** Sorts an app offers beyond the shared ones, labelled by the app. */
+  extra?: SortOption[]
   disabled?: boolean
   className?: string
 }
@@ -33,6 +46,7 @@ export function SortSelector({
   value,
   onValueChange,
   options,
+  extra = [],
   disabled,
   className,
 }: SortSelectorProps) {
@@ -48,9 +62,12 @@ export function SortSelector({
     { value: 'hot', label: t`Hot`, icon: <Flame className='size-4' /> },
     { value: 'top', label: t`Top`, icon: <Trophy className='size-4' /> },
   ]
-  const visibleOptions = options
-    ? SORT_OPTIONS.filter((opt) => options.includes(opt.value))
-    : SORT_OPTIONS
+  const visibleOptions = [
+    ...(options
+      ? SORT_OPTIONS.filter((opt) => options.includes(opt.value))
+      : SORT_OPTIONS),
+    ...extra,
+  ]
 
   // Map legacy 'relevant' to 'interests' for display
   const effectiveValue = value === 'relevant' ? 'interests' : value
