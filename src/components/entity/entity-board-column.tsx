@@ -36,6 +36,11 @@ import {
 } from '../ui/tooltip'
 import { Inbox, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { EntityBoardCard } from './entity-board-card'
+import {
+  entityBoardDropTarget,
+  entityBoardTopAllowed,
+  type EntityBoardDropTarget,
+} from './entity-board-drop'
 import type {
   EntityClass,
   EntityDragPreview,
@@ -159,6 +164,8 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   objectMapRef.current = objectMap
   const hierarchyRef = useRef(hierarchy)
   hierarchyRef.current = hierarchy
+  const allFieldsRef = useRef(allFields)
+  allFieldsRef.current = allFields
   const dragSourceRef = useRef<{
     id: string
     column: string
@@ -273,85 +280,30 @@ export function EntityBoardColumn<TObject extends EntityObject>({
         }
         return false
       }
-
-      // Drop detection: find deepest card under cursor
-      let dropOnEl: Element | null = null
-      let dropOnId = ''
-      let siblingReorder: {
-        parentId: string
-        rank: number
-        index: number
-        container: Element
-        siblings: NodeListOf<Element>
-      } | null = null
-
-      const targetEl = (e.target as HTMLElement).closest?.('[data-card-id]')
-      if (targetEl) {
-        const parentCardEl = targetEl.parentElement?.closest('[data-card-id]')
-        const rect = targetEl.getBoundingClientRect()
-        const edgeZone = parentCardEl
-          ? Math.min(rect.height * 0.35, 20)
-          : Math.min(rect.height * 0.2, 12)
-        const distFromTop = mouseY - rect.top
-        const distFromBottom = rect.bottom - mouseY
-        const cardId = targetEl.getAttribute('data-card-id') || ''
-        // The gap placeholder carries data-card-id={draggedId}. Hovering its
-        // middle would miss both drop-on and sibling reorder and fall through to
-        // top-level mode, which sends field=columnField and fails for classes
-        // without it.
-        const cursorOnGap = cardId === draggedId
-
-        if (
-          !cursorOnGap &&
-          distFromTop > edgeZone &&
-          distFromBottom > edgeZone
-        ) {
-          const cardObj = om[cardId]
-          if (
-            cardId &&
-            cardObj &&
-            canParent(cardObj.class) &&
-            (!draggedId || !isAncestor(cardId, draggedId))
-          ) {
-            dropOnEl = targetEl
-            dropOnId = cardId
-          }
-        } else {
-          if (parentCardEl) {
-            const parentId = parentCardEl.getAttribute('data-card-id') || ''
-            const parentObj = om[parentId]
-            const isAlreadySibling = draggedObj?.parent === parentId
-            if (
-              isAlreadySibling ||
-              (parentObj &&
-                canParent(parentObj.class) &&
-                (!draggedId || !isAncestor(parentId, draggedId)))
-            ) {
-              const sibContainer = targetEl.parentElement!
-              const siblings = sibContainer.querySelectorAll(
-                ':scope > [data-card-id]'
-              )
-              // Match calculateDropIndex: skip the gap (data-card-id === draggedId)
-              // so sibIndex stays consistent across re-renders as the gap moves.
-              let sibIndex = 0
-              for (let i = 0; i < siblings.length; i++) {
-                if (siblings[i].getAttribute('data-card-id') === draggedId)
-                  continue
-                const sibRect = siblings[i].getBoundingClientRect()
-                if (mouseY < sibRect.top + sibRect.height / 2) break
-                sibIndex++
-              }
-              siblingReorder = {
-                parentId,
-                rank: sibIndex + 1,
-                container: sibContainer,
-                siblings,
-                index: sibIndex,
-              }
-            }
-          }
-        }
+      // Whether a card may take the dragged object as its child
+      const accepts = (cardId: string) => {
+        const card = om[cardId]
+        return (
+          !!card &&
+          cardId !== draggedId &&
+          canParent(card.class) &&
+          (!draggedId || !isAncestor(cardId, draggedId))
+        )
       }
+
+      // Where the pointer aims: see entityBoardDropTarget. A drag over a text
+      // node has no element to start from.
+      const target = e.target
+      const drop: EntityBoardDropTarget =
+        target instanceof Element
+          ? entityBoardDropTarget(
+              target,
+              mouseY,
+              draggedId,
+              draggedObj?.parent,
+              accepts
+            )
+          : { kind: 'top' }
 
       // Calculate drop index for top-level between mode
       const calculateDropIndex = (cards: NodeListOf<Element>) => {
@@ -389,12 +341,20 @@ export function EntityBoardColumn<TObject extends EntityObject>({
       clearDropTargetHighlights()
 
       const source = dragSourceRef.current
+      const child = !!(draggedObj?.parent && om[draggedObj.parent])
+      const topAllowed = entityBoardTopAllowed(
+        { fields: allFieldsRef.current || {}, hierarchy: hr || {} },
+        draggedObj?.class || draggedClass,
+        child,
+        statusField || '',
+        id
+      )
 
-      if (dropOnEl && dropOnId) {
+      if (drop.kind === 'on') {
         dropModeRef.current = 'on'
-        dropTargetCardRef.current = dropOnId
+        dropTargetCardRef.current = drop.id
         childReorderRef.current = null
-        dropOnEl.setAttribute('data-drop-target', '')
+        drop.card.setAttribute('data-drop-target', '')
         // Send preview for drop-on-card mode
         if (onDragPreviewRef.current && source) {
           onDragPreviewRef.current({
@@ -405,17 +365,14 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             targetRow: dropRowRef.current,
             targetIndex: dropIndexRef.current,
             mode: 'on',
-            dropOnCardId: dropOnId,
+            dropOnCardId: drop.id,
             cardHeight: source.height,
           })
         }
-      } else if (siblingReorder) {
+      } else if (drop.kind === 'sibling') {
         dropModeRef.current = 'between'
         dropTargetCardRef.current = ''
-        childReorderRef.current = {
-          parentId: siblingReorder.parentId,
-          rank: siblingReorder.rank,
-        }
+        childReorderRef.current = { parentId: drop.parent, rank: drop.rank }
 
         // Gap placeholder in BoardCard's children list provides visual feedback
         // Send preview for sibling reorder
@@ -429,35 +386,35 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             targetIndex: dropIndexRef.current,
             mode: 'between',
             cardHeight: source.height,
-            childReorder: {
-              parentId: siblingReorder.parentId,
-              rank: siblingReorder.rank,
-            },
+            childReorder: { parentId: drop.parent, rank: drop.rank },
           })
         }
-      } else {
+      } else if (topAllowed) {
         dropModeRef.current = 'between'
         dropTargetCardRef.current = ''
         childReorderRef.current = null
-
-        const isChild = draggedObj?.parent && om[draggedObj.parent]
-        const canDropBetween = !isChild || canParent('')
-
-        if (canDropBetween) {
-          // Send preview for between-cards mode
-          if (onDragPreviewRef.current && source) {
-            onDragPreviewRef.current({
-              draggedId,
-              sourceColumn: source.column,
-              sourceRow: source.row,
-              targetColumn: id,
-              targetRow: dropRowRef.current,
-              targetIndex: dropIndexRef.current,
-              mode: 'between',
-              cardHeight: source.height,
-            })
-          }
+        // Send preview for between-cards mode
+        if (onDragPreviewRef.current && source) {
+          onDragPreviewRef.current({
+            draggedId,
+            sourceColumn: source.column,
+            sourceRow: source.row,
+            targetColumn: id,
+            targetRow: dropRowRef.current,
+            targetIndex: dropIndexRef.current,
+            mode: 'between',
+            cardHeight: source.height,
+          })
         }
+      } else {
+        // Nowhere here can take this drag: take down the last gap and show the
+        // drop is refused, rather than leave a gap up over a drop that does
+        // nothing. entityBoardDropAction refuses the drop itself.
+        dropModeRef.current = 'between'
+        dropTargetCardRef.current = ''
+        childReorderRef.current = null
+        e.dataTransfer.dropEffect = 'none'
+        onDragPreviewRef.current?.(null)
       }
     },
     [

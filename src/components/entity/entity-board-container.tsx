@@ -22,6 +22,7 @@ import {
   EntityBoardColumn,
   type EntityBoardColumnRow,
 } from './entity-board-column'
+import { entityBoardDropAction } from './entity-board-drop'
 import type {
   EntityClass,
   EntityDesign,
@@ -30,20 +31,6 @@ import type {
   EntityDragPreview,
   EntitySortState,
 } from '../../types/entity-object'
-
-// Check if objectId is a descendant of ancestorId
-function isDescendantOf(
-  objectId: string,
-  ancestorId: string,
-  objectMap: Record<string, EntityObject>
-): boolean {
-  let current = objectMap[objectId]?.parent
-  while (current) {
-    if (current === ancestorId) return true
-    current = objectMap[current]?.parent || ''
-  }
-  return false
-}
 
 export interface EntityBoardContainerProps<TObject extends EntityObject> {
   design: EntityDesign
@@ -68,7 +55,8 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
     newRank?: number,
     newRow?: string,
     scopeParent?: string,
-    promote?: boolean
+    promote?: boolean,
+    parent?: string
   ) => void
   onReparentObject?: (objectId: string, newParentId: string | null) => void
   onRenameColumn?: (
@@ -490,7 +478,43 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     [childrenByParent, statusField]
   )
 
-  // Handle drop events — distinguishes between-cards, drop-on-card, and sibling reorder
+  // A place among a column's top-level cards as the rank the server expects.
+  // The server renumbers ALL objects with the matching status, including the
+  // children the board nests inside parent cards, whose ranks can fall
+  // anywhere in the flat list - so count preceding non-top-level objects.
+  const topRank = (
+    objectId: string,
+    columnId: string,
+    newRank?: number
+  ): number | undefined => {
+    if (!newRank) return newRank
+    const topLevel = (objectsByStatus[columnId] || []).filter(
+      (o) => o.id !== objectId
+    )
+    // Build flat list of all objects in scope (same status), sorted by rank
+    const allInScope = objects
+      .filter(
+        (o) =>
+          o.id !== objectId && (o.values[statusField] || '') === columnId
+      )
+      .sort((a, b) => rankCompare(a.rank, b.rank))
+    const topLevelIds = new Set(topLevel.map((o) => o.id))
+    // Walk the flat list until we reach the newRank-th top-level card,
+    // then insert just before it. flatPos counts items we've passed.
+    let topCount = 0
+    let flatPos = 0
+    for (const obj of allInScope) {
+      if (topLevelIds.has(obj.id)) {
+        topCount++
+        if (topCount >= newRank) break
+      }
+      flatPos++
+    }
+    return flatPos + 1
+  }
+
+  // Handle drop events: into a card's children at a place, onto a card, or
+  // between top-level cards. entityBoardDropAction decides; this dispatches.
   const handleDrop =
     onMoveObject || onReparentObject
       ? (
@@ -504,98 +528,35 @@ export function EntityBoardContainer<TObject extends EntityObject>({
         ) => {
           const draggedObj = objectMap[objectId]
           if (!draggedObj) return
-
-          // Reorder child among siblings
-          if (reorderParentId && reorderRank !== undefined) {
-            if (draggedObj.parent === reorderParentId) {
-              onMoveObject?.(
-                objectId,
-                '',
-                reorderRank,
-                undefined,
-                reorderParentId
-              )
-            } else if (onReparentObject) {
-              const parentObj = objectMap[reorderParentId]
-              if (!parentObj) return
-              const allowedParents = design.hierarchy[draggedObj.class]
-              if (!allowedParents || !allowedParents.includes(parentObj.class))
-                return
-              if (isDescendantOf(reorderParentId, objectId, objectMap)) return
-              onReparentObject(objectId, reorderParentId)
-            }
+          const action = entityBoardDropAction(
+            draggedObj,
+            objectMap,
+            design,
+            statusField,
+            {
+              column: columnId,
+              rank: newRank,
+              row: rowId,
+              on: dropOnCardId,
+              parent: reorderParentId,
+              place: reorderRank,
+            },
+            (rank) => topRank(objectId, columnId, rank)
+          )
+          if (!action) return
+          if (action.kind === 'reparent') {
+            onReparentObject?.(objectId, action.parent)
             return
           }
-
-          // Drop on a card → reparent
-          if (dropOnCardId && onReparentObject) {
-            if (dropOnCardId === objectId) return
-            if (isDescendantOf(dropOnCardId, objectId, objectMap)) return
-            const targetObj = objectMap[dropOnCardId]
-            if (!targetObj) return
-            const allowedParents = design.hierarchy[draggedObj.class]
-            if (!allowedParents || !allowedParents.includes(targetObj.class))
-              return
-            onReparentObject(objectId, dropOnCardId)
-            return
-          }
-
-          // Drop between cards — check if child needs promotion
-          if (draggedObj.parent && objectMap[draggedObj.parent]) {
-            const parent = objectMap[draggedObj.parent]
-            const parentStatus = parent?.values[statusField] || ''
-            const parentRow = rowField
-              ? parent?.values[rowField] || ''
-              : undefined
-            const columnChanged = columnId !== parentStatus
-            const rowChanged = rowId !== undefined && rowId !== parentRow
-            if (columnChanged || rowChanged) {
-              const allowedParents = design.hierarchy[draggedObj.class]
-              if (!allowedParents || !allowedParents.includes('')) return
-              onMoveObject?.(
-                objectId,
-                columnId,
-                newRank,
-                rowId,
-                undefined,
-                true
-              )
-              return
-            }
-          }
-
-          // The server renumbers ALL objects with the matching status, including the
-          // children the board nests inside parent cards, whose ranks can fall
-          // anywhere in the flat list - so count preceding non-top-level objects.
-          let adjustedRank = newRank
-          if (newRank) {
-            const topLevel = (objectsByStatus[columnId] || []).filter(
-              (o) => o.id !== objectId
-            )
-            // Build flat list of all objects in scope (same status), sorted by rank
-            const allInScope = objects
-              .filter(
-                (o) =>
-                  o.id !== objectId &&
-                  (o.values[statusField] || '') === columnId
-              )
-              .sort((a, b) => rankCompare(a.rank, b.rank))
-            const topLevelIds = new Set(topLevel.map((o) => o.id))
-            // Walk the flat list until we reach the newRank-th top-level card,
-            // then insert just before it. flatPos counts items we've passed.
-            let topCount = 0
-            let flatPos = 0
-            for (const obj of allInScope) {
-              if (topLevelIds.has(obj.id)) {
-                topCount++
-                if (topCount >= newRank) break
-              }
-              flatPos++
-            }
-            adjustedRank = flatPos + 1
-          }
-
-          onMoveObject?.(objectId, columnId, adjustedRank, rowId)
+          onMoveObject?.(
+            objectId,
+            action.value,
+            action.rank,
+            action.row,
+            action.scope,
+            action.promote,
+            action.parent
+          )
         }
       : undefined
 
