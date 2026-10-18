@@ -45,6 +45,22 @@ interface AccountAddProps {
   hasExistingAiAccount?: boolean
 }
 
+// The providers the add dialog offers: not the browser's, which the browser
+// adds itself; not the networks, whose accounts are made and linked on the
+// Networks page; and the oauth ones only where the caller can take the user
+// through a provider's consent.
+export function addableProviders(
+  providers: Provider[],
+  linking: boolean
+): Provider[] {
+  return providers.filter(
+    (p) =>
+      p.type !== 'browser' &&
+      !p.capabilities.includes('network') &&
+      (linking || p.flow !== 'oauth')
+  )
+}
+
 export function AccountAdd({
   open,
   onOpenChange,
@@ -69,13 +85,8 @@ export function AccountAdd({
     [providers]
   )
 
-  // Filter out browser provider from the add dialog, and the oauth ones when
-  // the caller cannot take the user through a provider's consent.
   const availableProviders = useMemo(
-    () =>
-      providersList.filter(
-        (p) => p.type !== 'browser' && (onLink !== undefined || p.flow !== 'oauth')
-      ),
+    () => addableProviders(providersList, onLink !== undefined),
     [providersList, onLink]
   )
 

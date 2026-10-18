@@ -19,6 +19,7 @@ function providerLabels(): Record<string, string> {
     fcm: t`Android push`,
     github: 'GitHub',
     google: 'Google',
+    matrix: 'Matrix',
     mcp: t`MCP server`,
     microsoft: 'Microsoft',
     ntfy: 'ntfy',
