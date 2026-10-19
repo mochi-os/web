@@ -1,13 +1,17 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import type { ReactNode } from 'react'
+import { useRef, type MouseEvent, type ReactNode } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { useLingui } from '@lingui/react/macro'
 
 type CommentTreeDensity = 'compact' | 'comfortable'
+
+// Clicks on these keep their own meaning and never toggle the comment.
+const INTERACTIVE =
+  'a, button, input, textarea, select, label, summary, [role="button"], [role="menuitem"], [role="checkbox"], [role="link"], [contenteditable="true"]'
 
 export interface CommentTreeLayoutProps {
   /** Nesting depth (0 = top-level) */
@@ -22,7 +26,12 @@ export interface CommentTreeLayoutProps {
   hasChildren: boolean
   /** The avatar element to display */
   avatar: ReactNode
-  /** The main content (author, body, actions, etc.) */
+  /**
+   * The main content (author, body, actions, etc.). Mark the author and time
+   * line with `data-comment-header` so a tap on it collapses the comment.
+   * The body is left out so selecting text, following a link or opening an
+   * image never folds the thread away.
+   */
   content: ReactNode
   /** The nested child nodes (only rendered when not collapsed) */
   children?: ReactNode
@@ -64,19 +73,41 @@ export function CommentTreeLayout({
   const selfColorBorder = RAINBOW_BORDERS[depth % RAINBOW_BORDERS.length]
   const isComfortable = density === 'comfortable'
 
+  // Touch shortcut in the style of the Reddit app: tapping the avatar, the
+  // header line, or anywhere on a collapsed row. Reddit on the web keeps a
+  // mouse click on the row for reading, so a mouse only collapses from the
+  // thread line and the +/- button, which also stays as the keyboard and
+  // screen reader control.
+  const pointerType = useRef('')
+  const toggleFromRow = (event: MouseEvent<HTMLElement>) => {
+    if (!hasChildren) return
+    if (pointerType.current !== 'touch') return
+    const target = event.target as HTMLElement
+    // React bubbles clicks from portals (menus, dialogs) through the tree.
+    if (!event.currentTarget.contains(target)) return
+    if (target.closest(INTERACTIVE)) return
+    if (window.getSelection()?.toString()) return
+    if (!isCollapsed && !target.closest('[data-comment-header]')) return
+    onToggleCollapse()
+  }
+
   return (
     <div className='flex flex-row items-stretch'>
       {/* 1. Sidebar Column: Line + Connector + Button */}
       <div
         className={cn(
-          'relative shrink-0',
-          isComfortable ? 'w-5 md:w-4' : 'w-4'
+          'group/line relative shrink-0',
+          isComfortable ? 'w-5 md:w-4' : 'w-4',
+          hasChildren && 'cursor-pointer'
         )}
+        onClick={hasChildren ? onToggleCollapse : undefined}
       >
         <div
           className={cn(
-            'absolute top-0 bottom-0 z-0 w-[2px]',
+            'absolute top-0 bottom-0 z-0 w-[2px] transition-[width,transform]',
             isComfortable ? 'left-[9px] md:left-[7px]' : 'left-[7px]',
+            hasChildren &&
+              'group-hover/line:w-[3px] group-hover/line:-translate-x-px',
             selfColorBg
           )}
         />
@@ -127,9 +158,14 @@ export function CommentTreeLayout({
             'flex',
             isComfortable ? 'gap-2.5 pb-3 md:gap-2 md:pb-2' : 'gap-2 pb-2'
           )}
+          onPointerDown={(event) => {
+            pointerType.current = event.pointerType
+          }}
+          onClick={toggleFromRow}
         >
           {/* Avatar Area - No longer contains the line */}
           <div
+            data-comment-header=''
             className={cn(
               'flex shrink-0 items-center justify-center',
               isComfortable ? 'size-6 md:size-5' : 'size-5'
