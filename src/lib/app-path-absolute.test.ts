@@ -32,6 +32,15 @@ describe('absoluteRouteUrl', () => {
     expect(url).toBe(`${window.location.origin}/crm/fp123/obj9`)
   })
 
+  it('carries a search, as a link to one comment does', () => {
+    const url = absoluteRouteUrl(routerWith('/forums/'), {
+      to: '/$crmId/$objectId',
+      params: { crmId: 'fp123', objectId: 'post9' },
+      search: { comment: 'c7', server: undefined },
+    })
+    expect(url).toBe(`${window.location.origin}/forums/fp123/post9?comment=c7`)
+  })
+
   it('lets the history shorten the path, as a domain route does', () => {
     const history = createMemoryHistory()
     history.createHref = (href: string) => href.replace('/fp123', '')

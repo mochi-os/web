@@ -5,6 +5,11 @@ import { useRef, type MouseEvent, type ReactNode } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import {
+  CommentContinueThread,
+  useCommentDepthLimit,
+  useCommentThread,
+} from './comment-thread-context'
 import { useLingui } from '@lingui/react/macro'
 
 type CommentTreeDensity = 'compact' | 'comfortable'
@@ -37,6 +42,11 @@ export interface CommentTreeLayoutProps {
   children?: ReactNode
   /** Collapsed summary content (shown when collapsed) */
   collapsedContent?: ReactNode
+  /**
+   * The comment's id. Under a `CommentThreadProvider` it cuts the replies at
+   * the depth limit and highlights the comment the thread is opened on.
+   */
+  commentId?: string
 }
 
 export function CommentTreeLayout({
@@ -49,8 +59,14 @@ export function CommentTreeLayout({
   content,
   children,
   collapsedContent,
+  commentId,
 }: CommentTreeLayoutProps) {
   const { t } = useLingui()
+  const { onContinue, focusedId } = useCommentThread()
+  const depthLimit = useCommentDepthLimit()
+  const cutReplies =
+    !!onContinue && !!commentId && hasChildren && depth + 1 >= depthLimit
+  const highlighted = !!commentId && commentId === focusedId
   // Rainbow palette
   const RAINBOW_COLORS = [
     'bg-rose-400',
@@ -181,7 +197,9 @@ export function CommentTreeLayout({
             <div
               className={cn(
                 isComfortable &&
-                  'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0'
+                  'rounded-lg bg-muted/15 px-2.5 py-1.5 md:rounded-none md:bg-transparent md:px-0 md:py-0',
+                highlighted &&
+                  'bg-primary/10 ring-primary/30 md:bg-primary/10 rounded-lg px-2.5 py-1.5 ring-1 md:rounded-lg md:px-2.5 md:py-1.5'
               )}
             >
               {isCollapsed ? collapsedContent : content}
@@ -194,7 +212,11 @@ export function CommentTreeLayout({
           <div
             className={cn('w-full', isComfortable ? 'mb-3 md:mb-2' : 'mb-2')}
           >
-            {children}
+            {cutReplies ? (
+              <CommentContinueThread onClick={() => onContinue(commentId)} />
+            ) : (
+              children
+            )}
           </div>
         )}
       </div>
