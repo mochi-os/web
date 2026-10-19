@@ -417,8 +417,12 @@ export function EntityBoardCard<TObject extends EntityObject>({
       )}
 
       {/* Nested children */}
+      {/* data-children marks the list a drag places into by position. */}
       {hasChildren && (
-        <div className='space-y-1.5 border-t pt-1.5'>
+        <div
+          className='space-y-1.5 border-t pt-1.5'
+          data-children={atDepthCap ? undefined : object.id}
+        >
           {atDepthCap ? (
             <span className='text-[10px] text-muted-foreground'>
               <Plural

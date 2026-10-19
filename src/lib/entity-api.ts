@@ -141,6 +141,11 @@ export interface EntityMoveObjectRequest {
   scope?: string
   /** "true" to clear parent (promote child to top-level) */
   promote?: string
+  /**
+   * New parent, set in the same move as the rank among its children: a drop
+   * into another parent's children at a position
+   */
+  parent?: string
 }
 
 export interface EntityCreateObjectRequest {

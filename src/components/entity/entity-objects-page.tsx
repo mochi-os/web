@@ -150,6 +150,7 @@ export interface EntityObjectsPageApi<TObject extends EntityObject> {
       row?: { field: string; value?: string }
       scope?: string
       promote?: string
+      parent?: string
     }
   ) => Promise<unknown>
   updateObject: (
@@ -616,6 +617,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue,
       scopeParent,
       promote,
+      parent,
     }: {
       objectId: string
       field: string
@@ -625,6 +627,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue?: string
       scopeParent?: string
       promote?: boolean
+      parent?: string
     }) => {
       return api.moveObject(containerId, objectId, {
         field,
@@ -633,6 +636,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         row: rf ? { field: rf, value: rowValue } : undefined,
         scope: scopeParent,
         promote: promote ? 'true' : undefined,
+        parent,
       })
     },
     onMutate: async ({
@@ -644,6 +648,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue,
       scopeParent,
       promote,
+      parent,
     }) => {
       // Await, as the reparent mutation below does: an in-flight objects fetch
       // that resolves after the optimistic write would overwrite it and snap the
@@ -691,6 +696,15 @@ export function EntityObjectsPage<TObject extends EntityObject>({
             newRank = rankBetween(before, after)
           }
 
+          // A move into another parent takes that parent's board column and
+          // row, as the server copies them, so the card shows inside it at once.
+          const newParent =
+            parent !== undefined
+              ? old.objects.find((o) => o.id === parent)
+              : undefined
+          const sf = activeView?.columns || ''
+          const rowView = activeView?.rows || ''
+
           return {
             ...old,
             objects: old.objects.map((obj) => {
@@ -699,11 +713,18 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 if (rf && rowValue !== undefined) {
                   updatedValues[rf] = rowValue
                 }
+                if (newParent && sf) {
+                  updatedValues[sf] = newParent.values[sf] || ''
+                  if (rowView) {
+                    updatedValues[rowView] = newParent.values[rowView] || ''
+                  }
+                }
                 return {
                   ...obj,
                   rank: newRank ?? obj.rank,
                   values: updatedValues,
                   ...(promote ? { parent: '' } : {}),
+                  ...(parent !== undefined ? { parent } : {}),
                 }
               }
               // Cascade status/row changes to descendants (rank unchanged).
@@ -1116,7 +1137,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     newRank?: number,
     newRow?: string,
     scopeParent?: string,
-    promote?: boolean
+    promote?: boolean,
+    parent?: string
   ) => {
     moveMutation.mutate({
       objectId,
@@ -1127,6 +1149,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue: newRow,
       scopeParent,
       promote,
+      parent,
     })
   }
 
