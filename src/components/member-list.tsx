@@ -14,6 +14,9 @@ import { naturalCompare } from '../lib/utils'
 export interface MemberListMember {
   id: string
   name: string
+  // What else the app says of the member - their role in a room, say - shown
+  // beside their name in the app's own words.
+  detail?: string
 }
 
 export interface MemberListProps {
@@ -173,6 +176,11 @@ export function MemberList({
                 size='md'
               />
               <span className='truncate font-medium'>{name}</span>
+              {member.detail && (
+                <span className='text-muted-foreground shrink-0 text-xs'>
+                  {member.detail}
+                </span>
+              )}
               {isSelf && (
                 <span className='text-muted-foreground shrink-0 text-xs'>
                   <Trans>(you)</Trans>

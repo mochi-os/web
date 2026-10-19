@@ -31,4 +31,15 @@ describe('MemberList', () => {
     render(<MemberList members={members} ownerId='b' currentUserId='c' />)
     expect(names()).toEqual(['Bob', 'Carol', 'Alice'])
   })
+
+  it("shows what the app says of a member beside their name", () => {
+    render(
+      <MemberList
+        members={[{ id: 'a', name: 'Alice', detail: 'Moderator' }, ...members.slice(0, 2)]}
+      />
+    )
+    const rows = screen.getAllByRole('listitem').map((row) => row.textContent)
+    expect(rows).toEqual(['AliceModerator', 'Bob', 'Carol'].map((text) => expect.stringContaining(text)))
+    expect(screen.getAllByText('Moderator')).toHaveLength(1)
+  })
 })
