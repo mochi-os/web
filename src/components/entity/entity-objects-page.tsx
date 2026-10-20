@@ -1400,8 +1400,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               {duplicate && canWrite(access) && (
                 <DropdownMenuItem
                   // Whether the original has items decides how it is copied,
-                  // so Duplicate waits for the list.
-                  disabled={!populated || objectsLoading}
+                  // so Duplicate waits for the list. A list that failed to
+                  // load has not said either way.
+                  disabled={!populated || !objectsData}
                   onClick={() => setDuplicateOpen(true)}
                 >
                   <Copy className='size-4 me-2' />
@@ -1607,7 +1608,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           onOpenChange={setDuplicateOpen}
           sourceId={container.id}
           sourceName={container.name}
-          empty={(objectsData?.length ?? 0) === 0}
+          empty={objectsData?.length === 0}
         />
       )}
 
