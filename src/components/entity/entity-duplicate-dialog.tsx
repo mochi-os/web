@@ -29,9 +29,36 @@ import {
 } from '../../lib/entity-export'
 import { ENTITY_LIMIT } from '../../lib/entity-api'
 import { getErrorMessage } from '../../lib/handle-server-error'
+import { extractStatus } from '../../lib/error-normalizer'
 import { toast } from '../../lib/toast-utils'
 
 export type EntityDuplicateKind = 'everything' | 'design'
+
+/** One duplicate in progress, as Cancel needs to see it. */
+interface Running {
+  controller: AbortController
+  /** The whole file has reached the server, which is now importing it. */
+  uploaded: boolean
+  cancelled: boolean
+  /** The "copying" toast, dismissed as soon as the user cancels. */
+  toastId?: string | number
+}
+
+/**
+ * After the upload, whether the import may still be running. No answer means
+ * the connection dropped; 502, 503 and 504 are the proxy in front of the
+ * server giving up, while the server behind it may still be writing. Any other
+ * answer comes from the import itself, which has stopped.
+ */
+function importMayStillRun(err: unknown): boolean {
+  const status = extractStatus(err)
+  return (
+    status === undefined || status === 502 || status === 503 || status === 504
+  )
+}
+
+/** Ends a run whose outcome has been reported already. */
+class Stopped extends Error {}
 
 export interface EntityDuplicateLabels {
   title: string
@@ -48,6 +75,9 @@ export interface EntityDuplicateLabels {
   defaultName: (sourceName: string) => string
   /** Shown when a copy that did not finish could not be removed either. */
   leftBehind: string
+  /** Shown when the connection dropped while the server was still writing
+   *  the copy, which is then kept rather than deleted under it. */
+  incomplete: string
 }
 
 /** The createEntityApi calls a duplicate makes. */
@@ -81,6 +111,9 @@ export interface EntityDuplicateDialogProps {
   onDuplicated: (entityId: string) => void
   /** The same name rules as the app's create dialog. */
   validateName?: (name: string) => string | null
+  /** The original has no items. Everything is then its design alone: the
+   *  import refuses a file with no items, even one carrying a design. */
+  empty?: boolean
   labels: EntityDuplicateLabels
 }
 
@@ -94,6 +127,7 @@ export function EntityDuplicateDialog({
   remove,
   onDuplicated,
   validateName,
+  empty,
   labels,
 }: EntityDuplicateDialogProps) {
   const [name, setName] = useState(() => labels.defaultName(sourceName))
@@ -107,7 +141,7 @@ export function EntityDuplicateDialog({
   // is running.
   const [downloadProgress, setDownloadProgress] = useState<Upload | null>(null)
   // Set while a duplicate runs, so Cancel can stop it.
-  const abortRef = useRef<AbortController | null>(null)
+  const runningRef = useRef<Running | null>(null)
   // A ref, not a dependency: the app's labels are a fresh object on every
   // render, and the name is set once per opening.
   const defaultNameRef = useRef(labels.defaultName)
@@ -120,11 +154,12 @@ export function EntityDuplicateDialog({
     setAllowSearch(false)
   }, [open, sourceName])
 
-  const run = async (signal: AbortSignal): Promise<string> => {
+  const run = async (running: Running): Promise<string> => {
+    const { signal } = running.controller
     // Exported first, so a failed export leaves nothing behind.
     let archive: Blob | null = null
     let design: Record<string, unknown> | null = null
-    if (kind === 'everything') {
+    if (kind === 'everything' && !empty) {
       try {
         archive = await exportEntityArchive(api, sourceId, {
           signal,
@@ -144,25 +179,60 @@ export function EntityDuplicateDialog({
     signal.throwIfAborted()
 
     const copyId = await create(name.trim(), allowSearch ? 'public' : 'private')
+    const discard = async () => {
+      try {
+        await remove(copyId)
+      } catch {
+        toast.error(labels.leftBehind)
+      }
+    }
     try {
       // Creating cannot be stopped midway, so a Cancel during it lands here.
       signal.throwIfAborted()
       if (archive) {
         const file = archive
         await upload((onProgress) =>
-          api.importData(copyId, file, onProgress, true, signal)
+          api.importData(
+            copyId,
+            file,
+            (event) => {
+              onProgress(event)
+              // The whole file has reached the server, which now writes the
+              // copy whatever the browser does. Stopping the request from
+              // here on would not stop that.
+              if (event.total != null && event.loaded >= event.total) {
+                running.uploaded = true
+              }
+            },
+            true,
+            signal
+          )
         )
       } else if (design) {
         await api.importDesign(copyId, design)
       }
       signal.throwIfAborted()
     } catch (err) {
-      try {
-        await remove(copyId)
-      } catch {
-        toast.error(labels.leftBehind)
+      if (running.uploaded && importMayStillRun(err)) {
+        // The server may still be writing, and the import is not one
+        // transaction, so deleting the copy now would leave what it writes
+        // next with no CRM or project. The copy is kept and opened instead,
+        // for the user to check.
+        if (!running.cancelled) {
+          toast.error(labels.incomplete)
+          onOpenChange(false)
+          onDuplicated(copyId)
+        }
+        throw new Stopped()
       }
+      await discard()
       throw err
+    }
+    if (running.cancelled) {
+      // Cancelled after the upload: the server has now finished, so the copy
+      // can go without stranding anything.
+      await discard()
+      throw new Stopped()
     }
     return copyId
   }
@@ -173,36 +243,52 @@ export function EntityDuplicateDialog({
       toast.error(problem)
       return
     }
-    const controller = new AbortController()
-    abortRef.current = controller
+    const running: Running = {
+      controller: new AbortController(),
+      uploaded: false,
+      cancelled: false,
+    }
+    runningRef.current = running
     setPending(true)
     const working = toast.loading(labels.duplicating)
+    running.toastId = working
     try {
-      const copyId = await run(controller.signal)
+      const copyId = await run(running)
       toast.dismiss(working)
       toast.success(labels.duplicated)
       onOpenChange(false)
       onDuplicated(copyId)
     } catch (err) {
       toast.dismiss(working)
-      // A cancel is the user's own doing, not a failure to report.
-      if (!controller.signal.aborted) {
+      // A cancel is the user's own doing, and a Stopped has said what
+      // happened already.
+      if (!running.cancelled && !(err instanceof Stopped)) {
         toast.error(getErrorMessage(err, labels.failed))
       }
     } finally {
-      abortRef.current = null
+      if (runningRef.current === running) runningRef.current = null
       setPending(false)
     }
   }
 
-  // Closing while a duplicate runs stops it; the cleanup carries on.
+  // Stops a running duplicate. Before the upload is complete the request is
+  // aborted and the copy removed; after it, the server is left to finish and
+  // the copy is removed then.
+  const cancel = () => {
+    const running = runningRef.current
+    if (!running) return
+    running.cancelled = true
+    if (running.toastId !== undefined) toast.dismiss(running.toastId)
+    if (!running.uploaded) running.controller.abort()
+  }
+
   const close = () => {
-    abortRef.current?.abort()
+    cancel()
     onOpenChange(false)
   }
 
-  // Leaving the page mid-duplicate stops it too.
-  useEffect(() => () => abortRef.current?.abort(), [])
+  // Leaving the page mid-duplicate cancels it the same way.
+  useEffect(() => () => cancel(), [])
 
   return (
     <ResponsiveDialog
