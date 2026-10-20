@@ -269,6 +269,7 @@ describe('EntityObjectsPage', () => {
         failed: 'Failed',
         defaultName: (name: string) => `Duplicate of ${name}`,
         leftBehind: 'Left behind',
+        incomplete: 'Incomplete',
       },
     }
     const { unmount } = renderPage({ duplicate } as never)

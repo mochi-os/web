@@ -22,6 +22,7 @@ const labels = {
   failed: 'Failed to duplicate CRM',
   defaultName: (name: string) => `Duplicate of ${name}`,
   leftBehind: 'The unfinished copy could not be removed',
+  incomplete: 'The copy may be incomplete',
 }
 
 const archive = new Blob(['zip'])
@@ -34,6 +35,8 @@ let onDuplicated: ReturnType<typeof vi.fn>
 let onOpenChange: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
+  // Spies on toast persist between tests; each test counts its own calls.
+  vi.restoreAllMocks()
   api = {
     warmExport: vi
       .fn()
@@ -223,5 +226,115 @@ describe('EntityDuplicateDialog', () => {
     expect(
       screen.getByRole('radiogroup', { name: 'Duplicate CRM' })
     ).toBeInTheDocument()
+  })
+
+  describe('a cancel after the upload has reached the server', () => {
+    // Resolves the import when the test says, after reporting the whole file
+    // sent, the way the browser does once the body has left.
+    function importInFlight() {
+      let finish: (() => void) | undefined
+      let fail: ((err: unknown) => void) | undefined
+      let signal: AbortSignal | undefined
+      vi.mocked(api.importData).mockImplementation(
+        (_id, _file, onProgress, _design, importSignal) =>
+          new Promise((resolve, reject) => {
+            signal = importSignal
+            onProgress?.({ loaded: 100, total: 100 } as never)
+            finish = () => resolve({})
+            fail = reject
+          })
+      )
+      return {
+        started: () => signal !== undefined,
+        signal: () => signal,
+        finish: () => finish?.(),
+        fail: (err: unknown) => fail?.(err),
+      }
+    }
+
+    it('lets the server finish, then removes the copy', async () => {
+      const flight = importInFlight()
+      const error = vi.spyOn(toast, 'error')
+      renderDialog()
+      submit()
+      await waitFor(() => expect(flight.started()).toBe(true))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      // Not aborted, and not deleted underneath the running import.
+      expect(flight.signal()?.aborted).toBe(false)
+      expect(remove).not.toHaveBeenCalled()
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+
+      flight.finish()
+      await waitFor(() => expect(remove).toHaveBeenCalledWith('copy-fp'))
+      expect(onDuplicated).not.toHaveBeenCalled()
+      expect(error).not.toHaveBeenCalled()
+    })
+
+    it('keeps the copy when the proxy gives up while the server writes', async () => {
+      const flight = importInFlight()
+      renderDialog()
+      submit()
+      await waitFor(() => expect(flight.started()).toBe(true))
+
+      flight.fail({ response: { status: 504, data: {} } })
+
+      await waitFor(() => expect(onDuplicated).toHaveBeenCalledWith('copy-fp'))
+      expect(remove).not.toHaveBeenCalled()
+    })
+
+    it('clears the copying message as soon as the user cancels', async () => {
+      const flight = importInFlight()
+      const dismiss = vi.spyOn(toast, 'dismiss')
+      renderDialog()
+      submit()
+      await waitFor(() => expect(flight.started()).toBe(true))
+      dismiss.mockClear()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      expect(dismiss).toHaveBeenCalled()
+    })
+
+    it('keeps the copy when the connection drops while the server writes', async () => {
+      const flight = importInFlight()
+      const error = vi.spyOn(toast, 'error')
+      renderDialog()
+      submit()
+      await waitFor(() => expect(flight.started()).toBe(true))
+
+      flight.fail(new Error('Network Error'))
+
+      await waitFor(() =>
+        expect(error).toHaveBeenCalledWith('The copy may be incomplete')
+      )
+      expect(remove).not.toHaveBeenCalled()
+      expect(error).toHaveBeenCalledTimes(1)
+      // Opened, so the user can check what it holds.
+      expect(onDuplicated).toHaveBeenCalledWith('copy-fp')
+    })
+
+    it('removes the copy when the server answers with an error', async () => {
+      const flight = importInFlight()
+      renderDialog()
+      submit()
+      await waitFor(() => expect(flight.started()).toBe(true))
+
+      flight.fail({ response: { status: 400, data: {} } })
+
+      await waitFor(() => expect(remove).toHaveBeenCalledWith('copy-fp'))
+    })
+  })
+
+  it('copies an empty original by its design, which is all it has', async () => {
+    renderDialog({ empty: true })
+    submit()
+
+    await waitFor(() => expect(onDuplicated).toHaveBeenCalledWith('copy-fp'))
+    expect(api.exportDesign).toHaveBeenCalledWith('src-id')
+    expect(api.importDesign).toHaveBeenCalledWith('copy-fp', design)
+    expect(api.exportData).not.toHaveBeenCalled()
+    expect(api.importData).not.toHaveBeenCalled()
   })
 })

@@ -1398,7 +1398,12 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               {/* People who can edit only: a view-only subscriber is not
                   handed a one-click copy of someone else's data. */}
               {duplicate && canWrite(access) && (
-                <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                <DropdownMenuItem
+                  // Whether the original has items decides how it is copied,
+                  // so Duplicate waits for the list.
+                  disabled={!populated || objectsLoading}
+                  onClick={() => setDuplicateOpen(true)}
+                >
                   <Copy className='size-4 me-2' />
                   {duplicate.menuAction}
                 </DropdownMenuItem>
@@ -1602,6 +1607,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           onOpenChange={setDuplicateOpen}
           sourceId={container.id}
           sourceName={container.name}
+          empty={(objectsData?.length ?? 0) === 0}
         />
       )}
 
