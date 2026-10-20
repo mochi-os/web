@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { IconButton } from './icon-button'
-import { Input } from './ui/input'
+import { SearchInput } from './search-input'
 import { t } from '@lingui/core/macro'
 
 interface HeaderSearchProps {
@@ -15,6 +15,9 @@ interface HeaderSearchProps {
   label?: string
 }
 
+// The filter box for a page header: the list below narrows as you type. On a
+// phone it folds to an icon until opened, so the title keeps its room. Built
+// on SearchInput so every filter box has the same icon and clear button.
 export function HeaderSearch({
   value,
   onValueChange,
@@ -31,23 +34,27 @@ export function HeaderSearch({
 
   return (
     <div className='flex min-w-0 items-center gap-1.5'>
-      <Input
-        type='search'
-        aria-label={label}
-        placeholder={placeholder}
-        value={value}
-        onChange={(event) => onValueChange(event.target.value)}
-        className='hidden h-9 w-56 md:block'
-      />
+      <div className='hidden md:block'>
+        <SearchInput
+          type='search'
+          aria-label={label}
+          placeholder={placeholder}
+          value={value}
+          onValueChange={onValueChange}
+          className='h-9 w-56'
+        />
+      </div>
 
       {showMobileSearch ? (
         <div className='flex min-w-0 items-center gap-1.5 md:hidden'>
-          <Input
+          {/* The close button beside it clears too, so no second X inside. */}
+          <SearchInput
             type='search'
             aria-label={label}
             placeholder={placeholder}
             value={value}
-            onChange={(event) => onValueChange(event.target.value)}
+            onValueChange={onValueChange}
+            clearable={false}
             className='h-9 w-32 text-sm'
           />
           <IconButton

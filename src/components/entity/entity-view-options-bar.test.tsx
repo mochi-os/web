@@ -78,6 +78,26 @@ describe('EntityViewOptionsBar', () => {
     })
   })
 
+  it('names the desktop search and clears it in place', () => {
+    const onFilterChange = vi.fn()
+    render(
+      <EntityViewOptionsBar
+        views={[createMockEntityView()]}
+        filters={{ search: 'ldap', watched: false }}
+        onFilterChange={onFilterChange}
+        activeViewId='view-1'
+        onViewChange={vi.fn()}
+        sort={null}
+        onSortChange={vi.fn()}
+        showSort
+      />
+    )
+    // Drawer closed, so the only search box is the desktop one.
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(onFilterChange).toHaveBeenCalledWith({ search: '', watched: false })
+  })
+
   it('flips the sort direction from the drawer', async () => {
     const { onSortChange } = renderBar()
     fireEvent.click(await screen.findByRole('button', { name: 'Ascending' }))

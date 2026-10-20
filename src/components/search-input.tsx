@@ -16,6 +16,9 @@ type SearchInputProps = Omit<
   // Accessible label for the clear button. Defaults to a generic English
   // string; pass a localized value from callers that use i18n.
   clearLabel?: string
+  // Hide the clear button, for a caller that puts its own close button
+  // beside the field.
+  clearable?: boolean
 }
 
 // A text input with a leading search icon and a trailing clear (X) button that
@@ -24,6 +27,7 @@ export function SearchInput({
   value,
   onValueChange,
   clearLabel = t`Clear search`,
+  clearable = true,
   className,
   ...props
 }: SearchInputProps) {
@@ -33,10 +37,15 @@ export function SearchInput({
       <Input
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
-        className={cn('ps-8', value && 'pe-8', className)}
+        // type='search' would add the browser's own clear button beside ours.
+        className={cn(
+          'ps-8 [&::-webkit-search-cancel-button]:appearance-none',
+          clearable && value && 'pe-8',
+          className
+        )}
         {...props}
       />
-      {value && (
+      {clearable && value && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button

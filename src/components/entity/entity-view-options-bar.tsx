@@ -17,7 +17,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '../ui/drawer'
-import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { PageUtilityBar } from '../layout/page-utility-bar'
 import {
@@ -96,6 +95,8 @@ export function EntityViewOptionsBar({
   numbered = false,
 }: EntityViewOptionsBarProps) {
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false)
+  // One label for the drawer's search and the desktop bar's.
+  const searchLabel = t`Search`
   const hasSearchValue = filters.search.trim().length > 0
 
   // Below `lg` the controls live in a drawer: from 640 px up the inline bar
@@ -196,7 +197,7 @@ export function EntityViewOptionsBar({
           </DrawerHeader>
 
           <SearchInput
-            aria-label={t`Search`}
+            aria-label={searchLabel}
             placeholder={t`Search...`}
             value={filters.search}
             onValueChange={updateSearch}
@@ -297,11 +298,12 @@ export function EntityViewOptionsBar({
         {/* Views sit with the page title on the left; searching, filtering and
             sorting are actions on what is shown, so they gather on the right. */}
         <div className='ms-auto flex items-center gap-2'>
-          <Input
+          <SearchInput
             type='search'
+            aria-label={searchLabel}
             placeholder={t`Search...`}
             value={filters.search}
-            onChange={(e) => updateSearch(e.target.value)}
+            onValueChange={updateSearch}
             className='h-9 w-[200px] text-xs'
           />
 
