@@ -63,7 +63,8 @@ export function CommentContinueThread({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className='text-primary mb-2 inline-flex min-h-8 items-center gap-1.5 text-xs font-medium hover:underline md:min-h-6'
     >
-      <CornerDownRight className='size-3.5' />
+      {/* Mirrored, not turned: the hook still points down, toward the replies. */}
+      <CornerDownRight className='size-3.5 rtl:-scale-x-100' />
       {t`Continue this thread`}
     </button>
   )
@@ -86,9 +87,11 @@ export function CommentThreadBack({ onClick }: { onClick: () => void }) {
       ref={ref}
       type='button'
       onClick={onClick}
-      className='text-primary mb-3 inline-flex min-h-8 items-center gap-1.5 text-sm font-medium hover:underline'
+      // The page header is sticky, so stop below it rather than under it. It
+      // measures itself into --page-header-height, as StickyBar reads it.
+      className='text-primary mb-3 inline-flex min-h-8 scroll-mt-[calc(var(--sticky-top,0px)+var(--page-header-height,0px)+0.5rem)] items-center gap-1.5 text-sm font-medium hover:underline'
     >
-      <ArrowLeft className='size-4' />
+      <ArrowLeft className='size-4 rtl:rotate-180' />
       {t`All comments`}
     </button>
   )

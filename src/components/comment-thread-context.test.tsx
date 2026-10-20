@@ -14,6 +14,7 @@ import { i18n } from '@lingui/core'
 import type { ReactNode } from 'react'
 import { CommentTreeLayout } from './comment-tree-layout'
 import {
+  CommentContinueThread,
   CommentThreadBack,
   CommentThreadProvider,
   type CommentThreadOptions,
@@ -116,6 +117,34 @@ describe('A thread opened on one comment', () => {
     fireEvent.click(screen.getByRole('button', { name: 'All comments' }))
     expect(onClick).toHaveBeenCalledTimes(1)
     Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+  })
+
+  // jsdom has no layout, so these pin the classes that carry the behaviour.
+  it('stops below the sticky page header, by its measured height', () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <CommentThreadBack onClick={() => {}} />
+      </I18nProvider>
+    )
+    expect(
+      screen.getByRole('button', { name: 'All comments' }).className
+    ).toContain('var(--page-header-height')
+  })
+
+  it('points both arrows the other way in a right-to-left language', () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <CommentThreadBack onClick={() => {}} />
+        <CommentContinueThread onClick={() => {}} />
+      </I18nProvider>
+    )
+    const icon = (name: string) =>
+      screen
+        .getByRole('button', { name })
+        .querySelector('svg')!
+        .getAttribute('class')
+    expect(icon('All comments')).toContain('rtl:rotate-180')
+    expect(icon('Continue this thread')).toContain('rtl:-scale-x-100')
   })
 })
 
