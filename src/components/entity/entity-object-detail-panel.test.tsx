@@ -22,6 +22,13 @@ import type { EntityObject } from '../../types/entity-object'
 import { GitMerge } from 'lucide-react'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
+const { clipboardWrite } = vi.hoisted(() => ({
+  clipboardWrite: vi.fn(async () => true),
+}))
+vi.mock('../../lib/shell-bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/shell-bridge')>()),
+  shellClipboardWrite: clipboardWrite,
+}))
 vi.mock('../../lib/toast-utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/toast-utils')>()
   return { toast: { ...actual.toast, error: toastError } }
@@ -168,6 +175,35 @@ describe('EntityObjectDetailPanel failure reporting', () => {
     )
   })
 
+  describe('delete confirm', () => {
+    const deleteWithChildren = (title: string, count: number) =>
+      `Delete "${title}" and ${count} under it?`
+
+    it('says how many items go with it, at every depth', async () => {
+      const child = createMockEntityObject({ id: 'c1', parent: 'obj-1' })
+      const grandchild = createMockEntityObject({ id: 'c2', parent: 'c1' })
+      const unrelated = createMockEntityObject({ id: 'c3', parent: 'obj-2' })
+      vi.mocked(api.listObjects).mockResolvedValue({
+        data: { objects: [object, sibling, child, grandchild, unrelated] },
+      } as never)
+      renderPanel({ labels: { deleteWithChildren } })
+
+      fireEvent.click(await screen.findByLabelText('Delete item'))
+      expect(
+        await screen.findByText('Delete "Original" and 2 under it?')
+      ).toBeInTheDocument()
+    })
+
+    it('keeps the plain confirm for an item with nothing under it', async () => {
+      renderPanel({ labels: { deleteWithChildren } })
+
+      fireEvent.click(await screen.findByLabelText('Delete item'))
+      expect(
+        await screen.findByText(/Are you sure you want to delete "Original"/)
+      ).toBeInTheDocument()
+    })
+  })
+
   it('says so when the reparent is refused', async () => {
     vi.mocked(api.updateObject).mockRejectedValue({ response: { status: 409 } })
     renderPanel()
@@ -295,16 +331,60 @@ describe('EntityObjectDetailPanel header', () => {
   })
 })
 
+describe('EntityObjectDetailPanel copy link', () => {
+  it('copies the address the app builds for the item', async () => {
+    renderPanel({
+      itemUrl: (id) => `https://example.org/crm/fp/${id}`,
+      labels: { copyLink: 'Copy link' },
+    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy link' }))
+    await waitFor(() =>
+      expect(clipboardWrite).toHaveBeenCalledWith(
+        'https://example.org/crm/fp/obj-1'
+      )
+    )
+  })
+
+  it('offers no copy without an address or a label', async () => {
+    renderPanel({ itemUrl: (id) => id })
+    await screen.findByDisplayValue('Original')
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull()
+  })
+})
+
 describe('EntityObjectDetailPanel tabs', () => {
-  it('shows properties, comments and activity by default', async () => {
+  it('shows properties, comments and activity as tabs', async () => {
     renderPanel()
     await screen.findByDisplayValue('Original')
 
-    expect(
-      screen.getByRole('button', { name: /Properties/ })
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Comments/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Activity/ })).toBeInTheDocument()
+    expect(screen.getByRole('tablist')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Properties/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('tab', { name: /Comments/ })).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
+    expect(screen.getByRole('tab', { name: /Activity/ })).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      screen.getByRole('tab', { name: /Properties/ }).id
+    )
+  })
+
+  it('moves between tabs with the arrow keys', async () => {
+    renderPanel()
+    await screen.findByDisplayValue('Original')
+
+    const properties = screen.getByRole('tab', { name: /Properties/ })
+    properties.focus()
+    fireEvent.keyDown(properties, { key: 'ArrowRight' })
+
+    // Radix moves focus on the next tick.
+    const comments = screen.getByRole('tab', { name: /Comments/ })
+    await waitFor(() => expect(comments).toHaveFocus())
+    expect(comments).toHaveAttribute('aria-selected', 'true')
   })
 
   it('puts an extra tab between comments and activity and renders it when picked', async () => {
@@ -321,7 +401,7 @@ describe('EntityObjectDetailPanel tabs', () => {
     await screen.findByDisplayValue('Original')
 
     const names = screen
-      .getAllByRole('button')
+      .getAllByRole('tab')
       .map((b) => b.textContent ?? '')
       .filter((n) => /Properties|Comments|Merge requests|Activity/.test(n))
     expect(names[0]).toContain('Properties')
@@ -329,7 +409,8 @@ describe('EntityObjectDetailPanel tabs', () => {
     expect(names[2]).toContain('Merge requests (2)')
     expect(names[3]).toContain('Activity')
 
-    fireEvent.click(screen.getByRole('button', { name: /Merge requests/ }))
+    // Radix selects a tab on mouse down, not on click.
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Merge requests/ }))
     expect(await screen.findByText('request panel')).toBeInTheDocument()
   })
 
@@ -342,8 +423,8 @@ describe('EntityObjectDetailPanel tabs', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole('button', { name: /Comments \(3\)/ })
-      ).toBeInTheDocument()
+        screen.getByRole('tab', { name: /Comments \(3\)/ })
+      ).toHaveAttribute('aria-selected', 'true')
     )
   })
 })

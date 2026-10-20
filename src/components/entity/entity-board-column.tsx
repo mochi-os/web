@@ -34,7 +34,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip'
-import { Inbox, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  ArrowLeftToLine,
+  Inbox,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { EntityBoardCard } from './entity-board-card'
 import {
   entityBoardDropTarget,
@@ -99,6 +106,19 @@ export interface EntityBoardColumnProps<TObject extends EntityObject> {
   hideHeader?: boolean
   rows?: EntityBoardColumnRow<TObject>[]
   preview?: boolean
+  /** Shown as a narrow strip with its name and count. */
+  collapsed?: boolean
+  /** Swimlane rows folded to a single line: their cells show no cards. */
+  collapsedRows?: string[]
+  /** Collapsing is offered only when this and the labels are both passed. */
+  onToggleCollapsed?: () => void
+  collapseLabels?: EntityBoardCollapseLabels
+}
+
+/** Accessible names for the collapse control, from each app's own catalog. */
+export interface EntityBoardCollapseLabels {
+  collapse: (columnName: string) => string
+  expand: (columnName: string) => string
 }
 
 export function EntityBoardColumn<TObject extends EntityObject>({
@@ -134,6 +154,10 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   hideHeader,
   rows,
   preview,
+  collapsed,
+  collapsedRows,
+  onToggleCollapsed,
+  collapseLabels,
 }: EntityBoardColumnProps<TObject>) {
   const [showRenameDialog, setShowRenameDialog] = useState(false)
   const [newName, setNewName] = useState(name)
@@ -153,6 +177,11 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   const dropRowRef = useRef('')
   const rowsRef = useRef(rows)
   rowsRef.current = rows
+  const objectCountRef = useRef(objects.length)
+  objectCountRef.current = objects.length
+  const collapsedRef = useRef(false)
+  const collapsedRowsRef = useRef(collapsedRows)
+  collapsedRowsRef.current = collapsedRows
   const isDragOverRef = useRef(false)
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const dropModeRef = useRef<'between' | 'on'>('between')
@@ -319,14 +348,29 @@ export function EntityBoardColumn<TObject extends EntityObject>({
         return index
       }
 
-      if (rowsRef.current && columnRef.current) {
+      if (collapsedRef.current) {
+        // A collapsed column shows no cards or rows to aim at, so a drop lands
+        // at the end of the card's own row, which it keeps.
+        const row = dragSourceRef.current?.row ?? ''
+        dropRowRef.current = row
+        dropIndexRef.current = rowsRef.current
+          ? (rowsRef.current.find((r) => r.id === row)?.objects.length ?? 0)
+          : objectCountRef.current
+      } else if (rowsRef.current && columnRef.current) {
         const sections = columnRef.current.querySelectorAll('[data-row-id]')
         for (const section of sections) {
           const rect = section.getBoundingClientRect()
           if (mouseY >= rect.top && mouseY <= rect.bottom) {
-            dropRowRef.current = section.getAttribute('data-row-id') || ''
-            const cards = section.querySelectorAll(':scope > [data-card-id]')
-            dropIndexRef.current = calculateDropIndex(cards)
+            const rowId = section.getAttribute('data-row-id') || ''
+            dropRowRef.current = rowId
+            if (collapsedRowsRef.current?.includes(rowId)) {
+              // A folded row shows no cards, so a drop lands at its end.
+              dropIndexRef.current =
+                rowsRef.current.find((r) => r.id === rowId)?.objects.length ?? 0
+            } else {
+              const cards = section.querySelectorAll(':scope > [data-card-id]')
+              dropIndexRef.current = calculateDropIndex(cards)
+            }
             break
           }
         }
@@ -549,6 +593,48 @@ export function EntityBoardColumn<TObject extends EntityObject>({
     }
   }
 
+  const canCollapse =
+    !preview && !isReordering && !!onToggleCollapsed && !!collapseLabels
+  collapsedRef.current = !!collapsed && canCollapse
+
+  if (collapsed && canCollapse) {
+    return (
+      <div
+        ref={columnRef}
+        // On a swimlane board the strip runs down through every row.
+        className={cn(
+          'flex h-full w-10 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface-1 transition-colors data-drag-over:border-primary data-drag-over:bg-primary/5',
+          rows && 'row-span-full'
+        )}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <button
+          type='button'
+          onClick={onToggleCollapsed}
+          aria-expanded={false}
+          aria-label={collapseLabels.expand(name)}
+          className='flex flex-1 flex-col items-center gap-2 bg-primary/10 py-3 text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+        >
+          {colour && (
+            <span
+              className='size-3 shrink-0 rounded-full'
+              style={{ backgroundColor: colour }}
+            />
+          )}
+          <span className='text-sm font-medium [writing-mode:vertical-rl]'>
+            {name}
+          </span>
+          <span className='text-xs tabular-nums text-muted-foreground'>
+            {totalCount}
+          </span>
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={columnRef}
@@ -570,7 +656,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
     >
       {/* Column header */}
       <div
-        className='flex items-center justify-between px-3 py-2 border-b cursor-pointer bg-primary/10 text-primary'
+        className='group/column flex items-center justify-between px-3 py-2 border-b cursor-pointer bg-primary/10 text-primary'
         onDoubleClick={
           preview
             ? undefined
@@ -591,7 +677,12 @@ export function EntityBoardColumn<TObject extends EntityObject>({
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className='font-medium text-sm'>{name}</span>
+                <span className='flex items-baseline gap-2'>
+                  <span className='font-medium text-sm'>{name}</span>
+                  <span className='text-xs tabular-nums text-muted-foreground'>
+                    {totalCount}
+                  </span>
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 <Plural value={totalCount} one='# item' other='# items' />
@@ -599,59 +690,80 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             </Tooltip>
           </TooltipProvider>
         </div>
-        {!isReordering &&
-          (preview ||
-            onCreateClick ||
-            onRenameColumn ||
-            (totalCount === 0 && onDeleteColumn)) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+        <div className='flex items-center gap-1'>
+          {canCollapse && (
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <button
                   type='button'
                   data-column-menu
-                  aria-label={t`Column actions`}
-                  className='rounded p-1 transition-colors hover:bg-hover active:bg-interactive-active'
+                  onClick={onToggleCollapsed}
+                  aria-expanded
+                  aria-label={collapseLabels.collapse(name)}
+                  // Shown on hover, and always on touch screens and keyboard
+                  // focus, where there is no hover to reveal it.
+                  className='rounded p-1 opacity-0 transition-[opacity,background-color] group-hover/column:opacity-100 hover:bg-hover focus-visible:opacity-100 active:bg-interactive-active [@media(hover:none)]:opacity-100'
                 >
-                  <MoreHorizontal className='size-4 text-muted-foreground' />
+                  <ArrowLeftToLine className='size-4 text-muted-foreground rtl:-scale-x-100' />
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                {(onCreateClick || preview) && (
-                  <DropdownMenuItem
-                    onClick={preview ? undefined : onCreateClick}
-                  >
-                    <Plus className='size-4 me-2' />
-                    <Trans>Create</Trans>
-                  </DropdownMenuItem>
-                )}
-                {(onRenameColumn || preview) && (
-                  <DropdownMenuItem
-                    onClick={
-                      preview
-                        ? undefined
-                        : () => {
-                            setNewName(name)
-                            setShowRenameDialog(true)
-                          }
-                    }
-                  >
-                    <Pencil className='size-4 me-2' />
-                    <Trans>Rename</Trans>
-                  </DropdownMenuItem>
-                )}
-                {totalCount === 0 && (onDeleteColumn || preview) && (
-                  <DropdownMenuItem
-                    onClick={
-                      preview ? undefined : () => setShowDeleteDialog(true)
-                    }
-                  >
-                    <Trash2 className='size-4 me-2' />
-                    <Trans>Delete</Trans>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </TooltipTrigger>
+              <TooltipContent>{collapseLabels.collapse(name)}</TooltipContent>
+            </Tooltip>
           )}
+          {!isReordering &&
+            (preview ||
+              onCreateClick ||
+              onRenameColumn ||
+              (totalCount === 0 && onDeleteColumn)) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type='button'
+                    data-column-menu
+                    aria-label={t`Column actions`}
+                    className='rounded p-1 transition-colors hover:bg-hover active:bg-interactive-active'
+                  >
+                    <MoreHorizontal className='size-4 text-muted-foreground' />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  {(onCreateClick || preview) && (
+                    <DropdownMenuItem
+                      onClick={preview ? undefined : onCreateClick}
+                    >
+                      <Plus className='size-4 me-2' />
+                      <Trans>Create</Trans>
+                    </DropdownMenuItem>
+                  )}
+                  {(onRenameColumn || preview) && (
+                    <DropdownMenuItem
+                      onClick={
+                        preview
+                          ? undefined
+                          : () => {
+                              setNewName(name)
+                              setShowRenameDialog(true)
+                            }
+                      }
+                    >
+                      <Pencil className='size-4 me-2' />
+                      <Trans>Rename</Trans>
+                    </DropdownMenuItem>
+                  )}
+                  {totalCount === 0 && (onDeleteColumn || preview) && (
+                    <DropdownMenuItem
+                      onClick={
+                        preview ? undefined : () => setShowDeleteDialog(true)
+                      }
+                    >
+                      <Trash2 className='size-4 me-2' />
+                      <Trans>Delete</Trans>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+        </div>
       </div>
 
       <ResponsiveDialog
@@ -751,7 +863,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
               index < rows.length - 1 && 'border-b'
             )}
             onDoubleClick={
-              onCreateInRow && !preview
+              onCreateInRow && !preview && !collapsedRows?.includes(row.id)
                 ? (e) => {
                     if (
                       e.target === e.currentTarget ||
@@ -764,7 +876,8 @@ export function EntityBoardColumn<TObject extends EntityObject>({
                 : undefined
             }
           >
-            {renderCardsWithGap(row.objects, row.id)}
+            {!collapsedRows?.includes(row.id) &&
+              renderCardsWithGap(row.objects, row.id)}
           </div>
         ))
       ) : (

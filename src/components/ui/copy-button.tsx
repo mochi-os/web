@@ -19,6 +19,8 @@ interface CopyButtonProps
   successMessage?: string
   errorMessage?: string
   onCopyError?: () => void
+  /** Shown until a copy succeeds, in place of the copy icon. */
+  icon?: React.ReactNode
 }
 
 export function CopyButton({
@@ -26,6 +28,8 @@ export function CopyButton({
   successMessage = t`Copied to clipboard`,
   errorMessage = t`Failed to copy`,
   onCopyError,
+  icon,
+  onClick,
   className,
   variant = 'ghost',
   size = 'icon',
@@ -50,17 +54,20 @@ export function CopyButton({
       variant={variant}
       size={size}
       className={cn('size-8 shrink-0', className)}
+      {...props}
+      // After the spread, and calling a passed handler too: a Tooltip trigger
+      // injects its own onClick, which used to replace the copy entirely.
       onClick={(e) => {
+        onClick?.(e)
         e.preventDefault()
         e.stopPropagation()
         handleCopy()
       }}
-      {...props}
     >
       {copied ? (
         <Check className='h-3.5 w-3.5 text-success' />
       ) : (
-        <Copy className='h-3.5 w-3.5' />
+        (icon ?? <Copy className='h-3.5 w-3.5' />)
       )}
       <span className='sr-only'>
         <Trans>Copy</Trans>

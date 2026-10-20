@@ -247,3 +247,18 @@ export function getAuthLoginUrl(): string {
     '/'
   )
 }
+
+// The full address of a route, for a link someone copies and opens elsewhere.
+// It goes the way the router itself navigates: the base path is a rewrite
+// that publicHref already carries, and the history's createHref drops the
+// fingerprint on a domain route.
+export function absoluteRouteUrl(
+  router: {
+    buildLocation: (opts: never) => { publicHref: string }
+    history: { createHref: (href: string) => string }
+  },
+  location: { to: string; params?: Record<string, string> }
+): string {
+  const { publicHref } = router.buildLocation(location as never)
+  return window.location.origin + router.history.createHref(publicHref)
+}

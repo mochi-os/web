@@ -55,4 +55,50 @@ describe('EntityActivityList', () => {
     expect(screen.queryByText(/gone/)).toBeNull()
     expect(screen.getAllByText('Updated')).toHaveLength(1)
   })
+
+  it('names the past-tense actions the server logs', async () => {
+    const logged = (action: string, id: string) => ({
+      id,
+      user: 'u1',
+      name: 'Ada',
+      action,
+      field: '',
+      oldvalue: '',
+      newvalue: '',
+      created: 1,
+    })
+    render(
+      <EntityActivityList
+        containerId='c1'
+        objectId='o1'
+        listActivity={vi.fn(async () => ({
+          data: {
+            activities: [
+              logged('created', 'a'),
+              logged('updated', 'b'),
+              logged('moved', 'c'),
+            ],
+          },
+        }))}
+      />
+    )
+    expect(await screen.findByText('Created')).toBeInTheDocument()
+    expect(screen.getByText('Updated')).toBeInTheDocument()
+    expect(screen.getByText('Moved')).toBeInTheDocument()
+    expect(screen.queryByText('Changed')).toBeNull()
+  })
+
+  it('says the load failed rather than that there is no activity', async () => {
+    render(
+      <EntityActivityList
+        containerId='c1'
+        objectId='o1'
+        listActivity={vi.fn(async () => {
+          throw new Error('Server unreachable')
+        })}
+      />
+    )
+    expect(await screen.findByText(/Server unreachable/)).toBeInTheDocument()
+    expect(screen.queryByText('No activity yet')).toBeNull()
+  })
 })

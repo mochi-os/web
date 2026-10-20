@@ -101,6 +101,7 @@ export * from './components/entity/entity-comment-attachments'
 export * from './components/entity/entity-comment-thread'
 export * from './components/entity/entity-comment-list'
 export * from './components/entity/entity-create-object-dialog'
+export * from './components/entity/entity-duplicate-dialog'
 export * from './components/entity/entity-objects-page'
 export * from './components/entity/entity-settings-page'
 export * from './components/entity/entity-design-layout'
@@ -111,6 +112,7 @@ export * from './lib/composer-files'
 export * from './lib/entity-access'
 export * from './lib/create-entity-list-store'
 export * from './lib/entity-sort'
+export * from './lib/game-route'
 export * from './lib/entity-endpoints'
 export * from './lib/entity-api'
 export * from './lib/entity-title'
@@ -308,6 +310,7 @@ export {
   isDomainEntityRouting,
   getEntityFingerprint,
   normalizeEntityUrl,
+  absoluteRouteUrl,
 } from './lib/app-path'
 export {
   isInShell,

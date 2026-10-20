@@ -10,6 +10,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useLingui } from '@lingui/react/macro'
 import { Activity } from 'lucide-react'
 import { ActivityTimeline } from '../activity-timeline'
+import { GeneralError } from '../../features/errors/general-error'
 import { EmptyState } from '../ui/empty-state'
 import { EntityAvatar } from '../entity-avatar'
 import { ListSkeleton } from '../ui/list-skeleton'
@@ -33,6 +34,15 @@ export interface EntityActivityListProps {
   fields?: EntityField[]
 }
 
+// The server logs past tense (`created`, `updated`, `moved`). The
+// present-tense names are what this list was first written against.
+const ACTION_ALIASES: Record<string, string> = {
+  create: 'created',
+  update: 'updated',
+  delete: 'deleted',
+  move: 'moved',
+}
+
 export function EntityActivityList({
   containerId,
   objectId,
@@ -44,6 +54,9 @@ export function EntityActivityList({
   const {
     data,
     isLoading,
+    isError,
+    error,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -86,14 +99,14 @@ export function EntityActivityList({
     const field = activity.field
       ? fields?.find((f) => f.id === activity.field)?.name
       : undefined
-    switch (activity.action) {
-      case 'create':
+    switch (ACTION_ALIASES[activity.action] ?? activity.action) {
+      case 'created':
         return field ? t`Created ${field}` : t`Created`
-      case 'update':
+      case 'updated':
         return field ? t`Updated ${field}` : t`Updated`
-      case 'delete':
+      case 'deleted':
         return field ? t`Deleted ${field}` : t`Deleted`
-      case 'move':
+      case 'moved':
         return field ? t`Moved ${field}` : t`Moved`
       default:
         return field ? t`Changed ${field}` : t`Changed`
@@ -102,6 +115,20 @@ export function EntityActivityList({
 
   if (isLoading) {
     return <ListSkeleton count={3} variant='simple' height='h-10' />
+  }
+
+  // A failed first load is not an empty history.
+  if (isError && activities.length === 0) {
+    return (
+      <GeneralError
+        error={error}
+        minimal
+        mode='inline'
+        reset={() => {
+          void refetch()
+        }}
+      />
+    )
   }
 
   if (activities.length === 0) {

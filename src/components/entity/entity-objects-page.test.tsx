@@ -249,6 +249,57 @@ describe('EntityObjectsPage', () => {
 
   // crm passes a csvExport binding and projects does not, so the entry has to
   // come and go with the prop rather than being built into the shared menu.
+  it('offers Duplicate only to an app that passes it', async () => {
+    const duplicate = {
+      menuAction: 'Duplicate',
+      api: {} as never,
+      create: vi.fn(),
+      remove: vi.fn(),
+      onDuplicated: vi.fn(),
+      labels: {
+        title: 'Duplicate CRM',
+        name: 'Name',
+        everything: 'Everything',
+        designOnly: 'Design only',
+        allowSearch: 'Allow anyone to search',
+        cancel: 'Cancel',
+        confirm: 'Duplicate',
+        duplicating: 'Duplicating',
+        duplicated: 'Duplicated',
+        failed: 'Failed',
+        defaultName: (name: string) => `Duplicate of ${name}`,
+        leftBehind: 'Left behind',
+        incomplete: 'Incomplete',
+      },
+    }
+    const { unmount } = renderPage({ duplicate } as never)
+    await openPageMenu()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Duplicate' }))
+    expect(
+      await screen.findByRole('dialog', { name: 'Duplicate CRM' })
+    ).toBeInTheDocument()
+    unmount()
+
+    const second = renderPage()
+    await openPageMenu()
+    await screen.findByRole('menuitem', { name: 'exportData' })
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).toBeNull()
+    second.unmount()
+
+    // A view-only subscriber may export, but is not offered a one-click copy.
+    renderPage({
+      duplicate,
+      container: {
+        ...container,
+        access: 'view',
+        owner: { local: false, name: 'Someone' },
+      },
+    } as never)
+    await openPageMenu()
+    await screen.findByRole('menuitem', { name: 'exportData' })
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).toBeNull()
+  })
+
   it('lists the CSV export only for an app that passes one', async () => {
     renderPage({
       csvExport: {
@@ -322,6 +373,115 @@ describe('EntityObjectsPage', () => {
     await screen.findByText('Acme Holdings')
     expect(screen.getByTestId('detail-panel')).toHaveTextContent('none')
   })
+
+  describe('collapsed board columns', () => {
+    // The board is a stub that shows what it was told is collapsed and
+    // collapses "todo" when asked.
+    const boardSlot = {
+      renderBoard: ({
+        collapsedColumns,
+        onToggleColumnCollapsed,
+      }: {
+        collapsedColumns?: string[]
+        onToggleColumnCollapsed?: (id: string) => void
+      }) => (
+        <div data-testid='board'>
+          <span data-testid='collapsed'>
+            {(collapsedColumns ?? []).join(',') || 'none'}
+          </span>
+          <button onClick={() => onToggleColumnCollapsed?.('todo')}>
+            toggle
+          </button>
+        </div>
+      ),
+    }
+    const design = createMockEntityDesign({
+      views: [
+        createMockEntityView({
+          id: 'board',
+          name: 'Board',
+          viewtype: 'board',
+          columns: 'status',
+        }),
+      ],
+    })
+
+    it('remembers a collapsed column for this board only', async () => {
+      const first = renderPage({ design, ...boardSlot } as never)
+      fireEvent.click(await screen.findByRole('button', { name: 'toggle' }))
+      expect(screen.getByTestId('collapsed')).toHaveTextContent('todo')
+      first.unmount()
+
+      // Same board again: still collapsed.
+      const again = renderPage({ design, ...boardSlot } as never)
+      await waitFor(() =>
+        expect(screen.getByTestId('collapsed')).toHaveTextContent('todo')
+      )
+      again.unmount()
+
+      // Another board with the same columns: not collapsed.
+      renderPage({ design, containerId: 'c2', ...boardSlot } as never)
+      await screen.findByTestId('board')
+      expect(screen.getByTestId('collapsed')).toHaveTextContent('none')
+    })
+
+    it('remembers a folded row for this board only', async () => {
+      const rowsSlot = {
+        renderBoard: ({
+          collapsedRows,
+          onToggleRowCollapsed,
+        }: {
+          collapsedRows?: string[]
+          onToggleRowCollapsed?: (id: string) => void
+        }) => (
+          <div data-testid='board'>
+            <span data-testid='rows'>
+              {(collapsedRows ?? []).join(',') || 'none'}
+            </span>
+            <button onClick={() => onToggleRowCollapsed?.('high')}>fold</button>
+          </div>
+        ),
+      }
+      const swimlanes = createMockEntityDesign({
+        views: [
+          createMockEntityView({
+            id: 'board',
+            name: 'Board',
+            viewtype: 'board',
+            columns: 'status',
+            rows: 'priority',
+          }),
+        ],
+      })
+      const first = renderPage({ design: swimlanes, ...rowsSlot } as never)
+      fireEvent.click(await screen.findByRole('button', { name: 'fold' }))
+      expect(screen.getByTestId('rows')).toHaveTextContent('high')
+      first.unmount()
+
+      const again = renderPage({ design: swimlanes, ...rowsSlot } as never)
+      await waitFor(() =>
+        expect(screen.getByTestId('rows')).toHaveTextContent('high')
+      )
+      again.unmount()
+
+      renderPage({
+        design: swimlanes,
+        containerId: 'c2',
+        ...rowsSlot,
+      } as never)
+      await screen.findByTestId('board')
+      expect(screen.getByTestId('rows')).toHaveTextContent('none')
+    })
+
+    it('expands the column again on a second toggle', async () => {
+      renderPage({ design, ...boardSlot } as never)
+      const toggle = await screen.findByRole('button', { name: 'toggle' })
+      fireEvent.click(toggle)
+      fireEvent.click(toggle)
+      expect(screen.getByTestId('collapsed')).toHaveTextContent('none')
+    })
+  })
+
   it("opens Copy in an object's panel as the new-item form, filled from the object, and a later New as a plain one", async () => {
     const objects = createMockEntityObjects(3)
     const seen: Record<string, unknown>[] = []
