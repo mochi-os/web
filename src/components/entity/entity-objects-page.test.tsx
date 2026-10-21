@@ -121,6 +121,30 @@ async function openPageMenu() {
   return trigger
 }
 
+// The Copy dialog's binding, as an app passes it.
+const duplicate = {
+  menuAction: 'Duplicate',
+  api: {} as never,
+  create: vi.fn(),
+  remove: vi.fn(),
+  onDuplicated: vi.fn(),
+  labels: {
+    title: 'Duplicate CRM',
+    name: 'Name',
+    everything: 'Everything',
+    designOnly: 'Design only',
+    allowSearch: 'Allow anyone to search',
+    cancel: 'Cancel',
+    confirm: 'Duplicate',
+    duplicating: 'Duplicating',
+    duplicated: 'Duplicated',
+    failed: 'Failed',
+    defaultName: (name: string) => `Duplicate of ${name}`,
+    leftBehind: 'Left behind',
+    incomplete: 'Incomplete',
+  },
+}
+
 describe('EntityObjectsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -250,28 +274,6 @@ describe('EntityObjectsPage', () => {
   // crm passes a csvExport binding and projects does not, so the entry has to
   // come and go with the prop rather than being built into the shared menu.
   it('offers Duplicate only to an app that passes it', async () => {
-    const duplicate = {
-      menuAction: 'Duplicate',
-      api: {} as never,
-      create: vi.fn(),
-      remove: vi.fn(),
-      onDuplicated: vi.fn(),
-      labels: {
-        title: 'Duplicate CRM',
-        name: 'Name',
-        everything: 'Everything',
-        designOnly: 'Design only',
-        allowSearch: 'Allow anyone to search',
-        cancel: 'Cancel',
-        confirm: 'Duplicate',
-        duplicating: 'Duplicating',
-        duplicated: 'Duplicated',
-        failed: 'Failed',
-        defaultName: (name: string) => `Duplicate of ${name}`,
-        leftBehind: 'Left behind',
-        incomplete: 'Incomplete',
-      },
-    }
     const { unmount } = renderPage({ duplicate } as never)
     await openPageMenu()
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Duplicate' }))
@@ -298,6 +300,21 @@ describe('EntityObjectsPage', () => {
     await openPageMenu()
     await screen.findByRole('menuitem', { name: 'exportData' })
     expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).toBeNull()
+  })
+
+  // Whether the original has items decides between the full export and the
+  // design alone, so a list that failed to load must not read as empty.
+  it('holds Duplicate back while the item list has not loaded', async () => {
+    const api = makeApi([])
+    api.listObjects = vi.fn(async () => {
+      throw new Error('offline')
+    }) as never
+    renderPage({ duplicate, api } as never)
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalled())
+    await openPageMenu()
+    expect(
+      await screen.findByRole('menuitem', { name: 'Duplicate' })
+    ).toHaveAttribute('data-disabled')
   })
 
   it('lists the CSV export only for an app that passes one', async () => {
