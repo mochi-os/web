@@ -39,6 +39,7 @@ export function CommentThreadProvider({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCommentThread(): CommentThreadOptions {
   return useContext(CommentThreadContext)
 }
@@ -49,6 +50,7 @@ const DEPTH_LIMIT_MOBILE = 4
 const DEPTH_LIMIT_DESKTOP = 8
 
 /** How many levels of replies show before "Continue this thread". */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCommentDepthLimit(): number {
   const { isMobile } = useScreenSize()
   return isMobile ? DEPTH_LIMIT_MOBILE : DEPTH_LIMIT_DESKTOP
