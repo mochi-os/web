@@ -4,6 +4,9 @@
 // A comment's Share button opens the system share sheet on a touch screen and
 // copies the link with a mouse, falling back to the copy wherever the sheet is
 // refused. Closing the sheet is the person changing their mind, not a failure.
+// Inside the shell the frame refuses the sheet, and the copy only works during
+// the press, so there it copies at once without trying the sheet. The link is
+// built when pressed, not on every render.
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import {
@@ -17,11 +20,13 @@ import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 
 const copy = vi.fn<(text: string) => Promise<boolean>>()
+let inShell = false
 const success = vi.fn()
 const failure = vi.fn()
 
 vi.mock('../lib/shell-bridge', () => ({
   shellClipboardWrite: (text: string) => copy(text),
+  isInShell: () => inShell,
 }))
 vi.mock('../lib/toast-utils', () => ({
   toast: {
@@ -38,16 +43,23 @@ function pointer(coarse: boolean) {
   window.matchMedia = vi.fn().mockReturnValue({ matches: coarse }) as never
 }
 
-function press() {
+const getUrl = vi.fn(() => URL)
+
+function show() {
   render(
     <I18nProvider i18n={i18n}>
-      <CommentShareButton url={URL} />
+      <CommentShareButton getUrl={getUrl} />
     </I18nProvider>
   )
+}
+
+function press() {
+  show()
   fireEvent.click(screen.getByRole('button', { name: 'Share' }))
 }
 
 beforeEach(() => {
+  inShell = false
   copy.mockResolvedValue(true)
 })
 
@@ -118,5 +130,27 @@ describe('CommentShareButton', () => {
     press()
     await waitFor(() => expect(failure).toHaveBeenCalled())
     expect(success).not.toHaveBeenCalled()
+  })
+
+  it('copies during the press inside the shell, without trying the sheet', () => {
+    inShell = true
+    pointer(true)
+    const share = vi.fn()
+    Object.defineProperty(navigator, 'share', {
+      value: share,
+      configurable: true,
+    })
+    press()
+    // No waitFor: the copy has to start before the click handler returns.
+    expect(copy).toHaveBeenCalledWith(URL)
+    expect(share).not.toHaveBeenCalled()
+  })
+
+  it('builds the link only when pressed', () => {
+    pointer(false)
+    show()
+    expect(getUrl).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(getUrl).toHaveBeenCalledTimes(1)
   })
 })
