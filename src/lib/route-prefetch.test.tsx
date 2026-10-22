@@ -174,6 +174,8 @@ describe('startRoutePrefetch', () => {
     ['a new tab', '/chat/posts/5', { target: '_blank' }],
     ['a download', '/chat/posts/5', { download: '' }],
     ['an opted-out link', '/chat/posts/5', { 'data-no-prefetch': '' }],
+    // the router would leave this path as it is and match posts/$id
+    ['a path outside the basepath', '/posts/5', {}],
   ])('leaves %s alone', async (_, href, attributes) => {
     const { router, importer } = setup()
     stop = startRoutePrefetch(router)

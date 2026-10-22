@@ -59,9 +59,20 @@ function prefetchTarget(target: EventTarget | null): string | null {
   return element.href
 }
 
-// Fetch the code for the page an href leads to. Hrefs on another host, or
-// that match no route in this app, are ignored. Safe to call repeatedly: each
-// router path is looked up once, and loadRouteChunk skips loaded chunks.
+// True when a browser path lies inside the router's basepath, compared the
+// way the router's basepath rewrite compares it (case-insensitive).
+function insideBasepath(router: AnyRouter, pathname: string): boolean {
+  const base = router.basepath.replace(/^\/+|\/+$/g, '').toLowerCase()
+  if (!base) return true
+  const path = pathname.toLowerCase()
+  return path === '/' + base || path.startsWith('/' + base + '/')
+}
+
+// Fetch the code for the page an href leads to. The href is a browser path,
+// the same one a link to that page carries, basepath included. Hrefs on
+// another host, outside this app's basepath, or matching no route are
+// ignored. Safe to call repeatedly: each router path is looked up once, and
+// loadRouteChunk skips loaded chunks.
 export function prefetchRoute(
   router: AnyRouter,
   href: string,
@@ -77,6 +88,9 @@ export function prefetchRoute(
   // window.location still names the real host inside the shell's sandboxed
   // iframe, where window.origin is "null"
   if (url.host !== window.location.host) return
+  // Another app on this host. The router's basepath rewrite leaves such a
+  // path as it is, and it could match one of this app's routes.
+  if (!insideBasepath(router, url.pathname)) return
 
   // Paths only: inside the sandbox the router's own origin is a placeholder,
   // and parseLocation applies the basepath rewrite to whatever it is given.
