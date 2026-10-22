@@ -52,7 +52,7 @@ function getDomainRoutePath(): string {
 // avoid the letter l.
 const ENTITY_SEGMENT = /^[1-9A-HJ-NP-Za-km-z]{9}$|^[1-9A-HJ-NP-Za-km-z]{50,51}$/
 
-function isEntitySegment(segment: string): boolean {
+export function isEntitySegment(segment: string): boolean {
   return ENTITY_SEGMENT.test(segment)
 }
 
@@ -211,6 +211,20 @@ function parseHistoryHref(href: string, state: unknown): HistoryLocation {
   }
 }
 
+// The router path for each history made below, from a browser path. Links
+// carry the short browser form, so code that turns a link's href back into a
+// route (route-prefetch) splices the fingerprint in the way parseLocation does.
+const routerPaths = new WeakMap<RouterHistory, (path: string) => string>()
+
+// The router path for a browser path under this history: the path itself for
+// any history not made by createAppHistory.
+export function routerPathForHref(
+  history: RouterHistory,
+  path: string
+): string {
+  return routerPaths.get(history)?.(path) ?? path
+}
+
 // Router history for an entity domain route, hiding the fingerprint from the
 // address bar; undefined everywhere else. Only for route trees that put the
 // entity id first - a domain-aware tree (wikis, repositories) routes its root
@@ -224,7 +238,7 @@ export function createAppHistory(window_?: Window): RouterHistory | undefined {
   if (!fingerprint) return undefined
   const base = getDomainRoutePath()
 
-  return createBrowserHistory({
+  const history = createBrowserHistory({
     window: win,
     parseLocation: () =>
       parseHistoryHref(
@@ -238,6 +252,8 @@ export function createAppHistory(window_?: Window): RouterHistory | undefined {
       return entityBrowserPath(path, base, fingerprint) + rest
     },
   })
+  routerPaths.set(history, (path) => entityRouterPath(path, base, fingerprint))
+  return history
 }
 
 export function getAuthLoginUrl(): string {

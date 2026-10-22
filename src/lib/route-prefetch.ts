@@ -11,11 +11,19 @@
 // stays off in every app: it runs loaders on hover, and the burst of requests
 // from sweeping across a list is why it was turned off (chat 0f7f5fae).
 //
-// A failed import is swallowed here, but lazyRouteComponent remembers it: the
-// click that follows reloads the page once rather than retrying. Skipping
-// offline keeps that to a network drop that clears between hover and click.
+// A failed import is swallowed here, but lazyRouteComponent remembers it, so
+// the click that follows does not retry. Outside the shell it reloads the page
+// once. Inside the shell's sandboxed iframe that reload reads sessionStorage,
+// which throws there, so the page shows its error screen until a full reload.
+// Accepted: it takes a network drop between hover and click, and skipping
+// offline narrows it. A touch press prefetches at the click itself.
 
 import type { AnyRouter } from '@tanstack/react-router'
+import {
+  isDomainEntityRouting,
+  isEntitySegment,
+  routerPathForHref,
+} from './app-path'
 
 // How long a mouse must rest on a link before its page is fetched, so that
 // moving across a list or sidebar fetches nothing.
@@ -59,20 +67,31 @@ function prefetchTarget(target: EventTarget | null): string | null {
   return element.href
 }
 
-// True when a browser path lies inside the router's basepath, compared the
-// way the router's basepath rewrite compares it (case-insensitive).
-function insideBasepath(router: AnyRouter, pathname: string): boolean {
+function firstSegment(pathname: string): string {
+  return pathname.split('/')[1] ?? ''
+}
+
+// True when a browser path belongs to this app. The router's basepath rewrite
+// leaves a path outside the basepath as it is, so another app's path on this
+// host could otherwise match one of this app's routes.
+function insideApp(router: AnyRouter, pathname: string): boolean {
+  // Compared as the basepath rewrite compares it: case-insensitive
   const base = router.basepath.replace(/^\/+|\/+$/g, '').toLowerCase()
-  if (!base) return true
   const path = pathname.toLowerCase()
-  return path === '/' + base || path.startsWith('/' + base + '/')
+  if (base) return path === '/' + base || path.startsWith('/' + base + '/')
+  // Basepath "/". On a direct entity URL in the shell (/<entity>/...) this
+  // app's routes all lead with the entity, and another app's path leads with
+  // the app's name. A domain route has no entity in the path at all.
+  if (isDomainEntityRouting()) return true
+  if (!isEntitySegment(firstSegment(window.location.pathname))) return true
+  return isEntitySegment(firstSegment(pathname))
 }
 
 // Fetch the code for the page an href leads to. The href is a browser path,
 // the same one a link to that page carries, basepath included. Hrefs on
-// another host, outside this app's basepath, or matching no route are
-// ignored. Safe to call repeatedly: each router path is looked up once, and
-// loadRouteChunk skips loaded chunks.
+// another host, outside this app, or matching no route are ignored. Safe to
+// call repeatedly: each router path is looked up once, and loadRouteChunk
+// skips loaded chunks.
 export function prefetchRoute(
   router: AnyRouter,
   href: string,
@@ -88,21 +107,18 @@ export function prefetchRoute(
   // window.location still names the real host inside the shell's sandboxed
   // iframe, where window.origin is "null"
   if (url.host !== window.location.host) return
-  // Another app on this host. The router's basepath rewrite leaves such a
-  // path as it is, and it could match one of this app's routes.
-  if (!insideBasepath(router, url.pathname)) return
+  if (!insideApp(router, url.pathname)) return
 
   // Paths only: inside the sandbox the router's own origin is a placeholder,
   // and parseLocation applies the basepath rewrite to whatever it is given.
-  // On an entity domain route createAppHistory hides the fingerprint from the
-  // href, so the path may match a different route or none: the cost is a
-  // wasted chunk or no prefetch, never a request for data.
-  const path = url.pathname + url.search + url.hash
+  // A domain entity route's history hides the fingerprint from hrefs; put it
+  // back the way that history's own parse does before the router sees it.
+  const routerPath = routerPathForHref(router.history, url.pathname)
   let pathname: string
   try {
     pathname = router.parseLocation({
-      href: path,
-      pathname: url.pathname,
+      href: routerPath + url.search + url.hash,
+      pathname: routerPath,
       search: url.search,
       hash: url.hash,
       state: { __TSR_index: 0, key: '', __TSR_key: '' },
@@ -116,8 +132,12 @@ export function prefetchRoute(
   const { matchedRoutes, foundRoute } = router.getMatchedRoutes(pathname)
   if (!foundRoute) return
   for (const route of matchedRoutes) {
-    // undefined, not a promise, when a route has nothing left to load
-    Promise.resolve(router.loadRouteChunk(route)).catch(() => {})
+    try {
+      // undefined, not a promise, when a route has nothing left to load
+      Promise.resolve(router.loadRouteChunk(route)).catch(() => {})
+    } catch {
+      // an importer that throws before it returns its promise
+    }
   }
 }
 
@@ -157,16 +177,23 @@ export function startRoutePrefetch(
   const out = (event: PointerEvent) => {
     if (prefetchTarget(event.relatedTarget) !== pendingTarget) cancel()
   }
+  const press = (event: PointerEvent) => {
+    // A middle, right or modified press opens a new tab or a menu, not this
+    // page in this tab
+    if (event.button !== 0) return
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+    now(event)
+  }
 
   root.addEventListener('pointerover', over)
   root.addEventListener('pointerout', out)
-  root.addEventListener('pointerdown', now)
+  root.addEventListener('pointerdown', press)
   root.addEventListener('focusin', now)
   return () => {
     cancel()
     root.removeEventListener('pointerover', over)
     root.removeEventListener('pointerout', out)
-    root.removeEventListener('pointerdown', now)
+    root.removeEventListener('pointerdown', press)
     root.removeEventListener('focusin', now)
   }
 }

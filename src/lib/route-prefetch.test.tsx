@@ -12,6 +12,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
+import { createAppHistory } from './app-path'
 import { prefetchRoute, startRoutePrefetch } from './route-prefetch'
 
 // A router shaped like an app's: a basepath, preload off, a root loader, and a
@@ -76,6 +77,7 @@ afterEach(() => {
   document.body.innerHTML = ''
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   Object.defineProperty(navigator, 'onLine', {
     configurable: true,
     get: () => true,
@@ -186,6 +188,22 @@ describe('startRoutePrefetch', () => {
     expect(importer).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['a middle press', { button: 1 }],
+    ['a right press', { button: 2 }],
+    ['a ctrl press', { ctrlKey: true }],
+    ['a cmd press', { metaKey: true }],
+    ['a shift press', { shiftKey: true }],
+  ])('leaves %s alone, which opens a new tab or a menu', async (_, init) => {
+    const { router, importer } = setup()
+    stop = startRoutePrefetch(router)
+
+    pointer('pointerdown', link('/chat/posts/5'), init)
+    await flush()
+
+    expect(importer).not.toHaveBeenCalled()
+  })
+
   it('stops watching once stopped', async () => {
     const { router, importer } = setup()
     startRoutePrefetch(router)()
@@ -233,22 +251,25 @@ describe('prefetchRoute', () => {
     expect(importer).not.toHaveBeenCalled()
   })
 
-  // lazyRouteComponent catches its own import failure; a route split with
-  // .lazy() does not, and its rejection reaches loadRouteChunk
-  it('swallows a failed import', async () => {
+  it('does nothing in a hidden tab', async () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    const { router, importer } = setup()
+    prefetchRoute(router, '/chat/posts/5')
+    await flush()
+    expect(importer).not.toHaveBeenCalled()
+  })
+
+  // The shell's iframe has no allow-same-origin, so reading sessionStorage
+  // throws. lazyRouteComponent reads it after a failed import, and that throw
+  // turns its caught failure into a rejection loadRouteChunk passes on.
+  it('swallows a failed import inside the sandbox', async () => {
+    vi.spyOn(window, 'sessionStorage', 'get').mockImplementation(() => {
+      throw new DOMException('The document is sandboxed', 'SecurityError')
+    })
     const failing = vi.fn(async (): Promise<never> => {
-      throw new Error('Failed to fetch dynamically imported module: x.js')
+      throw new TypeError('Failed to fetch dynamically imported module: x.js')
     })
-    const root = createRootRoute({ component: Outlet })
-    const post = createRoute({
-      getParentRoute: () => root,
-      path: 'posts/$id',
-    }).lazy(failing)
-    const router = createRouter({
-      routeTree: root.addChildren([post]),
-      basepath: '/chat/',
-      history: createMemoryHistory({ initialEntries: ['/chat/'] }),
-    })
+    const { router } = setup('/chat/', failing)
     const rejections: unknown[] = []
     const onRejection = (reason: unknown) => rejections.push(reason)
     process.on('unhandledRejection', onRejection)
@@ -260,5 +281,100 @@ describe('prefetchRoute', () => {
 
     expect(failing).toHaveBeenCalledTimes(1)
     expect(rejections).toEqual([])
+  })
+
+  it('swallows an importer that throws before returning a promise', () => {
+    const throwing = vi.fn((): Promise<never> => {
+      throw new Error('no promise')
+    })
+    const { router } = setup('/chat/', throwing)
+    expect(() => prefetchRoute(router, '/chat/posts/5')).not.toThrow()
+    expect(throwing).toHaveBeenCalledTimes(1)
+  })
+})
+
+// A base58 fingerprint, the shape core routes as an entity
+const FINGERPRINT = '2Bx7KpQmZ'
+
+describe('prefetchRoute on an entity URL in the shell', () => {
+  // Basepath "/" with the entity leading every path of this app
+  function entityApp() {
+    const importer = vi.fn(async () => ({ default: () => <p>post</p> }))
+    const root = createRootRoute({ component: Outlet })
+    const post = createRoute({
+      getParentRoute: () => root,
+      path: '$forum/$post',
+      component: lazyRouteComponent(importer),
+    })
+    const router = createRouter({
+      routeTree: root.addChildren([post]),
+      basepath: '/',
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    })
+    return { router, importer }
+  }
+
+  beforeEach(() => window.history.pushState({}, '', `/${FINGERPRINT}/p1`))
+  afterEach(() => window.history.pushState({}, '', '/'))
+
+  it('leaves another app on the host alone', async () => {
+    const { router, importer } = entityApp()
+    prefetchRoute(router, '/people/abc')
+    await flush()
+    expect(importer).not.toHaveBeenCalled()
+  })
+
+  it("loads this app's own entity pages", async () => {
+    const { router, importer } = entityApp()
+    prefetchRoute(router, `/${FINGERPRINT}/p2`)
+    await flush()
+    expect(importer).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('prefetchRoute on an entity domain route', () => {
+  const metas: HTMLMetaElement[] = []
+  function meta(name: string, content: string) {
+    const element = document.createElement('meta')
+    element.name = name
+    element.content = content
+    document.head.appendChild(element)
+    metas.push(element)
+  }
+
+  beforeEach(() => {
+    meta('mochi:domain', '/')
+    meta('mochi:fingerprint', FINGERPRINT)
+  })
+  afterEach(() => {
+    for (const element of metas.splice(0)) element.remove()
+  })
+
+  // Links carry /<post>; the routes expect /<feed>/<post>
+  it('puts back the fingerprint the history hides from links', async () => {
+    const feedPage = vi.fn(async () => ({ default: () => <p>feed</p> }))
+    const postPage = vi.fn(async () => ({ default: () => <p>post</p> }))
+    const root = createRootRoute({ component: Outlet })
+    const feed = createRoute({
+      getParentRoute: () => root,
+      path: '$feedId',
+      component: lazyRouteComponent(feedPage),
+    })
+    const post = createRoute({
+      getParentRoute: () => root,
+      path: '$feedId/$postId',
+      component: lazyRouteComponent(postPage),
+    })
+    const router = createRouter({
+      routeTree: root.addChildren([feed, post]),
+      basepath: '/',
+      history: createAppHistory(),
+    })
+
+    prefetchRoute(router, '/p1')
+    await flush()
+
+    expect(postPage).toHaveBeenCalledTimes(1)
+    expect(feedPage).not.toHaveBeenCalled()
   })
 })
