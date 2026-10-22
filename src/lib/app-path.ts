@@ -257,7 +257,11 @@ export function absoluteRouteUrl(
     buildLocation: (opts: never) => { publicHref: string }
     history: { createHref: (href: string) => string }
   },
-  location: { to: string; params?: Record<string, string> }
+  location: {
+    to: string
+    params?: Record<string, string>
+    search?: Record<string, string | undefined>
+  }
 ): string {
   const { publicHref } = router.buildLocation(location as never)
   return window.location.origin + router.history.createHref(publicHref)

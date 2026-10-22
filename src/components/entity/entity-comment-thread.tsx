@@ -179,7 +179,10 @@ export function EntityCommentThread({
   const content = (
     <div className='space-y-1.5'>
       <div className='group/row'>
-        <div className='flex h-5 items-center gap-2 text-xs'>
+        <div
+          data-comment-header=''
+          className='flex h-5 items-center gap-2 text-xs'
+        >
           <span className='text-foreground font-medium'>
             {comment.name || comment.author}
           </span>

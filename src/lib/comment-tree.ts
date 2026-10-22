@@ -44,3 +44,21 @@ export function countCommentTree<T>(
   }
   return total
 }
+
+/** Walk a nested comment tree and return the comment with this id. */
+export function findCommentInTree<T>(
+  comments: readonly T[],
+  id: string,
+  getId: (item: T) => string,
+  getChildren: (item: T) => readonly T[] | undefined
+): T | undefined {
+  for (const comment of comments) {
+    if (getId(comment) === id) return comment
+    const children = getChildren(comment)
+    if (children?.length) {
+      const nested = findCommentInTree(children, id, getId, getChildren)
+      if (nested) return nested
+    }
+  }
+  return undefined
+}
