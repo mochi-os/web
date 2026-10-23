@@ -204,11 +204,28 @@ describe('startRoutePrefetch', () => {
     expect(importer).not.toHaveBeenCalled()
   })
 
+  it('leaves an alt press alone, which downloads the link', async () => {
+    const { router, importer } = setup()
+    stop = startRoutePrefetch(router)
+
+    pointer('pointerdown', link('/chat/posts/5'), { altKey: true })
+    await flush()
+
+    expect(importer).not.toHaveBeenCalled()
+  })
+
   it('stops watching once stopped', async () => {
     const { router, importer } = setup()
-    startRoutePrefetch(router)()
+    const stopWatching = startRoutePrefetch(router)
+    // A hover still waiting out its delay is dropped too
+    pointer('pointerover', link('/chat/posts/5'))
+    stopWatching()
 
-    pointer('pointerdown', link('/chat/posts/5'))
+    const a = link('/chat/posts/6')
+    pointer('pointerover', a)
+    pointer('pointerdown', a)
+    a.focus()
+    vi.advanceTimersByTime(100)
     await flush()
 
     expect(importer).not.toHaveBeenCalled()
@@ -231,7 +248,11 @@ describe('prefetchRoute', () => {
   })
 
   it('does nothing with data saver on or on 2G', async () => {
-    for (const connection of [{ saveData: true }, { effectiveType: '2g' }]) {
+    for (const connection of [
+      { saveData: true },
+      { effectiveType: '2g' },
+      { effectiveType: 'slow-2g' },
+    ]) {
       vi.stubGlobal('navigator', { ...navigator, connection })
       const { router, importer } = setup()
       prefetchRoute(router, '/chat/posts/5')
