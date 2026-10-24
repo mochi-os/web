@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+  useEffect,
   useId,
   useState,
   useMemo,
@@ -53,6 +54,12 @@ interface DiffViewerProps {
 // open and to scroll, and is rarely read line by line.
 const LARGE_LINES = 400
 const SHOWN_FILES = 50
+
+// Lines drawn when a diff first shows, and in each later step while the
+// browser is idle: a large diff shows its first files at once, and the page
+// stays responsive while the rest fill in.
+const FIRST_LINES = 1500
+const STEP_LINES = 2000
 
 // Pair consecutive remove/add lines for intra-line highlighting
 function pairLines(
@@ -619,6 +626,41 @@ export function DiffLines({
   )
 }
 
+// Pixels a card's header takes, and each line of a file drawn in full.
+const HEADER_HEIGHT = 41
+const LINE_HEIGHT = 20
+
+// The rows a file's lines take, a hunk's header among them.
+function fileLines(file: DiffFile) {
+  return file.hunks.reduce((sum, hunk) => sum + hunk.lines.length + 1, 0)
+}
+
+// Whether a file waits behind Load diff until the reader asks for it.
+function heldBack(file: DiffFile, index: number) {
+  return index >= SHOWN_FILES || file.additions + file.deletions > LARGE_LINES
+}
+
+// A guess at a file card's height before it is drawn: its header, and its
+// lines unless it is collapsed or waiting behind Load diff.
+function cardHeight(file: DiffFile, collapsed: boolean, held: boolean) {
+  if (collapsed) return HEADER_HEIGHT
+  if (held || file.isBinary || file.skipped) return HEADER_HEIGHT + 56
+  return HEADER_HEIGHT + fileLines(file) * LINE_HEIGHT
+}
+
+// Where a drawing step that starts at file `from` ends: after the files whose
+// lines fill `lines`, and always at least one further. A held-back file draws
+// only its button, so it costs nothing.
+function stepEnd(files: DiffFile[], from: number, lines: number) {
+  let end = from
+  let total = 0
+  while (end < files.length && (end === from || total < lines)) {
+    if (!heldBack(files[end], end)) total += fileLines(files[end])
+    end++
+  }
+  return end
+}
+
 export function DiffViewer({
   diff,
   viewStyle,
@@ -632,6 +674,30 @@ export function DiffViewer({
   const [loaded, setLoaded] = useState<Record<number, boolean>>({})
   const [listed, setListed] = useState(false)
   const id = useId()
+  // How many files from the start are drawn; the rest show their headers.
+  // A new diff starts again from its first files.
+  const [drawn, setDrawn] = useState(() => ({
+    files,
+    count: stepEnd(files, 0, FIRST_LINES),
+  }))
+  if (drawn.files !== files) {
+    setDrawn({ files, count: stepEnd(files, 0, FIRST_LINES) })
+  }
+  useEffect(() => {
+    if (drawn.files !== files || drawn.count >= files.length) return
+    const step = () =>
+      setDrawn((previous) =>
+        previous.files === files
+          ? { files, count: stepEnd(files, previous.count, STEP_LINES) }
+          : previous
+      )
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(step, { timeout: 200 })
+      return () => window.cancelIdleCallback(handle)
+    }
+    const handle = window.setTimeout(step, 0)
+    return () => window.clearTimeout(handle)
+  }, [drawn, files])
 
   if (files.length === 0 && truncated === 0) {
     return (
@@ -645,8 +711,7 @@ export function DiffViewer({
   const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0)
   const anyOpen = files.some((_, index) => !collapsed[index])
   const held = (file: DiffFile, index: number) =>
-    !loaded[index] &&
-    (index >= SHOWN_FILES || file.additions + file.deletions > LARGE_LINES)
+    !loaded[index] && heldBack(file, index)
 
   const toggleFile = (index: number) => {
     setCollapsed((prev) => ({ ...prev, [index]: !prev[index] }))
@@ -733,10 +798,22 @@ export function DiffViewer({
       </div>
 
       {files.map((file, index) => (
+        // A card off screen is not laid out or painted until it nears the
+        // view, which on a large diff is most of the page's work. Until then
+        // its height is guessed from its lines so the scrollbar holds still,
+        // and once drawn the browser keeps the real one. Find in page still
+        // searches it.
         <div
           key={index}
           id={`${id}-${index}`}
-          className='scroll-mt-24 overflow-hidden rounded-lg border'
+          className='scroll-mt-24 overflow-hidden rounded-lg border [content-visibility:auto]'
+          style={{
+            containIntrinsicSize: `auto ${cardHeight(
+              file,
+              !!collapsed[index],
+              held(file, index)
+            )}px`,
+          }}
         >
           <FileHeader
             file={file}
@@ -745,7 +822,14 @@ export function DiffViewer({
             actions={actions}
           />
           {!collapsed[index] &&
-            (held(file, index) ? (
+            (index >= drawn.count && !loaded[index] ? (
+              <div
+                style={{
+                  height:
+                    cardHeight(file, false, held(file, index)) - HEADER_HEIGHT,
+                }}
+              />
+            ) : held(file, index) ? (
               <div className='flex justify-center px-3 py-4'>
                 <button
                   type='button'

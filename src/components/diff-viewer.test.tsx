@@ -191,6 +191,33 @@ describe('DiffViewer files', () => {
     expect(screen.getByText('Again a.ts in unified')).toBeInTheDocument()
     expect(screen.getByText('a.ts line 1')).toBeInTheDocument()
   })
+
+  // Six files of 380 lines: the first four fill the first frame's 1,500.
+  const large = Array.from({ length: 6 }, (_, i) => file(`f${i}.ts`, 380)).join(
+    ''
+  )
+
+  it("draws a large diff's first files at once and the rest after", async () => {
+    render(<DiffViewer diff={large} viewStyle='unified' />)
+    expect(screen.getByText('f3.ts line 1')).toBeInTheDocument()
+    // THE POINT: the last files wait their turn, their headers shown.
+    expect(screen.queryByText('f4.ts line 1')).toBeNull()
+    expect(screen.getByRole('button', { name: /f5\.ts/ })).toBeInTheDocument()
+    expect(await screen.findByText('f5.ts line 1')).toBeInTheDocument()
+  })
+
+  it('draws a file picked from the list before its turn', () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0)
+      return 0
+    })
+    render(<DiffViewer diff={large} viewStyle='unified' />)
+    fireEvent.click(screen.getByRole('button', { name: /6 files changed/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /f5\.ts/ })[0])
+    expect(screen.getByText('f5.ts line 1')).toBeInTheDocument()
+    expect(screen.queryByText('f4.ts line 1')).toBeNull()
+  })
 })
 
 describe('DiffViewToggle', () => {
