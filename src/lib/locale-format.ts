@@ -399,6 +399,18 @@ export function formatMonthName(
     : plain
 }
 
+/**
+ * The month abbreviated, standing on its own: "Sep", "sept.", "9月". Where
+ * the language abbreviates a month as a bare number ("09" in Bulgarian and
+ * Lithuanian) it takes the full name instead.
+ */
+export function formatMonthShort(date: Date, timezone?: string): string {
+  const short = calendarFormatter('monthShort', timezone, {
+    month: 'short',
+  }).format(date)
+  return /\p{L}/u.test(short) ? short : formatMonthName(date, timezone)
+}
+
 /** The day of the month as a bare number, for a grid cell. */
 export function formatDayNumber(date: Date, timezone?: string): string {
   return calendarFormatter('day', timezone, { day: 'numeric' }).format(date)
