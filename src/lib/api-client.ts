@@ -12,6 +12,7 @@ import {
 } from './api-response-interceptors'
 import { clearContentTypeHeader } from './clear-content-type-header'
 import { isSameOriginRequest } from './safe-navigation'
+import { shellAdapter } from './shell-fetch'
 
 export { setLogoutHandler }
 
@@ -25,6 +26,8 @@ const logDevError = (message: string, error: unknown) => {
 
 export const apiClient = axios.create({
   timeout: 0,
+  // Inside the shell, requests go through the shell page (shell-fetch.ts).
+  adapter: shellAdapter,
   withCredentials: true,
   headers: {
     Accept: 'application/json',
