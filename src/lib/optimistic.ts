@@ -145,9 +145,11 @@ export function optimistic<TVariables>(
       return call
     },
 
-    /** Put back what a refused call changed. Call it first in `onError`. */
-    rollback: (call: OptimisticCall | undefined) => {
-      if (!call) return
+    /** Put back what a refused call changed. Call it first in `onError`.
+     * Takes the context as TanStack hands it over, which a hook that forwards
+     * its caller's options types `unknown`; anything else is ignored. */
+    rollback: (call: unknown) => {
+      if (!(call instanceof OptimisticCall)) return
       const slots = slotsFor(queryClient)
       for (const entry of call.entries) {
         const slot = slots.get(hashKey(entry.key))

@@ -224,6 +224,15 @@ describe('optimistic', () => {
     expect(item()).toEqual(START)
   })
 
+  it('ignores a context it did not make', () => {
+    const { client } = setup()
+    const patch = optimistic(client, () => [])
+    patch.rollback(undefined)
+    patch.rollback({})
+    patch.rollback('context from another hook')
+    expect(client.getQueryData(['item', 1])).toEqual(START)
+  })
+
   it('changes nothing and sends nothing when an update throws', async () => {
     const { client, click, item, requests, errors } = setup(() => [
       {
