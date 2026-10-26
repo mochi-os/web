@@ -9,13 +9,22 @@ import { describe, it, expect, vi } from 'vitest'
 import { parseDiff } from '../lib/diff-parser'
 import {
   DiffFileView,
+  DiffLines,
   DiffViewer,
   DiffViewToggle,
-  type DiffWords,
 } from './diff-viewer'
 
 const render = (ui: ReactElement) =>
   baseRender(<I18nProvider i18n={i18n}>{ui}</I18nProvider>)
+
+// The cell showing a line, whole: an edited line's changed words are marked in
+// pieces of their own, so its text is not one node.
+const line = (text: string) =>
+  screen.getByText(
+    (_, element) =>
+      element?.tagName === 'TD' &&
+      element.textContent?.replace(/^[-+ ]/, '') === text
+  )
 
 const hunk =
   'diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-x\n+y\n'
@@ -57,42 +66,157 @@ describe('DiffViewer', () => {
     expect(screen.queryByText('No changes to display')).not.toBeInTheDocument()
   })
 
-  // The library does not depend on a diff package: the app hands the word
-  // comparison in, and the view has to stand without one.
   const edit =
     'diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n@@ -1 +1 @@\n-a single server\n+a small server\n'
-  const words: DiffWords = () => [
-    { value: 'a ' },
-    { value: 'single', removed: true },
-    { value: 'small', added: true },
-    { value: ' server' },
-  ]
 
-  it('marks the changed words when the app passes a word comparison', () => {
-    render(<DiffViewer diff={edit} viewStyle='unified' words={words} />)
+  it('marks the changed words inside an edited line', () => {
+    render(<DiffViewer diff={edit} viewStyle='unified' />)
     expect(screen.getByText('single').className).toContain('bg-destructive')
     expect(screen.getByText('small').className).toContain('bg-success')
   })
 
-  it('shows both lines whole when the word comparison declines', () => {
+  it('shows both lines whole when they have little in common', () => {
     render(
-      <DiffViewer diff={edit} viewStyle='unified' words={() => undefined} />
+      <DiffViewer
+        diff={
+          'diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n@@ -1 +1 @@\n-Install from git.\n+Requirements are listed below.\n'
+        }
+        viewStyle='unified'
+      />
     )
-    expect(screen.getByText('a single server')).toBeInTheDocument()
-    expect(screen.getByText('a small server')).toBeInTheDocument()
-  })
-
-  it('shows both lines whole when no word comparison is passed', () => {
-    render(<DiffViewer diff={edit} viewStyle='unified' />)
-    expect(screen.getByText('a single server')).toBeInTheDocument()
-    expect(screen.getByText('a small server')).toBeInTheDocument()
+    expect(screen.getByText('Install from git.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Requirements are listed below.')
+    ).toBeInTheDocument()
   })
 
   it('lays the two sides out in separate columns in the split view', () => {
     const { container } = render(<DiffViewer diff={edit} viewStyle='split' />)
-    const row = screen.getByText('a single server').closest('tr')
-    expect(row).toBe(screen.getByText('a small server').closest('tr'))
+    const row = line('a single server').closest('tr')
+    expect(row).toBe(line('a small server').closest('tr'))
     expect(container.querySelectorAll('td.w-1\\/2').length).toBeGreaterThan(0)
+  })
+})
+
+const file = (name: string, lines = 1) =>
+  `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n@@ -0,0 +1,${lines} @@\n` +
+  Array.from({ length: lines }, (_, i) => `+${name} line ${i + 1}\n`).join('')
+
+describe('DiffViewer files', () => {
+  it('lists the changed files and opens one from the list', () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0)
+      return 0
+    })
+    render(
+      <DiffViewer diff={file('a.ts') + file('b.ts')} viewStyle='unified' />
+    )
+    expect(screen.queryByRole('list')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /2 files changed/ }))
+    const list = screen.getByRole('list')
+    expect(list).toHaveTextContent('a.ts')
+    expect(list).toHaveTextContent('b.ts')
+
+    // Collapsed by its header, b.ts opens again when picked from the list.
+    fireEvent.click(screen.getAllByRole('button', { name: /b\.ts/ })[1])
+    expect(screen.queryByText('b.ts line 1')).toBeNull()
+    fireEvent.click(screen.getAllByRole('button', { name: /b\.ts/ })[0])
+    expect(screen.getByText('b.ts line 1')).toBeInTheDocument()
+    expect(scroll).toHaveBeenCalled()
+  })
+
+  it('collapses and expands every file at once', () => {
+    render(
+      <DiffViewer diff={file('a.ts') + file('b.ts')} viewStyle='unified' />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }))
+    expect(screen.queryByText('a.ts line 1')).toBeNull()
+    expect(screen.queryByText('b.ts line 1')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
+    expect(screen.getByText('a.ts line 1')).toBeInTheDocument()
+    expect(screen.getByText('b.ts line 1')).toBeInTheDocument()
+  })
+
+  it('holds a large file back until asked for', () => {
+    render(<DiffViewer diff={file('big.ts', 401)} viewStyle='unified' />)
+    expect(screen.queryByText('big.ts line 1')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Load diff' }))
+    expect(screen.getByText('big.ts line 1')).toBeInTheDocument()
+  })
+
+  it('draws a file of exactly the size limit at once', () => {
+    render(<DiffViewer diff={file('edge.ts', 400)} viewStyle='unified' />)
+    expect(screen.getByText('edge.ts line 1')).toBeInTheDocument()
+  })
+
+  it('holds back files listed after the first fifty', () => {
+    const diff = Array.from({ length: 51 }, (_, i) => file(`f${i}.ts`)).join('')
+    render(<DiffViewer diff={diff} viewStyle='unified' />)
+    expect(screen.getByText('f49.ts line 1')).toBeInTheDocument()
+    expect(screen.queryByText('f50.ts line 1')).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Load diff' })).toHaveLength(1)
+  })
+
+  it("places the app's controls beside each file's toggle, not inside it", () => {
+    render(
+      <DiffViewer
+        diff={file('a.ts')}
+        viewStyle='unified'
+        actions={({ file }) => (
+          <button type='button'>Options {file.path}</button>
+        )}
+      />
+    )
+    const options = screen.getByRole('button', { name: 'Options a.ts' })
+    expect(options.closest('button[aria-expanded]')).toBeNull()
+  })
+
+  it("draws a file with the app's body when it gives one", () => {
+    render(
+      <DiffViewer
+        diff={file('a.ts')}
+        viewStyle='unified'
+        body={({ file, viewStyle }) => (
+          <div>
+            <p>
+              Again {file.path} in {viewStyle}
+            </p>
+            <DiffLines file={file} viewStyle={viewStyle} />
+          </div>
+        )}
+      />
+    )
+    expect(screen.getByText('Again a.ts in unified')).toBeInTheDocument()
+    expect(screen.getByText('a.ts line 1')).toBeInTheDocument()
+  })
+
+  // Six files of 380 lines: the first four fill the first frame's 1,500.
+  const large = Array.from({ length: 6 }, (_, i) => file(`f${i}.ts`, 380)).join(
+    ''
+  )
+
+  it("draws a large diff's first files at once and the rest after", async () => {
+    render(<DiffViewer diff={large} viewStyle='unified' />)
+    expect(screen.getByText('f3.ts line 1')).toBeInTheDocument()
+    // THE POINT: the last files wait their turn, their headers shown.
+    expect(screen.queryByText('f4.ts line 1')).toBeNull()
+    expect(screen.getByRole('button', { name: /f5\.ts/ })).toBeInTheDocument()
+    expect(await screen.findByText('f5.ts line 1')).toBeInTheDocument()
+  })
+
+  it('draws a file picked from the list before its turn', () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0)
+      return 0
+    })
+    render(<DiffViewer diff={large} viewStyle='unified' />)
+    fireEvent.click(screen.getByRole('button', { name: /6 files changed/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /f5\.ts/ })[0])
+    expect(screen.getByText('f5.ts line 1')).toBeInTheDocument()
+    expect(screen.queryByText('f4.ts line 1')).toBeNull()
   })
 })
 
@@ -124,7 +248,7 @@ describe('DiffFileView', () => {
 
   it('shows the lines with no file header and no totals', () => {
     render(<DiffFileView file={file} viewStyle='unified' />)
-    expect(screen.getByText('a single server')).toBeInTheDocument()
+    expect(line('a single server')).toBeInTheDocument()
     expect(screen.queryByText('home')).not.toBeInTheDocument()
     expect(screen.queryByText(/file changed/)).not.toBeInTheDocument()
     expect(screen.getByText(/@@ -1,2 \+1,2 @@/)).toBeInTheDocument()
@@ -165,6 +289,6 @@ describe('DiffFileView', () => {
       </I18nProvider>
     )
     expect(screen.queryByText(/@@/)).not.toBeInTheDocument()
-    expect(screen.getByText('a small server')).toBeInTheDocument()
+    expect(line('a small server')).toBeInTheDocument()
   })
 })
