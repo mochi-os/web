@@ -663,3 +663,98 @@ describe('installShellNavigationSync', () => {
     expect(parentPostMessage).not.toHaveBeenCalled()
   })
 })
+
+// A frame that navigates itself stays the same window, and the shell cannot
+// see where it went. The page tells it: 'ready' names the page's own path,
+// and 'leaving' goes as the page does, so the shell ends its requests before
+// the next page can hear their answers.
+describe('initShellBridge tells the shell where the page is and when it goes', () => {
+  afterEach(() => window.history.replaceState({}, '', '/'))
+
+  it('names its own path in ready', async () => {
+    window.history.replaceState({}, '', '/feeds/abc?view=1#top')
+    const { initShellBridge } = await import('./shell-bridge')
+    void initShellBridge()
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'ready', path: '/feeds/abc?view=1#top' },
+      window.location.origin
+    )
+  })
+
+  it('says leaving as the page goes', async () => {
+    const { initShellBridge } = await import('./shell-bridge')
+    void initShellBridge()
+    parentPostMessage.mockClear()
+    window.dispatchEvent(new Event('pagehide'))
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'leaving' },
+      window.location.origin
+    )
+  })
+})
+
+// A link followed inside the frame navigates it in place, past the shell. The
+// interceptor sends another host's links to a new tab and routes another
+// app's through the shell, judging each as the browser will resolve it:
+// //host/path matched neither of its tests of the text and loaded in place.
+describe('installShellLinkInterceptor', () => {
+  beforeEach(() => window.history.replaceState({}, '', '/feeds/abc'))
+  afterEach(() => {
+    document.body.innerHTML = ''
+    window.history.replaceState({}, '', '/')
+  })
+
+  async function click(href: string) {
+    const { installShellLinkInterceptor } = await import('./shell-bridge')
+    installShellLinkInterceptor()
+    const link = document.createElement('a')
+    link.setAttribute('href', href)
+    document.body.appendChild(link)
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    })
+    link.dispatchEvent(event)
+    const routed = parentPostMessage.mock.calls
+      .map((call) => call[0] as { type?: string; url?: string })
+      .filter((message) => message.type === 'navigate-external')
+    return { link, event, routed }
+  }
+
+  it.each([
+    ['protocol-relative', '//evil.example/settings/'],
+    ['backslash', '/\\evil.example/settings/'],
+    ['tab inside the slashes', '/\t/evil.example/settings/'],
+    ['absolute', 'https://evil.example/settings/'],
+  ])('sends a %s link to another host to a new tab', async (_name, href) => {
+    const { link, event, routed } = await click(href)
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(event.defaultPrevented).toBe(false)
+    expect(routed).toEqual([])
+  })
+
+  it.each([
+    ['absolute path', '/settings/x', '/settings/x'],
+    ['relative path', '../../settings/x?y=1', '/settings/x?y=1'],
+  ])(
+    'routes a link to another app by its %s through the shell',
+    async (_name, href, path) => {
+      const { link, event, routed } = await click(href)
+      expect(event.defaultPrevented).toBe(true)
+      expect(routed).toContainEqual(expect.objectContaining({ url: path }))
+      expect(link.getAttribute('target')).toBeNull()
+    }
+  )
+
+  it.each([
+    ['same app', '/feeds/other'],
+    ['relative same app', 'other'],
+    ['mail', 'mailto:someone@example.com'],
+  ])('leaves a %s link alone', async (_name, href) => {
+    const { link, event, routed } = await click(href)
+    expect(event.defaultPrevented).toBe(false)
+    expect(routed).toEqual([])
+    expect(link.getAttribute('target')).toBeNull()
+  })
+})

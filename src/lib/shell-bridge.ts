@@ -228,8 +228,28 @@ export function initShellBridge(): Promise<ShellInitData> {
 
     window.addEventListener('message', onMessage)
 
-    // Tell the shell we're ready
-    window.parent.postMessage({ type: 'ready' }, shellOrigin())
+    // As this page goes, say so: the shell ends its requests then, before
+    // whatever page the frame loads next can listen for their answers. The
+    // shell cannot see the frame navigate - its origin is opaque - and a page
+    // that leaves by a form post or a link the interceptor does not route
+    // stays in the same window.
+    window.addEventListener('pagehide', () => {
+      window.parent.postMessage({ type: 'leaving' }, shellOrigin())
+    })
+
+    // Tell the shell we're ready, and where this page is: a page the shell
+    // did not load itself is loaded again by the shell at this path, in a new
+    // frame, rather than handed the previous page's token.
+    window.parent.postMessage(
+      {
+        type: 'ready',
+        path:
+          window.location.pathname +
+          window.location.search +
+          window.location.hash,
+      },
+      shellOrigin()
+    )
   })
 
   return shellInitPromise
@@ -928,10 +948,25 @@ export function installShellLinkInterceptor(): void {
         return
       }
 
-      // Only intercept absolute-path links to other apps
-      if (!href.startsWith('/')) return
+      // Resolved as the browser will follow it: //host/path, /\host/path and
+      // a tab or newline inside the slashes all name another host, and a
+      // relative ../other/path another app, which a test of the text misses.
+      let url: URL
+      try {
+        url = new URL(href, window.location.href)
+      } catch {
+        return
+      }
+      // mailto:, tel: and the like are left to the browser, as before.
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+      if (url.origin !== shellOrigin()) {
+        target.setAttribute('target', '_blank')
+        target.setAttribute('rel', 'noopener noreferrer')
+        return
+      }
 
-      const linkApp = href.match(/^\/([^/]+)/)?.[1] || ''
+      // Only intercept links to other apps
+      const linkApp = url.pathname.match(/^\/([^/]+)/)?.[1] || ''
       if (!linkApp || linkApp === currentApp || linkApp.startsWith('_')) return
 
       if (
@@ -945,7 +980,7 @@ export function installShellLinkInterceptor(): void {
       // Cross-app link — route through shell
       event.preventDefault()
       event.stopPropagation()
-      shellNavigateExternal(href)
+      shellNavigateExternal(url.pathname + url.search + url.hash)
     },
     true
   ) // capture phase to intercept before app handlers
