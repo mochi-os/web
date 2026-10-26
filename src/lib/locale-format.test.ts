@@ -19,6 +19,7 @@ import {
   formatWeekdayDay,
   formatLongDate,
   formatMonthName,
+  formatMonthShort,
   parseClock,
   parseDate,
 } from './locale-format'
@@ -85,6 +86,23 @@ describe('a month named on its own is in the nominative', () => {
   it('keeps a capital where the plain name stands alone with one', () => {
     load('vi')
     expect(formatMonthName(MARCH)).toBe('Tháng 3')
+  })
+})
+
+describe('a month abbreviated on its own', () => {
+  it("uses the language's own abbreviation", () => {
+    load('en')
+    expect(formatMonthShort(MARCH)).toBe('Mar')
+    load('fr')
+    expect(formatMonthShort(MARCH)).toBe('mars')
+    load('ja')
+    expect(formatMonthShort(MARCH)).toBe('3月')
+  })
+
+  it('takes the full name where the abbreviation is a bare number', () => {
+    load('bg')
+    expect(formatMonthShort(MARCH)).toBe(formatMonthName(MARCH))
+    expect(formatMonthShort(MARCH)).toMatch(/\p{L}/u)
   })
 })
 

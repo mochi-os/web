@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/auth-store'
 import { attachApiResponseInterceptors } from './api-response-interceptors'
 import { clearContentTypeHeader } from './clear-content-type-header'
 import { isSameOriginRequest } from './safe-navigation'
+import { shellAdapter } from './shell-fetch'
 
 export interface AppClientOptions {
   /**
@@ -33,6 +34,8 @@ export function createAppClient({
 }: AppClientOptions = {}) {
   const client = axios.create({
     timeout,
+    // Inside the shell, requests go through the shell page (shell-fetch.ts).
+    adapter: shellAdapter,
     withCredentials: true,
     headers: {
       Accept: 'application/json',

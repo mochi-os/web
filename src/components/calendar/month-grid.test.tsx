@@ -773,3 +773,135 @@ describe('MonthGrid week numbers', () => {
     expect(number.classList.contains('text-primary-foreground/80')).toBe(true)
   })
 })
+
+describe('MonthGrid month names', () => {
+  const days = (first: string, count = 7) =>
+    Array.from({ length: count }, (_, index) => {
+      const day = new Date(`${first}T00:00:00Z`)
+      day.setUTCDate(day.getUTCDate() + index)
+      return day.toISOString().slice(0, 10)
+    })
+  const draw = (
+    first: string,
+    { month, today = '2026-10-07', count = 7 } = {} as {
+      month?: number
+      today?: string
+      count?: number
+    }
+  ) =>
+    render(
+      <I18nProvider i18n={i18n}>
+        <MonthGrid
+          days={days(first, count)}
+          month={month}
+          events={[]}
+          today={today}
+          weekNumbers
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    ).container
+  const named = () =>
+    screen
+      .queryAllByTestId('month-name')
+      .map((name) => [
+        name.closest('[data-day]')?.getAttribute('data-day'),
+        name.textContent,
+      ])
+
+  // Each hidden copy is six pixels a character wide, and the room beside the
+  // day number is `room`.
+  const spies: { mockRestore: () => void }[] = []
+  const room = (width: number) =>
+    spies.push(
+      vi
+        .spyOn(Element.prototype, 'getBoundingClientRect')
+        .mockImplementation(function (this: Element) {
+          if (this.hasAttribute('data-probe'))
+            return { width: (this.textContent ?? '').length * 6 } as DOMRect
+          if (this.firstElementChild?.hasAttribute('data-probe'))
+            return { width } as DOMRect
+          return { width: 0, top: 0, bottom: 0 } as DOMRect
+        })
+    )
+
+  beforeEach(() => {
+    i18n.load('en', {})
+    i18n.activate('en')
+  })
+  afterEach(() => {
+    cleanup()
+    for (const spy of spies.splice(0)) spy.mockRestore()
+  })
+
+  it('names the month on its first day alone, in the multiweek view too', () => {
+    draw('2026-09-28', { count: 42 })
+    expect(named()).toEqual([
+      ['2026-10-01', 'October'],
+      ['2026-11-01', 'November'],
+    ])
+  })
+
+  it('sits at the start of the line, opposite the day number', () => {
+    const container = draw('2026-09-28', { month: 10 })
+    const name = screen.getByTestId('month-name')
+    const header = cell(container, '2026-10-01').firstElementChild
+    expect(header?.firstElementChild?.contains(name)).toBe(true)
+    expect(header?.lastElementChild?.textContent).toBe('1')
+  })
+
+  it("follows the week number on a row's first day", () => {
+    draw('2025-09-01', { month: 9 })
+    const number = screen.getByTestId('week-number')
+    expect(number.textContent).toBe('36')
+    expect(number.nextElementSibling).toBe(screen.getByTestId('month-name'))
+    expect(screen.getByTestId('month-name').textContent).toBe('September')
+  })
+
+  it('is abbreviated where the full name does not fit', () => {
+    room(40)
+    draw('2026-09-28', { month: 10 })
+    expect(named()).toEqual([['2026-10-01', 'Oct']])
+  })
+
+  it('keeps the week number while the abbreviation fits beside it', () => {
+    // "36September" is 66 wide, "36Sep" 30.
+    room(60)
+    draw('2025-09-01', { month: 9 })
+    expect(screen.getByTestId('week-number').textContent).toBe('36')
+    expect(screen.getByTestId('month-name').textContent).toBe('Sep')
+  })
+
+  it('takes the week number away where neither form fits beside it', () => {
+    room(25)
+    draw('2025-09-01', { month: 9 })
+    expect(screen.queryByTestId('week-number')).toBeNull()
+    expect(screen.getByTestId('month-name').textContent).toBe('Sep')
+  })
+
+  it('is cut short only where even the abbreviation alone does not fit', () => {
+    room(10)
+    draw('2025-09-01', { month: 9 })
+    const name = screen.getByTestId('month-name')
+    expect(name.textContent).toBe('Sep')
+    expect(name.classList.contains('truncate')).toBe(true)
+    expect(screen.queryByTestId('week-number')).toBeNull()
+  })
+
+  it("is muted outside the month, and reads on today's coloured header", () => {
+    draw('2026-10-26', { month: 10 })
+    expect(
+      screen
+        .getByTestId('month-name')
+        .classList.contains('text-muted-foreground')
+    ).toBe(true)
+    cleanup()
+    draw('2026-10-26', { month: 10, today: '2026-11-01' })
+    const name = screen.getByTestId('month-name')
+    expect(name.classList.contains('text-primary-foreground')).toBe(true)
+    expect(name.classList.contains('text-muted-foreground')).toBe(false)
+  })
+})
