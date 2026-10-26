@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PreferencesData } from '../../types/settings'
 import { apiClient } from '../../lib/api-client'
+import { optimistic } from '../../lib/optimistic'
 
 const NO_TOAST = { mochi: { showGlobalErrorToast: false } } as const
 
@@ -17,16 +18,30 @@ export function usePreferencesData(endpoint: string) {
   })
 }
 
+// The pick shows at once and goes back if refused; each caller shows the
+// error. The patch is the prefix onSuccess refetches: `endpoint` is the set
+// route, not the one the preferences are read from.
 export function useSetPreference(endpoint: string) {
   const queryClient = useQueryClient()
+  const patch = optimistic(queryClient, (data: Record<string, string>) => [
+    {
+      filters: { queryKey: ['user', 'preferences'] },
+      update: (old: PreferencesData) => ({
+        ...old,
+        preferences: { ...old.preferences, ...data },
+      }),
+    },
+  ])
   return useMutation({
     mutationFn: async (data: Record<string, string>) => {
       const response = await apiClient.post(endpoint, data, NO_TOAST)
       return response.data
     },
+    onMutate: patch.onMutate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'preferences'] })
     },
+    onError: (_error, _variables, context) => patch.rollback(context),
   })
 }
 

@@ -10,6 +10,7 @@ import {
   screen,
   waitFor,
   fireEvent,
+  within,
   createMockEntityDesign,
   createMockEntityObject,
 } from './entity-test-utils'
@@ -295,6 +296,83 @@ describe('EntityObjectDetailPanel parent select', () => {
     expect(
       await screen.findByRole('option', { name: 'None' })
     ).toBeInTheDocument()
+  })
+})
+
+// The panel shows a pick before the server answers it, and goes back if the
+// server refuses. Each request here waits until the test answers it.
+describe('EntityObjectDetailPanel optimistic edits', () => {
+  function waiting() {
+    let reject!: (error: unknown) => void
+    const promise = new Promise((_resolve, rej) => {
+      reject = rej
+    })
+    return { promise, reject }
+  }
+
+  const statusSelect = () =>
+    within(
+      screen.getByText('Status', { selector: 'label' }).parentElement!
+    ).getByRole('combobox')
+
+  it('flips Watch at once and back when refused', async () => {
+    const request = waiting()
+    vi.mocked(api.addWatcher).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    fireEvent.click(await screen.findByLabelText('Watch'))
+    expect(await screen.findByLabelText('Stop watching')).toBeInTheDocument()
+
+    request.reject({ response: { status: 500 } })
+    expect(await screen.findByLabelText('Watch')).toBeInTheDocument()
+    expect(toastError).toHaveBeenCalledWith('Failed to update watching')
+  })
+
+  it('shows a new parent at once and the old one back when refused', async () => {
+    const request = waiting()
+    vi.mocked(api.updateObject).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    const parent = await screen.findByRole('combobox', { name: 'Parent' })
+    fireEvent.click(parent)
+    fireEvent.click(await screen.findByRole('option', { name: 'Sibling' }))
+    await waitFor(() => expect(parent).toHaveTextContent('Sibling'))
+
+    request.reject({ response: { status: 409 } })
+    await waitFor(() => expect(parent).not.toHaveTextContent('Sibling'))
+    expect(toastError).toHaveBeenCalledWith('Failed to move')
+  })
+
+  it('shows a picked option at once and the old value back when refused', async () => {
+    const request = waiting()
+    vi.mocked(api.setValue).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    await screen.findByDisplayValue('Original')
+    fireEvent.click(statusSelect())
+    fireEvent.click(await screen.findByRole('option', { name: 'Done' }))
+    await waitFor(() => expect(statusSelect()).toHaveTextContent('Done'))
+
+    request.reject({ response: { status: 403 } })
+    await waitFor(() => expect(statusSelect()).not.toHaveTextContent('Done'))
+    expect(toastError).toHaveBeenCalledWith('Failed to save')
+  })
+
+  it('keeps typed text in its input when the save is refused', async () => {
+    const request = waiting()
+    vi.mocked(api.setValue).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    const input = await screen.findByDisplayValue('Original')
+    fireEvent.change(input, { target: { value: 'Edited' } })
+    fireEvent.blur(input)
+    await waitFor(() => expect(api.setValue).toHaveBeenCalled())
+
+    request.reject({ response: { status: 403 } })
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('Failed to save')
+    )
+    expect(screen.getByDisplayValue('Edited')).toBeInTheDocument()
   })
 })
 

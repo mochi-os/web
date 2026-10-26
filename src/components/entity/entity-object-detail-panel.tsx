@@ -42,6 +42,7 @@ import { GeneralError } from '../../features/errors/general-error'
 import { naturalCompare } from '../../lib/utils'
 import { toast } from '../../lib/toast-utils'
 import { getErrorMessage } from '../../lib/handle-server-error'
+import { optimistic } from '../../lib/optimistic'
 import { textUnchanged } from '../../lib/change-detection'
 import {
   entityObjectTitle,
@@ -88,6 +89,13 @@ export interface EntityObjectDetail<TObject extends EntityObject> {
   watching: boolean
   comments: { count: number }
 }
+
+// A value picked from an option, date, person or tick shows everywhere at
+// once. A typed one is already in its input, and showing it ahead would let a
+// refusal reset that input once it loses focus, throwing the text away.
+const PICKED_FIELD_TYPES = new Set(['enumerated', 'date', 'user', 'checkbox'])
+
+type ValueChange = { field: string; value: string; picked: boolean }
 
 /** A tab an app adds between Comments and Activity. */
 export interface EntityObjectDetailTab {
@@ -306,21 +314,71 @@ export function EntityObjectDetailPanel<
   })
   const objectsData = objectListData?.objects
 
+  // Edits show in the panel and on the list behind it at once, and go back if
+  // refused. Each patches only what its onSuccess refetches.
+  const detailFilters = {
+    queryKey: ['object', containerId, objectId],
+    exact: true,
+  }
+  const listFilters = { queryKey: ['objects', containerId], exact: true }
+  const patchRow = (
+    old: { objects: TObject[] },
+    change: (row: TObject) => TObject
+  ) => ({
+    ...old,
+    objects: old.objects.map((row) =>
+      row.id === objectId ? change(row) : row
+    ),
+  })
+
+  const valuePatch = optimistic(
+    queryClient,
+    ({ field, value, picked }: ValueChange) =>
+      picked
+        ? [
+            {
+              filters: detailFilters,
+              update: (old: TDetail) => ({
+                ...old,
+                values: { ...old.values, [field]: value },
+              }),
+            },
+            {
+              filters: listFilters,
+              update: (old: { objects: TObject[] }) =>
+                patchRow(old, (row) => ({
+                  ...row,
+                  values: { ...row.values, [field]: value },
+                })),
+            },
+          ]
+        : []
+  )
+
   const updateValueMutation = useMutation({
-    mutationFn: async ({ field, value }: { field: string; value: string }) => {
+    mutationFn: async ({ field, value }: ValueChange) => {
       if (!objectId) return
       await api.setValue(containerId, objectId, field, value)
     },
+    onMutate: valuePatch.onMutate,
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['object', containerId, objectId],
       })
       queryClient.invalidateQueries({ queryKey: ['objects', containerId] })
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      valuePatch.rollback(context)
       toast.error(getErrorMessage(error, t`Failed to save`))
     },
   })
+
+  const watchPatch = optimistic(queryClient, (watching: boolean) => [
+    {
+      filters: detailFilters,
+      update: (old: TDetail) => ({ ...old, watching: !watching }),
+    },
+  ])
 
   const watchMutation = useMutation({
     mutationFn: async (watching: boolean) => {
@@ -329,12 +387,14 @@ export function EntityObjectDetailPanel<
         ? api.removeWatcher(containerId, objectId)
         : api.addWatcher(containerId, objectId)
     },
+    onMutate: watchPatch.onMutate,
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['object', containerId, objectId],
       })
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      watchPatch.rollback(context)
       toast.error(getErrorMessage(error, t`Failed to update watching`))
     },
   })
@@ -354,18 +414,37 @@ export function EntityObjectDetailPanel<
     },
   })
 
+  // Anything else the server changes along with the parent arrives with the
+  // refetch.
+  const parentPatch = optimistic(queryClient, (parent: string) => [
+    {
+      filters: detailFilters,
+      update: (old: TDetail) => ({
+        ...old,
+        object: { ...old.object, parent },
+      }),
+    },
+    {
+      filters: listFilters,
+      update: (old: { objects: TObject[] }) =>
+        patchRow(old, (row) => ({ ...row, parent })),
+    },
+  ])
+
   const updateParentMutation = useMutation({
     mutationFn: async (newParent: string) => {
       if (!objectId) return
       return api.updateObject(containerId, objectId, { parent: newParent })
     },
+    onMutate: parentPatch.onMutate,
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['object', containerId, objectId],
       })
       queryClient.invalidateQueries({ queryKey: ['objects', containerId] })
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      parentPatch.rollback(context)
       toast.error(getErrorMessage(error, t`Failed to move`))
     },
   })
@@ -539,7 +618,12 @@ export function EntityObjectDetailPanel<
 
   const handleFieldChange = (fieldId: string, value: string) => {
     if (textUnchanged(value, data.values[fieldId] ?? '')) return
-    updateValueMutation.mutate({ field: fieldId, value })
+    const fieldtype = classFields.find((f) => f.id === fieldId)?.fieldtype
+    updateValueMutation.mutate({
+      field: fieldId,
+      value,
+      picked: PICKED_FIELD_TYPES.has(fieldtype ?? ''),
+    })
   }
 
   const searchUsers = async (query: string) =>
