@@ -785,6 +785,13 @@ export function MonthGrid({
                   dragging && !dragging.calendar && dragging.day === day
                     ? dragging
                     : null
+                // The middle day is in the ISO week most of the row is in,
+                // whichever day the week starts on.
+                const numeral =
+                  weekNumbers && column === 0
+                    ? weekNumber(week[Math.min(3, week.length - 1)])
+                    : undefined
+                const noon = new Date(format.timestampAt(day, 720) * 1000)
                 return (
                   <div
                     key={day}
@@ -808,21 +815,24 @@ export function MonthGrid({
                       )}
                     >
                       {/* The week number sits in the first day's corner,
-                          opposite its date, taking no width of its own. The
-                          middle day is in the ISO week most of the row is in,
-                          whichever day the week starts on. */}
-                      {weekNumbers && column === 0 && (
-                        <span
-                          data-testid='week-number'
-                          className={cn(
-                            'me-auto ps-0.5 text-[0.6875rem]',
-                            day === today
-                              ? 'text-primary-foreground/80'
-                              : 'text-muted-foreground'
-                          )}
-                        >
-                          {weekNumber(week[Math.min(3, week.length - 1)])}
-                        </span>
+                          opposite its date, taking no width of its own; a
+                          month's first day names the month there too. */}
+                      {day.endsWith('-01') ? (
+                        <MonthStart
+                          long={format.formatMonthName(noon)}
+                          short={format.formatMonthShort(noon)}
+                          week={numeral}
+                          today={day === today}
+                          outside={outside}
+                        />
+                      ) : (
+                        numeral !== undefined && (
+                          <WeekNumber
+                            week={numeral}
+                            today={day === today}
+                            className='me-auto ps-0.5'
+                          />
+                        )
                       )}
                       <button
                         type='button'
@@ -834,9 +844,7 @@ export function MonthGrid({
                             'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
                         )}
                       >
-                        {format.formatDayNumber(
-                          new Date(format.timestampAt(day, 720) * 1000)
-                        )}
+                        {format.formatDayNumber(noon)}
                       </button>
                     </div>
                     <div className='flex min-h-0 flex-1 flex-col px-0.5 pt-1 pb-0.5'>
@@ -889,6 +897,133 @@ function scrolls(target: EventTarget) {
   if (!(target instanceof Element)) return false
   const list = target.closest<HTMLElement>('[data-list], [data-band]')
   return list !== null && list.scrollHeight > list.clientHeight
+}
+
+function WeekNumber({
+  week,
+  today,
+  probe,
+  className,
+}: {
+  week: number
+  today: boolean
+  /** A hidden copy measured for width, which tests do not find. */
+  probe?: boolean
+  className?: string
+}) {
+  return (
+    <span
+      data-testid={probe ? undefined : 'week-number'}
+      className={cn(
+        'text-[0.6875rem]',
+        today ? 'text-primary-foreground/80' : 'text-muted-foreground',
+        className
+      )}
+    >
+      {week}
+    </span>
+  )
+}
+
+/** One way to draw a month's start: its name, and the week number if any. */
+interface Way {
+  name: string
+  week?: number
+}
+
+/**
+ * A month's first day names the month at the start of its number's line, in
+ * full where that fits and abbreviated where it does not. On a row's first
+ * day the name follows the week number, which gives way where neither form
+ * fits beside it; only where even the abbreviation alone is too wide is it
+ * cut short.
+ */
+function MonthStart({
+  long,
+  short,
+  week,
+  today,
+  outside,
+}: {
+  long: string
+  short: string
+  week?: number
+  today: boolean
+  outside: boolean
+}) {
+  const box = useRef<HTMLSpanElement>(null)
+  // The fullest first.
+  const ways = useMemo<Way[]>(() => {
+    const names = short === long ? [long] : [long, short]
+    const bare = names.map((name) => ({ name }))
+    if (week === undefined) return bare
+    return [...names.map((name) => ({ name, week })), ...bare]
+  }, [long, short, week])
+  const [chosen, setChosen] = useState(0)
+
+  // Each way is drawn hidden at its natural width, and the first that fits
+  // the room left beside the day number is shown.
+  useLayoutEffect(() => {
+    const element = box.current
+    if (!element) return
+    const probes = [...element.querySelectorAll<HTMLElement>('[data-probe]')]
+    const measure = () => {
+      const room = element.getBoundingClientRect().width
+      const fits = probes.findIndex(
+        (probe) => probe.getBoundingClientRect().width <= room
+      )
+      setChosen(fits < 0 ? probes.length - 1 : fits)
+    }
+    measure()
+    // The copies as well as the room, so a font that arrives late counts.
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    for (const probe of probes) observer.observe(probe)
+    return () => observer.disconnect()
+  }, [ways])
+
+  const line = (way: Way, probe: boolean) => (
+    <>
+      {way.week !== undefined && (
+        <WeekNumber
+          week={way.week}
+          today={today}
+          probe={probe}
+          className='shrink-0'
+        />
+      )}
+      <span
+        data-testid={probe ? undefined : 'month-name'}
+        className={cn(
+          'text-xs font-medium',
+          !probe && 'min-w-0 truncate',
+          outside && 'text-muted-foreground',
+          today && 'text-primary-foreground'
+        )}
+      >
+        {way.name}
+      </span>
+    </>
+  )
+
+  return (
+    <span
+      ref={box}
+      className='relative flex min-w-0 flex-1 items-center gap-1 overflow-hidden ps-0.5'
+    >
+      {ways.map((way, index) => (
+        <span
+          key={index}
+          data-probe=''
+          aria-hidden
+          className='invisible absolute start-0 top-0 flex w-max items-center gap-1 ps-0.5 whitespace-nowrap'
+        >
+          {line(way, true)}
+        </span>
+      ))}
+      {line(ways[Math.min(chosen, ways.length - 1)], false)}
+    </span>
+  )
 }
 
 function EventMarks({ event }: { event: CalendarEvent }) {

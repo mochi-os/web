@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
-  createContext,
-  useContext,
+  useEffect,
+  useId,
   useState,
   useMemo,
+  type ComponentType,
   type ReactNode,
 } from 'react'
 import { Trans, Plural, useLingui } from '@lingui/react/macro'
@@ -20,30 +21,11 @@ import {
 } from 'lucide-react'
 import { useFormat } from '../hooks/use-format'
 import { parseDiff, type DiffFile, type DiffLine } from '../lib/diff-parser'
+import { lineWords } from '../lib/diff-text'
 import { cn } from '../lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export type DiffViewStyle = 'unified' | 'split'
-
-// One piece of a word-level comparison of two lines.
-interface DiffWordChange {
-  value: string
-  added?: boolean
-  removed?: boolean
-}
-
-// Compares two lines word by word. The app passes it in, as `diffWords` from
-// the `diff` package: the library does not depend on that package, so an app
-// that has it gets the changed words marked inside an edited line, and one
-// that does not still gets every other part of the view.
-// It may answer undefined for two lines it takes to be different lines rather
-// than two versions of one, and both are then shown whole.
-export type DiffWords = (
-  before: string,
-  after: string
-) => DiffWordChange[] | undefined
-
-const WordsContext = createContext<DiffWords | undefined>(undefined)
 
 const statusBadgeClass =
   'inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium leading-none shrink-0'
@@ -58,9 +40,26 @@ const statusBadgeStyles: Record<DiffFile['status'], string> = {
 interface DiffViewerProps {
   diff: string
   viewStyle: DiffViewStyle
-  /** Marks the changed words inside an edited line. See DiffWords. */
-  words?: DiffWords
+  /** Controls placed in each file's header, after its counts. */
+  actions?: ComponentType<{ file: DiffFile }>
+  /**
+   * Draws a file's lines in place of the default, for an app that compares a
+   * file again with other options. DiffLines draws them the default way.
+   */
+  body?: ComponentType<{ file: DiffFile; viewStyle: DiffViewStyle }>
 }
+
+// A file changing more lines than this, or listed after this many files, is
+// held back behind a button: a long diff drawn whole makes the page slow to
+// open and to scroll, and is rarely read line by line.
+const LARGE_LINES = 400
+const SHOWN_FILES = 50
+
+// Lines drawn when a diff first shows, and in each later step while the
+// browser is idle: a large diff shows its first files at once, and the page
+// stays responsive while the rest fill in.
+const FIRST_LINES = 1500
+const STEP_LINES = 2000
 
 // Pair consecutive remove/add lines for intra-line highlighting
 function pairLines(
@@ -109,7 +108,9 @@ function pairLines(
   return groups
 }
 
-// Render a line with intra-line word highlighting
+// Render a line with intra-line word highlighting. Two lines with too little
+// in common are different lines rather than two versions of one, and are
+// shown whole.
 function IntraLineHighlight({
   oldContent,
   newContent,
@@ -119,10 +120,8 @@ function IntraLineHighlight({
   newContent: string
   side: 'old' | 'new'
 }) {
-  const words = useContext(WordsContext)
   const whole = side === 'old' ? oldContent : newContent
-  if (!words) return <span>{whole}</span>
-  const changes = words(oldContent, newContent)
+  const changes = lineWords(oldContent, newContent)
   if (!changes) return <span>{whole}</span>
 
   return (
@@ -157,57 +156,81 @@ function IntraLineHighlight({
   )
 }
 
-// File header with collapsible toggle
+// The badge naming how a file changed: A, M, D or R.
+function StatusBadge({ status }: { status: DiffFile['status'] }) {
+  return (
+    <span
+      className={cn(
+        'font-sans text-[10px]',
+        statusBadgeStyles[status] || 'border-border bg-muted text-foreground'
+      )}
+    >
+      {status.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
+// A file's added and removed line counts, each left out when zero.
+function LineCounts({ file }: { file: DiffFile }) {
+  return (
+    <span className='flex shrink-0 items-center gap-2 font-sans text-xs'>
+      {file.additions > 0 && (
+        <span className={cn('flex items-center gap-0.5', 'text-success')}>
+          <Plus className='size-3' />
+          {file.additions}
+        </span>
+      )}
+      {file.deletions > 0 && (
+        <span className={cn('flex items-center gap-0.5', 'text-destructive')}>
+          <Minus className='size-3' />
+          {file.deletions}
+        </span>
+      )}
+    </span>
+  )
+}
+
+// File header: the toggle that collapses the file, and the app's controls
+// beside it rather than inside it, since a button cannot hold another.
 function FileHeader({
   file,
   collapsed,
   onToggle,
+  actions: Actions,
 }: {
   file: DiffFile
   collapsed: boolean
   onToggle: () => void
+  actions?: ComponentType<{ file: DiffFile }>
 }) {
   return (
-    <button
-      type='button'
-      onClick={onToggle}
-      className='bg-muted/50 hover:bg-hover/80 sticky top-0 z-10 flex w-full items-center gap-2 border-b px-3 py-2 font-mono text-sm transition-colors'
-    >
-      {collapsed ? (
-        <ChevronRight className='size-3.5 shrink-0 rtl:rotate-180' />
-      ) : (
-        <ChevronDown className='size-3.5 shrink-0' />
-      )}
-      <span
-        className={cn(
-          'font-sans text-[10px]',
-          statusBadgeStyles[file.status] ||
-            'border-border bg-muted text-foreground'
-        )}
+    <div className='bg-muted/50 sticky top-0 z-10 flex items-center border-b'>
+      <button
+        type='button'
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className='hover:bg-hover/80 flex min-w-0 flex-1 items-center gap-2 px-3 py-2 font-mono text-sm transition-colors'
       >
-        {file.status.charAt(0).toUpperCase()}
-      </span>
-      <span className='flex-1 truncate text-start'>{file.path}</span>
-      {file.oldPath && (
-        <span className='text-muted-foreground shrink-0 font-sans text-xs'>
-          <Trans>(from {file.oldPath})</Trans>
-        </span>
+        {collapsed ? (
+          <ChevronRight className='size-3.5 shrink-0 rtl:rotate-180' />
+        ) : (
+          <ChevronDown className='size-3.5 shrink-0' />
+        )}
+        <StatusBadge status={file.status} />
+        <span className='flex-1 truncate text-start'>{file.path}</span>
+        {file.oldPath && (
+          <span className='text-muted-foreground shrink-0 font-sans text-xs'>
+            <Trans>(from {file.oldPath})</Trans>
+          </span>
+        )}
+        <LineCounts file={file} />
+      </button>
+      {Actions && (
+        <div className='flex shrink-0 items-center gap-1 pe-2'>
+          <Actions file={file} />
+        </div>
       )}
-      <span className='flex shrink-0 items-center gap-2 font-sans text-xs'>
-        {file.additions > 0 && (
-          <span className={cn('flex items-center gap-0.5', 'text-success')}>
-            <Plus className='size-3' />
-            {file.additions}
-          </span>
-        )}
-        {file.deletions > 0 && (
-          <span className={cn('flex items-center gap-0.5', 'text-destructive')}>
-            <Minus className='size-3' />
-            {file.deletions}
-          </span>
-        )}
-      </span>
-    </button>
+    </div>
   )
 }
 
@@ -484,14 +507,12 @@ function SplitGroup({
 export function DiffFileView({
   file,
   viewStyle,
-  words,
   hunkHeaders,
   prose,
   textSize = 'xs',
 }: {
   file: DiffFile
   viewStyle: DiffViewStyle
-  words?: DiffWords
   hunkHeaders?: boolean
   /**
    * The text is written language, not code. A code line breaks anywhere, so a
@@ -503,28 +524,22 @@ export function DiffFileView({
   textSize?: 'xs' | 'sm'
 }) {
   return (
-    <WordsContext.Provider value={words}>
-      <div
-        className={cn(
-          'overflow-x-auto rounded-lg border',
-          prose && '[&_td]:[overflow-wrap:anywhere] [&_td]:[word-break:normal]'
-        )}
-      >
-        {viewStyle === 'split' ? (
-          <SplitView
-            file={file}
-            hunkHeaders={hunkHeaders}
-            textSize={textSize}
-          />
-        ) : (
-          <UnifiedView
-            file={file}
-            hunkHeaders={hunkHeaders}
-            textSize={textSize}
-          />
-        )}
-      </div>
-    </WordsContext.Provider>
+    <div
+      className={cn(
+        'overflow-x-auto rounded-lg border',
+        prose && '[&_td]:[overflow-wrap:anywhere] [&_td]:[word-break:normal]'
+      )}
+    >
+      {viewStyle === 'split' ? (
+        <SplitView file={file} hunkHeaders={hunkHeaders} textSize={textSize} />
+      ) : (
+        <UnifiedView
+          file={file}
+          hunkHeaders={hunkHeaders}
+          textSize={textSize}
+        />
+      )}
+    </div>
   )
 }
 
@@ -571,10 +586,118 @@ export function DiffViewToggle({
   )
 }
 
-export function DiffViewer({ diff, viewStyle, words }: DiffViewerProps) {
-  const { files, truncated } = useMemo(() => parseDiff(diff), [diff])
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+// One file's lines as DiffViewer draws them, or the reason there are none: a
+// binary file, or one core did not compare. For an app's own `body`, which
+// draws a file compared again and falls back to this.
+export function DiffLines({
+  file,
+  viewStyle,
+}: {
+  file: DiffFile
+  viewStyle: DiffViewStyle
+}) {
   const { formatFileSize } = useFormat()
+  return (
+    <div className='overflow-x-auto'>
+      {file.isBinary ? (
+        // Binary files carry no hunks — say so rather than render an empty
+        // body, which reads as "nothing changed".
+        <p className='text-muted-foreground px-3 py-4 text-sm'>
+          <Trans>Binary file not shown</Trans>
+        </p>
+      ) : file.skipped ? (
+        // Core did not compare the file: it is over the ceiling it names, so
+        // there is nothing to render but the reason.
+        <p className='text-muted-foreground px-3 py-4 text-sm'>
+          {file.limit ? (
+            <Trans>
+              Not compared: larger than {formatFileSize(file.limit)}
+            </Trans>
+          ) : (
+            <Trans>Not compared: over the size limit</Trans>
+          )}
+        </p>
+      ) : viewStyle === 'split' ? (
+        <SplitView file={file} />
+      ) : (
+        <UnifiedView file={file} />
+      )}
+    </div>
+  )
+}
+
+// Pixels a card's header takes, and each line of a file drawn in full.
+const HEADER_HEIGHT = 41
+const LINE_HEIGHT = 20
+
+// The rows a file's lines take, a hunk's header among them.
+function fileLines(file: DiffFile) {
+  return file.hunks.reduce((sum, hunk) => sum + hunk.lines.length + 1, 0)
+}
+
+// Whether a file waits behind Load diff until the reader asks for it.
+function heldBack(file: DiffFile, index: number) {
+  return index >= SHOWN_FILES || file.additions + file.deletions > LARGE_LINES
+}
+
+// A guess at a file card's height before it is drawn: its header, and its
+// lines unless it is collapsed or waiting behind Load diff.
+function cardHeight(file: DiffFile, collapsed: boolean, held: boolean) {
+  if (collapsed) return HEADER_HEIGHT
+  if (held || file.isBinary || file.skipped) return HEADER_HEIGHT + 56
+  return HEADER_HEIGHT + fileLines(file) * LINE_HEIGHT
+}
+
+// Where a drawing step that starts at file `from` ends: after the files whose
+// lines fill `lines`, and always at least one further. A held-back file draws
+// only its button, so it costs nothing.
+function stepEnd(files: DiffFile[], from: number, lines: number) {
+  let end = from
+  let total = 0
+  while (end < files.length && (end === from || total < lines)) {
+    if (!heldBack(files[end], end)) total += fileLines(files[end])
+    end++
+  }
+  return end
+}
+
+export function DiffViewer({
+  diff,
+  viewStyle,
+  actions,
+  body: Body = DiffLines,
+}: DiffViewerProps) {
+  const { files, truncated } = useMemo(() => parseDiff(diff), [diff])
+  // Keyed by position: a diff names each path once, but position is what the
+  // list and the cards share.
+  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({})
+  const [loaded, setLoaded] = useState<Record<number, boolean>>({})
+  const [listed, setListed] = useState(false)
+  const id = useId()
+  // How many files from the start are drawn; the rest show their headers.
+  // A new diff starts again from its first files.
+  const [drawn, setDrawn] = useState(() => ({
+    files,
+    count: stepEnd(files, 0, FIRST_LINES),
+  }))
+  if (drawn.files !== files) {
+    setDrawn({ files, count: stepEnd(files, 0, FIRST_LINES) })
+  }
+  useEffect(() => {
+    if (drawn.files !== files || drawn.count >= files.length) return
+    const step = () =>
+      setDrawn((previous) =>
+        previous.files === files
+          ? { files, count: stepEnd(files, previous.count, STEP_LINES) }
+          : previous
+      )
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(step, { timeout: 200 })
+      return () => window.cancelIdleCallback(handle)
+    }
+    const handle = window.setTimeout(step, 0)
+    return () => window.clearTimeout(handle)
+  }, [drawn, files])
 
   if (files.length === 0 && truncated === 0) {
     return (
@@ -586,23 +709,51 @@ export function DiffViewer({ diff, viewStyle, words }: DiffViewerProps) {
 
   const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0)
   const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0)
+  const anyOpen = files.some((_, index) => !collapsed[index])
+  const held = (file: DiffFile, index: number) =>
+    !loaded[index] && heldBack(file, index)
 
-  const toggleFile = (path: string) => {
-    setCollapsed((prev) => ({ ...prev, [path]: !prev[path] }))
+  const toggleFile = (index: number) => {
+    setCollapsed((prev) => ({ ...prev, [index]: !prev[index] }))
+  }
+  const toggleAll = () => {
+    setCollapsed(
+      anyOpen ? Object.fromEntries(files.map((_, index) => [index, true])) : {}
+    )
+  }
+  // Open the file, draw it even if it was held back, and bring it into view.
+  const jump = (index: number) => {
+    setCollapsed((prev) => ({ ...prev, [index]: false }))
+    setLoaded((prev) => ({ ...prev, [index]: true }))
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`${id}-${index}`)
+        ?.scrollIntoView({ block: 'start' })
+    )
   }
 
   return (
-    <WordsContext.Provider value={words}>
-      <div className='space-y-4'>
-        <div className='flex items-center gap-4 px-1 text-sm'>
-          <span className='text-muted-foreground flex items-center gap-1.5'>
+    <div className='space-y-4'>
+      <div className='space-y-2'>
+        <div className='flex flex-wrap items-center gap-4 px-1 text-sm'>
+          <button
+            type='button'
+            onClick={() => setListed(!listed)}
+            aria-expanded={listed}
+            className='text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors'
+          >
+            {listed ? (
+              <ChevronDown className='size-3.5' />
+            ) : (
+              <ChevronRight className='size-3.5 rtl:rotate-180' />
+            )}
             <FileCode2 className='size-4' />
             <Plural
               value={files.length}
               one='# file changed'
               other='# files changed'
             />
-          </span>
+          </button>
           <span className={cn('flex items-center gap-1', 'text-success')}>
             <Plus className='size-3' />
             {totalAdditions}
@@ -611,54 +762,99 @@ export function DiffViewer({ diff, viewStyle, words }: DiffViewerProps) {
             <Minus className='size-3' />
             {totalDeletions}
           </span>
+          {files.length > 1 && (
+            <button
+              type='button'
+              onClick={toggleAll}
+              className='text-muted-foreground hover:text-foreground ms-auto text-xs transition-colors'
+            >
+              {anyOpen ? (
+                <Trans>Collapse all</Trans>
+              ) : (
+                <Trans>Expand all</Trans>
+              )}
+            </button>
+          )}
         </div>
-
-        {files.map((file) => (
-          <div key={file.path} className='overflow-hidden rounded-lg border'>
-            <FileHeader
-              file={file}
-              collapsed={!!collapsed[file.path]}
-              onToggle={() => toggleFile(file.path)}
-            />
-            {!collapsed[file.path] && (
-              <div className='overflow-x-auto'>
-                {file.isBinary ? (
-                  // Binary files carry no hunks — say so rather than render an
-                  // empty body, which reads as "nothing changed".
-                  <p className='text-muted-foreground px-3 py-4 text-sm'>
-                    <Trans>Binary file not shown</Trans>
-                  </p>
-                ) : file.skipped ? (
-                  // Core did not compare the file: it is over the ceiling it
-                  // names, so there is nothing to render but the reason.
-                  <p className='text-muted-foreground px-3 py-4 text-sm'>
-                    {file.limit ? (
-                      <Trans>
-                        Not compared: larger than {formatFileSize(file.limit)}
-                      </Trans>
-                    ) : (
-                      <Trans>Not compared: over the size limit</Trans>
-                    )}
-                  </p>
-                ) : viewStyle === 'split' ? (
-                  <SplitView file={file} />
-                ) : (
-                  <UnifiedView file={file} />
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        {truncated > 0 && (
-          <p className='text-muted-foreground px-1 text-sm'>
-            <Plural
-              value={truncated}
-              one='# more file not shown'
-              other='# more files not shown'
-            />
-          </p>
+        {listed && (
+          <ul className='divide-y overflow-hidden rounded-lg border'>
+            {files.map((file, index) => (
+              <li key={index}>
+                <button
+                  type='button'
+                  onClick={() => jump(index)}
+                  className='hover:bg-hover flex w-full items-center gap-2 px-3 py-1.5 font-mono text-xs transition-colors'
+                >
+                  <StatusBadge status={file.status} />
+                  <span className='flex-1 truncate text-start'>
+                    {file.path}
+                  </span>
+                  <LineCounts file={file} />
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
-    </WordsContext.Provider>
+
+      {files.map((file, index) => (
+        // A card off screen is not laid out or painted until it nears the
+        // view, which on a large diff is most of the page's work. Until then
+        // its height is guessed from its lines so the scrollbar holds still,
+        // and once drawn the browser keeps the real one. Find in page still
+        // searches it.
+        <div
+          key={index}
+          id={`${id}-${index}`}
+          className='scroll-mt-24 overflow-hidden rounded-lg border [content-visibility:auto]'
+          style={{
+            containIntrinsicSize: `auto ${cardHeight(
+              file,
+              !!collapsed[index],
+              held(file, index)
+            )}px`,
+          }}
+        >
+          <FileHeader
+            file={file}
+            collapsed={!!collapsed[index]}
+            onToggle={() => toggleFile(index)}
+            actions={actions}
+          />
+          {!collapsed[index] &&
+            (index >= drawn.count && !loaded[index] ? (
+              <div
+                style={{
+                  height:
+                    cardHeight(file, false, held(file, index)) - HEADER_HEIGHT,
+                }}
+              />
+            ) : held(file, index) ? (
+              <div className='flex justify-center px-3 py-4'>
+                <button
+                  type='button'
+                  onClick={() =>
+                    setLoaded((prev) => ({ ...prev, [index]: true }))
+                  }
+                  className='text-primary text-sm hover:underline'
+                >
+                  <Trans>Load diff</Trans>
+                </button>
+              </div>
+            ) : (
+              <Body file={file} viewStyle={viewStyle} />
+            ))}
+        </div>
+      ))}
+      {truncated > 0 && (
+        <p className='text-muted-foreground px-1 text-sm'>
+          <Plural
+            value={truncated}
+            one='# more file not shown'
+            other='# more files not shown'
+          />
+        </p>
+      )}
+    </div>
   )
 }

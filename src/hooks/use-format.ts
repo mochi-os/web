@@ -20,6 +20,7 @@ import {
   formatWeekdayShort,
   formatWeekdayDay,
   formatMonthName,
+  formatMonthShort,
   formatMonthYear,
   formatDayNumber,
   formatLongDate,
@@ -89,6 +90,7 @@ export function useFormat() {
       formatWeekdayDay: (date: Date) => formatWeekdayDay(date, locale.timezone),
       formatMonthName: (date: Date, options?: { inline?: boolean }) =>
         formatMonthName(date, locale.timezone, options),
+      formatMonthShort: (date: Date) => formatMonthShort(date, locale.timezone),
       formatMonthYear: (date: Date) => formatMonthYear(date, locale.timezone),
       formatDayNumber: (date: Date) => formatDayNumber(date, locale.timezone),
       formatLongDate: (date: Date, zone?: string) =>

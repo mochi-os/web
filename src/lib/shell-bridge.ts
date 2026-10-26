@@ -104,6 +104,11 @@ type ShellInitData = {
   theme?: string
   colorTheme?: ColorTheme | null
   inShell: boolean
+  /**
+   * Whether the shell carries the app's requests (see shell-fetch.ts). Absent
+   * from an older shell, and the app then sends them itself.
+   */
+  fetch?: boolean
   sidebarOpen?: boolean
   domain?: DomainRouteInfo | null
   locale?: LocalePreferences | null
