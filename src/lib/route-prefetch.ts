@@ -12,11 +12,10 @@
 // from sweeping across a list is why it was turned off (chat 0f7f5fae).
 //
 // A failed import is swallowed here, but lazyRouteComponent remembers it, so
-// the click that follows does not retry. Outside the shell it reloads the page
-// once. Inside the shell's sandboxed iframe that reload reads sessionStorage,
-// which throws there, so the page shows its error screen until a full reload.
-// Accepted: it takes a network drop between hover and click, and skipping
-// offline narrows it. A touch press prefetches at the click itself.
+// the click that follows does not fetch again. startRoutePrefetch therefore
+// starts page-load-recovery too, which reloads the page once when its code
+// failed to load, whether early here or at the click. Skipping offline keeps
+// such failures rare. A touch press prefetches at the click itself.
 
 import type { AnyRouter } from '@tanstack/react-router'
 import {
@@ -24,6 +23,7 @@ import {
   isEntitySegment,
   routerPathForHref,
 } from './app-path'
+import { startPageLoadRecovery } from './page-load-recovery'
 
 // How long a mouse must rest on a link before its page is fetched, so that
 // moving across a list or sidebar fetches nothing.
@@ -141,8 +141,9 @@ export function prefetchRoute(
   }
 }
 
-// Watch the document for intent to open a page and prefetch its code. Call
-// once after createRouter; returns a function that stops watching.
+// Watch the document for intent to open a page and prefetch its code, and
+// recover from a page whose code fails to load. Call once after createRouter;
+// returns a function that stops both.
 export function startRoutePrefetch(
   router: AnyRouter,
   root: Document = document
@@ -189,8 +190,10 @@ export function startRoutePrefetch(
   root.addEventListener('pointerout', out)
   root.addEventListener('pointerdown', press)
   root.addEventListener('focusin', now)
+  const stopRecovery = startPageLoadRecovery(router)
   return () => {
     cancel()
+    stopRecovery()
     root.removeEventListener('pointerover', over)
     root.removeEventListener('pointerout', out)
     root.removeEventListener('pointerdown', press)
