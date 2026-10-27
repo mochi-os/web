@@ -5,18 +5,35 @@ import * as React from 'react'
 import * as SwitchPrimitive from '@radix-ui/react-switch'
 import { cn } from '../../lib/utils'
 
+// A switch whose change is being saved is loading: it keeps its look, shows
+// the busy pointer and ignores clicks until the save ends. Disabled is for a
+// switch the user may not use, which shows the not-allowed pointer.
 function Switch({
   className,
+  loading = false,
+  onClick,
   ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
+}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
+  loading?: boolean
+}) {
   return (
     <SwitchPrimitive.Root
       data-slot='switch'
+      aria-busy={loading || undefined}
+      data-loading={loading ? '' : undefined}
       className={cn(
-        'peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-[length:var(--border-width)] border-transparent shadow-xs transition-[background-color,border-color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+        'peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-[length:var(--border-width)] border-transparent shadow-xs transition-[background-color,border-color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[loading]:cursor-progress',
         className
       )}
       {...props}
+      onClick={(event) => {
+        // A prevented click is one the switch does not act on.
+        if (loading) {
+          event.preventDefault()
+          return
+        }
+        onClick?.(event)
+      }}
     >
       <SwitchPrimitive.Thumb
         data-slot='switch-thumb'
