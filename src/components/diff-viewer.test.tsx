@@ -206,6 +206,26 @@ describe('DiffViewer files', () => {
     expect(await screen.findByText('f5.ts line 1')).toBeInTheDocument()
   })
 
+  it("holds a waiting file's lines as text, for find in page", () => {
+    render(<DiffViewer diff={large} viewStyle='unified' />)
+    expect(screen.queryByText('f5.ts line 1')).toBeNull()
+    // THE POINT: not drawn yet, but every line is already in the page.
+    expect(document.body.textContent).toContain('+f5.ts line 1\n')
+    expect(document.body.textContent).toContain('+f5.ts line 380')
+  })
+
+  it("shows a held file's button at once, keeping its lines out of the page", () => {
+    const diff =
+      Array.from({ length: 4 }, (_, i) => file(`f${i}.ts`, 380)).join('') +
+      file('big.ts', 401)
+    render(<DiffViewer diff={diff} viewStyle='unified' />)
+    // Past the first step, and behind Load diff: its button, not its text.
+    expect(
+      screen.getByRole('button', { name: 'Load diff' })
+    ).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('big.ts line 1')
+  })
+
   it('draws a file picked from the list before its turn', () => {
     Element.prototype.scrollIntoView = vi.fn()
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {

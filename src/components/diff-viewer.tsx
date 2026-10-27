@@ -635,6 +635,25 @@ function fileLines(file: DiffFile) {
   return file.hunks.reduce((sum, hunk) => sum + hunk.lines.length + 1, 0)
 }
 
+// A file's lines as plain text, the marks of a patch before each: what its card
+// holds until its turn to be drawn comes. One text node costs little beside the
+// rows the drawn view builds, yet find in page, select all, copying, printing
+// and screen readers meet every line from the start.
+const MARKS: Record<DiffLine['type'], string> = {
+  header: '',
+  add: '+',
+  remove: '-',
+  context: ' ',
+}
+
+function plainLines(file: DiffFile) {
+  return file.hunks
+    .flatMap((hunk) =>
+      hunk.lines.map((line) => MARKS[line.type] + line.content)
+    )
+    .join('\n')
+}
+
 // Whether a file waits behind Load diff until the reader asks for it.
 function heldBack(file: DiffFile, index: number) {
   return index >= SHOWN_FILES || file.additions + file.deletions > LARGE_LINES
@@ -802,7 +821,8 @@ export function DiffViewer({
         // view, which on a large diff is most of the page's work. Until then
         // its height is guessed from its lines so the scrollbar holds still,
         // and once drawn the browser keeps the real one. Find in page still
-        // searches it.
+        // searches it, as it does a card waiting for its turn to be drawn,
+        // which holds its lines as plain text.
         <div
           key={index}
           id={`${id}-${index}`}
@@ -822,14 +842,7 @@ export function DiffViewer({
             actions={actions}
           />
           {!collapsed[index] &&
-            (index >= drawn.count && !loaded[index] ? (
-              <div
-                style={{
-                  height:
-                    cardHeight(file, false, held(file, index)) - HEADER_HEIGHT,
-                }}
-              />
-            ) : held(file, index) ? (
+            (held(file, index) ? (
               <div className='flex justify-center px-3 py-4'>
                 <button
                   type='button'
@@ -841,6 +854,16 @@ export function DiffViewer({
                   <Trans>Load diff</Trans>
                 </button>
               </div>
+            ) : index >= drawn.count && !loaded[index] ? (
+              <pre
+                className='text-muted-foreground overflow-hidden px-3 font-mono text-xs'
+                style={{
+                  height: cardHeight(file, false, false) - HEADER_HEIGHT,
+                  lineHeight: `${LINE_HEIGHT}px`,
+                }}
+              >
+                {plainLines(file)}
+              </pre>
             ) : (
               <Body file={file} viewStyle={viewStyle} />
             ))}
