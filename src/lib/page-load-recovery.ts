@@ -5,10 +5,12 @@
 // that fails to download (a network drop, a server restart, a deploy that
 // removed the old files) is remembered by lazyRouteComponent for the life of
 // the document, so neither Try again nor a later click fetches it again.
-// TanStack's own answer is one reload, but it reads sessionStorage first,
-// which throws in the shell's sandboxed iframe, and it only covers the
-// browsers' module messages, not a stylesheet the chunk depends on. Here any
-// such failure reloads the document once, which starts a fresh module map.
+// TanStack's own answer is one reload, guarded by a sessionStorage key. In the
+// shell's sandboxed iframe that storage either throws, or is the server's
+// in-memory stand-in (apps/menu/web/public/iframe-shim.js), which a reload
+// empties, so TanStack reloads for ever on a blank page. It also only covers
+// the browsers' module messages, not a stylesheet the chunk depends on. Here
+// any such failure reloads the document once, which starts a fresh module map.
 
 import type { AnyRouter } from '@tanstack/react-router'
 
@@ -24,9 +26,44 @@ const LOAD_FAILURES = [
 ]
 /* eslint-enable lingui/no-unlocalized-strings */
 
-// Kept in the history entry's state, which survives a reload and needs no
-// storage the sandbox forbids: the entry has had its one reload
-const RELOADED = '__mochiPageReload'
+// Put on the address of a page loaded again by this recovery: the page has had
+// its reload. A reload of the shell's frame keeps the address and loses the
+// history state. An earlier version kept this mark in the state, and a page
+// whose code kept failing reloaded about once a second.
+export const RELOAD_PARAM = '_reload'
+// Kept on the address of a shell frame, for a server that cannot tell a frame
+// load by its Sec-Fetch-Dest header
+const SHELL_PARAM = '_shell'
+
+// The sessionStorage key prefix TanStack's lazyRouteComponent marks its one
+// reload with
+const TANSTACK_RELOAD = 'tanstack_router_reload:'
+
+// Inside the shell, make TanStack's reload read as spent. The iframe shim's
+// storage forgets the mark on reload, and TanStack reloads while suspended, so
+// no error reaches defaultOnCatch and the page reloads for ever. Read as spent,
+// the failed import throws to the error boundary and is loaded again below.
+// A real Storage keeps the mark across a reload, so it is left alone (setting
+// a property on one stores an item), and so is a storage that throws:
+// TanStack's reload cannot run there. Returns a function that puts the storage
+// back.
+function spendTanStackReload(): () => void {
+  let storage: { getItem(key: string): string | null }
+  try {
+    storage = window.sessionStorage
+  } catch {
+    return () => {}
+  }
+  if (!storage || storage instanceof Storage) return () => {}
+  const getItem = storage.getItem
+  storage.getItem = function (key: string) {
+    if (String(key).startsWith(TANSTACK_RELOAD)) return '1'
+    return getItem.call(this, key)
+  }
+  return () => {
+    storage.getItem = getItem
+  }
+}
 
 function isLoadFailure(error: unknown): boolean {
   const message = (error as { message?: unknown } | null)?.message
@@ -53,69 +90,68 @@ async function pageCodeFailed(
   return results.some((result) => result.status === 'rejected')
 }
 
-function entryState(): Record<string, unknown> {
-  return (window.history.state ?? {}) as Record<string, unknown>
+function trimSlash(path: string): string {
+  return path.replace(/\/+$/, '') || '/'
 }
 
-// Reload once per history entry, so a page that keeps failing shows its error
-// screen instead of reloading for ever. Offline, wait for the network first.
-function reloadOnce() {
-  const state = entryState()
-  if (state[RELOADED]) return
-  if (navigator.onLine === false) {
-    window.addEventListener('online', reloadOnce, { once: true })
-    return
-  }
-  window.history.replaceState({ ...state, [RELOADED]: true }, '')
-  window.location.reload()
+// The browser address of the page in view, from the router: WebKit leaves the
+// shell frame's own address behind as the app navigates.
+function pageAddress(router: AnyRouter): URL {
+  return new URL(
+    router.history.createHref(router.state.location.publicHref),
+    window.location.href
+  )
 }
 
-// Watch the router for a page whose code failed to load and reload once.
-// Call once after createRouter; returns a function that stops watching.
+// Watch the router for a page whose code failed to load and load it again
+// once. Call once after createRouter; returns a function that stops watching.
 export function startPageLoadRecovery(router: AnyRouter): () => void {
   const previous = router.options.defaultOnCatch
-  // Whether the pages of the current load drew an error. Reset as a load
-  // starts, since the pages draw, and throw, after it resolves.
-  let caught = false
-  let opened: ReturnType<typeof setTimeout> | undefined
+  // Read before the router moves the address: the path this document was
+  // loaded again for, if it was. A failure there shows the error screen, so a
+  // page that keeps failing loads twice at most.
+  const loaded = new URL(window.location.href)
+  const reloadedFor = loaded.searchParams.has(RELOAD_PARAM)
+    ? trimSlash(loaded.pathname)
+    : undefined
+  const shellFrame = loaded.searchParams.has(SHELL_PARAM)
+
+  const reload = () => {
+    const page = pageAddress(router)
+    if (trimSlash(page.pathname) === reloadedFor) return
+    page.searchParams.set(RELOAD_PARAM, '1')
+    if (shellFrame) page.searchParams.set(SHELL_PARAM, '1')
+    window.location.replace(page.href)
+  }
+
+  // The page that failed while offline, loaded again when the network returns
+  let waiting: string | undefined
+  // Only while the failed page is still in view: offline, the user may have
+  // moved on to a page that works, and reloading it loses what they typed
+  const online = () => {
+    const failed = waiting
+    waiting = undefined
+    if (router.state.location.href === failed) reload()
+  }
+  const recover = () => {
+    if (navigator.onLine !== false) return reload()
+    waiting = router.state.location.href
+    window.addEventListener('online', online, { once: true })
+  }
 
   const onCatch: typeof previous = (error, info) => {
     previous?.(error, info)
-    caught = true
     void pageCodeFailed(router, error).then((failed) => {
-      if (failed) reloadOnce()
+      if (failed) recover()
     })
   }
   router.options.defaultOnCatch = onCatch
-
-  const stopLoad = router.subscribe('onBeforeLoad', () => {
-    caught = false
-  })
-
-  // A page that opened clears the mark, so a later failure on the same entry
-  // gets its reload too. Resolving is not opening: lazyRouteComponent swallows
-  // a failed import or stylesheet while loading and throws it while drawing,
-  // so the mark is cleared after the draw, and only when nothing was caught.
-  // Cleared on resolve, the page would reload for as long as it kept failing.
-  const stopResolved = router.subscribe('onResolved', () => {
-    clearTimeout(opened)
-    opened = setTimeout(() => {
-      opened = undefined
-      if (caught) return
-      const state = entryState()
-      if (!state[RELOADED]) return
-      if (router.state.matches.some((match) => match.status === 'error')) return
-      const { [RELOADED]: _, ...rest } = state
-      window.history.replaceState(rest, '')
-    })
-  })
+  const restoreStorage = spendTanStackReload()
 
   return () => {
-    window.removeEventListener('online', reloadOnce)
-    clearTimeout(opened)
+    restoreStorage()
+    window.removeEventListener('online', online)
     if (router.options.defaultOnCatch === onCatch)
       router.options.defaultOnCatch = previous
-    stopLoad()
-    stopResolved()
   }
 }

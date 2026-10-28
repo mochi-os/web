@@ -77,17 +77,48 @@ function sandbox() {
   })
 }
 
+// The server's iframe shim: an in-memory stand-in for sessionStorage, which
+// the shell's frame cannot read, emptied by every reload
+function shim() {
+  const items = new Map<string, string>()
+  const storage = {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      items.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      items.delete(key)
+    },
+    clear: () => items.clear(),
+  }
+  vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(
+    storage as unknown as Storage
+  )
+  return storage
+}
+
 const original = window.location
 let reload: ReturnType<typeof vi.fn>
+let replace: ReturnType<typeof vi.fn>
 let stop: (() => void) | undefined
+
+// The address the document was loaded at
+function loadedAt(path: string) {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: {
+      ...original,
+      href: new URL(path, original.origin).href,
+      reload,
+      replace,
+    },
+  })
+}
 
 beforeEach(() => {
   reload = vi.fn()
-  Object.defineProperty(window, 'location', {
-    configurable: true,
-    value: { ...original, href: original.href, reload },
-  })
-  window.history.replaceState(null, '')
+  replace = vi.fn()
+  loadedAt('/chat/')
 })
 
 afterEach(() => {
@@ -121,16 +152,25 @@ async function clickOpen() {
   await settle()
 }
 
-// The document after its one reload, opened straight on the page that failed
-async function reopen(router: ReturnType<typeof setup>) {
-  window.history.replaceState({ __mochiPageReload: true }, '')
+// A document opened straight on the post page, as a reload leaves it
+async function openPost(component: ReturnType<typeof lazyRouteComponent>) {
+  const router = setup(component, '/chat/posts/5')
   stop = startPageLoadRecovery(router)
   render(<RouterProvider router={router} />)
   await settle()
 }
 
+function setOnline(online: boolean) {
+  Object.defineProperty(navigator, 'onLine', {
+    configurable: true,
+    get: () => online,
+  })
+}
+
+const POST_RELOAD = new URL('/chat/posts/5?_reload=1', original.origin).href
+
 describe('startPageLoadRecovery', () => {
-  it('reloads once when a prefetch failed inside the shell', async () => {
+  it('loads the page again when a prefetch failed inside the shell', async () => {
     sandbox()
     const router = await open(setup(lazyRouteComponent(flaky(1))))
 
@@ -139,74 +179,129 @@ describe('startPageLoadRecovery', () => {
     await clickOpen()
 
     expect(screen.getByText('error screen')).toBeTruthy()
-    expect(reload).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
   })
 
-  it('reloads once when a click fails inside the shell', async () => {
+  it('loads the page again when a click fails inside the shell', async () => {
     sandbox()
     await open(setup(lazyRouteComponent(flaky(1))))
 
     await clickOpen()
 
-    expect(reload).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
   })
 
-  it('reloads once when a stylesheet the page needs fails', async () => {
+  it('loads the page again when a stylesheet it needs fails', async () => {
     await open(
       setup(lazyRouteComponent(flaky(1, 'Unable to preload CSS for x.css')))
     )
 
     await clickOpen()
 
-    expect(reload).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
   })
 
-  it("reloads after TanStack's own reload was spent in this tab", async () => {
+  it("loads the page again after TanStack's own reload was spent", async () => {
     window.sessionStorage.setItem(`tanstack_router_reload:${MODULE_ERROR}`, '1')
     await open(setup(lazyRouteComponent(flaky(1))))
 
     await clickOpen()
 
-    expect(reload).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
   })
 
-  it('shows the error screen when the reloaded entry fails again', async () => {
+  it("loads the page again under the server's storage shim", async () => {
+    shim()
+    await open(setup(lazyRouteComponent(flaky(1))))
+
+    await clickOpen()
+
+    expect(screen.getByText('error screen')).toBeTruthy()
+    expect(reload).not.toHaveBeenCalled()
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
+  })
+
+  it('shows the error screen when the page loaded again fails under the shim', async () => {
+    shim()
+    loadedAt('/chat/posts/5?_shell=1&_reload=1')
+    await openPost(lazyRouteComponent(flaky(Infinity)))
+
+    expect(screen.getByText('error screen')).toBeTruthy()
+    expect(reload).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it("leaves TanStack's own reload to a real sessionStorage", async () => {
+    await open(setup(lazyRouteComponent(flaky(1))))
+
+    await clickOpen()
+
+    expect(reload).toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+    expect(Object.keys(window.sessionStorage)).toEqual([
+      `tanstack_router_reload:${MODULE_ERROR}`,
+    ])
+  })
+
+  it('gives the shim its own storage back once stopped', async () => {
+    const storage = shim()
+    const getItem = storage.getItem
+    await open(setup(lazyRouteComponent(flaky(1))))
+
+    stop?.()
+    stop = undefined
+
+    expect(storage.getItem).toBe(getItem)
+  })
+
+  it('keeps the shell marker on the address it loads', async () => {
     sandbox()
-    window.history.replaceState({ __mochiPageReload: true }, '')
+    loadedAt('/chat/?_shell=1')
     await open(setup(lazyRouteComponent(flaky(1))))
 
     await clickOpen()
 
-    expect(screen.getByText('error screen')).toBeTruthy()
-    expect(reload).not.toHaveBeenCalled()
+    expect(replace).toHaveBeenCalledExactlyOnceWith(
+      new URL('/chat/posts/5?_reload=1&_shell=1', original.origin).href
+    )
   })
 
-  it('stops reloading a page whose stylesheet keeps failing', async () => {
-    const failing = flaky(Infinity, 'Unable to preload CSS for x.css')
-    await reopen(setup(lazyRouteComponent(failing), '/chat/posts/5'))
+  it('shows the error screen when the page loaded again fails inside the shell', async () => {
+    sandbox()
+    loadedAt('/chat/posts/5?_shell=1&_reload=1')
+    await openPost(lazyRouteComponent(flaky(Infinity)))
 
     expect(screen.getByText('error screen')).toBeTruthy()
-    expect(reload).not.toHaveBeenCalled()
-    expect(window.history.state?.__mochiPageReload).toBe(true)
+    expect(replace).not.toHaveBeenCalled()
   })
 
-  it("stops reloading a failing page once TanStack's reload is spent", async () => {
+  it('shows the error screen when a stylesheet keeps failing', async () => {
+    loadedAt('/chat/posts/5?_reload=1')
+    await openPost(
+      lazyRouteComponent(flaky(Infinity, 'Unable to preload CSS for x.css'))
+    )
+
+    expect(screen.getByText('error screen')).toBeTruthy()
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it("shows the error screen when a page keeps failing after TanStack's reload", async () => {
     window.sessionStorage.setItem(`tanstack_router_reload:${MODULE_ERROR}`, '1')
-    await reopen(setup(lazyRouteComponent(flaky(Infinity)), '/chat/posts/5'))
+    loadedAt('/chat/posts/5?_reload=1')
+    await openPost(lazyRouteComponent(flaky(Infinity)))
 
     expect(screen.getByText('error screen')).toBeTruthy()
-    expect(reload).not.toHaveBeenCalled()
-    expect(window.history.state?.__mochiPageReload).toBe(true)
+    expect(replace).not.toHaveBeenCalled()
   })
 
-  it('clears the mark once a page opens, so a later failure reloads too', async () => {
-    window.history.replaceState({ __mochiPageReload: true }, '')
-    await open(setup(lazyRouteComponent(flaky(0))))
+  it('loads another page again that fails after a reload', async () => {
+    sandbox()
+    loadedAt('/chat/?_reload=1')
+    await open(setup(lazyRouteComponent(flaky(1))))
 
     await clickOpen()
 
-    expect(screen.getByText('post page')).toBeTruthy()
-    expect(window.history.state?.__mochiPageReload).toBeUndefined()
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
   })
 
   it('leaves an error that is not page code to the error screen', async () => {
@@ -218,26 +313,37 @@ describe('startPageLoadRecovery', () => {
     await clickOpen()
 
     expect(screen.getByText('error screen')).toBeTruthy()
-    expect(reload).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
   })
 
-  it('waits for the network before reloading', async () => {
+  it('waits for the network before loading the page again', async () => {
     sandbox()
     await open(setup(lazyRouteComponent(flaky(1))))
-    Object.defineProperty(navigator, 'onLine', {
-      configurable: true,
-      get: () => false,
-    })
+    setOnline(false)
 
     await clickOpen()
-    expect(reload).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
 
-    Object.defineProperty(navigator, 'onLine', {
-      configurable: true,
-      get: () => true,
-    })
+    setOnline(true)
     window.dispatchEvent(new Event('online'))
-    expect(reload).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledExactlyOnceWith(POST_RELOAD)
+  })
+
+  it('leaves a page the user moved on to while offline', async () => {
+    sandbox()
+    const router = await open(setup(lazyRouteComponent(flaky(1))))
+    setOnline(false)
+    await clickOpen()
+
+    await act(async () => {
+      await router.navigate({ to: '/' })
+    })
+    await settle()
+    setOnline(true)
+    window.dispatchEvent(new Event('online'))
+
+    expect(screen.getByText('home')).toBeTruthy()
+    expect(replace).not.toHaveBeenCalled()
   })
 
   it('stops watching once stopped', async () => {
@@ -249,6 +355,6 @@ describe('startPageLoadRecovery', () => {
     await clickOpen()
 
     expect(router.options.defaultOnCatch).toBeUndefined()
-    expect(reload).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
   })
 })
