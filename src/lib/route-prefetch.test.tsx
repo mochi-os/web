@@ -214,6 +214,16 @@ describe('startRoutePrefetch', () => {
     expect(importer).not.toHaveBeenCalled()
   })
 
+  it('starts recovery from failed page code, and stops it too', () => {
+    const { router } = setup()
+    const stopWatching = startRoutePrefetch(router)
+    expect(router.options.defaultOnCatch).toBeTypeOf('function')
+
+    stopWatching()
+
+    expect(router.options.defaultOnCatch).toBeUndefined()
+  })
+
   it('stops watching once stopped', async () => {
     const { router, importer } = setup()
     const stopWatching = startRoutePrefetch(router)

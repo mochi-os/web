@@ -432,6 +432,7 @@ export * from './hooks/settings/use-system-settings'
 
 // Error pages
 export * from './features/errors/general-error'
+export * from './features/errors/route-error'
 export * from './features/errors/not-found-error'
 export * from './features/errors/access-denied-error'
 
