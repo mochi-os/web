@@ -65,7 +65,9 @@ function spendTanStackReload(): () => void {
   }
 }
 
-function isLoadFailure(error: unknown): boolean {
+// True when the error is a browser's or Vite's message for page code that did
+// not load
+export function isLoadFailure(error: unknown): boolean {
   const message = (error as { message?: unknown } | null)?.message
   return (
     typeof message === 'string' &&
@@ -103,6 +105,16 @@ function pageAddress(router: AnyRouter): URL {
   )
 }
 
+// Load the page in view again from the server, marked as loaded again so a
+// second failure on it shows the error screen. `shell` keeps the shell frame's
+// marker on the address.
+export function loadPageAgain(router: AnyRouter, shell: boolean) {
+  const page = pageAddress(router)
+  page.searchParams.set(RELOAD_PARAM, '1')
+  if (shell) page.searchParams.set(SHELL_PARAM, '1')
+  window.location.replace(page.href)
+}
+
 // Watch the router for a page whose code failed to load and load it again
 // once. Call once after createRouter; returns a function that stops watching.
 export function startPageLoadRecovery(router: AnyRouter): () => void {
@@ -117,11 +129,8 @@ export function startPageLoadRecovery(router: AnyRouter): () => void {
   const shellFrame = loaded.searchParams.has(SHELL_PARAM)
 
   const reload = () => {
-    const page = pageAddress(router)
-    if (trimSlash(page.pathname) === reloadedFor) return
-    page.searchParams.set(RELOAD_PARAM, '1')
-    if (shellFrame) page.searchParams.set(SHELL_PARAM, '1')
-    window.location.replace(page.href)
+    if (trimSlash(pageAddress(router).pathname) === reloadedFor) return
+    loadPageAgain(router, shellFrame)
   }
 
   // The page that failed while offline, loaded again when the network returns
