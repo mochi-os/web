@@ -8,6 +8,7 @@
 
 import { isSameOriginResource } from './safe-navigation'
 import { getAppPath, isDomainEntityRouting } from './app-path'
+import { RELOAD_PARAM } from './page-load-recovery'
 import { shellErrorMessage } from './shell-errors'
 
 type DomainRouteInfo = {
@@ -968,9 +969,11 @@ export function installShellNavigationSync(): void {
   const notifyShell = (location: URL | Location, replace: boolean) => {
     // Shed the shell's private _shell marker: the relayed path re-enters the
     // iframe src from the top history, where re-tagging plus the router's
-    // search serialization nests duplicate keys.
+    // search serialization nests duplicate keys. Shed page-load-recovery's
+    // _reload too: a page opened from an address carrying it gets no reload.
     const params = new URLSearchParams(location.search)
     params.delete('_shell')
+    params.delete(RELOAD_PARAM)
     const query = params.toString()
     const path = location.pathname + (query ? `?${query}` : '') + location.hash
     window.parent.postMessage(
