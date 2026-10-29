@@ -84,3 +84,63 @@ describe('EntityCommentThread', () => {
     expect(actionsRow.className).toContain('md:flex')
   })
 })
+
+// A person's avatar route names one of their comments, so a thread that built
+// each comment's own address fetched the same picture once per comment.
+describe('EntityCommentThread avatars', () => {
+  function by(
+    id: string,
+    author: string,
+    children: EntityComment[] = []
+  ): EntityComment {
+    return { ...comment(id, children), author, name: author }
+  }
+
+  const sources = (name: string) =>
+    screen
+      .getAllByAltText(`Avatar for ${name}`)
+      .map((img) => img.getAttribute('src'))
+
+  it('draws every reply by one person from the address the list gives them', () => {
+    const root = by('c1', 'Ann', [
+      by('c2', 'Bob', [by('c3', 'Ann'), by('c4', 'Bob')]),
+      by('c5', 'Ann'),
+    ])
+    render(
+      <EntityCommentThread
+        comment={root}
+        containerId='p1'
+        readOnly={false}
+        replyingTo={null}
+        replyDraft=''
+        onStartReply={vi.fn()}
+        onCancelReply={vi.fn()}
+        onReplyDraftChange={vi.fn()}
+        onSubmitReply={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        avatars={
+          new Map([
+            ['Ann', '/p1/-/comment/c1/asset'],
+            ['Bob', '/p1/-/comment/c2/asset'],
+          ])
+        }
+      />
+    )
+    expect(new Set(sources('Ann'))).toEqual(
+      new Set(['/p1/-/comment/c1/asset/avatar'])
+    )
+    expect(new Set(sources('Bob'))).toEqual(
+      new Set(['/p1/-/comment/c2/asset/avatar'])
+    )
+    expect(sources('Ann').length + sources('Bob').length).toBe(5)
+  })
+
+  it('keeps its own address for a person missing from the list', () => {
+    show(comment('c9'))
+    expect(screen.getByAltText('Avatar for Ada')).toHaveAttribute(
+      'src',
+      '/c1/-/comment/c9/asset/avatar'
+    )
+  })
+})

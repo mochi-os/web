@@ -54,6 +54,11 @@ export interface EntityCommentThreadProps {
   onDelete: (commentId: string) => void
   people?: Person[]
   depth?: number
+  /**
+   * One asset address per person across the list (`addressByAuthor`), so a
+   * person's avatar and style are fetched once, not once per comment.
+   */
+  avatars?: ReadonlyMap<string, string>
 }
 
 export function EntityCommentThread({
@@ -73,6 +78,7 @@ export function EntityCommentThread({
   onDelete,
   people = [],
   depth = 0,
+  avatars,
 }: EntityCommentThreadProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -135,8 +141,10 @@ export function EntityCommentThread({
 
   const timestamp = formatTimestamp(comment.created)
 
-  const assetUrl = (slot: string) =>
-    `${getAppPath()}/${containerId}/-/comment/${comment.id}/asset/${slot}`
+  const assets =
+    avatars?.get(comment.author) ??
+    `${getAppPath()}/${containerId}/-/comment/${comment.id}/asset`
+  const assetUrl = (slot: string) => `${assets}/${slot}`
   const avatar = (
     <EntityAvatar
       src={assetUrl('avatar')}
@@ -393,6 +401,7 @@ export function EntityCommentThread({
           onDelete={onDelete}
           people={people}
           depth={depth + 1}
+          avatars={avatars}
         />
       ))}
     </>
