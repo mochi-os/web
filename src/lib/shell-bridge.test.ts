@@ -650,6 +650,18 @@ describe('installShellNavigationSync', () => {
     ])
   })
 
+  it("keeps page-load-recovery's reload mark out of the shell's address", async () => {
+    history.replaceState = () => {}
+    const { installShellNavigationSync } = await import('./shell-bridge')
+    installShellNavigationSync()
+
+    history.replaceState(null, '', '/apps/routing/classes?_reload=1&_shell=1')
+
+    expect(parentPostMessage.mock.calls.map((call) => call[0])).toEqual([
+      { type: 'navigate', path: '/apps/routing/classes', replace: true },
+    ])
+  })
+
   it('still throws errors other than the sandbox refusal', async () => {
     history.replaceState = () => {
       throw new TypeError('bad state')

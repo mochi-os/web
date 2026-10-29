@@ -113,6 +113,7 @@ export * from './lib/entity-access'
 export * from './lib/create-entity-list-store'
 export * from './lib/entity-sort'
 export * from './lib/game-route'
+export * from './lib/route-prefetch'
 export * from './lib/entity-endpoints'
 export * from './lib/entity-api'
 export * from './lib/entity-title'
@@ -430,6 +431,7 @@ export * from './hooks/settings/use-system-settings'
 
 // Error pages
 export * from './features/errors/general-error'
+export * from './features/errors/route-error'
 export * from './features/errors/not-found-error'
 export * from './features/errors/access-denied-error'
 
