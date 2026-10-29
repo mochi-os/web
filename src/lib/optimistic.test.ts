@@ -107,6 +107,50 @@ describe('optimistic', () => {
     expect(item()).toEqual({ on: false, count: 1 })
   })
 
+  it('lets a first load finish when the query holds no data yet', async () => {
+    const { client, click, requests, sent } = setup((count) => [
+      {
+        filters: { queryKey: ['item', 2], exact: true },
+        update: (old: Item) => ({ ...old, count }),
+      },
+    ])
+    const slow = deferred()
+    const loading = client.fetchQuery({
+      queryKey: ['item', 2],
+      queryFn: () => slow.promise,
+    })
+    const refused = click(1)
+    await sent(1)
+    requests[0].reject(new Error('refused'))
+    await refused
+    slow.resolve(START)
+    await expect(loading).resolves.toEqual(START)
+    expect(client.getQueryData(['item', 2])).toEqual(START)
+  })
+
+  it('leaves a fetch alone that its filters exclude', async () => {
+    const { client, click, sent } = setup((count) => [
+      {
+        filters: {
+          queryKey: ['item'],
+          predicate: (query) => query.queryKey[1] === 1,
+        },
+        update: (old: Item) => ({ ...old, count }),
+      },
+    ])
+    client.setQueryData(['item', 3], START)
+    const slow = deferred()
+    const fetching = client.fetchQuery({
+      queryKey: ['item', 3],
+      queryFn: () => slow.promise,
+    })
+    click(1)
+    await sent(1)
+    slow.resolve({ on: true, count: 5 })
+    await fetching
+    expect(client.getQueryData(['item', 3])).toEqual({ on: true, count: 5 })
+  })
+
   it('keeps a later click when an earlier one is refused', async () => {
     const { click, item, requests, sent } = setup()
     const first = click(1)

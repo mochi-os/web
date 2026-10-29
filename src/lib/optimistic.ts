@@ -106,9 +106,18 @@ export function optimistic<TVariables>(
     onMutate: async (variables: TVariables): Promise<OptimisticCall> => {
       const list = patches(variables)
       // A fetch already on its way would land after the patch and put the old
-      // value back on screen.
+      // value back on screen. Only a query holding data is patched, so only
+      // that one is stopped: a first load cancelled here is never sent again,
+      // and its screen would wait for it until the window is next focused.
       await Promise.all(
-        list.map(({ filters }) => queryClient.cancelQueries(filters))
+        list.map(({ filters }) =>
+          queryClient.cancelQueries({
+            ...filters,
+            predicate: (query) =>
+              query.state.data !== undefined &&
+              (filters.predicate?.(query) ?? true),
+          })
+        )
       )
 
       // Every change is worked out before any is written, so an update that
