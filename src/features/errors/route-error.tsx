@@ -1,6 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { useState } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useRouter, type ErrorComponentProps } from '@tanstack/react-router'
 import { isLoadFailure, loadPageAgain } from '../../lib/page-load-recovery'
@@ -20,8 +21,16 @@ export function RouteError({ error }: ErrorComponentProps) {
   const router = useRouter()
   // Loads the routes in view again. The boundary's own reset only draws the
   // page again, and a route whose data failed keeps that error until it loads.
+  // The card stays up while either runs, so the button shows it is busy; a
+  // second failure draws a fresh card, and a reload replaces the document.
+  const [retrying, setRetrying] = useState(false)
   const retry = () => {
-    void router.invalidate()
+    setRetrying(true)
+    void router.invalidate().finally(() => setRetrying(false))
+  }
+  const reload = () => {
+    setRetrying(true)
+    loadPageAgain(router, isInShell())
   }
   const { t } = useLingui()
   const failed = isLoadFailure(error)
@@ -33,7 +42,8 @@ export function RouteError({ error }: ErrorComponentProps) {
             ? new Error(t`Please check your internet connection and try again.`)
             : error
         }
-        reset={failed ? () => loadPageAgain(router, isInShell()) : retry}
+        reset={failed ? reload : retry}
+        retrying={retrying}
         minimal
         mode='inline'
       />

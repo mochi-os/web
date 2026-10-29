@@ -110,6 +110,10 @@ describe('RouteError', () => {
     expect(replace).toHaveBeenCalledExactlyOnceWith(
       new URL('/chat/posts/5?_reload=1', original.href).href
     )
+    // Busy until the browser replaces the document
+    const busy = screen.getByRole('button', { name: 'Try again' })
+    expect(busy.hasAttribute('disabled')).toBe(true)
+    expect(busy.getAttribute('aria-busy')).toBe('true')
   })
 
   it("loads a page's data again on Try again after it failed", async () => {
@@ -132,6 +136,50 @@ describe('RouteError', () => {
 
     expect(await screen.findByText('post page')).toBeTruthy()
     expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('shows Try again as busy while the data loads again', async () => {
+    let attempt = 0
+    let release!: () => void
+    await open(
+      setup(
+        () => <p>post page</p>,
+        async () => {
+          attempt++
+          if (attempt === 1) throw new Error('Data failed')
+          await new Promise<void>((resolve) => {
+            release = resolve
+          })
+          throw new Error('Data failed')
+        }
+      )
+    )
+
+    const button = await screen.findByRole('button', { name: 'Try again' })
+    expect(button.hasAttribute('disabled')).toBe(false)
+
+    await act(async () => {
+      fireEvent.click(button)
+    })
+
+    const busy = screen.getByRole('button', { name: 'Try again' })
+    expect(busy.hasAttribute('disabled')).toBe(true)
+    expect(busy.getAttribute('aria-busy')).toBe('true')
+    expect(screen.getByText('sidebar')).toBeTruthy()
+
+    await act(async () => {
+      release()
+    })
+
+    await vi.waitFor(() => {
+      expect(
+        screen
+          .getByRole('button', { name: 'Try again' })
+          .hasAttribute('disabled')
+      ).toBe(false)
+    })
+    expect(screen.getByText('Data failed')).toBeTruthy()
+    expect(attempt).toBe(2)
   })
 
   it('draws a page again on Try again after it threw', async () => {

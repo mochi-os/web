@@ -11,6 +11,8 @@ type GeneralErrorProps = React.HTMLAttributes<HTMLDivElement> & {
   minimal?: boolean
   error?: unknown
   reset?: () => void
+  // Try again is running: the button is disabled and shows a spinner
+  retrying?: boolean
   mode?: 'fullscreen' | 'inline'
 }
 
@@ -99,6 +101,7 @@ export function GeneralError({
   minimal = false,
   error,
   reset,
+  retrying,
   mode = 'fullscreen',
 }: GeneralErrorProps) {
   const normalized = normalizeError(error)
@@ -149,8 +152,14 @@ export function GeneralError({
 
           {reset && (
             <div className='ps-9'>
-              <Button type='button' onClick={reset} variant='outline' size='sm'>
-                <RotateCcw className='h-4 w-4' />
+              <Button
+                type='button'
+                onClick={reset}
+                variant='outline'
+                size='sm'
+                loading={retrying}
+                icon={<RotateCcw className='h-4 w-4' />}
+              >
                 <Trans>Try again</Trans>
               </Button>
             </div>
@@ -183,8 +192,9 @@ export function GeneralError({
             variant='outline'
             size='sm'
             className='mt-2'
+            loading={retrying}
+            icon={<RotateCcw className='h-4 w-4' />}
           >
-            <RotateCcw className='h-4 w-4' />
             <Trans>Try again</Trans>
           </Button>
         )}
