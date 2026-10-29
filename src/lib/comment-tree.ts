@@ -62,3 +62,40 @@ export function findCommentInTree<T>(
   }
   return undefined
 }
+
+export interface AuthorAddressOptions<T> {
+  getAuthor: (item: T) => string | undefined
+  /**
+   * The asset address the row's own route serves, or undefined for a row
+   * that may not stand in for its author: one the server shows to some
+   * viewers only, such as a comment awaiting approval.
+   */
+  getAddress: (item: T) => string | undefined
+  getChildren?: (item: T) => readonly T[] | undefined
+}
+
+/**
+ * One asset address per author, from the first row each author has in a list,
+ * walked in display order with every reply. An author's avatar route names a
+ * row rather than the person, so a list that built each row's own address
+ * fetched the same picture and style once per row - a 500-comment thread by
+ * one author sent a thousand requests and ran out of the app's budget for
+ * calls to that author's server. Seed `found` to put a row first, as a post
+ * goes before its comments.
+ */
+export function addressByAuthor<T>(
+  rows: readonly T[],
+  options: AuthorAddressOptions<T>,
+  found: Map<string, string> = new Map()
+): Map<string, string> {
+  for (const row of rows) {
+    const author = options.getAuthor(row)
+    if (author && !found.has(author)) {
+      const address = options.getAddress(row)
+      if (address) found.set(author, address)
+    }
+    const children = options.getChildren?.(row)
+    if (children?.length) addressByAuthor(children, options, found)
+  }
+  return found
+}
