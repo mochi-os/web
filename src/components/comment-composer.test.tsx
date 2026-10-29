@@ -162,6 +162,14 @@ describe('CommentBox', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
+  it("puts the caller's controls in the button row, just before attach", () => {
+    box({ controls: <span>Chosen account</span> })
+    const controls = screen.getByText('Chosen account')
+    const attach = screen.getByRole('button', { name: 'Attach comment files' })
+    expect(controls.parentElement).toBe(attach.parentElement)
+    expect(controls.nextElementSibling).toBe(attach)
+  })
+
   it('carries the reply labels when asked', () => {
     box({ kind: 'reply', onClose: () => {} })
     expect(
