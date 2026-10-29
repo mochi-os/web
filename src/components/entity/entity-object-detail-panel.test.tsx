@@ -20,6 +20,7 @@ import {
   type EntityObjectDetailPanelApi,
 } from './entity-object-detail-panel'
 import type { EntityObject } from '../../types/entity-object'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { GitMerge } from 'lucide-react'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
@@ -356,6 +357,44 @@ describe('EntityObjectDetailPanel optimistic edits', () => {
     request.reject({ response: { status: 403 } })
     await waitFor(() => expect(statusSelect()).not.toHaveTextContent('Done'))
     expect(toastError).toHaveBeenCalledWith('Failed to save')
+  })
+
+  // The board or list behind the panel shares its cache, so a pick shows on
+  // its card too, and goes back there on a refusal.
+  it('shows a pick on the row behind the panel and puts it back when refused', async () => {
+    let client!: QueryClient
+    function Cache() {
+      client = useQueryClient()
+      return null
+    }
+    const status = () =>
+      client
+        .getQueryData<{ objects: EntityObject[] }>(['objects', 'c-1'])
+        ?.objects.find((entry) => entry.id === 'obj-1')?.values.status
+    const request = waiting()
+    vi.mocked(api.setValue).mockReturnValue(request.promise as never)
+    render(
+      <>
+        <Cache />
+        <EntityObjectDetailPanel
+          containerId='c-1'
+          objectId='obj-1'
+          design={design}
+          access='owner'
+          api={api}
+          onClose={() => {}}
+        />
+      </>
+    )
+
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalled())
+    await screen.findByDisplayValue('Original')
+    fireEvent.click(statusSelect())
+    fireEvent.click(await screen.findByRole('option', { name: 'Done' }))
+    await waitFor(() => expect(status()).toBe('done'))
+
+    request.reject({ response: { status: 403 } })
+    await waitFor(() => expect(status()).toBeUndefined())
   })
 
   it('keeps typed text in its input when the save is refused', async () => {
