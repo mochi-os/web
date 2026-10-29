@@ -23,6 +23,10 @@ export interface AttachmentImageProps {
  * was the client contradicting a server that tells them apart. The placeholder
  * click stops propagation, so a surrounding lightbox trigger never opens onto
  * the same failure.
+ *
+ * Tiles load lazily and decode off the main thread: a photo feed or thread
+ * holds dozens of them, and an eager <img> fetches every one as the page
+ * renders, the ones far below the screen included.
  */
 export function AttachmentImage({
   src,
@@ -64,6 +68,8 @@ export function AttachmentImage({
       key={attempt}
       src={src}
       alt={alt}
+      loading='lazy'
+      decoding='async'
       onError={() => {
         void classifyAttachmentFailure(src).then(setFailure)
       }}

@@ -112,6 +112,43 @@ describe('AttachmentGallery failure tiles', () => {
   })
 })
 
+describe('AttachmentGallery tile loading', () => {
+  // An eager tile fetches its bytes as the page renders, so a photo feed
+  // pulled every preview on the page, those far below the screen included.
+  it('loads a photo tile lazily and decodes it off the main thread', () => {
+    show()
+    const tile = screen.getByAltText('photo.jpg')
+    expect(tile).toHaveAttribute('loading', 'lazy')
+    expect(tile).toHaveAttribute('decoding', 'async')
+  })
+
+  it('keeps a retried tile lazy', async () => {
+    probe(503)
+    show()
+    fireEvent.error(screen.getByAltText('photo.jpg'))
+    await waitFor(() =>
+      expect(screen.getByText('Unavailable')).toBeInTheDocument()
+    )
+    fireEvent.click(screen.getByText('Unavailable'))
+    expect(screen.getByAltText('photo.jpg')).toHaveAttribute('loading', 'lazy')
+  })
+
+  it('draws the preview variant where the app asks for it', () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <AttachmentGallery
+          attachments={[attachment()]}
+          getPreviewUrl={(att) => `/app/entity/-/attachments/${att.id}/preview`}
+        />
+      </I18nProvider>
+    )
+    expect(screen.getByAltText('photo.jpg')).toHaveAttribute(
+      'src',
+      '/app/entity/-/attachments/a1/preview'
+    )
+  })
+})
+
 describe('AttachmentGallery file chips', () => {
   it('downloads through the shell instead of exposing a tokened href', () => {
     const { container } = show([
