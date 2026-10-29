@@ -20,7 +20,7 @@ const MODULE_ERROR =
 
 // The shape of an app: __root, a layout with the sidebar, the page under it,
 // and RouteError as the router's default
-function setup(page: () => never | React.ReactNode) {
+function setup(page: () => never | React.ReactNode, loader?: () => unknown) {
   const root = createRootRoute({
     component: Outlet,
     errorComponent: () => <p>root error screen</p>,
@@ -39,6 +39,7 @@ function setup(page: () => never | React.ReactNode) {
     getParentRoute: () => layout,
     path: 'posts/$id',
     component: page,
+    loader,
   })
   return createRouter({
     routeTree: root.addChildren([layout.addChildren([post])]),
@@ -111,7 +112,29 @@ describe('RouteError', () => {
     )
   })
 
-  it('shows any other error with the router reset on Try again', async () => {
+  it("loads a page's data again on Try again after it failed", async () => {
+    let fails = true
+    await open(
+      setup(
+        () => <p>post page</p>,
+        async () => {
+          if (fails) throw new Error('Data failed')
+        }
+      )
+    )
+
+    expect(await screen.findByText('Data failed')).toBeTruthy()
+
+    fails = false
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    })
+
+    expect(await screen.findByText('post page')).toBeTruthy()
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('draws a page again on Try again after it threw', async () => {
     let throws = true
     await open(
       setup(() => {
