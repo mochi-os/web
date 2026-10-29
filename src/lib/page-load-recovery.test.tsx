@@ -254,6 +254,38 @@ describe('startPageLoadRecovery', () => {
     expect(storage.getItem).toBe(getItem)
   })
 
+  it('takes the reload mark off the address outside the shell', async () => {
+    window.sessionStorage.setItem(`tanstack_router_reload:${MODULE_ERROR}`, '1')
+    loadedAt('/chat/posts/5?_reload=1')
+    const router = setup(
+      lazyRouteComponent(flaky(Infinity)),
+      '/chat/posts/5?_reload=1'
+    )
+    stop = startPageLoadRecovery(router)
+
+    expect(router.history.location.href).toBe('/chat/posts/5')
+    expect(router.latestLocation.search).toEqual({})
+
+    render(<RouterProvider router={router} />)
+    await settle()
+
+    expect(screen.getByText('error screen')).toBeTruthy()
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it("leaves the reload mark on a shell frame's address", async () => {
+    loadedAt('/chat/posts/5?_shell=1&_reload=1')
+    const router = setup(
+      lazyRouteComponent(flaky(Infinity)),
+      '/chat/posts/5?_shell=1&_reload=1'
+    )
+    stop = startPageLoadRecovery(router)
+
+    expect(router.history.location.href).toBe(
+      '/chat/posts/5?_shell=1&_reload=1'
+    )
+  })
+
   it('keeps the shell marker on the address it loads', async () => {
     sandbox()
     loadedAt('/chat/?_shell=1')

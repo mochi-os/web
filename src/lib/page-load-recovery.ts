@@ -115,6 +115,21 @@ export function loadPageAgain(router: AnyRouter, shell: boolean) {
   window.location.replace(page.href)
 }
 
+// Take the reload mark off the router's address, and so off the browser's.
+// Run before the first draw: the router reads its history's address again as
+// it loads, so a later navigation cannot carry the mark back.
+function dropReloadMark(router: AnyRouter) {
+  const { href, state } = router.history.location
+  const address = new URL(href, window.location.origin)
+  if (!address.searchParams.has(RELOAD_PARAM)) return
+  address.searchParams.delete(RELOAD_PARAM)
+  router.history.replace(
+    address.pathname + address.search + address.hash,
+    state
+  )
+  router.updateLatestLocation()
+}
+
 // Watch the router for a page whose code failed to load and load it again
 // once. Call once after createRouter; returns a function that stops watching.
 export function startPageLoadRecovery(router: AnyRouter): () => void {
@@ -127,6 +142,11 @@ export function startPageLoadRecovery(router: AnyRouter): () => void {
     ? trimSlash(loaded.pathname)
     : undefined
   const shellFrame = loaded.searchParams.has(SHELL_PARAM)
+  // Outside the shell the mark shows in the address bar, and a bookmark or
+  // refresh of it would skip this page's reload. A shell frame's address is
+  // never shown, the shell drops the mark from what it relays, and WebKit
+  // refuses the frame an address change before the shell bridge is installed.
+  if (reloadedFor !== undefined && !shellFrame) dropReloadMark(router)
 
   const reload = () => {
     if (trimSlash(pageAddress(router).pathname) === reloadedFor) return
