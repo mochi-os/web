@@ -13,10 +13,16 @@ import { GeneralError } from './general-error'
  * A page whose code failed to load asks the user to check the connection (the
  * sentence GeneralError already shows for a network error), and Try again
  * loads the page again from the server: lazyRouteComponent keeps the failed
- * import, so the router's reset would only throw it again.
+ * import, so the router's reset would only throw it again. Any other error
+ * loads the routes in view again, data included.
  */
-export function RouteError({ error, reset }: ErrorComponentProps) {
+export function RouteError({ error }: ErrorComponentProps) {
   const router = useRouter()
+  // Loads the routes in view again. The boundary's own reset only draws the
+  // page again, and a route whose data failed keeps that error until it loads.
+  const retry = () => {
+    void router.invalidate()
+  }
   const { t } = useLingui()
   const failed = isLoadFailure(error)
   return (
@@ -27,7 +33,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
             ? new Error(t`Please check your internet connection and try again.`)
             : error
         }
-        reset={failed ? () => loadPageAgain(router, isInShell()) : reset}
+        reset={failed ? () => loadPageAgain(router, isInShell()) : retry}
         minimal
         mode='inline'
       />
