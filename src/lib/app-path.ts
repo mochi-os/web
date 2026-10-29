@@ -13,17 +13,22 @@ import {
 } from '@tanstack/react-router'
 import { getShellInitData } from './shell-bridge'
 
+// A server-injected meta tag. Only the head is searched: core splices the
+// routing metas right after <head>, and a whole-document search walks every
+// node on a miss, which is every lookup inside the shell's frame, where long
+// lists make several per row.
+function meta(name: string): Element | null {
+  return document.head?.querySelector(`meta[name="${name}"]`) ?? null
+}
+
 // Read a server-injected meta tag value (null when absent)
 function getMeta(name: string): string | null {
-  return (
-    document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ??
-    null
-  )
+  return meta(name)?.getAttribute('content') ?? null
 }
 
 // Check whether a server-injected meta tag is present
 function hasMeta(name: string): boolean {
-  return document.querySelector(`meta[name="${name}"]`) !== null
+  return meta(name) !== null
 }
 
 // Check if we're on a domain with entity routing (subdomain or custom domain)
