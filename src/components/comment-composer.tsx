@@ -1,14 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import { Paperclip, Send, Trash2, X } from 'lucide-react'
 import { ConfirmDialog } from './confirm-dialog'
@@ -375,15 +368,12 @@ export interface CommentBoxProps {
   textareaClassName?: string
   /** Longest body the server accepts, when the caller knows it. */
   maxLength?: number
-  /** The caller's own controls for the send, in the button row before attach. */
-  controls?: ReactNode
 }
 
 /**
  * The comment box: mention-aware textarea, staged attachments with drop,
  * reorder and per-file retry, upload progress, and the attach / cancel / send
- * row, led by any controls of the caller's. It owns its files and sending
- * state; the draft is the caller's.
+ * row. It owns its files and sending state; the draft is the caller's.
  */
 export function CommentBox({
   maxLength,
@@ -401,7 +391,6 @@ export function CommentBox({
   autoFocus,
   className,
   textareaClassName,
-  controls,
 }: CommentBoxProps) {
   const [files, setFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -521,7 +510,6 @@ export function CommentBox({
           }}
           className='hidden'
         />
-        {controls}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
