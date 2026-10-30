@@ -31,6 +31,15 @@ function hasMeta(name: string): boolean {
   return meta(name) !== null
 }
 
+/**
+ * Whether the server served this page to a request with no session
+ * (core's web_mark_anonymous). Such a page has no app token to fetch. A page
+ * from an older core carries no mark, and reads as not anonymous.
+ */
+export function isAnonymousPage(): boolean {
+  return getMeta('mochi:anonymous') === 'true'
+}
+
 // Check if we're on a domain with entity routing (subdomain or custom domain)
 export function isDomainEntityRouting(): boolean {
   if (hasMeta('mochi:domain')) return true

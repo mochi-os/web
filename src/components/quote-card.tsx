@@ -5,6 +5,7 @@
 // its text and its first picture, the whole card a link to the post. The
 // server reads the quote from the network when the post is written and keeps
 // it with the post, so subscribers see what the writer saw.
+import { AssetImage } from './asset-image'
 import { EntityAvatar } from './entity-avatar'
 import { providerName } from '../lib/provider-name'
 import { cn } from '../lib/utils'
@@ -73,7 +74,7 @@ export function QuoteCard({
         </p>
       )}
       {image && (
-        <img
+        <AssetImage
           src={image}
           alt=''
           className='mt-2 max-h-[250px] max-w-full rounded-lg object-cover'

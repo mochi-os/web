@@ -1,9 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { ThemeProvider } from './theme-provider'
+import { ThemeProvider, useTheme } from './theme-provider'
 
 // The server-rendered class is a RESOLUTION of "follow the system", not the
 // preference: reading it as the preference freezes a page loaded while the OS
@@ -104,5 +104,79 @@ describe('ThemeProvider initial appearance', () => {
     flipColorScheme(false)
     expect(root().classList.contains('dark')).toBe(true)
     expect(root().classList.contains('light')).toBe(false)
+  })
+})
+
+// The shell used to post one colour-theme message per style property it set,
+// 66 for one theme change, and the provider took a new object from each, so
+// the whole app re-rendered 66 times. A theme equal to the one held is kept.
+describe('ThemeProvider: a colour theme it already holds', () => {
+  let parent: { postMessage: () => void; readonly document: never }
+
+  beforeEach(() => {
+    parent = {
+      postMessage: () => {},
+      get document(): never {
+        throw new DOMException('Blocked', 'SecurityError')
+      },
+    }
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => parent,
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => window,
+    })
+  })
+
+  function fromShell(data: unknown) {
+    const event = new MessageEvent('message', {
+      data,
+      origin: window.location.origin,
+    })
+    Object.defineProperty(event, 'source', {
+      value: parent,
+      configurable: true,
+    })
+    window.dispatchEvent(event)
+  }
+
+  const THEME = { hue: '250', chroma: '0.1', background: '250' }
+
+  it('re-renders nothing for an equal theme, and once for a new one', async () => {
+    setColorScheme(false)
+    let renders = 0
+    function Consumer() {
+      useTheme()
+      renders++
+      return null
+    }
+    render(
+      <ThemeProvider>
+        <Consumer />
+      </ThemeProvider>
+    )
+    await act(async () => {
+      fromShell({ type: 'color-theme-change', colorTheme: THEME })
+    })
+    const settled = renders
+
+    await act(async () => {
+      for (let i = 0; i < 10; i++)
+        fromShell({ type: 'color-theme-change', colorTheme: { ...THEME } })
+    })
+    expect(renders).toBe(settled)
+
+    await act(async () => {
+      fromShell({
+        type: 'color-theme-change',
+        colorTheme: { ...THEME, hue: '140' },
+      })
+    })
+    expect(renders).toBe(settled + 1)
   })
 })

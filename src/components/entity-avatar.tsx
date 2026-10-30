@@ -7,6 +7,7 @@ import { useAccent } from '../hooks/use-accent'
 import { normalizeEntityUrl } from '../lib/app-path'
 import { cn } from '../lib/utils'
 import { authenticatedUrl } from '../lib/shell-bridge'
+import { useAssetImage } from '../lib/shell-image'
 import { FacelessAvatar } from './faceless-avatar'
 
 // Standard avatar tiers. Pick by intent, not pixels:
@@ -78,6 +79,8 @@ export function EntityAvatar({
     !accent && styleUrl ? normalizeEntityUrl(styleUrl) : undefined
   )
   const ring = accent ?? fetched
+  // Through the shell in its frame, from the browser's cache.
+  const image = useAssetImage(resolvedSrc)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -97,8 +100,11 @@ export function EntityAvatar({
     />
   ) : (
     <img
-      src={resolvedSrc}
-      alt={alt ?? (name ? t`Avatar for ${name}` : t`Avatar`)}
+      ref={image.ref}
+      src={image.src}
+      alt={
+        image.pending ? '' : (alt ?? (name ? t`Avatar for ${name}` : t`Avatar`))
+      }
       width={px}
       height={px}
       onError={() => setFailed(true)}

@@ -30,6 +30,7 @@ import { useDragReorder } from '../hooks/use-drag-reorder'
 import { useFormat } from '../hooks/use-format'
 import { getFileIcon, isMedia } from '../lib/attachment-utils'
 import { cn } from '../lib/utils'
+import { AssetImage } from './asset-image'
 
 /**
  * Longest caption the composer stages. Matches the bound the attachment library
@@ -332,7 +333,7 @@ export function AttachmentComposer({
                     draggable={false}
                   />
                 ) : item.previewUrl ? (
-                  <img
+                  <AssetImage
                     src={item.previewUrl}
                     alt={item.name}
                     draggable={false}
@@ -419,7 +420,7 @@ export function AttachmentCaptionDialog({
                   className='max-h-[40vh] max-w-full object-contain'
                 />
               ) : (
-                <img
+                <AssetImage
                   src={item.previewUrl}
                   alt={item.name}
                   className='max-h-[40vh] max-w-full object-contain'

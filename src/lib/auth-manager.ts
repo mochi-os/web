@@ -105,6 +105,17 @@ class AuthManager {
     }, LOGOUT_REDIRECT_FAILSAFE_MS)
   }
 
+  /**
+   * Take the identity the shell already holds (from /_/shell) instead of
+   * asking /_/identity: the same id and name, and the profile cookie
+   * refreshed as loadIdentity refreshes it.
+   */
+  public applyIdentity(identity: { id: string; name: string }): void {
+    const store = useAuthStore.getState()
+    store.setProfile(identity.id, identity.name)
+    mergeProfileCookie({ name: identity.name || null })
+  }
+
   public async loadIdentity(force = false): Promise<void> {
     const store = useAuthStore.getState()
     const { token, name } = store

@@ -335,6 +335,8 @@ export {
   shellSetAvatar,
   onShellMessage,
   getShellInitData,
+  shellIdentity,
+  isOwnResource,
   safeCookieGet,
   safeCookieSet,
   installShellLinkInterceptor,
@@ -354,6 +356,7 @@ export {
 export type {
   ColorTheme,
   LocalePreferences,
+  ShellIdentity,
   ShellMicResult,
   ShellMicError,
 } from './lib/shell-bridge'
@@ -448,3 +451,9 @@ export * from './features/subscriptions'
 export * from './features/document/document-page'
 
 // Custom icons
+export { AssetImage, type AssetImageProps } from './components/asset-image'
+export {
+  carriedImage,
+  useAssetImage,
+  type AssetImageState,
+} from './lib/shell-image'

@@ -319,3 +319,61 @@ export const shellAdapter: AxiosAdapter = (config) => {
     }
   })
 }
+
+/** What the shell answered for a request it carried. */
+export type ShellReply = {
+  status: number
+  headers: Array<[string, string]>
+  body: ArrayBuffer
+}
+
+/**
+ * A GET carried by the shell, outside axios: for bytes the page shows rather
+ * than data it reads, such as an image. Null when the shell will not carry it
+ * (a shell that predates the bridge, a URL outside this app, a refusal, a
+ * redirect or a network failure), and the caller then loads it itself.
+ */
+export function shellGet(
+  url: string,
+  headers: Array<[string, string]>,
+  options: { revalidate?: boolean } = {}
+): Promise<ShellReply | null> {
+  if (!isInShell() || getShellInitData()?.fetch !== true)
+    return Promise.resolve(null)
+  listen()
+  return new Promise((resolve) => {
+    const id = identifier()
+    waiting.set(id, (reply) => {
+      if (
+        reply.refused ||
+        reply.redirect ||
+        reply.failed ||
+        typeof reply.status !== 'number'
+      ) {
+        resolve(null)
+        return
+      }
+      resolve({
+        status: reply.status,
+        headers: reply.headers ?? [],
+        body: reply.body ?? new ArrayBuffer(0),
+      })
+    })
+    try {
+      window.parent.postMessage(
+        {
+          type: 'fetch',
+          id,
+          url,
+          method: 'GET',
+          headers,
+          ...(options.revalidate ? { cache: 'no-cache' } : {}),
+        },
+        shellOrigin()
+      )
+    } catch {
+      waiting.delete(id)
+      resolve(null)
+    }
+  })
+}

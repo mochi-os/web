@@ -23,6 +23,7 @@ import {
 } from 'react-zoom-pan-pinch'
 import { cn } from '../../lib/utils'
 import { shellDownload } from '../../lib/shell-bridge'
+import { AssetImage } from '../asset-image'
 import { toast } from '../../lib/toast-utils'
 import { useShellStorage } from '../../hooks/use-shell-storage'
 import { useFormat } from '../../hooks/use-format'
@@ -421,7 +422,7 @@ export function ImageLightbox({
                       justifyContent: 'center',
                     }}
                   >
-                    <img
+                    <AssetImage
                       ref={imgRef}
                       src={currentMedia.url}
                       alt={currentMedia.caption || currentMedia.name}

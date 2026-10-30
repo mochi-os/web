@@ -6,6 +6,7 @@ import { CloudOff, ImageOff } from 'lucide-react'
 import { useLingui } from '@lingui/react/macro'
 import { classifyAttachmentFailure } from '../lib/attachment-utils'
 import { cn } from '../lib/utils'
+import { AssetImage } from './asset-image'
 
 export interface AttachmentImageProps {
   src: string
@@ -64,7 +65,7 @@ export function AttachmentImage({
   }
 
   return (
-    <img
+    <AssetImage
       key={attempt}
       src={src}
       alt={alt}

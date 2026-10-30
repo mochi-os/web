@@ -7,6 +7,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { Captions, GripVertical, Plus, X } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
+import { AssetImage } from '../asset-image'
 import type { UploadSlice } from '../../lib/upload-slices'
 import { Button } from './button'
 
@@ -358,7 +359,7 @@ function AttachmentTile({
             {/* Blurred, over-scaled copy of the same image behind the real one,
              * so `object-contain` letterboxing reads as a backdrop rather than
              * grey bands. The browser already has this bitmap. */}
-            <img
+            <AssetImage
               src={previewUrl}
               alt=''
               aria-hidden
@@ -368,7 +369,7 @@ function AttachmentTile({
             {/* Absolutely positioned, not merely sized: an in-flow image keeps its
              * intrinsic height as a minimum, so a tall screenshot forces the square
              * open. `object-contain` to avoid centre-cropping. */}
-            <img
+            <AssetImage
               src={previewUrl}
               alt={name}
               draggable={false}

@@ -118,6 +118,28 @@ type ShellInitData = {
    * preference, else the request's Accept-Language, else "en".
    */
   language?: string | null
+  /**
+   * The signed-in identity, so the page need not ask /_/identity. Absent from
+   * an older shell or core, and the page then asks as before.
+   */
+  identity?: ShellIdentity | null
+}
+
+/** Who is signed in, as the shell reports it from /_/shell. */
+export type ShellIdentity = {
+  id: string
+  name: string
+}
+
+/** The identity an init message carries, or null when it has none usable. */
+export function shellIdentity(value: unknown): ShellIdentity | null {
+  if (!value || typeof value !== 'object') return null
+  const identity = value as { id?: unknown; name?: unknown }
+  if (typeof identity.id !== 'string' || !identity.id) return null
+  return {
+    id: identity.id,
+    name: typeof identity.name === 'string' ? identity.name : '',
+  }
 }
 
 type ShellMessage = {
@@ -1076,9 +1098,7 @@ export function authenticatedUrl(url: string): string {
   // origin, so an author-controlled URL naming another app's action - a
   // markdown image source, say - would otherwise carry this reader's token
   // to it. Only this app's own route gets the token.
-  const prefix = ownResourcePrefix()
-  if (!prefix || !new URL(url, document.baseURI).pathname.startsWith(prefix))
-    return url
+  if (!isOwnResource(url)) return url
 
   // The asset token in preference to the app token: this one ends up in the
   // DOM, in a copied image address and in anything that keeps a URL, so it is
@@ -1090,6 +1110,16 @@ export function authenticatedUrl(url: string): string {
   const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}token=${encodeURIComponent(rawToken)}`
+}
+
+/**
+ * Whether a URL names a resource of this app on this origin: the only URLs
+ * that may carry this app's token, in a URL or in a header.
+ */
+export function isOwnResource(url: string): boolean {
+  if (!isSameOriginResource(url)) return false
+  const prefix = ownResourcePrefix()
+  return !!prefix && new URL(url, document.baseURI).pathname.startsWith(prefix)
 }
 
 // The path prefix this document's own resources live under: the whole
