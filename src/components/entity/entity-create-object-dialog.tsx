@@ -42,6 +42,7 @@ import { mergePendingFiles } from '../../lib/composer-files'
 import { moveItem } from '../../lib/reorder'
 import { rankBetween, rankCompare } from '../../lib/rank'
 import { EntityFieldEditor } from './entity-field-editor'
+import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 import type { EntityDesign, EntityObject } from '../../types/entity-object'
 import {
   entityObjectTitle,
@@ -177,13 +178,9 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   }, [allowedClasses, design.classes])
 
   // Load objects for parent selection (shares cache with design page)
-  const { data: objectListData } = useQuery({
-    queryKey: ['objects', containerId],
-    queryFn: async () => {
-      const response = await listObjects(containerId)
-      return response.data
-    },
-  })
+  const { data: objectListData } = useQuery(
+    entityObjectsQuery(listObjects, containerId)
+  )
   const objectsData = objectListData?.objects
 
   // Filter out classes that cannot be created. One the hierarchy gives no
@@ -324,14 +321,9 @@ export function EntityCreateObjectDialog<TObject extends EntityObject>({
   }, [selectedClass, defaultFields, design.fields, design.options])
 
   // Fetch design members for the owner picker
-  const { data: peopleData } = useQuery({
-    queryKey: ['people', containerId],
-    queryFn: async () => {
-      const response = await listPeople(containerId)
-      return response.data.people
-    },
-    staleTime: 60000,
-  })
+  const { data: peopleData } = useQuery(
+    entityPeopleQuery(listPeople, containerId)
+  )
 
   // Get fields and options for selected type
   const classFields = useMemo(() => {

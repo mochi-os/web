@@ -28,6 +28,11 @@ interface EntityLayoutProps<Row extends EntityListRow> {
   isLoading: boolean
   error?: string | null
   refresh: () => void | Promise<unknown>
+  /**
+   * The first load, which joins one the route loader already started. The
+   * layout uses refresh when it is not given.
+   */
+  load?: () => void | Promise<unknown>
   icon: LucideIcon
   labels: EntityLayoutLabels
   onCreate: () => void
@@ -42,15 +47,17 @@ export function EntityLayout<Row extends EntityListRow>({
   isLoading,
   error,
   refresh,
+  load,
   icon,
   labels,
   onCreate,
   viewUrl,
   children,
 }: EntityLayoutProps<Row>) {
+  const first = load ?? refresh
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    void first()
+  }, [first])
 
   // Destructured so the memo depends on the individual strings rather than the
   // labels object, which an app builds inline and would rebuild every render.

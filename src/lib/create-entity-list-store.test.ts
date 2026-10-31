@@ -89,3 +89,79 @@ describe('createEntityListStore', () => {
     expect(state.error).toBeNull()
   })
 })
+
+// The route loader starts the first load beside the page's own requests, and
+// the sidebar's mount must join it rather than send a second.
+describe('createEntityListStore first load', () => {
+  beforeEach(() => {
+    useStore.setState({
+      rows: [],
+      isLoading: false,
+      error: null,
+      started: false,
+    })
+    vi.clearAllMocks()
+  })
+
+  function deferred() {
+    let resolve!: (value: unknown) => void
+    const promise = new Promise((r) => {
+      resolve = r
+    })
+    return { promise, resolve }
+  }
+
+  it('joins a load already in flight', async () => {
+    const answer = deferred()
+    list.mockReturnValue(answer.promise)
+    const first = useStore.getState().load()
+    const second = useStore.getState().load()
+    // The second settles with the first, once the list is in.
+    let settled = false
+    void second.then(() => {
+      settled = true
+    })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    answer.resolve({ data: { entities: [{ id: '1', name: 'One' }] } })
+    await second
+    expect(useStore.getState().rows).toEqual([{ id: '1', name: 'One' }])
+    await first
+    expect(list).toHaveBeenCalledTimes(1)
+  })
+
+  it('still asks again for a refresh while a load is in flight', async () => {
+    // A refresh follows a change, which the load in flight may predate.
+    const answer = deferred()
+    list.mockReturnValueOnce(answer.promise)
+    list.mockResolvedValueOnce({ data: { entities: [] } })
+    const first = useStore.getState().load()
+    const again = useStore.getState().refresh()
+    answer.resolve({ data: { entities: [] } })
+    await Promise.all([first, again])
+    expect(list).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not ask again once the page has loaded it', async () => {
+    // The sidebar mounts after the route's load has answered.
+    list.mockResolvedValue({ data: { entities: [] } })
+    await useStore.getState().load()
+    await useStore.getState().load()
+    expect(list).toHaveBeenCalledTimes(1)
+  })
+
+  it('still asks again on a refresh after the page has loaded it', async () => {
+    list.mockResolvedValue({ data: { entities: [] } })
+    await useStore.getState().load()
+    await useStore.getState().refresh()
+    expect(list).toHaveBeenCalledTimes(2)
+  })
+
+  it('says whether a load has been asked for', async () => {
+    useStore.setState({ started: false })
+    expect(useStore.getState().started).toBe(false)
+    list.mockResolvedValue({ data: { entities: [] } })
+    await useStore.getState().load()
+    expect(useStore.getState().started).toBe(true)
+  })
+})

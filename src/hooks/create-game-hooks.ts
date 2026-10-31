@@ -119,6 +119,21 @@ export function createGameHooks<A extends GameApiShape>(
       ...options,
     })
 
+  /**
+   * A game's chat key for the websocket, read through the detail query. The
+   * page subscribes as soon as it knows the game, often before the detail has
+   * answered, and this joins that request rather than sending a second view,
+   * which would also clear the game's notifications on the server again. The
+   * key never changes, so a held answer of any age will do.
+   */
+  const gameKey = async (queryClient: QueryClient, gameId: string) => {
+    const detail = (await queryClient.ensureQueryData({
+      queryKey: gameQueryKeys.detail(gameId),
+      queryFn: () => gamesApi.detail(gameId) as Promise<ViewResponse>,
+    })) as { game?: { key?: string } } | undefined
+    return detail?.game?.key
+  }
+
   const useGamesQuery = (
     options?: Pick<
       UseQueryOptions<
@@ -351,6 +366,7 @@ export function createGameHooks<A extends GameApiShape>(
 
   const base = {
     gameKeys: gameQueryKeys,
+    gameKey,
     useGameDetailQuery,
     useGamesQuery,
     useInfiniteMessagesQuery,

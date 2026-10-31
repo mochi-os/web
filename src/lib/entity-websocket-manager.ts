@@ -44,6 +44,9 @@ class EntityWebsocketManager {
   private connections = new Map<string, WebSocket>()
   private reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private subscribers = new Map<string, Set<EntityWebsocketListener>>()
+  // Keys whose socket has opened once for the current subscribers: a later
+  // open is a reconnect, and what was sent while it was down never arrived.
+  private opened = new Set<string>()
   private connectionAttempts = new Map<string, boolean>()
   private reconnectFailures = new Map<string, number>()
   // Keys whose reconnect was deferred because the browser reported offline.
@@ -65,6 +68,7 @@ class EntityWebsocketManager {
         subs.delete(callback)
         if (subs.size === 0) {
           this.subscribers.delete(key)
+          this.opened.delete(key)
           this.closeConnection(key)
         }
       }
@@ -111,6 +115,15 @@ class EntityWebsocketManager {
         // A connection that lasted is not a failure: reset so the next drop
         // retries promptly instead of inheriting an old backoff.
         this.reconnectFailures.delete(key)
+        // Tell the subscribers of a reconnect, so they can ask again for
+        // whatever the missed events would have refreshed.
+        if (this.opened.has(key)) {
+          this.subscribers
+            .get(key)
+            ?.forEach((callback) => callback({ type: 'socket/reopen' }))
+        } else {
+          this.opened.add(key)
+        }
       }
 
       ws.onmessage = (event) => {

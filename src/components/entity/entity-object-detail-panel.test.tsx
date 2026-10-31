@@ -5,11 +5,13 @@
 // tab it shows, what it puts in the header, and whether a refused call is
 // reported; what the comment list and field editor do is their own tests.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { QueryClient } from '@tanstack/react-query'
 import {
   render,
   screen,
   waitFor,
   fireEvent,
+  renderWithClient,
   createMockEntityDesign,
   createMockEntityObject,
 } from './entity-test-utils'
@@ -19,6 +21,7 @@ import {
   type EntityObjectDetailPanelApi,
 } from './entity-object-detail-panel'
 import type { EntityObject } from '../../types/entity-object'
+import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 import { GitMerge } from 'lucide-react'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
@@ -124,6 +127,33 @@ beforeEach(() => {
   vi.clearAllMocks()
   toastError.mockClear()
   api = makeApi()
+})
+
+describe('EntityObjectDetailPanel lists', () => {
+  it('reuses the item list and people the page already holds', async () => {
+    // Opening an item used to download the whole item list again: the parent
+    // picker observed it with the shared client's staleTime 0.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+    })
+    await client.prefetchQuery(entityObjectsQuery(api.listObjects, 'c-1'))
+    await client.prefetchQuery(entityPeopleQuery(api.listPeople, 'c-1'))
+    renderWithClient(
+      <EntityObjectDetailPanel
+        containerId='c-1'
+        objectId='obj-1'
+        design={design}
+        access='owner'
+        api={api}
+        onClose={() => {}}
+      />,
+      client
+    )
+    await waitFor(() => expect(api.getObject).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(api.listObjects).toHaveBeenCalledTimes(1)
+    expect(api.listPeople).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('EntityObjectDetailPanel failure reporting', () => {

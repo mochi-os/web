@@ -9,6 +9,13 @@ import {
   type EntityWebsocketEvent,
 } from '../lib/entity-websocket-manager'
 
+/**
+ * How recently a list must have been fetched for the page that subscribes to
+ * take it as current: long enough to cover the route loader's request and
+ * the page mounting, in milliseconds.
+ */
+const ENTITY_LIST_JOIN = 5000
+
 interface UseEntityWebsocketOptions {
   /**
    * The app's entity noun, used in the server event type (`<entity>/update`)
@@ -45,10 +52,32 @@ export function useEntityWebsocket({
     if (!authReady) return
     if (!fingerprint) return
 
+    const invalidate = (queryKey: unknown[]) =>
+      void queryClient.invalidateQueries({ queryKey })
+
+    // The item and people lists are held for a while (entity-queries.ts), and
+    // whatever changed while this page was not listening - away on another
+    // page, or before its socket opened - reached no handler. So they are
+    // asked for again here, unless this navigation has only just fetched
+    // them, and again after a reconnect.
+    for (const queryKey of [
+      ['objects', fingerprint],
+      ['people', fingerprint],
+    ]) {
+      const updated = queryClient.getQueryState(queryKey)?.dataUpdatedAt ?? 0
+      if (updated && Date.now() - updated > ENTITY_LIST_JOIN) {
+        invalidate(queryKey)
+      }
+    }
+
     const handleMessage = (data: EntityWebsocketEvent) => {
       const pid = fingerprint
-      const invalidate = (queryKey: unknown[]) =>
-        void queryClient.invalidateQueries({ queryKey })
+
+      if (data.type === 'socket/reopen') {
+        invalidate(['objects', pid])
+        invalidate(['people', pid])
+        return
+      }
 
       // Handled before the switch: an entity noun of 'object' would otherwise
       // produce a `case` that collides with 'object/update' below, and the

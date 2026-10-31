@@ -12,7 +12,17 @@ export interface EntityListStoreState<TRow> {
   rows: TRow[]
   isLoading: boolean
   error: string | null
+  /** Whether a load has been asked for since the page opened. */
+  started: boolean
+  /** Loads the list again, whatever is in flight: for after a change. */
   refresh: () => Promise<void>
+  /**
+   * Loads the list once for the page: the route loader starts it beside the
+   * page's own requests, and the sidebar, which mounts once those have
+   * answered, joins it or finds it done rather than asking again. Later
+   * changes ask through refresh.
+   */
+  load: () => Promise<void>
 }
 
 export interface EntityListStoreConfig {
@@ -28,13 +38,10 @@ export function createEntityListStore<TRow>({
   listKey,
   errorMessage,
 }: EntityListStoreConfig) {
-  return create<EntityListStoreState<TRow>>()((set) => ({
-    rows: [],
-    isLoading: false,
-    error: null,
+  let pending: Promise<void> | null = null
 
-    refresh: async () => {
-      set({ isLoading: true, error: null })
+  return create<EntityListStoreState<TRow>>()((set, get) => {
+    const ask = async () => {
       try {
         const response = await list()
         const rows = (response.data?.[listKey] as TRow[]) ?? []
@@ -45,6 +52,25 @@ export function createEntityListStore<TRow>({
           isLoading: false,
         })
       }
-    },
-  }))
+    }
+
+    return {
+      rows: [],
+      isLoading: false,
+      error: null,
+      started: false,
+
+      refresh: () => {
+        set({ isLoading: true, error: null, started: true })
+        const request: Promise<void> = ask().finally(() => {
+          if (pending === request) pending = null
+        })
+        pending = request
+        return request
+      },
+
+      load: () =>
+        pending ?? (get().started ? Promise.resolve() : get().refresh()),
+    }
+  })
 }

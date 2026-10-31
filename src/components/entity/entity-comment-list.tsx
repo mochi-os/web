@@ -22,6 +22,7 @@ import { getAppPath } from '../../lib/app-path'
 import { addressByAuthor, findCommentTextInTree } from '../../lib/comment-tree'
 import { CommentBox, useDiscardGuard } from '../comment-composer'
 import { EntityCommentThread } from './entity-comment-thread'
+import { entityPeopleQuery } from './entity-queries'
 import type { EntityComment } from '../../types/entity-object'
 
 export interface EntityCommentListProps {
@@ -104,14 +105,9 @@ export function EntityCommentList({
     },
   })
 
-  const { data: peopleData } = useQuery({
-    queryKey: ['people', containerId],
-    queryFn: async () => {
-      const response = await listPeople(containerId)
-      return response.data.people
-    },
-    staleTime: 60000,
-  })
+  const { data: peopleData } = useQuery(
+    entityPeopleQuery(listPeople, containerId)
+  )
   const people = peopleData ?? []
 
   // One avatar address per person across the whole thread: the route names a
