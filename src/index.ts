@@ -293,6 +293,7 @@ export {
 export * from './hooks/use-pending-items'
 export * from './hooks/use-merge-on-scroll-top'
 export * from './hooks/use-list-auto-animate'
+export * from './hooks/use-progressive'
 export * from './hooks/use-drag-reorder'
 export * from './hooks/use-persisted-reorder'
 export * from './hooks/use-format'

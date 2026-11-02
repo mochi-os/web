@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef, type CSSProperties, type DragEvent } from 'react'
+import { memo, useRef, type CSSProperties, type DragEvent } from 'react'
 import {
   Calendar,
   CheckSquare,
@@ -73,9 +73,10 @@ export interface TreeRowProps {
    * move the tree refuses. Defaults to true.
    */
   canDrag?: boolean
-  onToggleExpand: () => void
-  onClick: () => void
-  onDragStart: () => void
+  /** Each is called with the row's object id, so one function serves every row. */
+  onToggleExpand: (objectId: string) => void
+  onClick: (objectId: string) => void
+  onDragStart: (objectId: string) => void
   onDragOver: (objectId: string, position: 'before' | 'after' | 'on') => void
   onDragEnd: () => void
 }
@@ -128,7 +129,11 @@ function columnWidthClass(field: TreeRowField, isTitle: boolean): string {
   }
 }
 
-export function TreeRow({
+/**
+ * One row of the tree table. Memoised: a list of a thousand rows draws again
+ * only the rows whose props changed, given callbacks that do not change.
+ */
+export const TreeRow = memo(function TreeRow({
   object,
   depth,
   hasChildren,
@@ -369,16 +374,16 @@ export function TreeRow({
           'bg-primary/10 hover:bg-primary/10 after:ring-1 after:ring-primary/20',
         isDragOver && 'bg-primary/20 after:ring-2 after:ring-primary/50'
       )}
-      onClick={onClick}
+      onClick={() => onClick(object.id)}
       draggable={canDrag}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move'
         e.dataTransfer.setData('text/plain', object.id)
-        onDragStart()
+        onDragStart(object.id)
       }}
       onDragOver={handleDragOver}
-      onDrop={onDragEnd}
-      onDragEnd={onDragEnd}
+      onDrop={() => onDragEnd()}
+      onDragEnd={() => onDragEnd()}
     >
       {isDragBefore ? (
         <td
@@ -425,7 +430,7 @@ export function TreeRow({
                   className='size-5 flex items-center justify-center hover:bg-hover transition-colors rounded'
                   onClick={(e) => {
                     e.stopPropagation()
-                    onToggleExpand()
+                    onToggleExpand(object.id)
                   }}
                 >
                   {isExpanded ? (
@@ -501,4 +506,4 @@ export function TreeRow({
       ) : null}
     </tr>
   )
-}
+})

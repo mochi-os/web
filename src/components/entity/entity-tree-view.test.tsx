@@ -7,10 +7,39 @@ import {
   render,
   screen,
   fireEvent,
+  waitFor,
   createMockEntityDesign,
   createMockEntityObject,
 } from './entity-test-utils'
 import { EntityTreeView } from './entity-tree-view'
+
+// Each row reads the format once a render: counting the reads counts the rows
+// drawn.
+const drawing = vi.hoisted(() => ({ reads: 0 }))
+vi.mock('../../hooks/use-format', async (original) => {
+  const actual = await original<typeof import('../../hooks/use-format')>()
+  return {
+    ...actual,
+    useFormat: () => {
+      drawing.reads++
+      return actual.useFormat()
+    },
+  }
+})
+
+const rows = () => document.querySelectorAll('tr[data-card-id]')
+
+const titled = (count: number, status?: (index: number) => string) =>
+  Array.from({ length: count }, (_, index) =>
+    createMockEntityObject({
+      id: `o${index}`,
+      rank: String(index).padStart(4, '0'),
+      values: {
+        title: `Row ${index}`,
+        ...(status ? { status: status(index) } : {}),
+      },
+    })
+  )
 
 const row = (id: string) =>
   document.querySelector(`tr[data-card-id="${id}"]`) as HTMLElement
@@ -136,5 +165,95 @@ describe('EntityTreeView', () => {
     await screen.findByText('Loose')
     expect(screen.getByText('[not set]')).toBeTruthy()
     expect(screen.queryByText('No status')).toBeNull()
+  })
+
+  it('draws the first hundred rows of a long list at once and the rest after', async () => {
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={titled(250)}
+        peopleMap={{}}
+        viewFields='title'
+        onCardClick={vi.fn()}
+      />
+    )
+    expect(rows()).toHaveLength(100)
+    expect(rows()[0].getAttribute('data-card-id')).toBe('o0')
+    await waitFor(() => expect(rows()).toHaveLength(250))
+    expect(rows()[249].getAttribute('data-card-id')).toBe('o249')
+  })
+
+  it('draws a section once the rows before it are drawn', async () => {
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={titled(250, (index) => (index < 150 ? 'todo' : 'done'))}
+        peopleMap={{}}
+        viewFields='title,status'
+        statusField='status'
+        onCardClick={vi.fn()}
+      />
+    )
+    expect(rows()).toHaveLength(100)
+    expect(screen.getByText('To Do')).toBeTruthy()
+    expect(screen.queryByText('Done')).toBeNull()
+    await waitFor(() => expect(rows()).toHaveLength(250))
+    expect(screen.getByText('Done')).toBeTruthy()
+  })
+
+  it('draws again only the rows a selection changes, whatever the page passes each time', async () => {
+    const design = createMockEntityDesign()
+    // Grouped by status, as a CRM's pipeline lists are, so the row fields
+    // are the view's fields less the one grouped by.
+    const objects = titled(60, () => 'todo')
+    const people = {}
+    // The page makes a new click handler on every render, as the objects
+    // page does.
+    const view = (selected?: string) => (
+      <EntityTreeView
+        design={design}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={people}
+        viewFields='title,status'
+        statusField='status'
+        selectedObjectId={selected}
+        onCardClick={() => {}}
+      />
+    )
+    const { rerender } = render(view())
+    await waitFor(() => expect(rows()).toHaveLength(60))
+    const before = drawing.reads
+    rerender(view('o3'))
+    expect(drawing.reads - before).toBeLessThanOrEqual(2)
+    expect(rows()[3].className).toContain('bg-primary/10')
+  })
+
+  it('opens the row clicked, through the handler the page passed last', async () => {
+    const design = createMockEntityDesign()
+    const objects = titled(3)
+    const first = vi.fn()
+    const second = vi.fn()
+    const view = (click: (object: unknown) => void) => (
+      <EntityTreeView
+        design={design}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        onCardClick={click}
+      />
+    )
+    const { rerender } = render(view(first))
+    rerender(view(second))
+    fireEvent.click(rows()[1])
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledWith(objects[1])
   })
 })
