@@ -11,6 +11,11 @@ describe('providerName', () => {
     expect(providerName('stripe-customer')).toBe('Stripe')
   })
 
+  it('names a hosted fediverse account by its protocol, and XMPP in capitals', () => {
+    expect(providerName('fediverse')).toBe('ActivityPub')
+    expect(providerName('xmpp')).toBe('XMPP')
+  })
+
   it('capitalises an unknown key rather than showing the raw slug', () => {
     expect(providerName('mastodon')).toBe('Mastodon')
   })

@@ -4,11 +4,13 @@
 // The five render slots are stubbed. What belongs to this page is which slot it
 // chooses and what it hands it; what the board and tree do is the apps' tests.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { QueryClient } from '@tanstack/react-query'
 import {
   render,
   screen,
   waitFor,
   fireEvent,
+  renderWithClient,
   createMockEntityDesign,
   createMockEntityObjects,
   createMockEntityView,
@@ -23,6 +25,7 @@ import type { EntityObject, EntityObjectCopy } from '../../types/entity-object'
 import { FileText } from 'lucide-react'
 import { SearchProvider } from '../../context/search-provider'
 import { toast } from '../../lib/toast-utils'
+import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 
 const invalidate = vi.fn()
 
@@ -71,7 +74,8 @@ const container: EntityObjectsPageContainer = {
 
 function renderPage(
   overrides: Partial<Parameters<typeof EntityObjectsPage>[0]> = {},
-  objects: EntityObject[] = createMockEntityObjects(3)
+  objects: EntityObject[] = createMockEntityObjects(3),
+  client?: QueryClient
 ) {
   const props = {
     design: createMockEntityDesign(),
@@ -98,11 +102,18 @@ function renderPage(
     ...overrides,
   } as Parameters<typeof EntityObjectsPage>[0]
   return {
-    ...render(
-      <SearchProvider>
-        <EntityObjectsPage {...props} />
-      </SearchProvider>
-    ),
+    ...(client
+      ? renderWithClient(
+          <SearchProvider>
+            <EntityObjectsPage {...props} />
+          </SearchProvider>,
+          client
+        )
+      : render(
+          <SearchProvider>
+            <EntityObjectsPage {...props} />
+          </SearchProvider>
+        )),
     props,
   }
 }
@@ -570,5 +581,48 @@ describe('EntityObjectsPage', () => {
     expect(plain.copied).toBeUndefined()
     expect(plain.defaultParent).toBeUndefined()
     expect(plain.allowedClasses).toEqual(['bug'])
+  })
+})
+
+describe('EntityObjectsPage lists the route loader started', () => {
+  it('reuses them on mount rather than asking again', async () => {
+    // The projects and crm loaders start both lists beside the details; with
+    // the shared client's staleTime 0 the page would download them again.
+    const api = makeApi(createMockEntityObjects(3))
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+    })
+    await client.prefetchQuery(entityObjectsQuery(api.listObjects, 'c1'))
+    await client.prefetchQuery(entityPeopleQuery(api.listPeople, 'c1'))
+    renderPage({ api }, undefined, client)
+    await screen.findByTestId('board')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(api.listObjects).toHaveBeenCalledTimes(1)
+    expect(api.listPeople).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('EntityObjectsPage filling', () => {
+  it('asks for the items again once the container has filled', async () => {
+    // The list held while it filled was fetched before the sync landed.
+    const api = makeApi([])
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const view = renderPage(
+      { api, container: { ...container, populated: 0 } },
+      undefined,
+      client
+    )
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalledTimes(1))
+    view.rerender(
+      <SearchProvider>
+        <EntityObjectsPage
+          {...view.props}
+          container={{ ...container, populated: 1 }}
+        />
+      </SearchProvider>
+    )
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalledTimes(2))
   })
 })

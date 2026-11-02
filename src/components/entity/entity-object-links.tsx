@@ -23,6 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { getErrorMessage } from '../../lib/handle-server-error'
 import { toast } from '../../lib/toast-utils'
+import { entityObjectsQuery } from './entity-queries'
 import type {
   EntityClass,
   EntityObject,
@@ -99,13 +100,9 @@ export function EntityObjectLinks<TObject extends EntityObject>({
     [classes, prefix]
   )
 
-  const { data: objectListData } = useQuery({
-    queryKey: ['objects', containerId],
-    queryFn: async () => {
-      const response = await listObjects(containerId)
-      return response.data
-    },
-  })
+  const { data: objectListData } = useQuery(
+    entityObjectsQuery(listObjects, containerId)
+  )
 
   const createLinkMutation = useMutation({
     mutationFn: async ({

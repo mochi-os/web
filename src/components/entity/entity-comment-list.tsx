@@ -4,7 +4,7 @@
 // Threaded comment list and composer for the object/class/field apps. The four
 // API calls arrive as props; the module behind them is per-app.
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { MessageSquare } from 'lucide-react'
@@ -18,9 +18,11 @@ import { useAttachmentError } from '../../hooks/use-attachment-error'
 import { useAuthStore } from '../../stores/auth-store'
 import { useUploadProgress } from '../../hooks/use-upload-progress'
 import { textUnchanged } from '../../lib/change-detection'
-import { findCommentTextInTree } from '../../lib/comment-tree'
+import { getAppPath } from '../../lib/app-path'
+import { addressByAuthor, findCommentTextInTree } from '../../lib/comment-tree'
 import { CommentBox, useDiscardGuard } from '../comment-composer'
 import { EntityCommentThread } from './entity-comment-thread'
+import { entityPeopleQuery } from './entity-queries'
 import type { EntityComment } from '../../types/entity-object'
 
 export interface EntityCommentListProps {
@@ -103,15 +105,23 @@ export function EntityCommentList({
     },
   })
 
-  const { data: peopleData } = useQuery({
-    queryKey: ['people', containerId],
-    queryFn: async () => {
-      const response = await listPeople(containerId)
-      return response.data.people
-    },
-    staleTime: 60000,
-  })
+  const { data: peopleData } = useQuery(
+    entityPeopleQuery(listPeople, containerId)
+  )
   const people = peopleData ?? []
+
+  // One avatar address per person across the whole thread: the route names a
+  // comment, and any comment on the item answers with its author's picture.
+  const avatars = useMemo(
+    () =>
+      addressByAuthor(data?.comments ?? [], {
+        getAuthor: (comment) => comment.author,
+        getAddress: (comment) =>
+          `${getAppPath()}/${containerId}/-/comment/${comment.id}/asset`,
+        getChildren: (comment) => comment.children,
+      }),
+    [data, containerId]
+  )
 
   const createMutation = useMutation({
     mutationFn: async ({
@@ -345,6 +355,7 @@ export function EntityCommentList({
               uploadProgress={uploadProgress}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              avatars={avatars}
             />
           ))}
         </div>

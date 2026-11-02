@@ -4,6 +4,7 @@
 import { t } from '@lingui/core/macro'
 import { useState } from 'react'
 import { cn } from '../lib/utils'
+import { AssetImage } from './asset-image'
 
 type EntityBannerProps = {
   src?: string | null
@@ -25,7 +26,7 @@ export function EntityBanner({
   }
 
   return (
-    <img
+    <AssetImage
       src={src}
       alt={alt}
       onError={() => setErrored(true)}

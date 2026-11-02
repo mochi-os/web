@@ -52,6 +52,6 @@ describe('QuoteCard', () => {
     const card = screen.getByTestId('quote-card')
     expect(card.tagName).toBe('DIV')
     expect(card.querySelector('img[src^="javascript"]')).toBeNull()
-    expect(screen.getByText('Fediverse')).toBeTruthy()
+    expect(screen.getByText('ActivityPub')).toBeTruthy()
   })
 })

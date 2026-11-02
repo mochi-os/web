@@ -40,6 +40,27 @@ function AllProviders({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Renders under a given query client, for a test that fills its cache first,
+ * as a route loader would, and then mounts what reads it.
+ */
+export function renderWithClient(
+  ui: ReactElement,
+  queryClient: QueryClient,
+  options?: Omit<RenderOptions, 'wrapper'>
+) {
+  function Providers({ children }: { children: React.ReactNode }) {
+    return (
+      <I18nProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </I18nProvider>
+    )
+  }
+  return render(ui, { wrapper: Providers, ...options })
+}
+
 export function renderWithProviders(
   ui: ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>

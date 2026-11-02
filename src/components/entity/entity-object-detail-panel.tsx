@@ -52,6 +52,7 @@ import { canWrite, canComment } from '../../lib/entity-access'
 import { countEntityDescendants } from '../../lib/entity-tree'
 import { useShellOverlay } from '../../hooks/use-shell-overlay'
 import { EntityFieldEditor } from './entity-field-editor'
+import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 import {
   EntityCommentList,
   type EntityCommentListProps,
@@ -295,23 +296,14 @@ export function EntityObjectDetailPanel<
     }
   }, [objectId, data, isPlaceholderData])
 
-  const { data: peopleData } = useQuery({
-    queryKey: ['people', containerId],
-    queryFn: async () => {
-      const response = await api.listPeople(containerId)
-      return response.data.people
-    },
-    staleTime: 60000,
-  })
+  const { data: peopleData } = useQuery(
+    entityPeopleQuery(api.listPeople, containerId)
+  )
 
   // All objects, for the parent picker. Shares the container page's cache.
-  const { data: objectListData } = useQuery({
-    queryKey: ['objects', containerId],
-    queryFn: async () => {
-      const response = await api.listObjects(containerId)
-      return response.data
-    },
-  })
+  const { data: objectListData } = useQuery(
+    entityObjectsQuery(api.listObjects, containerId)
+  )
   const objectsData = objectListData?.objects
 
   // Edits show in the panel and on the list behind it at once, and go back if

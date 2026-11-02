@@ -3,8 +3,13 @@
 
 import { create } from 'zustand'
 import { clearProfileCookie } from '../lib/profile-cookie'
-import { initShellBridge, isInShell, onShellMessage } from '../lib/shell-bridge'
-import { getAppPath } from '../lib/app-path'
+import {
+  initShellBridge,
+  isInShell,
+  onShellMessage,
+  shellIdentity,
+} from '../lib/shell-bridge'
+import { getAppPath, isAnonymousPage } from '../lib/app-path'
 
 type TokenResponse = { token?: unknown }
 
@@ -163,18 +168,24 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       let token = data.token
 
       // In standalone (non-shell) mode, fetch an app-scoped token from the
-      // backend so authenticated API requests include Bearer auth.
-      if (!data.inShell && !token) {
+      // backend so authenticated API requests include Bearer auth - unless
+      // the server marked the page as served with no session, when the mint
+      // can only be refused and the page's data waits on it for nothing.
+      if (!data.inShell && !token && !isAnonymousPage()) {
         token = await fetchNonShellAppToken(resolveCurrentAppPath())
       }
 
-      set({
+      // The shell names who is signed in, and a known name spares the page
+      // its own /_/identity request (authManager.loadIdentity skips then).
+      const identity = shellIdentity(data.identity)
+      set((state) => ({
         token,
-        name: '',
+        identity: identity ? identity.id : state.identity,
+        name: identity ? identity.name : '',
         isAuthenticated: Boolean(token),
         isInitialized: true,
         isLogoutInProgress: false,
-      })
+      }))
     },
 
     // @deprecated Use authManager.loadIdentity() instead

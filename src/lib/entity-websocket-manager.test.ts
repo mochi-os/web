@@ -218,6 +218,38 @@ describe('entityWebsocketManager', () => {
     stop()
   })
 
+  // What was sent while the socket was down never arrived, so a reconnect is
+  // told to the subscribers; the first open is not, as nothing was missed.
+  it('tells the subscribers of a reconnect, not of the first open', () => {
+    const events: EntityWebsocketEvent[] = []
+    const stop = entityWebsocketManager.subscribe('reopen', (event) =>
+      events.push(event)
+    )
+    const first = socketsFor('reopen')[0]
+    first.open()
+    expect(events).toEqual([])
+    first.finishClose()
+    vi.advanceTimersByTime(60000)
+    const sockets = socketsFor('reopen')
+    sockets[sockets.length - 1].open()
+    expect(events).toEqual([{ type: 'socket/reopen' }])
+    stop()
+  })
+
+  it('starts afresh for subscribers who come after the last one left', () => {
+    const before = entityWebsocketManager.subscribe('fresh', () => {})
+    socketsFor('fresh')[0].open()
+    before()
+    const events: EntityWebsocketEvent[] = []
+    const stop = entityWebsocketManager.subscribe('fresh', (event) =>
+      events.push(event)
+    )
+    const sockets = socketsFor('fresh')
+    sockets[sockets.length - 1].open()
+    expect(events).toEqual([])
+    stop()
+  })
+
   it('closes the connection when the last subscriber leaves, with handlers detached', () => {
     const unsubscribe = entityWebsocketManager.subscribe('kA', () => {})
     const [ws] = socketsFor('kA')
@@ -279,7 +311,13 @@ describe('entityWebsocketManager', () => {
 
     expect(socketsFor('kC')).toHaveLength(2)
     second.deliver({ type: 'ping' })
-    expect(received).toEqual(['a:ping', 'b:ping'])
+    // The replacement opening is a reconnect, so both are told of it first.
+    expect(received).toEqual([
+      'a:socket/reopen',
+      'b:socket/reopen',
+      'a:ping',
+      'b:ping',
+    ])
   })
 
   // The token used to travel in the handshake URL, where it lands in every

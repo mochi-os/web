@@ -6,6 +6,7 @@ import { CloudOff, ImageOff } from 'lucide-react'
 import { useLingui } from '@lingui/react/macro'
 import { classifyAttachmentFailure } from '../lib/attachment-utils'
 import { cn } from '../lib/utils'
+import { AssetImage } from './asset-image'
 
 export interface AttachmentImageProps {
   src: string
@@ -23,6 +24,10 @@ export interface AttachmentImageProps {
  * was the client contradicting a server that tells them apart. The placeholder
  * click stops propagation, so a surrounding lightbox trigger never opens onto
  * the same failure.
+ *
+ * Tiles load lazily and decode off the main thread: a photo feed or thread
+ * holds dozens of them, and an eager <img> fetches every one as the page
+ * renders, the ones far below the screen included.
  */
 export function AttachmentImage({
   src,
@@ -60,10 +65,12 @@ export function AttachmentImage({
   }
 
   return (
-    <img
+    <AssetImage
       key={attempt}
       src={src}
       alt={alt}
+      loading='lazy'
+      decoding='async'
       onError={() => {
         void classifyAttachmentFailure(src).then(setFailure)
       }}

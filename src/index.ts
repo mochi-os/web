@@ -103,6 +103,7 @@ export * from './components/entity/entity-comment-list'
 export * from './components/entity/entity-create-object-dialog'
 export * from './components/entity/entity-duplicate-dialog'
 export * from './components/entity/entity-objects-page'
+export * from './components/entity/entity-queries'
 export * from './components/entity/entity-settings-page'
 export * from './components/entity/entity-design-layout'
 export * from './components/entity/entity-design-page'
@@ -183,6 +184,7 @@ export * from './components/command-menu'
 export * from './components/load-more-trigger'
 export * from './components/new-items-action'
 export * from './components/confirm-dialog'
+export * from './components/publish-choice'
 export * from './components/attachment-composer'
 export * from './components/comment-composer'
 export * from './components/faceless-avatar'
@@ -335,6 +337,8 @@ export {
   shellSetAvatar,
   onShellMessage,
   getShellInitData,
+  shellIdentity,
+  isOwnResource,
   safeCookieGet,
   safeCookieSet,
   installShellLinkInterceptor,
@@ -354,6 +358,7 @@ export {
 export type {
   ColorTheme,
   LocalePreferences,
+  ShellIdentity,
   ShellMicResult,
   ShellMicError,
 } from './lib/shell-bridge'
@@ -449,3 +454,9 @@ export * from './features/subscriptions'
 export * from './features/document/document-page'
 
 // Custom icons
+export { AssetImage, type AssetImageProps } from './components/asset-image'
+export {
+  carriedImage,
+  useAssetImage,
+  type AssetImageState,
+} from './lib/shell-image'

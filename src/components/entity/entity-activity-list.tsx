@@ -17,6 +17,7 @@ import { ListSkeleton } from '../ui/list-skeleton'
 import { LoadMoreTrigger } from '../load-more-trigger'
 import { useFormat } from '../../hooks/use-format'
 import { getAppPath } from '../../lib/app-path'
+import { addressByAuthor } from '../../lib/comment-tree'
 import type { EntityActivity, EntityField } from '../../types/entity-object'
 
 // The server's default page. A shorter page is the last one.
@@ -89,6 +90,22 @@ export function EntityActivityList({
       return true
     })
   }, [data])
+
+  // One avatar address per person across the list: the route names an
+  // activity row, and any row on the item answers with its person's picture.
+  const avatars = useMemo(
+    () =>
+      addressByAuthor(activities, {
+        getAuthor: (activity) => activity.user,
+        getAddress: (activity) =>
+          `${getAppPath()}/${containerId}/-/activity/${activity.id}/asset`,
+      }),
+    [activities, containerId]
+  )
+  const assets = (activity: EntityActivity) =>
+    avatars.get(activity.user) ??
+    `${getAppPath()}/${containerId}/-/activity/${activity.id}/asset`
+
   const loadMore = useCallback(() => {
     void fetchNextPage()
   }, [fetchNextPage])
@@ -160,8 +177,8 @@ export function EntityActivityList({
           secondary: (
             <div className='flex items-center gap-2 text-xs text-muted-foreground'>
               <EntityAvatar
-                src={`${getAppPath()}/${containerId}/-/activity/${activity.id}/asset/avatar`}
-                styleUrl={`${getAppPath()}/${containerId}/-/activity/${activity.id}/asset/style`}
+                src={`${assets(activity)}/avatar`}
+                styleUrl={`${assets(activity)}/style`}
                 seed={activity.user}
                 name={activity.name || activity.user}
                 size='xs'

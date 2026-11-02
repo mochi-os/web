@@ -60,6 +60,7 @@ import type { EntityCreateObjectDialogProps } from './entity-create-object-dialo
 import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
 import { EntityContentScroller } from './entity-content-scroller'
+import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 import {
   EntityDuplicateDialog,
   type EntityDuplicateDialogProps,
@@ -547,15 +548,22 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const queryClient = useQueryClient()
 
   // Load objects
-  const { data: objectListData, isLoading: objectsLoading } = useQuery({
-    queryKey: ['objects', containerId],
-    queryFn: async () => {
-      const response = await api.listObjects(containerId)
-      return response.data
-    },
-  })
+  const { data: objectListData, isLoading: objectsLoading } = useQuery(
+    entityObjectsQuery(api.listObjects, containerId)
+  )
   const objectsData = objectListData?.objects
   const watchedIds = objectListData?.watched
+
+  // A container still filling has a list fetched before the sync landed; ask
+  // again once it is filled, as the held list would otherwise stand.
+  const filling = useRef(!container.populated)
+  useEffect(() => {
+    if (container.populated && filling.current) {
+      void queryClient.invalidateQueries({ queryKey: ['objects', containerId] })
+      void queryClient.invalidateQueries({ queryKey: ['people', containerId] })
+    }
+    filling.current = !container.populated
+  }, [container.populated, containerId, queryClient])
 
   // While the container is empty and no view was specified in the URL, switch
   // to the view the app nominates (crm's companies view).
@@ -574,13 +582,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   }, [objectsData, design.views, search.view, activeViewId, emptyViewClass])
 
   // Load people for resolving user field values to names
-  const { data: peopleData } = useQuery({
-    queryKey: ['people', containerId],
-    queryFn: async () => {
-      const response = await api.listPeople(containerId)
-      return response.data.people
-    },
-  })
+  const { data: peopleData } = useQuery(
+    entityPeopleQuery(api.listPeople, containerId)
+  )
 
   // Create a map of user ID to name for quick lookups
   const peopleMap = useMemo(() => {

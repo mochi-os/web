@@ -121,3 +121,114 @@ describe('auth store initialize in the shell', () => {
     expect(store.getState().isAuthenticated).toBe(true)
   })
 })
+
+// The shell names who is signed in in its init, so the frame's page need not
+// ask /_/identity behind a preflight of its own.
+describe('auth store initialize: the identity comes with init', () => {
+  let parentStub: { postMessage: () => void; readonly document: never }
+
+  beforeEach(() => {
+    vi.resetModules()
+    parentStub = {
+      postMessage: () => {},
+      get document(): never {
+        throw new DOMException('Blocked', 'SecurityError')
+      },
+    }
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => parentStub,
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => window,
+    })
+  })
+
+  function fromShell(data: unknown) {
+    const event = new MessageEvent('message', {
+      data,
+      origin: window.location.origin,
+    })
+    Object.defineProperty(event, 'source', {
+      value: parentStub,
+      configurable: true,
+    })
+    window.dispatchEvent(event)
+  }
+
+  it('takes the id and name, and the identity load then asks nothing', async () => {
+    const { useAuthStore: store } = await import('./auth-store')
+    const { authManager } = await import('../lib/auth-manager')
+    const initialized = store.getState().initialize()
+    fromShell({
+      type: 'init',
+      token: 'app-token',
+      inShell: true,
+      identity: { id: 'identity-alice', name: 'Alice' },
+    })
+    await initialized
+    expect(store.getState().identity).toBe('identity-alice')
+    expect(store.getState().name).toBe('Alice')
+
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    await authManager.loadIdentity(false)
+    expect(fetch).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('leaves them to /_/identity under a shell that sends none', async () => {
+    const { useAuthStore: store } = await import('./auth-store')
+    const initialized = store.getState().initialize()
+    fromShell({ type: 'init', token: 'app-token', inShell: true })
+    await initialized
+    expect(store.getState().name).toBe('')
+  })
+})
+
+// A page the server served to a request with no session says so, and the
+// store then skips the /_/token request that could only be refused - a round
+// trip before the page asked for any data.
+describe('auth store initialize: a page served with no session', () => {
+  let fetch: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ token: 'minted' }),
+    }))
+    vi.stubGlobal('fetch', fetch)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    document.head.querySelector('meta[name="mochi:anonymous"]')?.remove()
+  })
+
+  const minted = () =>
+    fetch.mock.calls.filter(([url]) => String(url).includes('/_/token'))
+
+  it('asks for no token when the page is marked', async () => {
+    const meta = document.createElement('meta')
+    meta.name = 'mochi:anonymous'
+    meta.content = 'true'
+    document.head.appendChild(meta)
+    const { useAuthStore: store } = await import('./auth-store')
+    await store.getState().initialize()
+    expect(minted()).toEqual([])
+    expect(store.getState().token).toBe('')
+    expect(store.getState().isInitialized).toBe(true)
+  })
+
+  it('asks as before when the page is not marked', async () => {
+    const { useAuthStore: store } = await import('./auth-store')
+    await store.getState().initialize()
+    expect(minted()).toHaveLength(1)
+    expect(store.getState().token).toBe('minted')
+  })
+})

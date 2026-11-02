@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import type { RouterHistory } from '@tanstack/react-router'
 import {
   createAppHistory,
@@ -12,6 +12,8 @@ import {
   getAppPath,
   getEntityFingerprint,
   getRouterBasepath,
+  isDomainEntityRouting,
+  normalizeEntityUrl,
 } from './app-path'
 
 const FINGERPRINT = 'v9VpRumgT'
@@ -33,7 +35,36 @@ afterEach(() => {
   history?.destroy()
   history = undefined
   document.head.innerHTML = ''
+  document.body.innerHTML = ''
+  vi.restoreAllMocks()
   at('/')
+})
+
+// Core splices the routing metas right after <head>. Long lists inside the
+// shell's frame, which carries none, look them up several times per row, so a
+// lookup must not walk the document: on a 500-comment thread that cost
+// seconds of frozen tab.
+describe('meta lookups', () => {
+  it('never search the whole document', () => {
+    const whole = vi.spyOn(document, 'querySelector')
+    at(`/feeds/${FINGERPRINT}/-/posts`)
+    getAppPath()
+    getRouterBasepath()
+    getEntityFingerprint()
+    isDomainEntityRouting()
+    normalizeEntityUrl(`/feeds/${FINGERPRINT}/-/posts`)
+    expect(whole).not.toHaveBeenCalled()
+  })
+
+  it('read only the head, so a meta in the body routes nothing', () => {
+    document.body.innerHTML =
+      '<meta name="mochi:app" content="other"><meta name="mochi:domain" content="/">'
+    at('/wikis/home')
+    expect(getAppPath()).toBe('/wikis')
+    expect(isDomainEntityRouting()).toBe(false)
+    metas({ 'mochi:app': 'feeds' })
+    expect(getAppPath()).toBe('/feeds')
+  })
 })
 
 // A document without routing metas: the menu shell's iframe. The helpers

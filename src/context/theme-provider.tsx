@@ -120,6 +120,11 @@ const installedProperties = new Set<string>()
   }
 }
 
+// Whether two colour themes install the same values.
+function sameColorTheme(a: ColorTheme | null, b: ColorTheme | null): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
 function applyColorThemeToDOM(ct: ColorTheme | null) {
   const root = document.documentElement
   for (const prop of installedProperties) {
@@ -227,12 +232,14 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       ) {
         _setTheme(msg.theme as Theme)
       }
-      // Color theme messages
-      if (msg.type === 'init' && 'colorTheme' in msg) {
-        _setColorTheme(colorThemeFromMessage(msg.colorTheme))
-      }
-      if (msg.type === 'color-theme-change') {
-        _setColorTheme(colorThemeFromMessage(msg.colorTheme))
+      // Color theme messages. A theme equal to the one held keeps the held
+      // object, so React skips re-rendering the whole app for it.
+      if (
+        (msg.type === 'init' && 'colorTheme' in msg) ||
+        msg.type === 'color-theme-change'
+      ) {
+        const next = colorThemeFromMessage(msg.colorTheme)
+        _setColorTheme((held) => (sameColorTheme(held, next) ? held : next))
       }
     })
     return () => unsubShell()

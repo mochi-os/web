@@ -16,60 +16,64 @@ afterEach(() => {
   cleanup()
 })
 
-// jsdom implements none of these, and Radix's popper-backed primitives
-// (Tooltip, Select, Popover) reach for all of them on mount.
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
+// The stand-ins for what jsdom lacks. A test that runs in the node
+// environment (the build's own tests) has no window to stand them in.
+if (typeof window !== 'undefined') {
+  // jsdom implements none of these, and Radix's popper-backed primitives
+  // (Tooltip, Select, Popover) reach for all of them on mount.
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+
+  global.ResizeObserver = class ResizeObserver {
+    observe = vi.fn()
+    unobserve = vi.fn()
+    disconnect = vi.fn()
+  }
+
+  global.IntersectionObserver = class IntersectionObserver {
+    observe = vi.fn()
+    unobserve = vi.fn()
+    disconnect = vi.fn()
+    root = null
+    rootMargin = ''
+    thresholds: number[] = []
+  } as unknown as typeof globalThis.IntersectionObserver
+
+  // Radix Select scrolls the active item into view when the listbox opens and
+  // again on selection. Without this, a test that only reads the option labels
+  // passes while one that actually picks an option throws.
+  Element.prototype.scrollIntoView = vi.fn()
+
+  // Sonner captures the pointer on every pointer-down inside a toast so a swipe
+  // can leave the toast's box. jsdom has no pointer capture; without these a
+  // pointer-down on a toast reports an uncaught exception from Sonner's handler.
+  Element.prototype.setPointerCapture = vi.fn()
+  Element.prototype.releasePointerCapture = vi.fn()
+  Element.prototype.hasPointerCapture = vi.fn(() => false)
+
+  // @formkit/auto-animate calls el.animate() from a MutationObserver, so a missing
+  // Web Animations API throws outside any test's stack: every test still reports
+  // as passed and only the exit code says otherwise.
+  Element.prototype.animate = vi.fn().mockImplementation(() => ({
+    cancel: vi.fn(),
+    finish: vi.fn(),
+    pause: vi.fn(),
+    play: vi.fn(),
+    reverse: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-})
-
-global.ResizeObserver = class ResizeObserver {
-  observe = vi.fn()
-  unobserve = vi.fn()
-  disconnect = vi.fn()
+    finished: Promise.resolve(),
+    onfinish: null,
+  })) as unknown as Element['animate']
 }
-
-global.IntersectionObserver = class IntersectionObserver {
-  observe = vi.fn()
-  unobserve = vi.fn()
-  disconnect = vi.fn()
-  root = null
-  rootMargin = ''
-  thresholds: number[] = []
-} as unknown as typeof globalThis.IntersectionObserver
-
-// Radix Select scrolls the active item into view when the listbox opens and
-// again on selection. Without this, a test that only reads the option labels
-// passes while one that actually picks an option throws.
-Element.prototype.scrollIntoView = vi.fn()
-
-// Sonner captures the pointer on every pointer-down inside a toast so a swipe
-// can leave the toast's box. jsdom has no pointer capture; without these a
-// pointer-down on a toast reports an uncaught exception from Sonner's handler.
-Element.prototype.setPointerCapture = vi.fn()
-Element.prototype.releasePointerCapture = vi.fn()
-Element.prototype.hasPointerCapture = vi.fn(() => false)
-
-// @formkit/auto-animate calls el.animate() from a MutationObserver, so a missing
-// Web Animations API throws outside any test's stack: every test still reports
-// as passed and only the exit code says otherwise.
-Element.prototype.animate = vi.fn().mockImplementation(() => ({
-  cancel: vi.fn(),
-  finish: vi.fn(),
-  pause: vi.fn(),
-  play: vi.fn(),
-  reverse: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  finished: Promise.resolve(),
-  onfinish: null,
-})) as unknown as Element['animate']

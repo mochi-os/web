@@ -102,3 +102,55 @@ describe('EntityActivityList', () => {
     expect(screen.queryByText('No activity yet')).toBeNull()
   })
 })
+
+// A person's avatar route names one of their activity rows, so a list that
+// built each row's own address fetched the same picture once per row.
+describe('EntityActivityList avatars', () => {
+  it('draws every row by one person from their first row', async () => {
+    const row = (id: string, user: string) => ({
+      id,
+      user,
+      name: user,
+      action: 'created',
+      field: '',
+      oldvalue: '',
+      newvalue: '',
+      created: 1,
+    })
+    render(
+      <EntityActivityList
+        containerId='p1'
+        objectId='o1'
+        listActivity={vi.fn(async () => ({
+          data: {
+            activities: [
+              row('a1', 'Ann'),
+              row('a2', 'Bob'),
+              row('a3', 'Ann'),
+              row('a4', 'Bob'),
+              row('a5', ''),
+            ],
+          },
+        }))}
+        fields={[]}
+      />
+    )
+    const sources = async (name: string) =>
+      (await screen.findAllByAltText(`Avatar for ${name}`)).map((img) =>
+        img.getAttribute('src')
+      )
+    expect(await sources('Ann')).toEqual([
+      '/p1/-/activity/a1/asset/avatar',
+      '/p1/-/activity/a1/asset/avatar',
+    ])
+    expect(await sources('Bob')).toEqual([
+      '/p1/-/activity/a2/asset/avatar',
+      '/p1/-/activity/a2/asset/avatar',
+    ])
+    // A row naming no one keeps its own address rather than borrowing one.
+    expect(screen.getByAltText('Avatar')).toHaveAttribute(
+      'src',
+      '/p1/-/activity/a5/asset/avatar'
+    )
+  })
+})
