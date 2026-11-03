@@ -70,7 +70,10 @@ export interface ProviderField {
 export interface Provider {
   type: string
   capabilities: string[]
-  flow: 'form' | 'browser' | 'oauth'
+  // How an account is connected: 'handle' makes a hosted account on another
+  // network from a handle, 'link' links an existing one there (both on the
+  // Networks page).
+  flow: 'form' | 'browser' | 'oauth' | 'handle' | 'link'
   fields: ProviderField[]
   verify: boolean
 }

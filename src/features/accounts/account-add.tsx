@@ -46,9 +46,10 @@ interface AccountAddProps {
 }
 
 // The providers the add dialog offers: not the browser's, which the browser
-// adds itself; not the networks, whose accounts are made and linked on the
-// Networks page; and the oauth ones only where the caller can take the user
-// through a provider's consent.
+// adds itself; not the networks, nor Mastodon and Lemmy, whose accounts are
+// made and linked on the Networks page (adding one here made an account with
+// nothing to sign in with); and the oauth ones only where the caller can take
+// the user through a provider's consent.
 export function addableProviders(
   providers: Provider[],
   linking: boolean
@@ -57,6 +58,7 @@ export function addableProviders(
     (p) =>
       p.type !== 'browser' &&
       !p.capabilities.includes('network') &&
+      p.flow !== 'link' &&
       (linking || p.flow !== 'oauth')
   )
 }
