@@ -107,6 +107,55 @@ describe('optimistic', () => {
     expect(item()).toEqual({ on: false, count: 1 })
   })
 
+  it('marks a query out of date again when a refused click had stopped its fetch', async () => {
+    const { client, click, item, requests, sent } = setup()
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const fetching = client
+      .fetchQuery({ queryKey: ['item', 1], queryFn: () => deferred().promise })
+      .catch(() => {})
+    const refused = click(1)
+    await sent(1)
+    await fetching
+    requests[0].reject(new Error('refused'))
+    await refused
+    expect(item()).toEqual(START)
+    expect(client.getQueryState(['item', 1])?.isInvalidated).toBe(true)
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ['item', 1],
+      exact: true,
+    })
+  })
+
+  it('marks it out of date when it was, even after a later click went first', async () => {
+    const { client, click, requests, sent } = setup()
+    await client.invalidateQueries({ queryKey: ['item', 1] })
+    const first = click(1)
+    const second = click(2)
+    await sent(2)
+    requests[0].reject(new Error('refused'))
+    await first
+    requests[1].reject(new Error('refused'))
+    await second
+    expect(client.getQueryState(['item', 1])?.isInvalidated).toBe(true)
+  })
+
+  it('puts the snapshot back no fresher than it was', async () => {
+    const { client, click, requests, sent } = setup()
+    const fetchedAt = client.getQueryState(['item', 1])?.dataUpdatedAt
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(Date.now() + 60_000)
+      const refused = click(1)
+      await sent(1)
+      requests[0].reject(new Error('refused'))
+      await refused
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(client.getQueryState(['item', 1])?.dataUpdatedAt).toBe(fetchedAt)
+    expect(client.getQueryState(['item', 1])?.isInvalidated).toBe(false)
+  })
+
   it('lets a first load finish when the query holds no data yet', async () => {
     const { client, click, requests, sent } = setup((count) => [
       {

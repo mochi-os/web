@@ -22,9 +22,11 @@
 //   })
 //
 // Patch only queries the mutation already refetches on success, so the
-// server's answer always replaces the guess. Nothing here sends a request: a
-// refused call puts the snapshot back rather than refetching, so the mutation
-// costs the server exactly what it did before.
+// server's answer always replaces the guess. A refused call puts the snapshot
+// back rather than refetching, so the mutation costs the server exactly what
+// it did before. The one request it sends is the one it stopped: a query that
+// was fetching or marked out of date on the click is marked out of date again
+// when its snapshot goes back, so that fetch still happens.
 
 import {
   hashKey,
@@ -49,6 +51,10 @@ interface Entry {
   key: QueryKey
   /** What goes back if this call is refused. */
   snapshot: unknown
+  /** When the snapshot was fetched, so it goes back no fresher than it was. */
+  updatedAt: number
+  /** The query was fetching or invalidated on the click; see the top. */
+  outdated: boolean
 }
 
 // One per patched query: the calls still waiting on the server, in click
@@ -105,6 +111,21 @@ export function optimistic<TVariables>(
     /** Pass as the mutation's `onMutate`, unwrapped. */
     onMutate: async (variables: TVariables): Promise<OptimisticCall> => {
       const list = patches(variables)
+      // Read before the fetches below are stopped. Setting a guess marks a
+      // query fresh, and setting the snapshot back would again, which hides
+      // that the server has something newer.
+      const before = new Map<string, { updatedAt: number; outdated: boolean }>()
+      for (const { filters } of list) {
+        for (const query of queryClient.getQueryCache().findAll(filters)) {
+          before.set(query.queryHash, {
+            updatedAt: query.state.dataUpdatedAt,
+            outdated:
+              query.state.isInvalidated ||
+              query.state.fetchStatus === 'fetching',
+          })
+        }
+      }
+
       // A fetch already on its way would land after the patch and put the old
       // value back on screen. Only a query holding data is patched, so only
       // that one is stopped: a first load cancelled here is never sent again,
@@ -144,7 +165,13 @@ export function optimistic<TVariables>(
       for (const [hash, { key, old, next }] of changes) {
         if (next === undefined || next === old) continue
         queryClient.setQueryData(key, next)
-        const entry = { call, key, snapshot: old }
+        const entry = {
+          call,
+          key,
+          snapshot: old,
+          updatedAt: before.get(hash)?.updatedAt ?? 0,
+          outdated: before.get(hash)?.outdated ?? false,
+        }
         call.entries.push(entry)
         const slot = slots.get(hash) ?? { entries: [], count: undefined }
         slot.entries.push(entry)
@@ -170,11 +197,21 @@ export function optimistic<TVariables>(
           // screen. If that is refused too, it goes back to what was there
           // before this one.
           later.snapshot = entry.snapshot
+          later.updatedAt = entry.updatedAt
+          later.outdated ||= entry.outdated
         } else if (countOf(entry.key) === slot.count) {
           // Only over a guess: if a refetch has landed since, its data is
           // newer than the snapshot and stays.
-          queryClient.setQueryData(entry.key, entry.snapshot)
+          queryClient.setQueryData(entry.key, entry.snapshot, {
+            updatedAt: entry.updatedAt,
+          })
           slot.count = countOf(entry.key)
+          if (entry.outdated) {
+            void queryClient.invalidateQueries({
+              queryKey: entry.key,
+              exact: true,
+            })
+          }
         }
       }
       forget(slots, call)
