@@ -51,6 +51,12 @@ export interface Account {
   device?: string
   // The capabilities the account holds now, such as "login" and "calendar".
   granted?: string[]
+  // An account on another network: true for one hosted here, false for one
+  // linked; absent on every other kind. Removing a hosted one removes it from
+  // its network with everything it published.
+  hosted?: boolean
+  // The server a network account is on.
+  server?: string
 }
 
 export interface ProviderField {
