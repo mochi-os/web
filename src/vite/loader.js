@@ -83,7 +83,16 @@ export function loader(manifest, entry, styles) {
     if (!bridged) return Promise.resolve(null)
     kind = kind || /javascript/i
     if (carrying[url]) return carrying[url]
-    return (carrying[url] = new Promise(function (resolve) {
+    return (carrying[url] = requested(url, kind).then(function (body) {
+      return body && new TextDecoder().decode(body)
+    }))
+  }
+
+  // The bytes of url as the shell fetched them, from the top window's cache,
+  // or null when it will not carry it or answers anything but a 200 whose
+  // content type kind matches.
+  function requested(url, kind) {
+    return new Promise(function (resolve) {
       var id = identifier()
       // The shell answers every request, refusals included; this is for one
       // that is lost, and long enough that a slow link is not taken for one.
@@ -110,7 +119,7 @@ export function loader(manifest, entry, styles) {
             Object.prototype.toString.call(reply.body) ===
               '[object ArrayBuffer]' &&
             kind.test(type)
-            ? new TextDecoder().decode(reply.body)
+            ? reply.body
             : null
         )
       }
@@ -124,7 +133,7 @@ export function loader(manifest, entry, styles) {
         delete waiting[id]
         resolve(null)
       }
-    }))
+    })
   }
 
   // Ask for a chunk before it is needed: through the shell, or as a preload
@@ -427,13 +436,225 @@ export function loader(manifest, entry, styles) {
     )
   }
 
+  // --- Fonts ---
+
+  // An adopted sheet's fonts are fetched by the frame itself, which the
+  // browser's cache never serves, so every face in use was downloaded again on
+  // every page view. Each @font-face rule is taken out of the sheet and its
+  // face registered from here instead, with a placeholder source: a font with
+  // no glyphs, from a blob address. The browser loads a placeholder only when
+  // the page draws characters in its face's range, as it would the real font,
+  // and that face's bytes are then fetched through the shell and put in its
+  // place - from the face's own address where the shell will not carry them.
+  // A local() or data: source would not do: the browser resolves those as soon
+  // as the face is added, so every face would be fetched, used or not.
+  var BLANK =
+    'AAEAAAAKAIAAAwAgT1MvMlO/Ut8AAACsAAAAVmNtYXAADAAmAAABBAAAACRnbHlmAAAAAAAAASgAAAAMaGVhZF8eQOUAAAE0AAAANmhoZWEDIgEuAAABbAAAACRobXR4AfQAAAAAAZAAAAAEbG9jYQAAAAYAAAGUAAAABG1heHAAAgACAAABmAAAACBuYW1lABQEhwAAAbgAAAAUcG9zdP+fADIAAAHMAAAAIAABAfQBkAAFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABOT05FAED/////AyD/OAAAAyAAyAAAAAAAAAAAAAAAAAABAAMAAQAAAAwABAAYAAAAAgACAAAAAP//AAD//wABAAAAAAAAAAAAAAAAAAAAAQAAAAEAADYvaoVfDzz1AAsD6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAgAAAAAAAAABAAADIP84AAAB9AAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQH0AAAAAAAGAAEAAAABAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAABABIAAwABBAkAAQACAAAAeAADAAAAAAAA/5wAMgAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  var blank = null
+  var descriptions = [
+    ['font-style', 'style'],
+    ['font-weight', 'weight'],
+    ['font-stretch', 'stretch'],
+    ['unicode-range', 'unicodeRange'],
+    ['font-display', 'display'],
+    ['font-feature-settings', 'featureSettings'],
+  ]
+
+  // The formats a browser that has the font loading API reads. A source in
+  // any other (embedded-opentype, svg) is passed over for the next.
+  var formats = /^(woff2|woff|truetype|opentype)(-variations)?$/i
+
+  // Where a stretch of CSS text that may hold braces, semicolons or commas of
+  // its own ends: a string, a comment or a parenthesised group (a url() or a
+  // format()). The index after it, or -1 when text at i opens none.
+  function skipped(text, i) {
+    var c = text[i]
+    if (c === '"' || c === "'") {
+      for (var j = i + 1; j < text.length; j++) {
+        if (text[j] === '\\') j++
+        else if (text[j] === c) return j + 1
+      }
+      return text.length
+    }
+    if (c === '/' && text[i + 1] === '*') {
+      var end = text.indexOf('*/', i + 2)
+      return end < 0 ? text.length : end + 2
+    }
+    if (c === '(') {
+      var depth = 0
+      for (var k = i; k < text.length; k++) {
+        var d = text[k]
+        if (d === '(') depth++
+        else if (d === ')') {
+          if (--depth === 0) return k + 1
+        } else if (d === '\\') k++
+        else if (d === '"' || d === "'" || (d === '/' && text[k + 1] === '*'))
+          k = skipped(text, k) - 1
+      }
+      return text.length
+    }
+    return -1
+  }
+
+  // text cut at each separator that stands outside strings, comments and
+  // parentheses: a data: address holds semicolons and commas of its own.
+  function pieces(text, separator) {
+    var out = []
+    var start = 0
+    for (var i = 0; i < text.length; i++) {
+      var next = skipped(text, i)
+      if (next >= 0) i = next - 1
+      else if (text[i] === '\\') i++
+      else if (text[i] === separator) {
+        out.push(text.slice(start, i))
+        start = i + 1
+      }
+    }
+    out.push(text.slice(start))
+    return out
+  }
+
+  // The index of the brace closing the block text opens at open, or -1.
+  function closing(text, open) {
+    var depth = 0
+    for (var i = open; i < text.length; i++) {
+      var next = skipped(text, i)
+      if (next >= 0) i = next - 1
+      else if (text[i] === '\\') i++
+      else if (text[i] === '{') depth++
+      else if (text[i] === '}' && --depth === 0) return i
+    }
+    return -1
+  }
+
+  // A function's argument in a source entry, url(...) or format(...), quoted
+  // or not, or null.
+  function argument(entry, name) {
+    var match = new RegExp(
+      name + '\\(\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\'")\\s]*))\\s*\\)',
+      'i'
+    ).exec(entry)
+    if (!match) return null
+    return match[1] !== undefined
+      ? match[1]
+      : match[2] !== undefined
+        ? match[2]
+        : match[3]
+  }
+
+  // The address of the first source in a src list the browser would read: a
+  // url() in one of the formats above, or naming none and not an EOT file.
+  function chosen(source) {
+    var entries = pieces(source, ',')
+    for (var i = 0; i < entries.length; i++) {
+      var address = argument(entries[i], 'url')
+      if (!address) continue
+      var format = argument(entries[i], 'format')
+      if (
+        format !== null ? formats.test(format) : !/\.eot([?#]|$)/i.test(address)
+      )
+        return address
+    }
+    return null
+  }
+
+  // A top-level @font-face rule's face, registered with a placeholder; the
+  // rule's text in its place, '' when the face was taken, else the rule.
+  function face(whole, body) {
+    var declared = {}
+    pieces(body, ';').forEach(function (part) {
+      var colon = part.indexOf(':')
+      if (colon > 0)
+        declared[part.slice(0, colon).trim().toLowerCase()] = part
+          .slice(colon + 1)
+          .trim()
+    })
+    var named = (declared['font-family'] || '').trim()
+    var quoted = /^(['"])([\s\S]*)\1$/.exec(named)
+    var family = quoted ? quoted[2] : named
+    var source = declared.src || ''
+    var address = chosen(source)
+    // A face read from the sheet's own text costs no download to defer.
+    if (!family || !address || /^(data|blob):/i.test(address)) return whole
+    var descriptors = {}
+    descriptions.forEach(function (pair) {
+      if (declared[pair[0]]) descriptors[pair[1]] = declared[pair[0]]
+    })
+    try {
+      var placeholder = new FontFace(family, 'url(' + blank + ')', descriptors)
+      document.fonts.add(placeholder)
+    } catch (error) {
+      return whole
+    }
+    function swap() {
+      requested(address, /font|woff|truetype|opentype/i).then(function (bytes) {
+        try {
+          document.fonts.delete(placeholder)
+          document.fonts.add(new FontFace(family, bytes || source, descriptors))
+        } catch (error) {
+          // A face that cannot be built falls back to the next family.
+        }
+      })
+    }
+    placeholder.loaded.then(swap, swap)
+    return ''
+  }
+
+  // The sheet with its top-level @font-face rules taken out and their faces
+  // registered. A rule inside another (@media, @supports, @layer) holds only
+  // where that rule says, which a face registered from here would not, so it
+  // stays in the sheet and its font is fetched by the frame as before.
+  function deferred(text) {
+    if (!document.fonts || typeof FontFace !== 'function') return text
+    if (blank === null) {
+      try {
+        var binary = atob(BLANK)
+        var bytes = new Uint8Array(binary.length)
+        for (var b = 0; b < binary.length; b++) bytes[b] = binary.charCodeAt(b)
+        blank = URL.createObjectURL(new Blob([bytes], { type: 'font/ttf' }))
+      } catch (error) {
+        blank = ''
+      }
+    }
+    if (!blank) return text
+    var out = ''
+    var from = 0
+    var depth = 0
+    for (var i = 0; i < text.length; i++) {
+      var next = skipped(text, i)
+      if (next >= 0) {
+        i = next - 1
+      } else if (text[i] === '\\') {
+        i++
+      } else if (text[i] === '{') {
+        depth++
+      } else if (text[i] === '}') {
+        depth = Math.max(0, depth - 1)
+      } else if (
+        text[i] === '@' &&
+        depth === 0 &&
+        /^@font-face\s*\{/i.test(text.slice(i, i + 64))
+      ) {
+        var open = text.indexOf('{', i)
+        var close = closing(text, open)
+        if (close < 0) break
+        out +=
+          text.slice(from, i) +
+          face(text.slice(i, close + 1), text.slice(open + 1, close))
+        from = close + 1
+        i = close
+      }
+    }
+    return out + text.slice(from)
+  }
+
   // In place, from the shell's copy where it can be.
   function adopted(url) {
     return carried(url, /css/i).then(function (text) {
       if (text !== null && document.adoptedStyleSheets) {
         try {
           var sheet = new CSSStyleSheet()
-          sheet.replaceSync(absolute(text, url))
+          sheet.replaceSync(deferred(absolute(text, url)))
           document.adoptedStyleSheets = document.adoptedStyleSheets.concat([
             sheet,
           ])

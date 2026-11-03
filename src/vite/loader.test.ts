@@ -59,7 +59,16 @@ Promise.all([import('./one.js'), import('./two.js')]).then(([one, two]) => {
   'src/shared.js': `export const shared = 'shared:' + Math.random().toString(36).slice(2)\nexport const big = ${JSON.stringify('x'.repeat(2000))}\n`,
   'src/one.js': `import { shared } from './shared.js'\nimport { entry } from './main.js'\nexport const value = 'one ' + shared\nexport const meta = import.meta.url\nexport const back = entry\n`,
   'src/two.js': `import { shared } from './shared.js'\nawait new Promise((resolve) => setTimeout(resolve, 5))\nexport const value = 'two ' + shared\n`,
-  'src/style.css': `#root { background-image: url(./pixel.png); }\n`,
+  // Faces as real sheets write them: one plain; one whose src list leads
+  // with sources the browser would pass over (an EOT, declared and not) and
+  // ends in a data: address, whose semicolon and comma are its own; one read
+  // from the sheet's own text; and one that holds only inside an @media.
+  'src/style.css': `#root { background-image: url(./pixel.png); }
+@font-face { font-family: 'Test Face'; src: url(./face.woff2) format('woff2'); font-weight: 400; unicode-range: U+0000-00FF; }
+@font-face { font-family: "Second Face"; src: url(./legacy.eot) format('embedded-opentype'), url(./legacy.eot), url(./second.woff2) format("woff2"), url(data:font/woff;base64,d09GRgABAAA=) format('woff'); font-weight: 700; }
+@font-face { font-family: 'Inline Face'; src: url(data:font/woff2;base64,d09GMgABAAA=) format('woff2'); }
+@media (min-width: 1px) { @font-face { font-family: 'Nested Face'; src: url(./face.woff2) format('woff2'); } }
+`,
 }
 
 // A one-pixel PNG, emitted as its own asset.
@@ -67,6 +76,11 @@ const PIXEL = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64'
 )
+
+// A font file's stand-in: bytes the test can recognise.
+const FACE = Buffer.from('wOF2-test-face-bytes')
+const SECOND = Buffer.from('wOF2-second-face-bytes')
+const LEGACY = Buffer.from('legacy-eot-bytes')
 
 let root = ''
 let output = ''
@@ -103,6 +117,9 @@ beforeAll(async () => {
     writeFileSync(path.join(root, name), text)
   }
   writeFileSync(path.join(root, 'src/pixel.png'), PIXEL)
+  writeFileSync(path.join(root, 'src/face.woff2'), FACE)
+  writeFileSync(path.join(root, 'src/second.woff2'), SECOND)
+  writeFileSync(path.join(root, 'src/legacy.eot'), LEGACY)
   output = path.join(root, 'dist')
   await bundle(true, output)
 }, 60000)
@@ -115,7 +132,28 @@ const ORIGIN = 'http://mochi.test'
 // a page served for a named frame sets it first. jsdom constructs
 // stylesheets but cannot adopt one; sheets gives the frame a list to adopt
 // into.
-function server(dist: string, frame?: string, sheets = false) {
+// The font loading API, which jsdom lacks: a FontFace records how it was
+// made and loads when the test says the page drew with it, as a browser loads
+// a face only then; document.fonts holds faces. jsdom has no blob addresses
+// either.
+const FONTS = `window.__faces = [];
+window.FontFace = function (family, source, descriptors) {
+  var face = this;
+  this.family = family; this.source = source; this.descriptors = descriptors;
+  this.loaded = new Promise(function (resolve) { face.draw = function () { resolve(face) } });
+  window.__faces.push(this);
+};
+URL.createObjectURL = function () { return 'blob:null/test' };
+(function () {
+  var held = new Set();
+  Object.defineProperty(document, 'fonts', { value: {
+    add: function (face) { held.add(face) },
+    delete: function (face) { held.delete(face) },
+    has: function (face) { return held.has(face) },
+  } });
+})();`
+
+function server(dist: string, frame?: string, sheets = false, fonts = false) {
   const asked: string[] = []
   class Loader extends ResourceLoader {
     fetch(url: string) {
@@ -140,6 +178,7 @@ function server(dist: string, frame?: string, sheets = false) {
                 (sheets
                   ? ";Object.defineProperty(document, 'adoptedStyleSheets', { value: [], writable: true })"
                   : '') +
+                (fonts ? ';' + FONTS : '') +
                 '</script>'
             )
         )
@@ -181,9 +220,10 @@ type Result = {
 function framed(
   name: string,
   answer: 'script' | 'refuse' | 'page' = 'script',
-  sheets = false
+  sheets = false,
+  fonts: boolean | 'refused' = false
 ) {
-  const site = server(output, name, sheets)
+  const site = server(output, name, sheets, fonts !== false)
   const carried: string[] = []
   const dom = new JSDOM(
     `<!doctype html><html><body><iframe name="${name}" src="${ORIGIN}/app/?_shell=1"></iframe></body></html>`,
@@ -222,7 +262,11 @@ function framed(
       )
     }
     const url = new URL(String(data.url))
-    if (answer === 'refuse' || !url.pathname.startsWith('/app/')) {
+    if (
+      answer === 'refuse' ||
+      !url.pathname.startsWith('/app/') ||
+      (fonts === 'refused' && url.pathname.endsWith('.woff2'))
+    ) {
       reply({ refused: true })
       return
     }
@@ -238,9 +282,13 @@ function framed(
           'content-type',
           answer === 'page'
             ? 'text/html'
-            : url.pathname.endsWith('.css')
-              ? 'text/css; charset=utf-8'
-              : 'text/javascript; charset=utf-8',
+            : url.pathname.endsWith('.woff2')
+              ? 'font/woff2'
+              : url.pathname.endsWith('.eot')
+                ? 'application/vnd.ms-fontobject'
+                : url.pathname.endsWith('.css')
+                  ? 'text/css; charset=utf-8'
+                  : 'text/javascript; charset=utf-8',
         ],
       ],
       body: bytes.buffer.slice(
@@ -367,6 +415,165 @@ describe('mochiPlugin: the built page loads its System.register bundle', () => {
       expect(styles).toContain(':root.dark{color-scheme:dark}')
       expect(shell.carried.length).toBeGreaterThanOrEqual(4)
       expect(new Set(shell.carried).size).toBe(shell.carried.length)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  type Face = {
+    family: string
+    source: unknown
+    descriptors: Record<string, string>
+    draw: () => void
+  }
+  type Fonts = {
+    __faces: Face[]
+    document: Document & {
+      adoptedStyleSheets: CSSStyleSheet[]
+      fonts: { has: (face: unknown) => boolean }
+    }
+  }
+
+  // The faces registered for a family, oldest first.
+  const faces = (window: Fonts, family: string) =>
+    window.__faces.filter((face) => face.family === family)
+
+  it("fetches an adopted sheet's fonts through the shell, and only those the page draws with", async () => {
+    const shell = framed('mochi:bridge', 'script', true, true)
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      // The sheet keeps no rule for the face: it is registered in the rule's
+      // place with a blank font from a blob address, which the browser loads
+      // only when the page draws in the face's range.
+      const rules = [...window.document.adoptedStyleSheets[0].cssRules].map(
+        (rule) => rule.cssText
+      )
+      expect(rules.join('\n')).not.toMatch(/Test Face/)
+      expect(faces(window, 'Test Face')).toHaveLength(1)
+      const placeholder = faces(window, 'Test Face')[0]
+      expect(placeholder.source).toBe('url(blob:null/test)')
+      expect(placeholder.descriptors).toMatchObject({
+        weight: '400',
+        unicodeRange: 'U+0000-00FF',
+      })
+      // A face the page has not drawn with is not fetched.
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(shell.carried.some((url) => url.endsWith('.woff2'))).toBe(false)
+
+      placeholder.draw()
+      await until(
+        () => faces(window, 'Test Face').length === 2,
+        'the face to be added'
+      )
+      const face = faces(window, 'Test Face')[1]
+      expect(face.descriptors).toEqual(placeholder.descriptors)
+      expect(Object.prototype.toString.call(face.source)).toBe(
+        '[object ArrayBuffer]'
+      )
+      expect(new TextDecoder().decode(face.source as ArrayBuffer)).toBe(
+        FACE.toString()
+      )
+      expect(window.document.fonts.has(face)).toBe(true)
+      expect(window.document.fonts.has(placeholder)).toBe(false)
+      // THE POINT: the shell carried the font, once.
+      expect(
+        shell.carried.filter((url) => url.endsWith('.woff2'))
+      ).toHaveLength(1)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('loads a font from its own address when the shell will not carry it', async () => {
+    const shell = framed('mochi:bridge', 'script', true, 'refused')
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const placeholder = faces(window, 'Test Face')[0]
+      placeholder.draw()
+      await until(
+        () => faces(window, 'Test Face').length === 2,
+        'the face to be added'
+      )
+      const face = faces(window, 'Test Face')[1]
+      expect(face.source).toMatch(
+        new RegExp(
+          '^url\\("?' + ORIGIN + '/app/assets/face-[\\w-]+\\.woff2"?\\)'
+        )
+      )
+      expect(window.document.fonts.has(placeholder)).toBe(false)
+      expect(window.document.fonts.has(face)).toBe(true)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('fetches the first source the browser would read, past an EOT', async () => {
+    const shell = framed('mochi:bridge', 'script', true, true)
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const placeholder = faces(window, 'Second Face')[0]
+      expect(placeholder.descriptors).toEqual({ weight: '700' })
+      placeholder.draw()
+      await until(
+        () => faces(window, 'Second Face').length === 2,
+        'the face to be added'
+      )
+      const face = faces(window, 'Second Face')[1]
+      // THE POINT: the WOFF2 the src list offers third, not the EOT before it.
+      expect(new TextDecoder().decode(face.source as ArrayBuffer)).toBe(
+        SECOND.toString()
+      )
+      expect(shell.carried.some((url) => url.endsWith('.eot'))).toBe(false)
+      // CONTROL: the shell carried a font, so the EOT was passed over rather
+      // than the face left unloaded.
+      expect(
+        shell.carried.filter((url) => /\/second-[\w-]+\.woff2$/.test(url))
+      ).toHaveLength(1)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('falls back to the whole src list, a data: address with its semicolon intact', async () => {
+    const shell = framed('mochi:bridge', 'script', true, 'refused')
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      faces(window, 'Second Face')[0].draw()
+      await until(
+        () => faces(window, 'Second Face').length === 2,
+        'the face to be added'
+      )
+      const source = String(faces(window, 'Second Face')[1].source)
+      expect(source).toMatch(/second-[\w-]+\.woff2/)
+      expect(source).toMatch(
+        /url\(data:font\/woff;base64,d09GRgABAAA=\) format\(['"]woff['"]\)$/
+      )
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('leaves a face read from the sheet itself, or held by an @media, in the sheet', async () => {
+    const shell = framed('mochi:bridge', 'script', true, true)
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const rules = [...window.document.adoptedStyleSheets[0].cssRules]
+        .map((rule) => rule.cssText)
+        .join('\n')
+      // THE POINT: neither is registered from here, and both stay as written.
+      expect(faces(window, 'Nested Face')).toHaveLength(0)
+      expect(faces(window, 'Inline Face')).toHaveLength(0)
+      expect(rules).toMatch(/@media[^{]*\{\s*@font-face\s*\{[^}]*Nested Face/)
+      expect(rules).toMatch(/Inline Face/)
+      // CONTROL: the top-level faces beside them were taken.
+      expect(faces(window, 'Test Face')).toHaveLength(1)
+      expect(faces(window, 'Second Face')).toHaveLength(1)
+      expect(rules).not.toMatch(/Test Face|Second Face/)
     } finally {
       shell.dom.window.close()
     }

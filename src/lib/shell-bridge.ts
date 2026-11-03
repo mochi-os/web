@@ -110,6 +110,12 @@ type ShellInitData = {
    * from an older shell, and the app then sends them itself.
    */
   fetch?: boolean
+  /**
+   * Whether the shell reports a carried download's progress (fetch.progress)
+   * to a request that asks. Absent from an older shell, which answers only
+   * once the whole body is in.
+   */
+  progress?: boolean
   sidebarOpen?: boolean
   domain?: DomainRouteInfo | null
   locale?: LocalePreferences | null

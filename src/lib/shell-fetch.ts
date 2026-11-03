@@ -85,12 +85,22 @@ function identifier(): string {
 }
 let listening = false
 
+// A carried GET's progress callbacks, by request id.
+const progressing = new Map<string, (received: number) => void>()
+
 function listen() {
   if (listening) return
   listening = true
   onShellMessage((message) => {
+    if (message.type === 'fetch.progress') {
+      const report = progressing.get(message.id as string)
+      if (report && typeof message.received === 'number')
+        report(message.received)
+      return
+    }
     if (message.type !== 'fetch.result') return
     const id = message.id as string
+    progressing.delete(id)
     const settle = waiting.get(id)
     if (!settle) return
     waiting.delete(id)
@@ -327,23 +337,63 @@ export type ShellReply = {
   body: ArrayBuffer
 }
 
+// How long a carried GET may go without a word from the shell before it is
+// ended and answered null, so the caller loads the bytes itself: patience for
+// one that hears only the answer, which must arrive whole within it, and
+// stall for one that hears progress, which a download moving at all renews
+// every tenth of a second.
+const patience = 60000
+const stall = 15000
+
 /**
- * A GET carried by the shell, outside axios: for bytes the page shows rather
- * than data it reads, such as an image. Null when the shell will not carry it
- * (a shell that predates the bridge, a URL outside this app, a refusal, a
- * redirect or a network failure), and the caller then loads it itself.
+ * A GET carried by the shell, outside axios: for bytes the page shows or
+ * uses rather than data it reads, such as an image or a model. The shell's
+ * window keeps them in the browser's cache, which a sandboxed frame has none
+ * of. Null when the shell will not carry it (a shell that predates the
+ * bridge, a URL outside this app, a refusal, a redirect, a network failure,
+ * or a shell gone quiet), and the caller then loads it itself. progress hears
+ * the bytes received so far; a request that asks for it is carried only by a
+ * shell that reports them, since one that does not shows a long download no
+ * movement until it ends.
  */
 export function shellGet(
   url: string,
   headers: Array<[string, string]>,
-  options: { revalidate?: boolean } = {}
+  options: {
+    revalidate?: boolean
+    progress?: (received: number) => void
+  } = {}
 ): Promise<ShellReply | null> {
-  if (!isInShell() || getShellInitData()?.fetch !== true)
-    return Promise.resolve(null)
+  const init = getShellInitData()
+  if (!isInShell() || init?.fetch !== true) return Promise.resolve(null)
+  if (options.progress && init.progress !== true) return Promise.resolve(null)
   listen()
   return new Promise((resolve) => {
     const id = identifier()
+    const report = options.progress
+    let timer: ReturnType<typeof setTimeout> | undefined
+    // Given up on: ended in the shell too, so it is not downloaded twice.
+    function quiet() {
+      waiting.delete(id)
+      progressing.delete(id)
+      try {
+        window.parent.postMessage({ type: 'fetch.abort', id }, shellOrigin())
+      } catch {
+        // The shell has gone; nothing to end.
+      }
+      resolve(null)
+    }
+    function wait() {
+      clearTimeout(timer)
+      timer = setTimeout(quiet, report ? stall : patience)
+    }
+    if (report)
+      progressing.set(id, (received) => {
+        wait()
+        report(received)
+      })
     waiting.set(id, (reply) => {
+      clearTimeout(timer)
       if (
         reply.refused ||
         reply.redirect ||
@@ -368,11 +418,14 @@ export function shellGet(
           method: 'GET',
           headers,
           ...(options.revalidate ? { cache: 'no-cache' } : {}),
+          ...(report ? { progress: true } : {}),
         },
         shellOrigin()
       )
+      wait()
     } catch {
       waiting.delete(id)
+      progressing.delete(id)
       resolve(null)
     }
   })

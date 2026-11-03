@@ -24,7 +24,7 @@ export default {
           // Brand and product names - never translated. Keep in step with BRAND
           // in claude/scripts/i18n_glossary.py; the extras here are third-party
           // products Mochi names in provider and browser tables.
-          '^(?:Mochi|Mochi OS|GitHub|Stripe|Pushbullet|ntfy|libp2p|JWT|OAuth|OIDC|PKCE|SAML)$',
+          '^(?:Mochi|Mochi OS|GitHub|Stripe|Pushbullet|ntfy|libp2p|JWT|OAuth|OIDC|PKCE|SAML|ActivityPub|Matrix)$',
           // Browser names, returned by user-agent sniffing as an identifier.
           '^Browser$',
           // Internal reason strings and diagnostic source labels: recorded

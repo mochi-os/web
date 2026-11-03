@@ -79,9 +79,10 @@ async function answer(reply: Record<string, unknown>) {
 }
 
 // boot starts the app as the shell would: the init message, carrying the
-// bridge flag unless told otherwise, then the app's clients. The direct path
-// is axios's own adapter, replaced here by one that records the request.
-async function boot(options: { bridge?: boolean } = {}) {
+// bridge and progress flags unless told otherwise, then the app's clients.
+// The direct path is axios's own adapter, replaced here by one that records
+// the request.
+async function boot(options: { bridge?: boolean; progress?: boolean } = {}) {
   const bridge = await import('./shell-bridge')
   const init = bridge.initShellBridge()
   fromParent({
@@ -89,6 +90,9 @@ async function boot(options: { bridge?: boolean } = {}) {
     token: 'app-token',
     inShell: true,
     ...(options.bridge === false ? {} : { fetch: true }),
+    ...(options.bridge === false || options.progress === false
+      ? {}
+      : { progress: true }),
   })
   await init
   const { useAuthStore } = await import('../stores/auth-store')
@@ -214,6 +218,135 @@ describe('requests through the shell', () => {
     const blob = (await result).data as Blob
     expect(blob.type).toBe('image/png')
     expect(blob.size).toBe(1)
+  })
+})
+
+describe('a GET carried for bytes the page uses', () => {
+  it('reports the bytes received as the shell tells it, then answers', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    const heard: number[] = []
+    const reply = shellGet('/feeds/assets/model.glb', [], {
+      progress: (received) => heard.push(received),
+    })
+    await vi.waitFor(() => expect(requests()).toHaveLength(1))
+    const id = requests()[0].id
+    expect(requests()[0].progress).toBe(true)
+    fromParent({ type: 'fetch.progress', id, received: 1000 })
+    fromParent({ type: 'fetch.progress', id: 'someone-else', received: 99 })
+    fromParent({ type: 'fetch.progress', id, received: 3000 })
+    fromParent({
+      type: 'fetch.result',
+      id,
+      status: 200,
+      headers: [],
+      body: json({ ok: 1 }),
+    })
+    expect((await reply)?.status).toBe(200)
+    expect(heard).toEqual([1000, 3000])
+  })
+
+  it('asks for no progress when nobody listens', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    const reply = shellGet('/feeds/assets/model.glb', [])
+    await answer({ status: 200, headers: [], body: json({}) })
+    await reply
+    expect(posted.find((m) => m.type === 'fetch')?.progress).toBeUndefined()
+  })
+
+  it('leaves one that wants progress to the caller under a shell that reports none', async () => {
+    await boot({ progress: false })
+    const { shellGet } = await import('./shell-fetch')
+    const reply = await shellGet('/feeds/assets/model.glb', [], {
+      progress: () => {},
+    })
+    expect(reply).toBeNull()
+    expect(requests()).toHaveLength(0)
+    // CONTROL: the same shell still carries a GET that wants none.
+    const plain = shellGet('/feeds/assets/model.glb', [])
+    await answer({ status: 200, headers: [], body: json({}) })
+    expect((await plain)?.status).toBe(200)
+  })
+})
+
+describe('a carried GET the shell goes quiet on', () => {
+  afterEach(() => vi.useRealTimers())
+
+  // Whether a promise has settled, and with what, without waiting for it.
+  function watch<T>(promise: Promise<T>) {
+    const state: { settled: boolean; value?: T } = { settled: false }
+    void promise.then((value) => {
+      state.settled = true
+      state.value = value
+    })
+    return state
+  }
+
+  it('gives up after 15 s without progress, ends it in the shell and answers null', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const heard: number[] = []
+    const reply = watch(
+      shellGet('/feeds/assets/model.glb', [], {
+        progress: (received) => heard.push(received),
+      })
+    )
+    const id = requests()[0].id
+    await vi.advanceTimersByTimeAsync(14999)
+    expect(reply.settled).toBe(false)
+    // CONTROL: a report renews the wait, so a moving download is never cut.
+    fromParent({ type: 'fetch.progress', id, received: 500 })
+    await vi.advanceTimersByTimeAsync(14999)
+    expect(reply.settled).toBe(false)
+    expect(aborts()).toHaveLength(0)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(reply.settled).toBe(true)
+    expect(reply.value).toBeNull()
+    expect(aborts()).toEqual([{ type: 'fetch.abort', id }])
+    // The shell's late answer and reports reach nobody.
+    fromParent({ type: 'fetch.progress', id, received: 900 })
+    fromParent({
+      type: 'fetch.result',
+      id,
+      status: 200,
+      headers: [],
+      body: json({}),
+    })
+    expect(heard).toEqual([500])
+  })
+
+  it('gives one that hears only its answer 60 s', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const reply = watch(shellGet('/feeds/assets/photo.jpg', []))
+    await vi.advanceTimersByTimeAsync(59999)
+    expect(reply.settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(reply.settled).toBe(true)
+    expect(reply.value).toBeNull()
+    expect(aborts()).toEqual([{ type: 'fetch.abort', id: requests()[0].id }])
+  })
+
+  it('does not end one the shell answered in time', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const reply = watch(
+      shellGet('/feeds/assets/model.glb', [], { progress: () => {} })
+    )
+    fromParent({
+      type: 'fetch.result',
+      id: requests()[0].id,
+      status: 200,
+      headers: [],
+      body: json({}),
+    })
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(reply.value?.status).toBe(200)
+    expect(aborts()).toHaveLength(0)
   })
 })
 
