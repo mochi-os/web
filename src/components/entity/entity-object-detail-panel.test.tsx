@@ -426,6 +426,43 @@ describe('EntityObjectDetailPanel optimistic edits', () => {
     await waitFor(() => expect(status()).toBeUndefined())
   })
 
+  // The server moves a reparented card into its new parent's column, which
+  // the panel cannot know, so the row behind it waits for the server.
+  it('leaves the row behind the panel alone until a new parent is saved', async () => {
+    let client!: QueryClient
+    function Cache() {
+      client = useQueryClient()
+      return null
+    }
+    const parentOf = () =>
+      client
+        .getQueryData<{ objects: EntityObject[] }>(['objects', 'c-1'])
+        ?.objects.find((entry) => entry.id === 'obj-1')?.parent
+    const request = waiting()
+    vi.mocked(api.updateObject).mockReturnValue(request.promise as never)
+    render(
+      <>
+        <Cache />
+        <EntityObjectDetailPanel
+          containerId='c-1'
+          objectId='obj-1'
+          design={design}
+          access='owner'
+          api={api}
+          onClose={() => {}}
+        />
+      </>
+    )
+
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalled())
+    const parent = await screen.findByRole('combobox', { name: 'Parent' })
+    const before = parentOf()
+    fireEvent.click(parent)
+    fireEvent.click(await screen.findByRole('option', { name: 'Sibling' }))
+    await waitFor(() => expect(parent).toHaveTextContent('Sibling'))
+    expect(parentOf()).toBe(before)
+  })
+
   it('keeps typed text in its input when the save is refused', async () => {
     const request = waiting()
     vi.mocked(api.setValue).mockReturnValue(request.promise as never)

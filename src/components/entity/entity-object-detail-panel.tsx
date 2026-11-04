@@ -406,8 +406,10 @@ export function EntityObjectDetailPanel<
     },
   })
 
-  // Anything else the server changes along with the parent arrives with the
-  // refetch.
+  // Only the panel shows the new parent at once. The server also copies the
+  // new parent's column and row values, which only the board's view knows, so
+  // a card moved here alone would sit in its old column. The board waits for
+  // the refetch instead.
   const parentPatch = optimistic(queryClient, (parent: string) => [
     {
       filters: detailFilters,
@@ -415,11 +417,6 @@ export function EntityObjectDetailPanel<
         ...old,
         object: { ...old.object, parent },
       }),
-    },
-    {
-      filters: listFilters,
-      update: (old: { objects: TObject[] }) =>
-        patchRow(old, (row) => ({ ...row, parent })),
     },
   ])
 
