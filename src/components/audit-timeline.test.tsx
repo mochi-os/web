@@ -62,4 +62,32 @@ describe('AuditTimeline', () => {
     expect(await screen.findByText(/fp:abc123def/)).toBeInTheDocument()
     expect(screen.queryByText(/ENTITYID/)).not.toBeInTheDocument()
   })
+
+  it('leaves the separator off an entry the server names nobody on', async () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <AuditTimeline
+          kind='auction'
+          object='a1'
+          fetchAudit={async () => ({
+            audit: [
+              {
+                id: 'a1',
+                action: 'auction.bid_placed',
+                data: '{}',
+                actor: '',
+                actor_name: '',
+                actor_fingerprint: '',
+                timestamp: 1700000000,
+              },
+            ],
+          })}
+          actionLabels={{ 'auction.bid_placed': 'Bid placed' }}
+          formatFingerprint={(fingerprint) => fingerprint}
+        />
+      </I18nProvider>
+    )
+    expect(await screen.findByText('Bid placed')).toBeInTheDocument()
+    expect(screen.queryByText(/·/)).not.toBeInTheDocument()
+  })
 })
