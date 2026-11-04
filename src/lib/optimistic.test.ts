@@ -251,6 +251,35 @@ describe('optimistic', () => {
     expect(item()?.count).toBe(1)
   })
 
+  it('keeps an accepted later click when an earlier one is refused after it', async () => {
+    const { click, item, requests, sent } = setup()
+    const first = click(1)
+    const second = click(2)
+    await sent(2)
+    requests[1].resolve({})
+    await second
+    requests[0].reject(new Error('refused'))
+    await first
+    // The server holds the second click's value; the first has nothing to undo.
+    expect(item()?.count).toBe(2)
+  })
+
+  it('still goes back for a click made after an accepted one', async () => {
+    const { click, item, requests, sent } = setup()
+    const first = click(1)
+    const second = click(2)
+    const third = click(3)
+    await sent(3)
+    requests[1].resolve({})
+    await second
+    requests[2].reject(new Error('refused'))
+    await third
+    expect(item()?.count).toBe(2)
+    requests[0].reject(new Error('refused'))
+    await first
+    expect(item()?.count).toBe(2)
+  })
+
   it('keeps data a refetch brought in over the snapshot', async () => {
     const { client, click, item, requests, sent } = setup()
     const done = click(1)

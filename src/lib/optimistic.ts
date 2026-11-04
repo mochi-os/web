@@ -76,13 +76,18 @@ function slotsFor(queryClient: QueryClient): Map<string, Slot> {
     const created = new Map<string, Slot>()
     // A settled call leaves nothing to undo. Its callbacks belong to the
     // caller, so learn of it from the cache instead. A refusal arrives here
-    // after onError, where rollback has already dropped it.
+    // after onError, where rollback has already dropped it. An accepted call
+    // also settles every earlier click on the same query: the server now
+    // holds this one's value, so an earlier click refused later must not put
+    // back what was there before it.
     queryClient.getMutationCache().subscribe((event) => {
       if (event.type !== 'updated') return
       if (event.action.type !== 'success' && event.action.type !== 'error')
         return
       const context = event.mutation.state.context
-      if (context instanceof OptimisticCall) forget(created, context)
+      if (context instanceof OptimisticCall) {
+        forget(created, context, event.action.type === 'success')
+      }
     })
     registries.set(queryClient, created)
     slots = created
@@ -90,12 +95,20 @@ function slotsFor(queryClient: QueryClient): Map<string, Slot> {
   return slots
 }
 
-function forget(slots: Map<string, Slot>, call: OptimisticCall) {
+function forget(
+  slots: Map<string, Slot>,
+  call: OptimisticCall,
+  withEarlier = false
+) {
   for (const entry of call.entries) {
     const hash = hashKey(entry.key)
     const slot = slots.get(hash)
     if (!slot) continue
-    slot.entries = slot.entries.filter((other) => other !== entry)
+    const index = slot.entries.indexOf(entry)
+    if (index === -1) continue
+    slot.entries = withEarlier
+      ? slot.entries.slice(index + 1)
+      : slot.entries.filter((other) => other !== entry)
     if (slot.entries.length === 0) slots.delete(hash)
   }
 }
