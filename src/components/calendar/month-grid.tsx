@@ -37,7 +37,7 @@ import {
 import { EventDot } from './event-dot'
 import { EventTitle } from './event-title'
 import { useEventTooltip } from './tooltip'
-import { Wheel } from './wheel'
+import { Scroll, Wheel } from './wheel'
 import type { CalendarEvent, DayMove } from './types'
 
 // An all-day or multi-day event's one line.
@@ -45,6 +45,8 @@ const BAR = 28
 // A timed event's two lines: its title, then its time and marks.
 const CHIP = 40
 const HEADER = 28
+// Milliseconds without a wheel event before scrolling weeks settle on one.
+const SETTLE = 150
 
 export interface MonthGridProps {
   /** The days shown; a whole number of weeks. */
@@ -58,7 +60,8 @@ export interface MonthGridProps {
   weekNumbers?: boolean
   /**
    * Where a day's all-day and multi-day events go among its timed ones:
-   * above them, the default, or below.
+   * above them, the default, or below. Those carried over from an earlier
+   * day lead the day either way.
    */
   allday?: 'first' | 'last'
   /** The occurrence whose summary or editor is open, drawn tinted. */
@@ -77,9 +80,17 @@ export interface MonthGridProps {
   onDay: (day: string) => void
   /**
    * The wheel over the grid, or a chip held at its top or bottom edge: 1 for
-   * the next range, -1 for the previous.
+   * the next range, -1 for the previous. A scrolling grid steps by weeks, as
+   * many as it has scrolled past.
    */
   onStep?: (direction: number) => void
+  /**
+   * Weeks drawn beyond each end of `days`, through which the wheel scrolls
+   * the grid by the pixel, stepping the range by weeks as they pass and
+   * settling on a week when it stops; their occurrences belong in `events`.
+   * Without it the wheel pages.
+   */
+  buffer?: number
 }
 
 interface Dragging {
@@ -122,14 +133,26 @@ export function MonthGrid({
   onMove,
   onDay,
   onStep,
+  buffer = 0,
 }: MonthGridProps) {
   const { t } = useLingui()
   const format = useFormat()
   const tooltip = useEventTooltip()
+  const root = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
+  const track = useRef<HTMLDivElement>(null)
   const ghost = useRef<HTMLDivElement>(null)
   const [rowHeight, setRowHeight] = useState(120)
   const [wheel] = useState(() => new Wheel())
+  const [scroll] = useState(() => new Scroll())
+  // The first day a scrolling step asked for, until the range arrives there.
+  const pending = useRef<string | null>(null)
+  // The first day and row height the scroll's offset is measured against.
+  const measured = useRef({ first: days[0], height: rowHeight })
+  const motion = useRef<{
+    frame: number
+    timer?: ReturnType<typeof setTimeout>
+  }>({ frame: 0 })
   const [dragging, setDragging] = useState<Dragging | null>(null)
   const draggingRef = useRef<Dragging | null>(null)
   draggingRef.current = dragging
@@ -145,6 +168,17 @@ export function MonthGrid({
   const rows = useMemo(
     () => weekRows(days[0] ?? today, days.length),
     [days, today]
+  )
+  // The weeks drawn: those shown, and a scrolling grid's buffer each side.
+  const drawn = useMemo(
+    () =>
+      buffer
+        ? weekRows(
+            addDays(days[0] ?? today, -7 * buffer),
+            days.length + 14 * buffer
+          )
+        : rows,
+    [rows, days, today, buffer]
   )
 
   useLayoutEffect(() => {
@@ -184,65 +218,95 @@ export function MonthGrid({
     [events, tentative]
   )
 
-  // Each day's occurrences in the two groups a cell draws: bars for the
-  // all-day and multi-day ones, one on every day they cover, and chips for
-  // the timed ones within a day. Each group runs by start, all-day before
-  // timed at the same start, then by title; the lifted copy leads its group
-  // wherever it falls, so the days it would land on show it.
+  // Each day's occurrences in the groups a cell draws: bars for the all-day
+  // and multi-day ones, one on every day they cover, and chips for the timed
+  // ones within a day. Bars carried over from an earlier day lead the day
+  // whichever way the all-day ones are placed, so with those last they are
+  // a group of their own above the chips. Each group runs by the day an
+  // occurrence begins, then all-day before timed, then by start and title;
+  // the lifted copy leads its group wherever it falls, so the days it would
+  // land on show it. The first day is the one the grid draws it from, not
+  // its start's: an all-day occurrence starts at midnight in the zone it was
+  // expanded in, UTC for a birthday, which west of there is the evening
+  // before, after an overnight event that began then.
   const lists = useMemo(() => {
     const out = new Map<
       string,
-      { bars: CalendarEvent[]; chips: CalendarEvent[] }
+      {
+        carried: CalendarEvent[]
+        bars: CalendarEvent[]
+        chips: CalendarEvent[]
+      }
     >()
-    const first = days[0]
-    const last = days[days.length - 1]
+    const first = drawn[0]?.[0]
+    const end = drawn[drawn.length - 1]
+    const last = end?.[end.length - 1]
     if (!first || !last) return out
     const slot = (day: string) => {
       let list = out.get(day)
       if (!list) {
-        list = { bars: [], chips: [] }
+        list = { carried: [], bars: [], chips: [] }
         out.set(day, list)
       }
       return list
     }
+    const opens = new Map<string, string>()
     for (const event of laid) {
       const begins = format.zonedDay(new Date(event.start * 1000))
       const ends = format.zonedDay(new Date((event.finish - 1) * 1000))
       if (!event.allday && begins === ends) {
+        opens.set(event.key, begins)
         slot(begins).chips.push(event)
         continue
       }
       const covered = coveredDays(event, format.zonedDay)
+      opens.set(event.key, covered.start)
       const to = covered.finish < last ? covered.finish : last
       for (
         let day = covered.start > first ? covered.start : first;
         day <= to;
         day = addDays(day, 1)
-      )
-        slot(day).bars.push(event)
+      ) {
+        const list = slot(day)
+        if (allday === 'last' && day > covered.start) list.carried.push(event)
+        else list.bars.push(event)
+      }
     }
     const leads = (event: CalendarEvent) =>
       event.key === tentative?.key ? 1 : 0
     const order = (a: CalendarEvent, b: CalendarEvent) =>
       leads(b) - leads(a) ||
-      a.start - b.start ||
+      daysBetween(opens.get(b.key) ?? '', opens.get(a.key) ?? '') ||
       Number(b.allday) - Number(a.allday) ||
+      a.start - b.start ||
       naturalCompare(a.title, b.title)
     for (const list of out.values()) {
+      list.carried.sort(order)
       list.bars.sort(order)
       list.chips.sort(order)
     }
     return out
-  }, [laid, days, tentative, format])
+  }, [laid, drawn, tentative, allday, format])
 
   /**
-   * The most height a day's first group may take when the day has a second:
-   * what leaves room for one of the second's entries, and never less than
-   * one of its own; the rest of it scrolls. With no second group it takes
-   * the whole day.
+   * The most height each of a day's groups but the last may take: what
+   * leaves room for one entry of every group after it, below those before
+   * it, and never less than one of its own; the rest of it scrolls. The last
+   * takes what is left of the day. Each entry takes its group's line, gap
+   * and a held group's bottom margin included.
    */
-  const hold = (own: number, other: number) =>
-    Math.max(own, rowHeight - HEADER - 2 - other)
+  const holds = (groups: { events: CalendarEvent[]; line: number }[]) => {
+    let room = rowHeight - HEADER - 2
+    return groups.map((group, index) => {
+      if (index === groups.length - 1) return undefined
+      const reserve = groups
+        .slice(index + 1)
+        .reduce((sum, later) => sum + later.line, 0)
+      const most = Math.max(group.line, room - reserve)
+      room -= Math.min(group.events.length * group.line, most)
+      return most
+    })
+  }
 
   // --- Dragging a chip onto another day ---
 
@@ -313,6 +377,122 @@ export function MonthGrid({
 
   const live = useRef({ update, finish, cancel, onStep })
   live.current = { update, finish, cancel, onStep }
+
+  // --- Scrolling the weeks by the pixel ---
+
+  /** Draws the weeks at the scroll's offset, held within the buffer. */
+  const place = () => {
+    const element = track.current
+    if (!element || !buffer) return
+    const most = buffer * rowHeight
+    const offset = Math.max(-most, Math.min(most, scroll.offset))
+    element.style.transform = `translateY(${-most - offset}px)`
+  }
+
+  /**
+   * Steps the range once the weeks have passed most of a week, and draws
+   * them; one step at a time, so each is taken from the range it moves.
+   */
+  const follow = () => {
+    const first = days[0]
+    if (pending.current === null && first) {
+      const weeks = scroll.weeks(rowHeight)
+      if (weeks) {
+        pending.current = addDays(first, 7 * weeks)
+        onStep?.(weeks)
+      }
+    }
+    place()
+  }
+
+  const stop = () => {
+    cancelAnimationFrame(motion.current.frame)
+    motion.current.frame = 0
+  }
+
+  /** Runs the scroll's animated move a frame at a time until it arrives. */
+  const run = () => {
+    if (motion.current.frame) return
+    let then = performance.now()
+    const tick = (now: number) => {
+      const going = scroll.frame(now - then)
+      then = now
+      motion.current.frame = going ? requestAnimationFrame(tick) : 0
+      steer.current.follow()
+    }
+    motion.current.frame = requestAnimationFrame(tick)
+  }
+
+  const roll = (event: WheelEvent) => {
+    if (!buffer) {
+      // A day whose events overflow it scrolls them; the rest of the grid
+      // pages.
+      if (scrolls(event.target)) return
+      const direction = wheel.step(event)
+      if (direction) onStep?.(direction)
+      return
+    }
+    // A day whose events overflow it scrolls them, unless the weeks are
+    // already moving and have brought it under the pointer.
+    if (!scroll.active(event.timeStamp) && scrolls(event.target)) return
+    if (event.deltaY === 0) return
+    event.preventDefault()
+    const animated = scroll.input(event, rowHeight)
+    clearTimeout(motion.current.timer)
+    motion.current.timer = setTimeout(() => {
+      scroll.settle(steer.current.height)
+      run()
+    }, SETTLE)
+    if (animated) {
+      run()
+    } else {
+      stop()
+      follow()
+    }
+  }
+
+  const steer = useRef({ roll, follow, height: rowHeight })
+  steer.current = { roll, follow, height: rowHeight }
+
+  useEffect(() => {
+    const element = root.current
+    const current = motion.current
+    if (!element) return
+    const rolled = (event: WheelEvent) => steer.current.roll(event)
+    element.addEventListener('wheel', rolled, { passive: false })
+    return () => {
+      element.removeEventListener('wheel', rolled)
+      cancelAnimationFrame(current.frame)
+      clearTimeout(current.timer)
+    }
+  }, [])
+
+  // A step the scroll asked for arrives with the weeks still where they were
+  // drawn. Any other change to the range, or to the row height, starts the
+  // weeks afresh on its first.
+  useLayoutEffect(() => {
+    const first = days[0]
+    const last = measured.current
+    if (first === last.first && rowHeight === last.height) {
+      place()
+      return
+    }
+    if (
+      buffer &&
+      first &&
+      last.first &&
+      rowHeight === last.height &&
+      pending.current === first
+    ) {
+      scroll.shift(daysBetween(last.first, first) / 7, rowHeight)
+    } else {
+      scroll.reset()
+      stop()
+    }
+    pending.current = null
+    measured.current = { first, height: rowHeight }
+    follow()
+  })
 
   const pointing = dragging !== null && !dragging.keyboard
   useEffect(() => {
@@ -730,16 +910,7 @@ export function MonthGrid({
   }
 
   return (
-    <div
-      className='flex h-full min-h-0 flex-col'
-      onWheel={(event) => {
-        // A day whose events overflow it scrolls them; the rest of the grid
-        // pages.
-        if (scrolls(event.target)) return
-        const direction = wheel.step(event)
-        if (direction) onStep?.(direction)
-      }}
-    >
+    <div ref={root} className='flex h-full min-h-0 flex-col'>
       <div className='grid grid-cols-7 border-b'>
         {weekdayNames.map((name, index) => (
           <div
@@ -754,134 +925,162 @@ export function MonthGrid({
       <div
         ref={body}
         data-testid='weeks'
-        className='flex min-h-0 flex-1 flex-col'
+        className={cn(
+          'flex min-h-0 flex-1 flex-col',
+          buffer > 0 && 'overflow-hidden'
+        )}
       >
-        {rows.map((week) => (
-          <div key={week[0]} className='flex min-h-0 flex-1 border-b'>
-            <div className='grid flex-1 grid-cols-7'>
-              {week.map((day, column) => {
-                const outside = month !== undefined && monthOf(day) !== month
-                const list = lists.get(day)
-                const bars = {
-                  events: list?.bars ?? [],
-                  line: BAR,
-                  draw: barButton,
-                  band: true,
-                }
-                const chips = {
-                  events: list?.chips ?? [],
-                  line: CHIP,
-                  draw: chipButton,
-                  band: false,
-                }
-                // Both groups stack from the top of the day; the first is held
-                // so one of the second stays in view.
-                const [upper, lower] =
-                  allday === 'last' ? [chips, bars] : [bars, chips]
-                const groups = [upper, lower].filter(
-                  (group) => group.events.length > 0
-                )
-                const landing =
-                  dragging && !dragging.calendar && dragging.day === day
-                    ? dragging
-                    : null
-                // The middle day is in the ISO week most of the row is in,
-                // whichever day the week starts on.
-                const numeral =
-                  weekNumbers && column === 0
-                    ? weekNumber(week[Math.min(3, week.length - 1)])
-                    : undefined
-                const noon = new Date(format.timestampAt(day, 720) * 1000)
-                return (
-                  <div
-                    key={day}
-                    data-day={day}
-                    className={cn(
-                      'hover:bg-hover/40 flex min-h-0 cursor-pointer flex-col border-s first:border-s-0',
-                      outside && 'bg-muted/30',
-                      (landing || picked(day)) && 'bg-primary/10'
-                    )}
-                    onPointerDown={(pointer) => startChoose(pointer, day)}
-                    onClick={(pointer) => {
-                      // Anywhere in the cell but on an event or its number.
-                      if (!(pointer.target as Element).closest('button'))
-                        onCreate(day)
-                    }}
-                  >
+        {/* A scrolling grid draws its buffer beyond each end, out of sight
+            and out of reach until the weeks move it into view. */}
+        <div
+          ref={track}
+          className={cn(
+            'flex flex-col',
+            buffer > 0 ? 'shrink-0 will-change-transform' : 'min-h-0 flex-1'
+          )}
+        >
+          {drawn.map((week, index) => (
+            <div
+              key={week[0]}
+              className={cn(
+                'flex border-b',
+                buffer > 0 ? 'shrink-0' : 'min-h-0 flex-1'
+              )}
+              style={buffer > 0 ? { height: `${rowHeight}px` } : undefined}
+              inert={
+                buffer > 0 && (index < buffer || index >= buffer + rows.length)
+              }
+            >
+              <div className='grid flex-1 grid-cols-7'>
+                {week.map((day, column) => {
+                  const outside = month !== undefined && monthOf(day) !== month
+                  const list = lists.get(day)
+                  const carried = {
+                    name: 'carried',
+                    events: list?.carried ?? [],
+                    line: BAR,
+                    draw: barButton,
+                    band: true,
+                  }
+                  const bars = {
+                    name: 'bars',
+                    events: list?.bars ?? [],
+                    line: BAR,
+                    draw: barButton,
+                    band: true,
+                  }
+                  const chips = {
+                    name: 'chips',
+                    events: list?.chips ?? [],
+                    line: CHIP,
+                    draw: chipButton,
+                    band: false,
+                  }
+                  // The groups stack from the top of the day; each but the last
+                  // is held so one of every later group stays in view.
+                  const groups = (
+                    allday === 'last' ? [carried, chips, bars] : [bars, chips]
+                  ).filter((group) => group.events.length > 0)
+                  const heights = holds(groups)
+                  const landing =
+                    dragging && !dragging.calendar && dragging.day === day
+                      ? dragging
+                      : null
+                  // The middle day is in the ISO week most of the row is in,
+                  // whichever day the week starts on.
+                  const numeral =
+                    weekNumbers && column === 0
+                      ? weekNumber(week[Math.min(3, week.length - 1)])
+                      : undefined
+                  const noon = new Date(format.timestampAt(day, 720) * 1000)
+                  return (
                     <div
+                      key={day}
+                      data-day={day}
                       className={cn(
-                        'flex shrink-0 items-center justify-end px-1 py-px',
-                        day === today && 'bg-primary text-primary-foreground'
+                        'hover:bg-hover/40 flex min-h-0 cursor-pointer flex-col border-s first:border-s-0',
+                        outside && 'bg-muted/30',
+                        (landing || picked(day)) && 'bg-primary/10'
                       )}
+                      onPointerDown={(pointer) => startChoose(pointer, day)}
+                      onClick={(pointer) => {
+                        // Anywhere in the cell but on an event or its number.
+                        if (!(pointer.target as Element).closest('button'))
+                          onCreate(day)
+                      }}
                     >
-                      {/* The week number sits in the first day's corner,
-                          opposite its date, taking no width of its own; a
-                          month's first day names the month there too. */}
-                      {day.endsWith('-01') ? (
-                        <MonthStart
-                          long={format.formatMonthName(noon)}
-                          short={format.formatMonthShort(noon)}
-                          week={numeral}
-                          today={day === today}
-                          outside={outside}
-                        />
-                      ) : (
-                        numeral !== undefined && (
-                          <WeekNumber
-                            week={numeral}
-                            today={day === today}
-                            className='me-auto ps-0.5'
-                          />
-                        )
-                      )}
-                      <button
-                        type='button'
-                        onClick={() => onDay(day)}
+                      <div
                         className={cn(
-                          'hover:bg-hover rounded-full px-1.5 text-sm/4.5',
-                          outside && 'text-muted-foreground',
-                          day === today &&
-                            'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
+                          'flex shrink-0 items-center justify-end px-1 py-px',
+                          day === today && 'bg-primary text-primary-foreground'
                         )}
                       >
-                        {format.formatDayNumber(noon)}
-                      </button>
+                        {/* The week number sits in the first day's corner,
+                          opposite its date, taking no width of its own; a
+                          month's first day names the month there too. */}
+                        {day.endsWith('-01') ? (
+                          <MonthStart
+                            long={format.formatMonthName(noon)}
+                            short={format.formatMonthShort(noon)}
+                            week={numeral}
+                            today={day === today}
+                            outside={outside}
+                          />
+                        ) : (
+                          numeral !== undefined && (
+                            <WeekNumber
+                              week={numeral}
+                              today={day === today}
+                              className='me-auto ps-0.5'
+                            />
+                          )
+                        )}
+                        <button
+                          type='button'
+                          onClick={() => onDay(day)}
+                          className={cn(
+                            'hover:bg-hover rounded-full px-1.5 text-sm/4.5',
+                            outside && 'text-muted-foreground',
+                            day === today &&
+                              'text-primary-foreground hover:bg-primary-foreground/20 font-semibold'
+                          )}
+                        >
+                          {format.formatDayNumber(noon)}
+                        </button>
+                      </div>
+                      <div className='flex min-h-0 flex-1 flex-col px-0.5 pt-1 pb-0.5'>
+                        {groups.map((group, index) => {
+                          const most = heights[index]
+                          const held = most !== undefined
+                          return (
+                            <div
+                              key={group.name}
+                              {...(group.band
+                                ? { 'data-band': '' }
+                                : { 'data-list': '' })}
+                              className={cn(
+                                'flex flex-col gap-0.5 overflow-y-auto overscroll-contain',
+                                held ? 'shrink-0' : 'min-h-0 flex-1',
+                                held && 'pb-0.5'
+                              )}
+                              style={
+                                held ? { maxHeight: `${most}px` } : undefined
+                              }
+                            >
+                              {group.events.map((event) =>
+                                group.draw(event, day)
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                    <div className='flex min-h-0 flex-1 flex-col px-0.5 pt-1 pb-0.5'>
-                      {groups.map((group, index) => {
-                        const held = index === 0 && groups.length > 1
-                        return (
-                          <div
-                            key={group.band ? 'bars' : 'chips'}
-                            {...(group.band
-                              ? { 'data-band': '' }
-                              : { 'data-list': '' })}
-                            className={cn(
-                              'flex flex-col gap-0.5 overflow-y-auto overscroll-contain',
-                              held ? 'shrink-0' : 'min-h-0 flex-1',
-                              held && 'pb-0.5'
-                            )}
-                            style={
-                              held
-                                ? {
-                                    maxHeight: `${hold(group.line, groups[1].line)}px`,
-                                  }
-                                : undefined
-                            }
-                          >
-                            {group.events.map((event) =>
-                              group.draw(event, day)
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       {dragging && !dragging.calendar && (
         <span className='sr-only' aria-live='polite'>
@@ -893,7 +1092,7 @@ export function MonthGrid({
 }
 
 /** Whether a wheel over this element scrolls one of a day's lists. */
-function scrolls(target: EventTarget) {
+function scrolls(target: EventTarget | null) {
   if (!(target instanceof Element)) return false
   const list = target.closest<HTMLElement>('[data-list], [data-band]')
   return list !== null && list.scrollHeight > list.clientHeight

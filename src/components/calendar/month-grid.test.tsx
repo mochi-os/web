@@ -5,8 +5,30 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
+import { addDays } from './layout'
 import { MonthGrid } from './month-grid'
 import type { CalendarEvent } from './types'
+
+// The user's zone; the provider's default is UTC.
+let zone: string | undefined
+
+vi.mock('../../context/locale-provider', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../../context/locale-provider')>()
+  return {
+    ...original,
+    useLocale: () => {
+      const value = original.useLocale()
+      return zone
+        ? { ...value, locale: { ...value.locale, timezone: zone } }
+        : value
+    },
+  }
+})
+
+afterEach(() => {
+  zone = undefined
+})
 
 const WEEK = [
   '2026-09-21',
@@ -214,6 +236,122 @@ describe('MonthGrid wheel', () => {
     const onStep = vi.fn()
     fireEvent.wheel(grid(onStep), { deltaY: 5 })
     expect(onStep).not.toHaveBeenCalled()
+  })
+})
+
+describe('MonthGrid scrolling', () => {
+  /** Four weeks from a Monday. */
+  const weeks = (from: string) =>
+    Array.from({ length: 28 }, (_, index) => addDays(from, index))
+  let tall: { mockRestore: () => void }
+
+  beforeEach(() => {
+    // Four weeks in 600 pixels: 150 a week.
+    tall = vi
+      .spyOn(Element.prototype, 'clientHeight', 'get')
+      .mockImplementation(function (this: Element) {
+        return (this as HTMLElement).dataset?.testid === 'weeks' ? 600 : 0
+      })
+  })
+
+  afterEach(() => tall.mockRestore())
+
+  function grid(from: string, onStep = vi.fn()) {
+    const element = (start: string) => (
+      <I18nProvider i18n={i18n}>
+        <MonthGrid
+          days={weeks(start)}
+          events={[]}
+          today='2026-09-22'
+          buffer={2}
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+          onStep={onStep}
+        />
+      </I18nProvider>
+    )
+    const { container, rerender } = render(element(from))
+    const weeksBox = container.querySelector('[data-testid="weeks"]')!
+    const track = weeksBox.firstElementChild as HTMLElement
+    return {
+      onStep,
+      track,
+      rows: () => [...track.children] as HTMLElement[],
+      roll: (...deltas: number[]) => {
+        for (const deltaY of deltas) fireEvent.wheel(weeksBox, { deltaY })
+      },
+      move: (start: string) => rerender(element(start)),
+    }
+  }
+
+  it('draws two weeks beyond each end, out of reach until they are scrolled to', () => {
+    const { rows, track } = grid('2026-09-21')
+    expect(
+      rows().map((row) =>
+        row.querySelector('[data-day]')!.getAttribute('data-day')
+      )
+    ).toEqual([
+      '2026-09-07',
+      '2026-09-14',
+      '2026-09-21',
+      '2026-09-28',
+      '2026-10-05',
+      '2026-10-12',
+      '2026-10-19',
+      '2026-10-26',
+    ])
+    expect(rows().map((row) => row.hasAttribute('inert'))).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+    ])
+    expect(rows()[2].style.height).toBe('150px')
+    // The first shown week at the top.
+    expect(track.style.transform).toBe('translateY(-300px)')
+  })
+
+  it("moves the weeks as far as a trackpad's deltas, stepping once most of a week has passed", () => {
+    const { roll, track, onStep } = grid('2026-09-21')
+    roll(10, 20, 30, 20)
+    expect(track.style.transform).toBe('translateY(-380px)')
+    expect(onStep).not.toHaveBeenCalled()
+    roll(10)
+    expect(onStep).toHaveBeenCalledExactlyOnceWith(1)
+    // Still one step until the range has moved.
+    roll(10)
+    expect(onStep).toHaveBeenCalledTimes(1)
+    expect(track.style.transform).toBe('translateY(-400px)')
+  })
+
+  it('keeps the weeks where they are drawn when the range steps on under them', () => {
+    const { roll, track, move, onStep } = grid('2026-09-21')
+    roll(10, 20, 30, 20, 10, 10)
+    move('2026-09-28')
+    // 100 past the old first week is 50 short of the new one.
+    expect(track.style.transform).toBe('translateY(-250px)')
+    roll(30, 30, 30, 20)
+    expect(onStep).toHaveBeenLastCalledWith(1)
+  })
+
+  it('starts afresh on a range it did not step to', () => {
+    const { roll, track, move } = grid('2026-09-21')
+    roll(10, 20, 30)
+    move('2027-01-04')
+    expect(track.style.transform).toBe('translateY(-300px)')
+  })
+
+  it('scrolls back as well as forward', () => {
+    const { roll, track, onStep } = grid('2026-09-21')
+    roll(-10, -20, -30, -30)
+    expect(track.style.transform).toBe('translateY(-210px)')
+    expect(onStep).toHaveBeenCalledExactlyOnceWith(-1)
   })
 })
 
@@ -546,6 +684,87 @@ describe('MonthGrid day stacking', () => {
     ])
   })
 
+  it('leads with what carries over from an earlier day, though an all-day start is earlier', () => {
+    zone = 'America/Los_Angeles'
+    // A birthday starts at midnight in UTC, 17:00 the evening before here,
+    // after an overnight event that began at 20:00.
+    const birthday = {
+      key: 'birthday',
+      title: 'Birthday',
+      colour: '#f97316',
+      start: day(23, 0),
+      finish: day(24, 0),
+      allday: true,
+      date: '2026-09-23',
+    }
+    // Named to follow the birthday, so only its earlier day puts it first.
+    const overnight = { ...timed('overnight', 23, 3), finish: day(23, 9) }
+    const { container } = draw([birthday, overnight])
+    expect(groups(container, '2026-09-23')).toEqual([['overnight', 'birthday']])
+  })
+
+  it('leads with what carries over from an earlier day with the all-day events last', () => {
+    const retreat = {
+      key: 'retreat',
+      title: 'Retreat',
+      colour: '#16a34a',
+      start: day(22, 0),
+      finish: day(25, 0),
+      allday: true,
+      date: '2026-09-22',
+    }
+    const flight = { ...timed('flight', 22, 20), finish: day(23, 6) }
+    const events = [timed('standup', 23, 9), ...holidays(1), flight, retreat]
+    expect(groups(draw(events).container, '2026-09-23')).toEqual([
+      ['retreat', 'flight', 'holiday0'],
+      ['standup'],
+    ])
+    cleanup()
+    const { container } = draw(events, 600, 'last')
+    expect(groups(container, '2026-09-23')).toEqual([
+      ['retreat', 'flight'],
+      ['standup'],
+      ['holiday0'],
+    ])
+    // On the day they begin they go with the rest, all-day first.
+    expect(groups(container, '2026-09-22')).toEqual([['retreat', 'flight']])
+  })
+
+  it('holds each group but the last to leave room for one of every later group', () => {
+    const long = (key: string) => ({
+      key,
+      title: key,
+      colour: '#16a34a',
+      start: day(22, 0),
+      finish: day(24, 0),
+      allday: true,
+      date: '2026-09-22',
+    })
+    const { container } = draw(
+      [
+        long('long0'),
+        long('long1'),
+        timed('a', 23, 9),
+        timed('b', 23, 10),
+        timed('c', 23, 11),
+        ...holidays(1),
+      ],
+      180,
+      'last'
+    )
+    const [carried, starting] = cell(
+      container,
+      '2026-09-23'
+    ).querySelectorAll<HTMLElement>('[data-band]')
+    // 180 less the day number and the margin is 150, less one timed event
+    // and one all-day line for the groups below.
+    expect(carried.style.maxHeight).toBe('82px')
+    // The 94 the two carried lines leave, less one all-day line.
+    expect(list(container, '2026-09-23').style.maxHeight).toBe('66px')
+    expect(starting.style.maxHeight).toBe('')
+    expect(starting.classList.contains('flex-1')).toBe(true)
+  })
+
   it('gives the first group its whole height while it leaves room for one of the second', () => {
     const { container } = draw([...holidays(3), timed('standup', 23, 9)], 600)
     // 600 less the day number and the margin, less one timed event.
@@ -759,11 +978,11 @@ describe('MonthGrid week numbers', () => {
   it('takes no column of its own beside the days or the weekday names', () => {
     week('2026-10-05')
     const weeks = screen.getByTestId('weeks')
-    // A row holds the seven days alone, and so does the header above.
-    expect(weeks.firstElementChild?.childElementCount).toBe(1)
-    expect(weeks.firstElementChild?.firstElementChild?.childElementCount).toBe(
-      7
-    )
+    // A row, within the track that holds the rows, holds the seven days
+    // alone, and so does the header above.
+    const row = weeks.firstElementChild?.firstElementChild
+    expect(row?.childElementCount).toBe(1)
+    expect(row?.firstElementChild?.childElementCount).toBe(7)
     expect(weeks.previousElementSibling?.childElementCount).toBe(7)
   })
 
