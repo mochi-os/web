@@ -5,12 +5,13 @@
 // tab it shows, what it puts in the header, and whether a refused call is
 // reported; what the comment list and field editor do is their own tests.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, useQueryClient } from '@tanstack/react-query'
 import {
   render,
   screen,
   waitFor,
   fireEvent,
+  within,
   renderWithClient,
   createMockEntityDesign,
   createMockEntityObject,
@@ -325,6 +326,158 @@ describe('EntityObjectDetailPanel parent select', () => {
     expect(
       await screen.findByRole('option', { name: 'None' })
     ).toBeInTheDocument()
+  })
+})
+
+// The panel shows a pick before the server answers it, and goes back if the
+// server refuses. Each request here waits until the test answers it.
+describe('EntityObjectDetailPanel optimistic edits', () => {
+  function waiting() {
+    let reject!: (error: unknown) => void
+    const promise = new Promise((_resolve, rej) => {
+      reject = rej
+    })
+    return { promise, reject }
+  }
+
+  const statusSelect = () =>
+    within(
+      screen.getByText('Status', { selector: 'label' }).parentElement!
+    ).getByRole('combobox')
+
+  it('flips Watch at once and back when refused', async () => {
+    const request = waiting()
+    vi.mocked(api.addWatcher).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    fireEvent.click(await screen.findByLabelText('Watch'))
+    expect(await screen.findByLabelText('Stop watching')).toBeInTheDocument()
+
+    request.reject({ response: { status: 500 } })
+    expect(await screen.findByLabelText('Watch')).toBeInTheDocument()
+    expect(toastError).toHaveBeenCalledWith('Failed to update watching')
+  })
+
+  it('shows a new parent at once and the old one back when refused', async () => {
+    const request = waiting()
+    vi.mocked(api.updateObject).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    const parent = await screen.findByRole('combobox', { name: 'Parent' })
+    fireEvent.click(parent)
+    fireEvent.click(await screen.findByRole('option', { name: 'Sibling' }))
+    await waitFor(() => expect(parent).toHaveTextContent('Sibling'))
+
+    request.reject({ response: { status: 409 } })
+    await waitFor(() => expect(parent).not.toHaveTextContent('Sibling'))
+    expect(toastError).toHaveBeenCalledWith('Failed to move')
+  })
+
+  it('shows a picked option at once and the old value back when refused', async () => {
+    const request = waiting()
+    vi.mocked(api.setValue).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    await screen.findByDisplayValue('Original')
+    fireEvent.click(statusSelect())
+    fireEvent.click(await screen.findByRole('option', { name: 'Done' }))
+    await waitFor(() => expect(statusSelect()).toHaveTextContent('Done'))
+
+    request.reject({ response: { status: 403 } })
+    await waitFor(() => expect(statusSelect()).not.toHaveTextContent('Done'))
+    expect(toastError).toHaveBeenCalledWith('Failed to save')
+  })
+
+  // The board or list behind the panel shares its cache, so a pick shows on
+  // its card too, and goes back there on a refusal.
+  it('shows a pick on the row behind the panel and puts it back when refused', async () => {
+    let client!: QueryClient
+    function Cache() {
+      client = useQueryClient()
+      return null
+    }
+    const status = () =>
+      client
+        .getQueryData<{ objects: EntityObject[] }>(['objects', 'c-1'])
+        ?.objects.find((entry) => entry.id === 'obj-1')?.values.status
+    const request = waiting()
+    vi.mocked(api.setValue).mockReturnValue(request.promise as never)
+    render(
+      <>
+        <Cache />
+        <EntityObjectDetailPanel
+          containerId='c-1'
+          objectId='obj-1'
+          design={design}
+          access='owner'
+          api={api}
+          onClose={() => {}}
+        />
+      </>
+    )
+
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalled())
+    await screen.findByDisplayValue('Original')
+    fireEvent.click(statusSelect())
+    fireEvent.click(await screen.findByRole('option', { name: 'Done' }))
+    await waitFor(() => expect(status()).toBe('done'))
+
+    request.reject({ response: { status: 403 } })
+    await waitFor(() => expect(status()).toBeUndefined())
+  })
+
+  // The server moves a reparented card into its new parent's column, which
+  // the panel cannot know, so the row behind it waits for the server.
+  it('leaves the row behind the panel alone until a new parent is saved', async () => {
+    let client!: QueryClient
+    function Cache() {
+      client = useQueryClient()
+      return null
+    }
+    const parentOf = () =>
+      client
+        .getQueryData<{ objects: EntityObject[] }>(['objects', 'c-1'])
+        ?.objects.find((entry) => entry.id === 'obj-1')?.parent
+    const request = waiting()
+    vi.mocked(api.updateObject).mockReturnValue(request.promise as never)
+    render(
+      <>
+        <Cache />
+        <EntityObjectDetailPanel
+          containerId='c-1'
+          objectId='obj-1'
+          design={design}
+          access='owner'
+          api={api}
+          onClose={() => {}}
+        />
+      </>
+    )
+
+    await waitFor(() => expect(api.listObjects).toHaveBeenCalled())
+    const parent = await screen.findByRole('combobox', { name: 'Parent' })
+    const before = parentOf()
+    fireEvent.click(parent)
+    fireEvent.click(await screen.findByRole('option', { name: 'Sibling' }))
+    await waitFor(() => expect(parent).toHaveTextContent('Sibling'))
+    expect(parentOf()).toBe(before)
+  })
+
+  it('keeps typed text in its input when the save is refused', async () => {
+    const request = waiting()
+    vi.mocked(api.setValue).mockReturnValue(request.promise as never)
+    renderPanel()
+
+    const input = await screen.findByDisplayValue('Original')
+    fireEvent.change(input, { target: { value: 'Edited' } })
+    fireEvent.blur(input)
+    await waitFor(() => expect(api.setValue).toHaveBeenCalled())
+
+    request.reject({ response: { status: 403 } })
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('Failed to save')
+    )
+    expect(screen.getByDisplayValue('Edited')).toBeInTheDocument()
   })
 })
 
