@@ -419,19 +419,19 @@ describe('MonthGrid event appearance', () => {
       container.querySelector(`[data-key="${key}"]`) as HTMLElement
   }
 
-  it('reads a timed event as its dot and time on one line, then its title on a line of its own', () => {
+  it('reads a timed event as its dot and title, with its time on a line under the title', () => {
     const chip = draw()('standup')
     const [first, second] = Array.from(chip.children) as HTMLElement[]
     const dot = first.firstElementChild as HTMLElement
     expect(dot.getAttribute('aria-hidden')).toBe('true')
     expect(dot.classList.contains('rounded-full')).toBe(true)
     expect(dot.style.backgroundColor).toBe('rgb(96, 165, 250)')
-    expect(first.textContent).toMatch(/^\d{1,2}:\d{2}/)
-    // The title has the whole line, with no dot before it.
-    expect(second.textContent).toBe('Standup')
-    expect(second.querySelector('[aria-hidden].rounded-full')).toBeNull()
-    // As far from the time as an all-day bar's dot is from its title.
-    expect(dot.classList.contains('me-0.5')).toBe(true)
+    expect(first.textContent).toBe('Standup')
+    // The title sits after its dot as an all-day bar's does, so a day's
+    // titles line up; the time sits under the title, not the dot.
+    expect(first.classList.contains('gap-1.5')).toBe(true)
+    expect(second.textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(second.classList.contains('ps-3.5')).toBe(true)
     expect(chip.style.borderInlineStartColor).toBe('')
     expect(chip.style.backgroundColor).toBe('')
   })
@@ -456,15 +456,14 @@ describe('MonthGrid event appearance', () => {
     expect(find('standup').classList.contains('opacity-60')).toBe(false)
   })
 
-  it('puts the dot, the time, the repeat mark and the reminder above the title', () => {
+  it('puts the time, then the repeat mark, then the reminder under the title', () => {
     const chip = draw()('weekly')
-    const first = chip.children[0] as HTMLElement
-    const parts = Array.from(first.children) as HTMLElement[]
-    expect(parts[0].classList.contains('rounded-full')).toBe(true)
-    expect(parts[1].textContent).toMatch(/^\d{1,2}:\d{2}/)
-    expect(parts[2].getAttribute('aria-label')).toBe('Repeats')
-    expect(parts[3].getAttribute('aria-label')).toBe('Reminder')
-    expect((chip.children[1] as HTMLElement).textContent).toBe('Weekly')
+    expect((chip.children[0] as HTMLElement).textContent).toBe('Weekly')
+    const second = chip.children[1] as HTMLElement
+    const parts = Array.from(second.children) as HTMLElement[]
+    expect(parts[0].textContent).toMatch(/^\d{1,2}:\d{2}/)
+    expect(parts[1].getAttribute('aria-label')).toBe('Repeats')
+    expect(parts[2].getAttribute('aria-label')).toBe('Reminder')
   })
 
   it('shows no reminder mark on an event without one', () => {
@@ -1070,6 +1069,19 @@ describe('MonthGrid month names', () => {
     const header = cell(container, '2026-10-01').firstElementChild
     expect(header?.firstElementChild?.contains(name)).toBe(true)
     expect(header?.lastElementChild?.textContent).toBe('1')
+  })
+
+  it("keeps the day number's line height beside it, so no day's header is taller than another's", () => {
+    // A browser with a minimum font size enlarges the small text; a line
+    // height of its own would then grow with it and push that day's events
+    // below its neighbours'.
+    draw('2025-09-01', { month: 9 })
+    const number = screen.getByTestId('week-number')
+    const name = screen.getByTestId('month-name')
+    const date = number.closest('[data-day]')!.querySelector('button')!
+    expect(date.classList.contains('text-sm/4.5')).toBe(true)
+    expect(number.classList.contains('leading-4.5')).toBe(true)
+    expect(name.classList.contains('text-xs/4.5')).toBe(true)
   })
 
   it("follows the week number on a row's first day", () => {

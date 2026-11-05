@@ -780,18 +780,13 @@ export function MonthGrid({
   const clock = (event: CalendarEvent) =>
     format.formatClock(new Date(event.start * 1000), event.zone?.start)
 
-  // The dot, the time, how it repeats and whether it has a reminder, then
-  // under them the title, which has the line's whole width.
+  // The dot and the title, the title where an all-day bar's is, so a day's
+  // titles line up; then under the title, aligned with it, the time, how it
+  // repeats and whether it has a reminder.
   const chipContent = (event: CalendarEvent, lifted: boolean) => (
     <>
-      <span className='text-muted-foreground flex items-center gap-1 text-xs leading-4'>
-        {/* As far from the time as an all-day bar's dot is from its title. */}
-        <EventDot event={event} className='me-0.5' />
-        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
-        {!lifted && <RepeatMark event={event} />}
-        {!lifted && <AlarmMark event={event} />}
-      </span>
       <span className='flex min-w-0 items-center gap-1.5'>
+        <EventDot event={event} />
         {lifted && dragging?.copy && (
           <Copy className='size-3 shrink-0' aria-label={t`Copy`} />
         )}
@@ -799,6 +794,11 @@ export function MonthGrid({
           event={event}
           className={cn('flex-1', lifted && 'font-medium')}
         />
+      </span>
+      <span className='text-muted-foreground flex items-center gap-1 ps-3.5 text-xs leading-4'>
+        {!event.allday && <span className='shrink-0'>{clock(event)}</span>}
+        {!lifted && <RepeatMark event={event} />}
+        {!lifted && <AlarmMark event={event} />}
       </span>
     </>
   )
@@ -1114,7 +1114,9 @@ function WeekNumber({
     <span
       data-testid={probe ? undefined : 'week-number'}
       className={cn(
-        'text-[0.6875rem]',
+        // The day number's line height, so a browser that enlarges small
+        // text cannot make this day's header taller than its neighbours'.
+        'text-[0.6875rem] leading-4.5',
         today ? 'text-primary-foreground/80' : 'text-muted-foreground',
         className
       )}
@@ -1194,7 +1196,8 @@ function MonthStart({
       <span
         data-testid={probe ? undefined : 'month-name'}
         className={cn(
-          'text-xs font-medium',
+          // The day number's line height, as the week number's.
+          'text-xs/4.5 font-medium',
           !probe && 'min-w-0 truncate',
           outside && 'text-muted-foreground',
           today && 'text-primary-foreground'
