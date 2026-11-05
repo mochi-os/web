@@ -54,6 +54,34 @@ describe('loader: a request the shell never answers', () => {
     expect(script.crossOrigin).toBe('anonymous')
   })
 
+  // A slow link's download outlasts a minute, and is not ended while it moves.
+  it('waits while the shell reports bytes, and ends it 15 s after they stop', async () => {
+    vi.useFakeTimers()
+    loader([[], []], './assets/index-a.js', [])
+    await vi.advanceTimersByTimeAsync(0)
+    const request = posted.find((message) => message.type === 'fetch')
+    expect(request?.progress).toBe(true)
+    // As the shell delivers it: from the parent, at the page's own origin.
+    const report = () => {
+      const event = new MessageEvent('message', {
+        data: { type: 'fetch.progress', id: request?.id, received: 1 },
+        origin: window.location.origin,
+      })
+      Object.defineProperty(event, 'source', { value: window.parent })
+      window.dispatchEvent(event)
+    }
+    await vi.advanceTimersByTimeAsync(50_000)
+    report()
+    await vi.advanceTimersByTimeAsync(14_999)
+    report()
+    await vi.advanceTimersByTimeAsync(14_999)
+    expect(posted).not.toContainEqual({ type: 'fetch.abort', id: request?.id })
+    expect(document.querySelector('script[src]')).toBeNull()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(posted).toContainEqual({ type: 'fetch.abort', id: request?.id })
+    expect(document.querySelector('script[src]')).not.toBeNull()
+  })
+
   it('preloads natively in CORS mode, so the script takes the preload up', async () => {
     window.name = ''
     loader(

@@ -246,10 +246,22 @@ describe('a GET carried for bytes the page uses', () => {
     expect(heard).toEqual([1000, 3000])
   })
 
-  it('asks for no progress when nobody listens', async () => {
+  // The reports are what keep a slow download from being ended part-way.
+  it('asks a shell that reports progress for it when nobody listens', async () => {
     await boot()
     const { shellGet } = await import('./shell-fetch')
-    const reply = shellGet('/feeds/assets/model.glb', [])
+    const reply = shellGet('/feeds/assets/photo.jpg', [])
+    await vi.waitFor(() => expect(requests()).toHaveLength(1))
+    fromParent({ type: 'fetch.progress', id: requests()[0].id, received: 10 })
+    await answer({ status: 200, headers: [], body: json({}) })
+    expect((await reply)?.status).toBe(200)
+    expect(requests()[0].progress).toBe(true)
+  })
+
+  it('asks a shell that reports none for no progress', async () => {
+    await boot({ progress: false })
+    const { shellGet } = await import('./shell-fetch')
+    const reply = shellGet('/feeds/assets/photo.jpg', [])
     await answer({ status: 200, headers: [], body: json({}) })
     await reply
     expect(posted.find((m) => m.type === 'fetch')?.progress).toBeUndefined()
@@ -283,7 +295,7 @@ describe('a carried GET the shell goes quiet on', () => {
     return state
   }
 
-  it('gives up after 15 s without progress, ends it in the shell and answers null', async () => {
+  it('gives up 15 s after its last report, ends it in the shell and answers null', async () => {
     await boot()
     const { shellGet } = await import('./shell-fetch')
     vi.useFakeTimers()
@@ -317,8 +329,82 @@ describe('a carried GET the shell goes quiet on', () => {
     expect(heard).toEqual([500])
   })
 
-  it('gives one that hears only its answer 60 s', async () => {
+  // A caller that hears progress watches for movement itself: Air calls a
+  // load that shows none for 20 s stalled, so it must hear null before then
+  // to load the bytes on its own.
+  it('answers one that hears progress null 15 s after asking with no report', async () => {
     await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const reply = watch(
+      shellGet('/feeds/assets/model.glb', [], { progress: () => {} })
+    )
+    await vi.advanceTimersByTimeAsync(14999)
+    expect(reply.settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(reply.value).toBeNull()
+    expect(aborts()).toEqual([{ type: 'fetch.abort', id: requests()[0].id }])
+  })
+
+  // A response slow to start is not cut sooner for having been asked for
+  // progress the caller does not hear.
+  it("waits 60 s for a plain GET's first report", async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const reply = watch(shellGet('/feeds/assets/photo.jpg', []))
+    expect(requests()[0].progress).toBe(true)
+    await vi.advanceTimersByTimeAsync(59999)
+    expect(reply.settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(reply.value).toBeNull()
+    expect(aborts()).toEqual([{ type: 'fetch.abort', id: requests()[0].id }])
+  })
+
+  // A photo on a slow link outlasts 60 s, and is not ended while it moves.
+  it('keeps a plain GET waiting while the shell reports its bytes', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const reply = watch(shellGet('/feeds/assets/photo.jpg', []))
+    const id = requests()[0].id
+    await vi.advanceTimersByTimeAsync(50000)
+    fromParent({ type: 'fetch.progress', id, received: 1000 })
+    await vi.advanceTimersByTimeAsync(14999)
+    fromParent({ type: 'fetch.progress', id, received: 2000 })
+    await vi.advanceTimersByTimeAsync(14999)
+    expect(reply.settled).toBe(false)
+    expect(aborts()).toHaveLength(0)
+    fromParent({
+      type: 'fetch.result',
+      id,
+      status: 200,
+      headers: [],
+      body: json({}),
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(reply.value?.status).toBe(200)
+  })
+
+  // Once its bytes are coming, a download that stops is ended at the same
+  // 15 s as one the caller watches.
+  it('ends a plain GET 15 s after its last report', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    vi.useFakeTimers()
+    const reply = watch(shellGet('/feeds/assets/photo.jpg', []))
+    const id = requests()[0].id
+    await vi.advanceTimersByTimeAsync(1000)
+    fromParent({ type: 'fetch.progress', id, received: 1000 })
+    await vi.advanceTimersByTimeAsync(14999)
+    expect(reply.settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(reply.value).toBeNull()
+    expect(aborts()).toEqual([{ type: 'fetch.abort', id }])
+  })
+
+  it('gives one that hears only its answer 60 s', async () => {
+    await boot({ progress: false })
     const { shellGet } = await import('./shell-fetch')
     vi.useFakeTimers()
     const reply = watch(shellGet('/feeds/assets/photo.jpg', []))

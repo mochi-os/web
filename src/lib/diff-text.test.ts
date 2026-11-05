@@ -145,4 +145,32 @@ describe('lineWords', () => {
       lineWords('Install from git.', 'Requirements are listed below.')
     ).toBeUndefined()
   })
+
+  const words = (count: number, word: (i: number) => string) =>
+    Array.from({ length: count }, (_, i) => word(i)).join(' ')
+
+  // Half its words kept, so the two read as one edited line, but six hundred
+  // pieces changed: past what is marked.
+  it('declines a line that changes more than can be marked', () => {
+    const before = words(600, (i) => `word${i}`)
+    const after = words(600, (i) => (i % 2 ? `word${i}` : `other${i}`))
+    expect(lineWords(before, after)).toBeUndefined()
+  })
+
+  it('gives up on two long unlike lines without holding the page', () => {
+    const before = words(6000, (i) => `a${(i * 7919) % 5000}`)
+    const after = words(6000, (i) => `b${(i * 104729) % 5000}`)
+    const start = performance.now()
+    expect(lineWords(before, after)).toBeUndefined()
+    expect(performance.now() - start).toBeLessThan(2000)
+  })
+
+  it('still marks one change in a very long line', () => {
+    const before = 'function(a,b){return a+b};'.repeat(8000)
+    const after = before.slice(0, 100000) + 'X' + before.slice(100000)
+    const changes = lineWords(before, after)
+    expect(changes?.filter((c) => c.added || c.removed)).toHaveLength(2)
+    expect(side(changes, 'added')).toBe(before)
+    expect(side(changes, 'removed')).toBe(after)
+  })
 })

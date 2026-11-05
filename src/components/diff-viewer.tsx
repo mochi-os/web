@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+  memo,
   useEffect,
   useId,
   useState,
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react'
 import { useFormat } from '../hooks/use-format'
 import { parseDiff, type DiffFile, type DiffLine } from '../lib/diff-parser'
-import { lineWords } from '../lib/diff-text'
+import { lineWords, type DiffWordChange } from '../lib/diff-text'
 import { cn } from '../lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
@@ -61,15 +62,29 @@ const SHOWN_FILES = 50
 const FIRST_LINES = 1500
 const STEP_LINES = 2000
 
+// A run of a hunk's lines: context lines, or removed lines and the added lines
+// that replace them, each removed line paired with the added line at its place.
+interface LineGroup {
+  removes: DiffLine[]
+  adds: DiffLine[]
+  contexts: DiffLine[]
+  // The changed words of each pair, undefined where the two are shown whole.
+  // Both sides are drawn from one comparison.
+  words: (DiffWordChange[] | undefined)[]
+}
+
 // Pair consecutive remove/add lines for intra-line highlighting
-function pairLines(
-  lines: DiffLine[]
-): { removes: DiffLine[]; adds: DiffLine[]; contexts: DiffLine[] }[] {
-  const groups: {
-    removes: DiffLine[]
-    adds: DiffLine[]
-    contexts: DiffLine[]
-  }[] = []
+function pairLines(lines: DiffLine[]): LineGroup[] {
+  const groups: LineGroup[] = []
+  const pair = (removes: DiffLine[], adds: DiffLine[]) =>
+    groups.push({
+      removes,
+      adds,
+      contexts: [],
+      words: removes
+        .slice(0, adds.length)
+        .map((line, i) => lineWords(line.content, adds[i].content)),
+    })
   let i = 0
 
   while (i < lines.length) {
@@ -79,7 +94,7 @@ function pairLines(
       continue
     }
     if (line.type === 'context') {
-      groups.push({ removes: [], adds: [], contexts: [line] })
+      groups.push({ removes: [], adds: [], contexts: [line], words: [] })
       i++
     } else if (line.type === 'remove') {
       const removes: DiffLine[] = []
@@ -92,14 +107,14 @@ function pairLines(
         adds.push(lines[i])
         i++
       }
-      groups.push({ removes, adds, contexts: [] })
+      pair(removes, adds)
     } else if (line.type === 'add') {
       const adds: DiffLine[] = []
       while (i < lines.length && lines[i].type === 'add') {
         adds.push(lines[i])
         i++
       }
-      groups.push({ removes: [], adds, contexts: [] })
+      pair([], adds)
     } else {
       i++
     }
@@ -108,20 +123,32 @@ function pairLines(
   return groups
 }
 
+// A hunk's groups, kept with its lines for as long as they are held. A file is
+// drawn again on each change of view and each time it is opened after being
+// collapsed, and comparing the words of its pairs is the costly part.
+const grouped = new WeakMap<DiffLine[], LineGroup[]>()
+
+function hunkGroups(lines: DiffLine[]) {
+  let groups = grouped.get(lines)
+  if (!groups) {
+    groups = pairLines(lines)
+    grouped.set(lines, groups)
+  }
+  return groups
+}
+
 // Render a line with intra-line word highlighting. Two lines with too little
 // in common are different lines rather than two versions of one, and are
 // shown whole.
 function IntraLineHighlight({
-  oldContent,
-  newContent,
+  changes,
+  whole,
   side,
 }: {
-  oldContent: string
-  newContent: string
+  changes: DiffWordChange[] | undefined
+  whole: string
   side: 'old' | 'new'
 }) {
-  const whole = side === 'old' ? oldContent : newContent
-  const changes = lineWords(oldContent, newContent)
   if (!changes) return <span>{whole}</span>
 
   return (
@@ -253,7 +280,7 @@ function UnifiedView({
     >
       {/* Each hunk is its own tbody; a wrapping tbody would nest them. */}
       {file.hunks.map((hunk, hi) => {
-        const groups = pairLines(hunk.lines)
+        const groups = hunkGroups(hunk.lines)
         return (
           <tbody key={hi}>
             {hunkHeaders && (
@@ -277,11 +304,7 @@ function UnifiedView({
   )
 }
 
-function UnifiedGroup({
-  group,
-}: {
-  group: { removes: DiffLine[]; adds: DiffLine[]; contexts: DiffLine[] }
-}) {
+function UnifiedGroup({ group }: { group: LineGroup }) {
   if (group.contexts.length > 0) {
     return (
       <>
@@ -317,8 +340,8 @@ function UnifiedGroup({
             <span className='text-destructive select-none'>-</span>
             {i < paired ? (
               <IntraLineHighlight
-                oldContent={line.content}
-                newContent={group.adds[i].content}
+                changes={group.words[i]}
+                whole={line.content}
                 side='old'
               />
             ) : (
@@ -337,8 +360,8 @@ function UnifiedGroup({
             <span className='text-success select-none'>+</span>
             {i < paired ? (
               <IntraLineHighlight
-                oldContent={group.removes[i].content}
-                newContent={line.content}
+                changes={group.words[i]}
+                whole={line.content}
                 side='new'
               />
             ) : (
@@ -370,7 +393,7 @@ function SplitView({
     >
       {/* Each hunk is its own tbody; a wrapping tbody would nest them. */}
       {file.hunks.map((hunk, hi) => {
-        const groups = pairLines(hunk.lines)
+        const groups = hunkGroups(hunk.lines)
         return (
           <tbody key={hi}>
             {hunkHeaders && (
@@ -399,11 +422,7 @@ function SplitView({
   )
 }
 
-function SplitGroup({
-  group,
-}: {
-  group: { removes: DiffLine[]; adds: DiffLine[]; contexts: DiffLine[] }
-}) {
+function SplitGroup({ group }: { group: LineGroup }) {
   if (group.contexts.length > 0) {
     return (
       <>
@@ -455,8 +474,8 @@ function SplitGroup({
             <>
               {hasPair ? (
                 <IntraLineHighlight
-                  oldContent={rem.content}
-                  newContent={add.content}
+                  changes={group.words[i]}
+                  whole={rem.content}
                   side='old'
                 />
               ) : (
@@ -483,8 +502,8 @@ function SplitGroup({
             <>
               {hasPair ? (
                 <IntraLineHighlight
-                  oldContent={rem.content}
-                  newContent={add.content}
+                  changes={group.words[i]}
+                  whole={add.content}
                   side='new'
                 />
               ) : (
@@ -680,6 +699,21 @@ function stepEnd(files: DiffFile[], from: number, lines: number) {
   return end
 }
 
+// A drawn file's lines. A drawing step, a collapse or a Load diff draws the
+// viewer again, and a file already drawn is not drawn again with it unless its
+// own file, view or body changed.
+const Drawn = memo(function Drawn({
+  body: Body,
+  file,
+  viewStyle,
+}: {
+  body: ComponentType<{ file: DiffFile; viewStyle: DiffViewStyle }>
+  file: DiffFile
+  viewStyle: DiffViewStyle
+}) {
+  return <Body file={file} viewStyle={viewStyle} />
+})
+
 export function DiffViewer({
   diff,
   viewStyle,
@@ -865,7 +899,7 @@ export function DiffViewer({
                 {plainLines(file)}
               </pre>
             ) : (
-              <Body file={file} viewStyle={viewStyle} />
+              <Drawn body={Body} file={file} viewStyle={viewStyle} />
             ))}
         </div>
       ))}

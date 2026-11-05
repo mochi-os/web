@@ -55,13 +55,18 @@ export function loader(manifest, entry, styles) {
   // --- Fetching ---
 
   var waiting = Object.create(null)
+  var moving = Object.create(null) // request id -> renews its wait
   var carrying = Object.create(null) // URL -> Promise of its text, or null
   if (bridged) {
     window.addEventListener('message', function (event) {
       if (event.source !== window.parent || event.origin !== origin) return
       var data = event.data
-      if (!data || data.type !== 'fetch.result' || typeof data.id !== 'string')
+      if (!data || typeof data.id !== 'string') return
+      if (data.type === 'fetch.progress') {
+        if (moving[data.id]) moving[data.id]()
         return
+      }
+      if (data.type !== 'fetch.result') return
       var settle = waiting[data.id]
       if (!settle) return
       delete waiting[data.id]
@@ -95,19 +100,32 @@ export function loader(manifest, entry, styles) {
     return new Promise(function (resolve) {
       var id = identifier()
       // The shell answers every request, refusals included; this is for one
-      // that is lost, and long enough that a slow link is not taken for one.
-      // A request given up on is ended, so it is not downloaded twice.
-      var timer = setTimeout(function () {
-        delete waiting[id]
-        try {
-          window.parent.postMessage({ type: 'fetch.abort', id: id }, origin)
-        } catch (error) {
-          // The shell has gone; nothing to end.
-        }
-        resolve(null)
-      }, 60000)
+      // that is lost, and long enough that a slow link is not taken for one:
+      // a minute for the first bytes, and once a shell that reports progress
+      // says they are coming, 15 s between its reports, so a download is
+      // ended only once it stops moving. A request given up on is ended, so
+      // it is not downloaded twice.
+      var timer
+      function wait(time) {
+        clearTimeout(timer)
+        timer = setTimeout(function () {
+          delete waiting[id]
+          delete moving[id]
+          try {
+            window.parent.postMessage({ type: 'fetch.abort', id: id }, origin)
+          } catch (error) {
+            // The shell has gone; nothing to end.
+          }
+          resolve(null)
+        }, time)
+      }
+      wait(60000)
+      moving[id] = function () {
+        wait(15000)
+      }
       waiting[id] = function (reply) {
         clearTimeout(timer)
+        delete moving[id]
         var type = ''
         var headers = Array.isArray(reply.headers) ? reply.headers : []
         for (var i = 0; i < headers.length; i++) {
@@ -124,13 +142,22 @@ export function loader(manifest, entry, styles) {
         )
       }
       try {
+        // A shell that does not report progress passes over the ask.
         window.parent.postMessage(
-          { type: 'fetch', id: id, url: url, method: 'GET', headers: [] },
+          {
+            type: 'fetch',
+            id: id,
+            url: url,
+            method: 'GET',
+            headers: [],
+            progress: true,
+          },
           origin
         )
       } catch (error) {
         clearTimeout(timer)
         delete waiting[id]
+        delete moving[id]
         resolve(null)
       }
     })
@@ -451,6 +478,9 @@ export function loader(manifest, entry, styles) {
   var BLANK =
     'AAEAAAAKAIAAAwAgT1MvMlO/Ut8AAACsAAAAVmNtYXAADAAmAAABBAAAACRnbHlmAAAAAAAAASgAAAAMaGVhZF8eQOUAAAE0AAAANmhoZWEDIgEuAAABbAAAACRobXR4AfQAAAAAAZAAAAAEbG9jYQAAAAYAAAGUAAAABG1heHAAAgACAAABmAAAACBuYW1lABQEhwAAAbgAAAAUcG9zdP+fADIAAAHMAAAAIAABAfQBkAAFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABOT05FAED/////AyD/OAAAAyAAyAAAAAAAAAAAAAAAAAABAAMAAQAAAAwABAAYAAAAAgACAAAAAP//AAD//wABAAAAAAAAAAAAAAAAAAAAAQAAAAEAADYvaoVfDzz1AAsD6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAgAAAAAAAAABAAADIP84AAAB9AAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQH0AAAAAAAGAAEAAAABAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAABABIAAwABBAkAAQACAAAAeAADAAAAAAAA/5wAMgAAAAAAAAAAAAAAAAAAAAAAAAAA'
   var blank = null
+  // The descriptors a face registered from here carries, each by its name in
+  // a rule and in the font loading API. A rule declaring any other keeps its
+  // face in the sheet, where the browser reads all of them.
   var descriptions = [
     ['font-style', 'style'],
     ['font-weight', 'weight'],
@@ -458,7 +488,36 @@ export function loader(manifest, entry, styles) {
     ['unicode-range', 'unicodeRange'],
     ['font-display', 'display'],
     ['font-feature-settings', 'featureSettings'],
+    ['font-variation-settings', 'variationSettings'],
+    ['ascent-override', 'ascentOverride'],
+    ['descent-override', 'descentOverride'],
+    ['line-gap-override', 'lineGapOverride'],
+    ['size-adjust', 'sizeAdjust'],
   ]
+  var described = { 'font-family': true, src: true }
+  descriptions.forEach(function (pair) {
+    described[pair[0]] = true
+  })
+
+  // A face swapped in loaded is announced as the browser announces one it
+  // loads itself, so a page that measures text once its fonts are in measures
+  // again: document.fonts.ready settled on the placeholder, and a face built
+  // from its bytes is loaded before it is added, which the set announces
+  // nothing for.
+  function announce(face) {
+    var event
+    try {
+      event = new FontFaceSetLoadEvent('loadingdone', { fontfaces: [face] })
+    } catch (error) {
+      event = new Event('loadingdone')
+      event.fontfaces = [face]
+    }
+    try {
+      document.fonts.dispatchEvent(event)
+    } catch (error) {
+      // A set that takes no listeners has none to tell.
+    }
+  }
 
   // The formats a browser that has the font loading API reads. A source in
   // any other (embedded-opentype, svg) is passed over for the next.
@@ -576,6 +635,9 @@ export function loader(manifest, entry, styles) {
     var address = chosen(source)
     // A face read from the sheet's own text costs no download to defer.
     if (!family || !address || /^(data|blob):/i.test(address)) return whole
+    for (var name in declared) {
+      if (!described[name]) return whole
+    }
     var descriptors = {}
     descriptions.forEach(function (pair) {
       if (declared[pair[0]]) descriptors[pair[1]] = declared[pair[0]]
@@ -590,7 +652,16 @@ export function loader(manifest, entry, styles) {
       requested(address, /font|woff|truetype|opentype/i).then(function (bytes) {
         try {
           document.fonts.delete(placeholder)
-          document.fonts.add(new FontFace(family, bytes || source, descriptors))
+          var real = new FontFace(family, bytes || source, descriptors)
+          document.fonts.add(real)
+          // A face loaded from its own address is the browser's to announce.
+          if (bytes)
+            real.loaded.then(
+              function () {
+                announce(real)
+              },
+              function () {}
+            )
         } catch (error) {
           // A face that cannot be built falls back to the next family.
         }

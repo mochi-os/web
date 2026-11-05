@@ -338,10 +338,14 @@ export type ShellReply = {
 }
 
 // How long a carried GET may go without a word from the shell before it is
-// ended and answered null, so the caller loads the bytes itself: patience for
-// one that hears only the answer, which must arrive whole within it, and
-// stall for one that hears progress, which a download moving at all renews
-// every tenth of a second.
+// ended and answered null, so the caller loads the bytes itself: stall between
+// reports of bytes received, which a download moving at all renews every tenth
+// of a second, so a slow link's large download is ended only once it stops
+// moving, not part-way through, to be fetched again by the frame outside any
+// cache. Before the first report, patience, or for the whole answer from a
+// shell that reports none; but stall for a caller that hears progress, which
+// watches for movement itself (Air calls a load that shows none for 20 s
+// stalled) and is answered in time to load the bytes on its own.
 const patience = 60000
 const stall = 15000
 
@@ -371,6 +375,10 @@ export function shellGet(
   return new Promise((resolve) => {
     const id = identifier()
     const report = options.progress
+    // A shell that reports progress is asked to for every request, whether
+    // or not the caller listens: the reports are what keep it waiting.
+    const reports = init.progress === true
+    let heard = false
     let timer: ReturnType<typeof setTimeout> | undefined
     // Given up on: ended in the shell too, so it is not downloaded twice.
     function quiet() {
@@ -385,12 +393,13 @@ export function shellGet(
     }
     function wait() {
       clearTimeout(timer)
-      timer = setTimeout(quiet, report ? stall : patience)
+      timer = setTimeout(quiet, heard || report ? stall : patience)
     }
-    if (report)
+    if (reports)
       progressing.set(id, (received) => {
+        heard = true
         wait()
-        report(received)
+        report?.(received)
       })
     waiting.set(id, (reply) => {
       clearTimeout(timer)
@@ -418,7 +427,7 @@ export function shellGet(
           method: 'GET',
           headers,
           ...(options.revalidate ? { cache: 'no-cache' } : {}),
-          ...(report ? { progress: true } : {}),
+          ...(reports ? { progress: true } : {}),
         },
         shellOrigin()
       )
