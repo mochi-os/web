@@ -25,6 +25,7 @@ import { TreeRow } from '../tree-row'
 import { TreeTableHeader } from '../tree-table-header'
 import { treeTableMinWidth } from '../tree-table-width'
 import { useShellStorage } from '../../hooks/use-shell-storage'
+import { useProgressive } from '../../hooks/use-progressive'
 import { sortEntityObjects, compareEntityObjects } from '../../lib/entity-sort'
 import type {
   EntityDesign,
@@ -280,6 +281,12 @@ function buildStatusGroups<TObject extends EntityObject>(
   return groups
 }
 
+// What a row does in a preview: nothing.
+const ignore = () => {}
+// What a class without fields or options has.
+const noFields: EntityDesign['fields'][string] = []
+const noOptions: EntityDesign['options'][string] = {}
+
 export function EntityTreeView<TObject extends EntityObject>({
   design,
   containerId,
@@ -335,24 +342,36 @@ export function EntityTreeView<TObject extends EntityObject>({
     viewClasses && viewClasses.length > 0
       ? viewClasses[0]
       : design.classes[0]?.id || ''
-  const fields = design.fields[effectiveClass] || []
-  const options = design.options[effectiveClass] || {}
+  // The same value on every render, as everything a row is given is: rows
+  // are memoised, and a new array or object each render would draw every row
+  // again.
+  const fields = design.fields[effectiveClass] || noFields
+  const options = design.options[effectiveClass] || noOptions
 
   // Get visible fields from view's fields setting, or fall back to field's card property
-  const viewFieldsList = viewFields?.split(',').filter(Boolean) || []
+  const viewFieldsList = useMemo(
+    () => viewFields?.split(',').filter(Boolean) || [],
+    [viewFields]
+  )
   const showClass = viewFieldsList.includes('class')
   // No prefix means the app does not issue readable ids, so there is nothing
   // to put in the column even when a view lists it.
   const showId = prefix !== undefined && viewFieldsList.includes('id')
-  const fieldMap = new Map(fields.map((f) => [f.id, f]))
-  const visibleFields = viewFieldsList
-    .map((id) => fieldMap.get(id))
-    .filter(Boolean) as typeof fields
+  const visibleFields = useMemo(() => {
+    const fieldMap = new Map(fields.map((f) => [f.id, f]))
+    return viewFieldsList
+      .map((id) => fieldMap.get(id))
+      .filter(Boolean) as typeof fields
+  }, [fields, viewFieldsList])
 
   const groupField = resolveGroupField(statusField, visibleFields)
-  const rowFields = groupField
-    ? visibleFields.filter((f) => f.id !== groupField)
-    : visibleFields
+  const rowFields = useMemo(
+    () =>
+      groupField
+        ? visibleFields.filter((f) => f.id !== groupField)
+        : visibleFields,
+    [groupField, visibleFields]
+  )
 
   const groupOptions = useMemo(
     () =>
@@ -748,6 +767,65 @@ export function EntityTreeView<TObject extends EntityObject>({
     clearDragState,
   ])
 
+  // What a row calls back, through a ref holding the latest handlers: the
+  // functions rows are given never change, so a memoised row draws again only
+  // when what it shows changes, not on every drag step or selection, which
+  // drew every row of a long list each time.
+  const latest = useRef({
+    toggleExpand,
+    onCardClick,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    objectMap,
+  })
+  useLayoutEffect(() => {
+    latest.current = {
+      toggleExpand,
+      onCardClick,
+      handleDragStart,
+      handleDragOver,
+      handleDragEnd,
+      objectMap,
+    }
+  })
+  const rowToggle = useCallback(
+    (objectId: string) => latest.current.toggleExpand(objectId),
+    []
+  )
+  const rowClick = useCallback((objectId: string) => {
+    const object = latest.current.objectMap[objectId]
+    if (object) latest.current.onCardClick(object)
+  }, [])
+  const rowDragStart = useCallback(
+    (objectId: string) => latest.current.handleDragStart(objectId),
+    []
+  )
+  const rowDragOver = useCallback(
+    (objectId: string, position: 'before' | 'after' | 'on') =>
+      latest.current.handleDragOver(objectId, position),
+    []
+  )
+  const rowDragEnd = useCallback(() => latest.current.handleDragEnd(), [])
+
+  // The rows in drawing order: each open section's in turn, or the tree's.
+  // They are drawn a hundred at first and the rest as the browser is idle
+  // (useProgressive), so a long list paints without waiting for all of it.
+  const sectionRows = useMemo(
+    () =>
+      statusGroups.map((group) =>
+        collapsedSectionSet.has(group.id)
+          ? []
+          : buildGroupedFlatNodes(group.objects, sort)
+      ),
+    [statusGroups, collapsedSectionSet, sort]
+  )
+  const total =
+    statusGroups.length > 0
+      ? sectionRows.reduce((sum, rows) => sum + rows.length, 0)
+      : flatNodes.length
+  const drawn = useProgressive(total)
+
   const renderFlatNodes = (nodes: FlatNode<TObject>[]) =>
     nodes.map(({ node, hasChildren, isExpanded, anySiblingHasChildren }) => {
       const draggedObj = draggedId ? objectMap[draggedId] : null
@@ -800,13 +878,11 @@ export function EntityTreeView<TObject extends EntityObject>({
             isReparentAllowed(draggedId, node.object.id)
           }
           canDrag={!preview && canDragRows}
-          onToggleExpand={() => toggleExpand(node.object.id)}
-          onClick={preview ? () => {} : () => onCardClick(node.object)}
-          onDragStart={
-            preview ? () => {} : () => handleDragStart(node.object.id)
-          }
-          onDragOver={preview ? () => {} : handleDragOver}
-          onDragEnd={preview ? () => {} : handleDragEnd}
+          onToggleExpand={rowToggle}
+          onClick={preview ? ignore : rowClick}
+          onDragStart={preview ? ignore : rowDragStart}
+          onDragOver={preview ? ignore : rowDragOver}
+          onDragEnd={preview ? ignore : rowDragEnd}
         />
       )
     })
@@ -831,6 +907,14 @@ export function EntityTreeView<TObject extends EntityObject>({
   const headerTitleFieldId = design.classes.find(
     (c) => c.id === effectiveClass
   )?.title
+
+  // The rows drawn so far, taken in drawing order.
+  let budget = drawn
+  const take = (nodes: FlatNode<TObject>[]) => {
+    const part = nodes.length <= budget ? nodes : nodes.slice(0, budget)
+    budget -= part.length
+    return part
+  }
 
   return (
     // The minimum width keeps every column readable on a narrow screen. The
@@ -858,9 +942,11 @@ export function EntityTreeView<TObject extends EntityObject>({
         />
         <tbody>
           {statusGroups.length > 0
-            ? statusGroups.map((group) => {
+            ? statusGroups.map((group, index) => {
+                // A section is drawn once the rows before it are.
+                if (budget <= 0 && drawn < total) return null
                 const sectionExpanded = !collapsedSectionSet.has(group.id)
-                const groupFlat = buildGroupedFlatNodes(group.objects, sort)
+                const groupFlat = take(sectionRows[index])
                 return (
                   <Fragment key={group.id}>
                     <ListSectionHeader
@@ -887,7 +973,7 @@ export function EntityTreeView<TObject extends EntityObject>({
                   </Fragment>
                 )
               })
-            : renderFlatNodes(flatNodes)}
+            : renderFlatNodes(take(flatNodes))}
         </tbody>
       </table>
     </div>

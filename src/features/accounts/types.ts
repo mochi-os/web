@@ -51,6 +51,12 @@ export interface Account {
   device?: string
   // The capabilities the account holds now, such as "login" and "calendar".
   granted?: string[]
+  // An account on another network: true for one hosted here, false for one
+  // linked; absent on every other kind. Removing a hosted one removes it from
+  // its network with everything it published.
+  hosted?: boolean
+  // The server a network account is on.
+  server?: string
 }
 
 export interface ProviderField {
@@ -64,7 +70,10 @@ export interface ProviderField {
 export interface Provider {
   type: string
   capabilities: string[]
-  flow: 'form' | 'browser' | 'oauth'
+  // How an account is connected: 'handle' makes a hosted account on another
+  // network from a handle, 'link' links an existing one there (both on the
+  // Networks page).
+  flow: 'form' | 'browser' | 'oauth' | 'handle' | 'link'
   fields: ProviderField[]
   verify: boolean
 }

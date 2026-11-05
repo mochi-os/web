@@ -15,6 +15,8 @@ describe('addableProviders', () => {
     provider('browser', ['notify']),
     provider('matrix', ['network', 'chat', 'notify'], 'handle'),
     provider('github', ['login'], 'oauth'),
+    provider('mastodon', ['social'], 'link'),
+    provider('lemmy', ['social'], 'link'),
   ]
 
   it('offers no network: its accounts are made and linked on the Networks page', () => {

@@ -154,6 +154,7 @@ export function NavGroup({
     !animateList || (state === 'collapsed' && !isMobile)
   const [menuRef] = useListAutoAnimate<HTMLUListElement>({
     disabled: animationsDisabled,
+    count: items.length,
   })
 
   return (

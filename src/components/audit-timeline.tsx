@@ -121,7 +121,8 @@ export function AuditTimeline({
               ),
               secondary: (
                 <p className='text-muted-foreground text-xs'>
-                  {formatTimestamp(entry.timestamp)} · {actor}
+                  {formatTimestamp(entry.timestamp)}
+                  {actor && ` · ${actor}`}
                 </p>
               ),
             }

@@ -95,6 +95,7 @@ export function useDragReorder({
 
   const [autoAnimateRef] = useListAutoAnimate<HTMLDivElement>({
     duration: SHIFT_MS,
+    count,
   })
   const containerRef = useRef<HTMLDivElement | null>(null)
   const itemsRef = useRef<(HTMLElement | null)[]>([])
