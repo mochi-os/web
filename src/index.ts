@@ -291,6 +291,7 @@ export {
   websocketFailed,
 } from './lib/websocket-token'
 export * from './hooks/use-pending-items'
+export * from './hooks/use-poll'
 export * from './hooks/use-merge-on-scroll-top'
 export * from './hooks/use-list-auto-animate'
 export * from './hooks/use-progressive'

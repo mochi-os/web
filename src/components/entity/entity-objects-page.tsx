@@ -68,6 +68,7 @@ import {
 import { useEntityWebsocket } from '../../hooks/use-entity-websocket'
 import { useKeyboardShortcuts } from '../../hooks/use-keyboard-shortcuts'
 import { usePageTitle } from '../../hooks/use-page-title'
+import { usePoll } from '../../hooks/use-poll'
 import { useShellStorage } from '../../hooks/use-shell-storage'
 import { useSearch } from '../../context/search-provider'
 import { getAppPath } from '../../lib/app-path'
@@ -419,13 +420,12 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
   // Fallback for the websocket race: if the update event is missed (fired
   // before the socket connected), poll the loader while the container is still
-  // filling so the board never stays stuck on the loading spinner.
+  // filling so the board never stays stuck on the loading spinner. The polls
+  // slow down and stop after ten minutes, since a subscription can stay filling
+  // for good when its owner is gone; the update event still reloads the board
+  // when a pull lands later.
   const populated = container.populated
-  useEffect(() => {
-    if (populated) return
-    const timer = setInterval(() => void router.invalidate(), 3000)
-    return () => clearInterval(timer)
-  }, [populated, router])
+  usePoll(!populated, () => void router.invalidate(), container.id)
 
   // Disable global Ctrl+K search shortcut so we can use it for view options
   const { setShortcutEnabled } = useSearch()
