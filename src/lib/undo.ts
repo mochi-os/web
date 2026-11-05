@@ -24,6 +24,7 @@
 
 import {
   hashKey,
+  type Query,
   type QueryClient,
   type QueryFilters,
   type QueryKey,
@@ -266,21 +267,24 @@ export function optimisticFields<TVariables, TItem extends object>(
         })
         return found
       }
+      // An `edit` that throws here leaves nothing to undo: no fetch is
+      // stopped yet and the call is not waiting.
+      const holding = new Map<string, Query>()
       for (const { filters, edit } of places) {
         for (const query of queryClient.getQueryCache().findAll(filters)) {
           if (query.state.data === undefined) continue
-          if (call.queries.has(query.queryHash)) continue
-          if (!holds(query.state.data, edit)) continue
-          call.queries.set(query.queryHash, query.queryKey)
-          if (
-            query.state.isInvalidated ||
-            query.state.fetchStatus === 'fetching'
-          ) {
-            registry.stopped.add(query.queryHash)
-          }
+          if (holding.has(query.queryHash)) continue
+          if (holds(query.state.data, edit)) holding.set(query.queryHash, query)
         }
       }
-      for (const hash of call.queries.keys()) {
+      for (const [hash, query] of holding) {
+        call.queries.set(hash, query.queryKey)
+        if (
+          query.state.isInvalidated ||
+          query.state.fetchStatus === 'fetching'
+        ) {
+          registry.stopped.add(hash)
+        }
         const calls = registry.waiting.get(hash) ?? new Set()
         calls.add(call)
         registry.waiting.set(hash, calls)
@@ -291,40 +295,60 @@ export function optimisticFields<TVariables, TItem extends object>(
         )
       )
 
-      // A query two places match is edited by the first only, so a click is
-      // never applied to it twice.
-      const seen = new Set<string>()
-      for (const place of places) {
-        for (const [key, data] of queryClient.getQueriesData(place.filters)) {
-          const hash = hashKey(key)
-          if (data === undefined || seen.has(hash)) continue
-          seen.add(hash)
-          let step: Step | undefined
-          const next = place.edit(data as never, id, (item) => {
-            const shown = options.apply(item, variables)
-            if (shown === item) return item
-            step ??= {
-              key,
-              edit: (old, change) =>
-                place.edit(
-                  old as never,
-                  id,
-                  change as unknown as (item: TItem) => TItem
-                ),
-              undo: registry.chain(chainId(hash, id)),
-              after: {},
-            }
-            step.undo.remember(pick(item, fields))
-            step.after = pick(shown, fields)
-            return shown
-          })
-          if (step) call.steps.push(step)
-          if (next !== data) {
-            queryClient.setQueryData(key, next, {
-              updatedAt: queryClient.getQueryState(key)?.dataUpdatedAt,
+      // Every change is worked out before any is written or joins a chain,
+      // so an `edit` or `apply` that throws leaves the cache and the click
+      // order as they were, and the call stops waiting, sending any fetch it
+      // stopped. A query two places
+      // match is edited by the first only, so a click is never applied to it
+      // twice.
+      const writes: { key: QueryKey; next: unknown }[] = []
+      const found: (Omit<Step, 'undo'> & { hash: string; before: Fields })[] =
+        []
+      try {
+        const seen = new Set<string>()
+        for (const place of places) {
+          for (const [key, data] of queryClient.getQueriesData(place.filters)) {
+            const hash = hashKey(key)
+            if (data === undefined || seen.has(hash)) continue
+            seen.add(hash)
+            let step: (typeof found)[number] | undefined
+            const next = place.edit(data as never, id, (item) => {
+              const shown = options.apply(item, variables)
+              if (shown === item) return item
+              // The first copy of the item names what showed before.
+              step ??= {
+                key,
+                hash,
+                edit: (old, change) =>
+                  place.edit(
+                    old as never,
+                    id,
+                    change as unknown as (item: TItem) => TItem
+                  ),
+                before: pick(item, fields),
+                after: {},
+              }
+              step.after = pick(shown, fields)
+              return shown
             })
+            if (step) found.push(step)
+            if (next !== data) writes.push({ key, next })
           }
         }
+      } catch (error) {
+        settle(queryClient, registry, call)
+        throw error
+      }
+
+      for (const { hash, before, ...step } of found) {
+        const undo = registry.chain(chainId(hash, id))
+        undo.remember(before)
+        call.steps.push({ ...step, undo })
+      }
+      for (const { key, next } of writes) {
+        queryClient.setQueryData(key, next, {
+          updatedAt: queryClient.getQueryState(key)?.dataUpdatedAt,
+        })
       }
       return call
     },

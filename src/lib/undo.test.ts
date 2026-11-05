@@ -362,6 +362,71 @@ describe('optimisticFields', () => {
     expect(find('a')).toMatchObject({ votes: 0, mine: false })
   })
 
+  it('leaves everything as it was when an edit throws', async () => {
+    const LIST = ['list']
+    let broken = true
+    const { client, click, find, requests, sent } = setup([
+      { filters: { queryKey: KEY }, edit: editComment },
+      {
+        filters: { queryKey: LIST },
+        // Finds the item, then throws on the change itself.
+        edit: (old: Post, id, change) => {
+          const next = editComment(old, id, change)
+          if (broken && next !== old) throw new Error('broken')
+          return next
+        },
+      },
+    ])
+    client.setQueryData<Post>(LIST, { comments: [comment('a')] })
+    client.setQueryData<Post>(KEY, {
+      comments: [{ ...comment('a'), votes: 4 }, comment('b')],
+    })
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    void client.invalidateQueries({ queryKey: KEY, refetchType: 'none' })
+    invalidate.mockClear()
+
+    await click({ id: 'a', mine: true })
+    expect(requests).toHaveLength(0)
+    expect(find('a')).toMatchObject({ votes: 4, mine: false })
+    // The fetch the click stopped is still sent once nothing waits.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: KEY, exact: true })
+
+    // A later click on the item is undone as if the broken one never was.
+    broken = false
+    const done = click({ id: 'a', mine: true })
+    await sent(1)
+    expect(find('a')).toMatchObject({ votes: 5, mine: true })
+    requests[0].reject(new Error('refused'))
+    await done
+    expect(find('a')).toMatchObject({ votes: 4, mine: false })
+  })
+
+  it('leaves everything as it was when finding the item throws', async () => {
+    const LIST = ['list']
+    let broken = true
+    const { client, click, find, requests, sent } = setup([
+      { filters: { queryKey: KEY }, edit: editComment },
+      {
+        filters: { queryKey: LIST },
+        edit: (old: Post, id, change) => {
+          if (broken) throw new Error('broken')
+          return editComment(old, id, change)
+        },
+      },
+    ])
+    client.setQueryData<Post>(LIST, { comments: [comment('a')] })
+    await click({ id: 'a', mine: true })
+    expect(requests).toHaveLength(0)
+    expect(find('a')).toMatchObject({ votes: 0, mine: false })
+
+    broken = false
+    const done = click({ id: 'a', mine: true })
+    await sent(1)
+    requests[0].reject(new Error('refused'))
+    await done
+    expect(find('a')).toMatchObject({ votes: 0, mine: false })
+  })
+
   it('ignores a context it did not make', () => {
     const { vote, post } = setup()
     const data = post()
