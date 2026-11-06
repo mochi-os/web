@@ -15,7 +15,7 @@ function show(quote: Quote) {
 }
 
 describe('QuoteCard', () => {
-  it('links the author, text, picture and network to the post', () => {
+  it('links the author, text and picture to the post, without naming the network', () => {
     show({
       network: 'bluesky',
       url: 'https://bsky.app/profile/bob.bsky.social/post/3abc',
@@ -36,7 +36,8 @@ describe('QuoteCard', () => {
     expect(screen.getByText('Bob')).toBeTruthy()
     expect(screen.getByText('@bob.bsky.social')).toBeTruthy()
     expect(screen.getByText('Hi there')).toBeTruthy()
-    expect(screen.getByText('Bluesky')).toBeTruthy()
+    // THE POINT: the network is not named on the card.
+    expect(screen.queryByText('Bluesky')).toBeNull()
     expect(
       card.querySelector('img[src="https://pds.example/blob"]')
     ).not.toBeNull()
@@ -52,6 +53,6 @@ describe('QuoteCard', () => {
     const card = screen.getByTestId('quote-card')
     expect(card.tagName).toBe('DIV')
     expect(card.querySelector('img[src^="javascript"]')).toBeNull()
-    expect(screen.getByText('ActivityPub')).toBeTruthy()
+    expect(screen.queryByText('ActivityPub')).toBeNull()
   })
 })

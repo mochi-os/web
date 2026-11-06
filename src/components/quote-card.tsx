@@ -4,10 +4,11 @@
 // A post on another network quoted in a Mochi post or message: who wrote it,
 // its text and its first picture, the whole card a link to the post. The
 // server reads the quote from the network when the post is written and keeps
-// it with the post, so subscribers see what the writer saw.
+// it with the post, so subscribers see what the writer saw. The card does not
+// name the network: the author's address and the link already say where the
+// post is.
 import { AssetImage } from './asset-image'
 import { EntityAvatar } from './entity-avatar'
-import { providerName } from '../lib/provider-name'
 import { cn } from '../lib/utils'
 
 export interface QuoteAuthor {
@@ -46,24 +47,17 @@ export function QuoteCard({
   const image = quoteHref(quote.image)
   const body = (
     <>
-      {(name || quote.network) && (
+      {name && (
         <div className='mb-1 flex items-center gap-2'>
-          {name && (
-            <EntityAvatar
-              src={quoteHref(author?.avatar) ?? null}
-              name={name}
-              size='sm'
-            />
-          )}
-          {name && <span className='truncate font-medium'>{name}</span>}
+          <EntityAvatar
+            src={quoteHref(author?.avatar) ?? null}
+            name={name}
+            size='sm'
+          />
+          <span className='truncate font-medium'>{name}</span>
           {author?.address && author.name && (
             <span className='text-muted-foreground truncate text-xs'>
               {author.address}
-            </span>
-          )}
-          {quote.network && (
-            <span className='text-muted-foreground ms-auto shrink-0 text-xs'>
-              {providerName(quote.network)}
             </span>
           )}
         </div>
