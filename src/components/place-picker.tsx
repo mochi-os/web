@@ -34,7 +34,7 @@ export function PlacePicker({
   onOpenChange,
   onSelect,
   title = t`Select location`,
-  placeholder = t`Search for a place...`,
+  placeholder = t`Search for a place`,
 }: PlacePickerProps) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<PhotonPlace | null>(null)

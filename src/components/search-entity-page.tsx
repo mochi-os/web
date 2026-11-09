@@ -79,7 +79,7 @@ export function FindEntityPage({
   icon: Icon,
   iconClassName = 'bg-primary/10 text-primary',
   title,
-  placeholder = t`Search...`,
+  placeholder = t`Search`,
   emptyMessage = t`No results found`,
   subscribeLabel = t`Subscribe`,
   recommendations = [],

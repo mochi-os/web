@@ -329,7 +329,6 @@ export function StepUpDialog({
                           if (e.key === 'Enter' && !busy && canVerify)
                             submitActive()
                         }}
-                        placeholder={t`Enter the code from your email`}
                         className='font-mono'
                         autoComplete='one-time-code'
                         disabled={busy}
@@ -363,7 +362,6 @@ export function StepUpDialog({
                       if (e.key === 'Enter' && !busy && canVerify)
                         submitActive()
                     }}
-                    placeholder={t`Enter your authenticator code`}
                     className='font-mono'
                     autoComplete='one-time-code'
                     disabled={busy}

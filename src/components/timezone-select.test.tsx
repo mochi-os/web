@@ -102,7 +102,7 @@ describe('TimezoneSelect', () => {
     expect(await screen.findByText(/Detect from web browser/)).toBeTruthy()
     cleanup()
     fireEvent.click(show({ auto: false }))
-    await screen.findByPlaceholderText('Search time zone...')
+    await screen.findByPlaceholderText('Search time zone')
     expect(screen.queryByText(/Detect from web browser/)).toBeNull()
   })
 
@@ -188,7 +188,7 @@ describe('the list', () => {
     expect(screen.getByText('Europe/Kyiv')).toBeTruthy()
     expect(screen.queryByText('Asia/Calcutta')).toBeNull()
     expect(screen.queryByText('Europe/Kiev')).toBeNull()
-    fireEvent.change(screen.getByPlaceholderText('Search time zone...'), {
+    fireEvent.change(screen.getByPlaceholderText('Search time zone'), {
       target: { value: 'Calcutta' },
     })
     await waitFor(() => expect(screen.queryByText('Asia/Tokyo')).toBeNull())

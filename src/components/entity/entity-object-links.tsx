@@ -328,7 +328,7 @@ export function EntityObjectLinks<TObject extends EntityObject>({
                 </SelectContent>
               </Select>
               <Input
-                placeholder={t`Search objects...`}
+                placeholder={t`Search objects`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className='h-8 text-xs'

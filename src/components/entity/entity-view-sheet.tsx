@@ -398,7 +398,7 @@ export function ViewSheet({
                   }
                 >
                   <SelectTrigger className='w-full'>
-                    <SelectValue placeholder={t`Select a field`} />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE_SELECT_VALUE}>

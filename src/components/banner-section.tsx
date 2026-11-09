@@ -96,7 +96,7 @@ export function BannerSection({ entityId, api }: BannerSectionProps) {
             setBannerText(e.target.value)
             setDirty(e.target.value !== savedRef.current)
           }}
-          placeholder={t`Enter banner text (markdown supported)...`}
+          placeholder={t`Enter banner text (markdown supported)`}
           rows={3}
           maxLength={10000}
           className='font-mono text-sm'

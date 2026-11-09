@@ -61,7 +61,7 @@ export function InlineEntitySearch<T extends InlineEntitySearchItem>({
   onSubscribe,
   icon: Icon,
   iconClassName = 'bg-primary/10 text-primary',
-  placeholder = t`Search...`,
+  placeholder = t`Search`,
   emptyMessage = t`No results found`,
   searchErrorMessage,
   subscribeLabel = t`Subscribe`,

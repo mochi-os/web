@@ -24,7 +24,6 @@ import {
 } from '../../components/ui/select'
 import { Switch } from '../../components/ui/switch'
 import { getProviderLabel, type Provider } from './types'
-import { t } from '@lingui/core/macro'
 
 interface AccountAddProps {
   open: boolean
@@ -185,7 +184,7 @@ export function AccountAdd({
                 </Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
                   <SelectTrigger id='type' className='w-full'>
-                    <SelectValue placeholder={t`Select account type`} />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {availableProviders.map((provider) => (

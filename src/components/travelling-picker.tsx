@@ -137,7 +137,7 @@ export function TravellingPicker({
         <div className='space-y-4 overflow-y-auto flex-1 min-h-0 px-1'>
           {/* Origin field */}
           <div className='space-y-2'>
-            <Label>
+            <Label htmlFor='travelling-origin'>
               <Trans>From</Trans>
             </Label>
             <div className='relative'>
@@ -162,6 +162,7 @@ export function TravellingPicker({
               ) : (
                 <>
                   <Input
+                    id='travelling-origin'
                     ref={originInputRef}
                     value={originQuery}
                     onChange={(e) => {
@@ -169,7 +170,6 @@ export function TravellingPicker({
                       setActiveField('origin')
                     }}
                     onFocus={() => setActiveField('origin')}
-                    placeholder={t`Search for origin...`}
                     autoFocus
                   />
                   {originFetching && (
@@ -206,7 +206,7 @@ export function TravellingPicker({
 
           {/* Destination field */}
           <div className='space-y-2'>
-            <Label>
+            <Label htmlFor='travelling-destination'>
               <Trans>To</Trans>
             </Label>
             <div className='relative'>
@@ -231,6 +231,7 @@ export function TravellingPicker({
               ) : (
                 <>
                   <Input
+                    id='travelling-destination'
                     ref={destinationInputRef}
                     value={destinationQuery}
                     onChange={(e) => {
@@ -238,7 +239,6 @@ export function TravellingPicker({
                       setActiveField('destination')
                     }}
                     onFocus={() => setActiveField('destination')}
-                    placeholder={t`Search for destination...`}
                   />
                   {destinationFetching && (
                     <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground' />

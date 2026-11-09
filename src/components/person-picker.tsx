@@ -55,6 +55,9 @@ export interface PersonPickerProps {
   assetUrl?: (person: Person, asset: 'avatar' | 'style') => string
   /** Placeholder text */
   placeholder?: string
+  /** The combobox field's accessible name, for a field whose visible label
+   *  is not tied to it. Defaults to the placeholder. */
+  label?: string
   /** Empty state message */
   emptyMessage?: string
   /** Whether the picker is disabled */
@@ -80,7 +83,8 @@ export function PersonPicker({
   directoryFn,
   friendsFn,
   assetUrl,
-  placeholder = t`Select person...`,
+  placeholder = t`Select person`,
+  label,
   emptyMessage = t`No people found`,
   disabled = false,
   className,
@@ -350,7 +354,7 @@ export function PersonPicker({
               }
             }}
             placeholder={selectedIds.length === 0 ? placeholder : undefined}
-            aria-label={placeholder}
+            aria-label={label ?? placeholder}
             disabled={disabled}
           />
           {single && selectedIds.length > 0 && (
@@ -481,7 +485,7 @@ export function PersonPicker({
           <div className='relative'>
             <Search className='absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
             <Input
-              placeholder={t`Search...`}
+              placeholder={t`Search`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='ps-8 h-8'
