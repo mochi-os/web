@@ -24,6 +24,7 @@
 
 import {
   hashKey,
+  replaceEqualDeep,
   type Query,
   type QueryClient,
   type QueryFilters,
@@ -202,8 +203,16 @@ function pick(item: object, fields: readonly PropertyKey[]): Fields {
   return out
 }
 
+// Whether a field still shows the guess. Writing to the cache copies an array
+// or object that changed, so the guess's own array is never the one cached,
+// and comparing by reference would never put it back. An unchanged one is
+// kept as it was, so the cache's own comparison tells them apart.
 function same(a: Fields, b: Fields, fields: readonly PropertyKey[]) {
-  return fields.every((field) => Object.is(a[field], b[field]))
+  return fields.every(
+    (field) =>
+      Object.is(a[field], b[field]) ||
+      replaceEqualDeep(a[field], b[field]) === a[field]
+  )
 }
 
 /**

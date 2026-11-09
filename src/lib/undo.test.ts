@@ -191,6 +191,60 @@ describe('optimisticFields', () => {
     expect(find('a').votes).toBe(7)
   })
 
+  // The cache copies an array a write changed, so the guess's own array is
+  // never the one it holds.
+  describe('with an array field', () => {
+    type Tagged = { id: string; tags: string[] }
+    const TAGS = ['tagged', 1]
+
+    function tagSetup() {
+      const client = new QueryClient()
+      client.setQueryData(TAGS, { id: 'a', tags: ['x'] })
+      const tag = optimisticFields(client, {
+        places: [
+          {
+            filters: { queryKey: TAGS },
+            edit: (old: Tagged, id, change) =>
+              old.id === id ? change(old) : old,
+          },
+        ],
+        id: () => 'a',
+        fields: ['tags'],
+        apply: (item: Tagged, added: string) => ({
+          ...item,
+          tags: [...item.tags, added],
+        }),
+      })
+      const request = deferred()
+      const done = new MutationObserver(client, {
+        mutationFn: () => request.promise,
+        onMutate: tag.onMutate,
+        onError: (_error, _variables, context) => tag.rollback(context),
+      })
+        .mutate('y')
+        .catch(() => {})
+      const tags = () => client.getQueryData<Tagged>(TAGS)!.tags
+      return { client, request, done, tags }
+    }
+
+    it('puts it back when refused', async () => {
+      const { request, done, tags } = tagSetup()
+      await vi.waitFor(() => expect(tags()).toEqual(['x', 'y']))
+      request.reject(new Error('refused'))
+      await done
+      expect(tags()).toEqual(['x'])
+    })
+
+    it('leaves it when a refetch changed it since', async () => {
+      const { client, request, done, tags } = tagSetup()
+      await vi.waitFor(() => expect(tags()).toEqual(['x', 'y']))
+      client.setQueryData(TAGS, { id: 'a', tags: ['x', 'z'] })
+      request.reject(new Error('refused'))
+      await done
+      expect(tags()).toEqual(['x', 'z'])
+    })
+  })
+
   it('changes nothing for a refusal while a later click on the item waits', async () => {
     const { click, find, requests, sent } = setup()
     const first = click({ id: 'a', mine: true })
