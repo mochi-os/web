@@ -3,15 +3,16 @@
 
 import { Trans } from '@lingui/react/macro'
 import { SlidersHorizontal } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { Skeleton } from './ui/skeleton'
 import { cn, naturalCompare } from '../lib/utils'
 import { t } from '@lingui/core/macro'
@@ -80,10 +81,10 @@ export function NotificationCategoryButton({
   }
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
+          <DropdownMenuTrigger asChild>
             <button
               type='button'
               aria-label={t`Change notification category`}
@@ -95,56 +96,49 @@ export function NotificationCategoryButton({
             >
               <SlidersHorizontal className='size-3.5' />
             </button>
-          </PopoverTrigger>
+          </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{t`Change notification category`}</TooltipContent>
       </Tooltip>
-      <PopoverContent
+      <DropdownMenuContent
         align='end'
-        className='w-64 p-3'
+        className='min-w-48'
         onClick={(e) => e.stopPropagation()}
       >
-        <div className='space-y-2'>
-          <p className='text-xs font-medium text-muted-foreground'>
-            <Trans>Category for these notifications</Trans>
+        {!ordered ? (
+          <div className='space-y-1 p-1'>
+            <Skeleton className='h-7 w-full' />
+            <Skeleton className='h-7 w-full' />
+          </div>
+        ) : !row ? (
+          <p className='text-muted-foreground px-2 py-1.5 text-xs'>
+            <Trans>
+              No topic record yet — try again after the next notification.
+            </Trans>
           </p>
-          {row?.label ? (
-            <p className='text-sm font-medium'>{row.label}</p>
-          ) : null}
-          {!ordered ? (
-            <Skeleton className='h-9 w-full' />
-          ) : !row ? (
-            <p className='text-xs text-muted-foreground'>
-              <Trans>
-                No topic record yet — try again after the next notification.
-              </Trans>
-            </p>
-          ) : (
-            <Select
-              value={row.category != null ? String(row.category) : ''}
-              onValueChange={onChange}
-              disabled={saving}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder={t`Unassigned`} />
-              </SelectTrigger>
-              <SelectContent>
-                {ordered.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>
-                    {cat.display ?? cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <a
-            href='/settings/user/notifications'
-            className='block text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline'
+        ) : (
+          <DropdownMenuRadioGroup
+            value={row.category != null ? String(row.category) : ''}
+            onValueChange={(value) => void onChange(value)}
           >
+            {ordered.map((cat) => (
+              <DropdownMenuRadioItem
+                key={cat.id}
+                value={String(cat.id)}
+                disabled={saving}
+              >
+                {cat.display ?? cat.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a href='/settings/user/notifications'>
             <Trans>Manage categories</Trans>
           </a>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

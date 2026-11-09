@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { t } from '@lingui/core/macro'
-import { useState, useEffect, type ReactNode } from 'react'
+import { useCallback, useState, useEffect, type ReactNode } from 'react'
 import { Trans } from '@lingui/react/macro'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Loader2, type LucideIcon } from 'lucide-react'
@@ -61,8 +61,10 @@ interface FindEntityPageProps {
   /** Text to start with, such as a share link a notification opened the page with */
   initialQuery?: string
   /** Rendered above the results for the settled query: what the app finds
-   * beyond the directory, such as a person on another network. */
-  supplement?: (query: string) => ReactNode
+   * beyond the directory, such as a person on another network. It may call
+   * found(true) once it shows a result, and the page then shows no empty
+   * message for that query. */
+  supplement?: (query: string, found: (yes: boolean) => void) => ReactNode
   /** Rendered above the recommendations while nothing is searched: what the
    * app offers besides the directory, such as the user's accounts elsewhere. */
   aside?: ReactNode
@@ -109,6 +111,19 @@ export function FindEntityPage({
     retry: false,
     refetchOnWindowFocus: false,
   })
+
+  // The settled query the supplement has a result for: a late answer for a
+  // query since changed names that one, so it holds back no empty message.
+  const settled = debouncedSearch.trim()
+  const [supplied, setSupplied] = useState('')
+  const found = useCallback(
+    (yes: boolean) =>
+      setSupplied((current) =>
+        yes ? settled : current === settled ? '' : current
+      ),
+    [settled]
+  )
+  const answered = supplied !== '' && supplied === settled
 
   // Debounce search input
   useEffect(() => {
@@ -183,7 +198,7 @@ export function FindEntityPage({
           </div>
 
           <div className='space-y-6'>
-            {debouncedSearch.trim() && supplement?.(debouncedSearch.trim())}
+            {settled && supplement?.(settled, found)}
 
             {isLink && isResolving && (
               <div className='flex items-center justify-center py-8'>
@@ -207,7 +222,7 @@ export function FindEntityPage({
               />
             )}
 
-            {isLink && !isResolving && !resolvedEntry && (
+            {isLink && !isResolving && !resolvedEntry && !answered && (
               <div className='py-12 text-center'>
                 <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>
                   <Icon className='text-muted-foreground size-8' />
@@ -240,6 +255,7 @@ export function FindEntityPage({
               !isLoading &&
               !isError &&
               debouncedSearch &&
+              !answered &&
               filteredResults.length === 0 && (
                 <div className='py-12 text-center'>
                   <div className='bg-muted/50 rounded-full p-4 w-fit mx-auto mb-3'>

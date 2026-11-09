@@ -62,12 +62,16 @@ Promise.all([import('./one.js'), import('./two.js')]).then(([one, two]) => {
   // Faces as real sheets write them: one plain; one whose src list leads
   // with sources the browser would pass over (an EOT, declared and not) and
   // ends in a data: address, whose semicolon and comma are its own; one read
-  // from the sheet's own text; and one that holds only inside an @media.
+  // from the sheet's own text; one that holds only inside an @media; one with
+  // metric overrides and variation settings; and one declaring a descriptor
+  // the font loading API has no name for.
   'src/style.css': `#root { background-image: url(./pixel.png); }
 @font-face { font-family: 'Test Face'; src: url(./face.woff2) format('woff2'); font-weight: 400; unicode-range: U+0000-00FF; }
 @font-face { font-family: "Second Face"; src: url(./legacy.eot) format('embedded-opentype'), url(./legacy.eot), url(./second.woff2) format("woff2"), url(data:font/woff;base64,d09GRgABAAA=) format('woff'); font-weight: 700; }
 @font-face { font-family: 'Inline Face'; src: url(data:font/woff2;base64,d09GMgABAAA=) format('woff2'); }
 @media (min-width: 1px) { @font-face { font-family: 'Nested Face'; src: url(./face.woff2) format('woff2'); } }
+@font-face { font-family: 'Metric Face'; src: url(./face.woff2) format('woff2'); size-adjust: 105%; ascent-override: 90%; descent-override: 20%; line-gap-override: 0%; font-variation-settings: 'wght' 500; }
+@font-face { font-family: 'Language Face'; src: url(./face.woff2) format('woff2'); font-language-override: 'TRK'; }
 `,
 }
 
@@ -134,8 +138,8 @@ const ORIGIN = 'http://mochi.test'
 // into.
 // The font loading API, which jsdom lacks: a FontFace records how it was
 // made and loads when the test says the page drew with it, as a browser loads
-// a face only then; document.fonts holds faces. jsdom has no blob addresses
-// either.
+// a face only then; document.fonts holds faces and takes listeners. jsdom has
+// no blob addresses either.
 const FONTS = `window.__faces = [];
 window.FontFace = function (family, source, descriptors) {
   var face = this;
@@ -146,11 +150,11 @@ window.FontFace = function (family, source, descriptors) {
 URL.createObjectURL = function () { return 'blob:null/test' };
 (function () {
   var held = new Set();
-  Object.defineProperty(document, 'fonts', { value: {
-    add: function (face) { held.add(face) },
-    delete: function (face) { held.delete(face) },
-    has: function (face) { return held.has(face) },
-  } });
+  var set = new EventTarget();
+  set.add = function (face) { held.add(face) };
+  set.delete = function (face) { held.delete(face) };
+  set.has = function (face) { return held.has(face) };
+  Object.defineProperty(document, 'fonts', { value: set });
 })();`
 
 function server(dist: string, frame?: string, sheets = false, fonts = false) {
@@ -430,7 +434,7 @@ describe('mochiPlugin: the built page loads its System.register bundle', () => {
     __faces: Face[]
     document: Document & {
       adoptedStyleSheets: CSSStyleSheet[]
-      fonts: { has: (face: unknown) => boolean }
+      fonts: EventTarget & { has: (face: unknown) => boolean }
     }
   }
 
@@ -574,6 +578,96 @@ describe('mochiPlugin: the built page loads its System.register bundle', () => {
       expect(faces(window, 'Test Face')).toHaveLength(1)
       expect(faces(window, 'Second Face')).toHaveLength(1)
       expect(rules).not.toMatch(/Test Face|Second Face/)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("carries a face's metric overrides and variation settings", async () => {
+    const shell = framed('mochi:bridge', 'script', true, true)
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const placeholder = faces(window, 'Metric Face')[0]
+      expect(placeholder.descriptors).toEqual({
+        sizeAdjust: '105%',
+        ascentOverride: '90%',
+        descentOverride: '20%',
+        lineGapOverride: '0%',
+        variationSettings: expect.stringMatching(/^['"]wght['"] 500$/),
+      })
+      placeholder.draw()
+      await until(
+        () => faces(window, 'Metric Face').length === 2,
+        'the face to be added'
+      )
+      expect(faces(window, 'Metric Face')[1].descriptors).toEqual(
+        placeholder.descriptors
+      )
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('leaves a face declaring what a registered face cannot carry in the sheet', async () => {
+    const shell = framed('mochi:bridge', 'script', true, true)
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const rules = [...window.document.adoptedStyleSheets[0].cssRules]
+        .map((rule) => rule.cssText)
+        .join('\n')
+      expect(faces(window, 'Language Face')).toHaveLength(0)
+      expect(rules).toMatch(/Language Face/)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  // ready settles on the placeholder, and a face built from its bytes is
+  // loaded before it is added, so the set would announce nothing of it.
+  it('announces a face it swaps in once the face has loaded', async () => {
+    const shell = framed('mochi:bridge', 'script', true, true)
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const announced: unknown[] = []
+      window.document.fonts.addEventListener('loadingdone', (event) =>
+        announced.push((event as Event & { fontfaces: unknown }).fontfaces)
+      )
+      faces(window, 'Test Face')[0].draw()
+      await until(
+        () => faces(window, 'Test Face').length === 2,
+        'the face to be added'
+      )
+      const face = faces(window, 'Test Face')[1]
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(announced).toEqual([])
+      face.draw()
+      await until(() => announced.length > 0, 'the face to be announced')
+      expect(announced).toEqual([[face]])
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('leaves a face loaded from its own address for the browser to announce', async () => {
+    const shell = framed('mochi:bridge', 'script', true, 'refused')
+    try {
+      expectApp(await result(shell.frame))
+      const window = shell.frame() as unknown as Fonts
+      const announced: Event[] = []
+      window.document.fonts.addEventListener('loadingdone', (event) =>
+        announced.push(event)
+      )
+      faces(window, 'Test Face')[0].draw()
+      await until(
+        () => faces(window, 'Test Face').length === 2,
+        'the face to be added'
+      )
+      faces(window, 'Test Face')[1].draw()
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(announced).toEqual([])
     } finally {
       shell.dom.window.close()
     }

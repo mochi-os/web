@@ -16,16 +16,27 @@ export interface DiffWordChange {
 // marking none.
 const WORDS_MINIMUM = 0.3
 
+// The most words and spaces between them an edited line may change and still
+// be marked. The comparison's cost grows with the edit times the line's
+// length, so unbounded, two unlike lines of 40 KB held the page for twelve
+// seconds; stopped here, no pair takes more than a tenth of a second, a 1 MB
+// minified line with one change among them, which is still marked.
+const WORDS_EDIT = 500
+
 // The changed words of an edited line and its replacement, or undefined when
-// the two have too little in common to be read as one edited line. The view
-// draws each side from these pieces, so they have to rebuild both lines
-// exactly. The whitespace-keeping comparison does; the plain one moves and
-// merges spaces, which in code changes what the line shows.
+// the two have too little in common to be read as one edited line, or change
+// more than can be marked. The view draws each side from these pieces, so
+// they have to rebuild both lines exactly. The whitespace-keeping comparison
+// does; the plain one moves and merges spaces, which in code changes what the
+// line shows.
 export function lineWords(
   before: string,
   after: string
 ): DiffWordChange[] | undefined {
-  const changes = diffWordsWithSpace(before, after)
+  const changes = diffWordsWithSpace(before, after, {
+    maxEditLength: WORDS_EDIT,
+  })
+  if (!changes) return undefined
   let common = 0
   for (const change of changes) {
     if (!change.added && !change.removed) common += change.value.trim().length

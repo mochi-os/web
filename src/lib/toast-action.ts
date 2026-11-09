@@ -9,7 +9,8 @@ export type ToastActionMessages<T> = {
   loading: string
   success?: string | ((data: T) => string) | false
   successOptions?: (data: T) => ExternalToast | undefined
-  error?: string | ((err: unknown) => string)
+  // false shows no toast, for a failure the caller answers itself.
+  error?: string | ((err: unknown) => string | false)
   errorOptions?: (err: unknown) => ExternalToast | undefined
 }
 
@@ -39,8 +40,8 @@ export function toastAction<T>(
     })
     .catch((err) => {
       toast.dismiss(id)
-      const options = messages.errorOptions?.(err)
-      toast.error(resolveError(err), options)
+      const message = resolveError(err)
+      if (message !== false) toast.error(message, messages.errorOptions?.(err))
       throw err
     })
 }

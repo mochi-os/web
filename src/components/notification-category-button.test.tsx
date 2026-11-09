@@ -64,64 +64,68 @@ describe('NotificationCategoryButton', () => {
 
     // Positive control: the trigger is present and wired, so the assertions
     // about what it does are about behaviour rather than a missing button.
-    fireEvent.click(screen.getByLabelText('Change notification category'))
+    fireEvent.keyDown(screen.getByLabelText('Change notification category'), {
+      key: 'Enter',
+    })
     expect(onOpenChange).toHaveBeenCalledWith(true)
   })
 
   it('shows a placeholder while the consumer is still loading', () => {
     renderButton({ open: true, categories: null })
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument()
   })
 
-  it('populates the picker from the supplied categories', async () => {
+  it('lists the categories in the menu itself, the current one checked', () => {
+    // THE POINT: one menu, so a category is one choice away - no heading and
+    // no dropdown inside it to open first.
     renderButton({ open: true })
-    // The select shows the topic's current category.
-    expect(await screen.findByRole('combobox')).toHaveTextContent('Normal')
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Category for these notifications')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Normal' })
+    ).toHaveAttribute('aria-checked', 'true')
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Quiet' })
+    ).toHaveAttribute('aria-checked', 'false')
   })
 
   it('explains itself when the topic row does not exist yet', () => {
     renderButton({ open: true, topic: null })
     expect(screen.getByText(/No topic record yet/)).toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument()
   })
 
-  it('shows no name at all when the topic row carries no label', () => {
-    // The topic key is an identifier the app chose, not a name; a row that
-    // has not been labelled yet is simply unnamed.
-    renderButton({ open: true, topic: { ...TOPIC, label: '' } })
-    expect(screen.queryByText('post')).not.toBeInTheDocument()
-  })
-
-  it('names the topic the category applies to', () => {
-    // The assignment is topic-wide, not per-notification; the popover says
-    // which topic so the confirmation toast makes sense afterwards.
-    renderButton({ open: true })
-    expect(screen.getByText('New posts')).toBeInTheDocument()
-  })
-
-  it('sorts the no-notifications category last', async () => {
+  it('sorts the no-notifications category last', () => {
     // The id is the string '0', so the default-last rule has to compare it as
     // one: against the number 0 it never matched and the row sorted by name.
     renderButton({ open: true })
-    fireEvent.click(await screen.findByRole('combobox'))
-    const labels = (await screen.findAllByRole('option')).map(
-      (o) => o.textContent
-    )
-    expect(labels[labels.length - 1]).toBe('No notifications')
+    const labels = screen
+      .getAllByRole('menuitemradio')
+      .map((item) => item.textContent)
+    expect(labels).toEqual(['Normal', 'Quiet', 'No notifications'])
   })
 
-  it('hands the consumer the category id verbatim', async () => {
+  it('hands the consumer the category id verbatim', () => {
     // A uid is 32 hex characters. Anything that treats it as a number keeps
     // only the leading digit run, so the id must survive the round trip whole.
     const { onCategoryChange } = renderButton({ open: true })
-    fireEvent.click(await screen.findByRole('combobox'))
-    fireEvent.click(await screen.findByRole('option', { name: 'Quiet' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Quiet' }))
     expect(onCategoryChange).toHaveBeenCalledWith(TOPIC, QUIET)
+  })
+
+  it('offers no choice while a change is saving', () => {
+    const { onCategoryChange } = renderButton({ open: true, saving: true })
+    const quiet = screen.getByRole('menuitemradio', { name: 'Quiet' })
+    expect(quiet).toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(quiet)
+    expect(onCategoryChange).not.toHaveBeenCalled()
   })
 
   it('links to the category editor in settings', () => {
     renderButton({ open: true })
-    const link = screen.getByRole('link', { name: 'Manage categories' })
+    const link = screen.getByRole('menuitem', { name: 'Manage categories' })
     expect(link).toHaveAttribute('href', '/settings/user/notifications')
   })
 })

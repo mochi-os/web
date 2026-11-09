@@ -5,14 +5,22 @@ import { i18n } from '@lingui/core'
 import { I18nProvider } from '@lingui/react'
 import { fireEvent, render as baseRender, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
-import { describe, it, expect, vi } from 'vitest'
-import { parseDiff } from '../lib/diff-parser'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { parseDiff, type DiffFile } from '../lib/diff-parser'
+import { lineWords } from '../lib/diff-text'
 import {
   DiffFileView,
   DiffLines,
   DiffViewer,
   DiffViewToggle,
 } from './diff-viewer'
+
+// The real comparison, counted: each pair's words are compared once, however
+// often the view is drawn.
+vi.mock('../lib/diff-text', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/diff-text')>()
+  return { ...actual, lineWords: vi.fn(actual.lineWords) }
+})
 
 const render = (ui: ReactElement) =>
   baseRender(<I18nProvider i18n={i18n}>{ui}</I18nProvider>)
@@ -95,6 +103,42 @@ describe('DiffViewer', () => {
     const row = line('a single server').closest('tr')
     expect(row).toBe(line('a small server').closest('tr'))
     expect(container.querySelectorAll('td.w-1\\/2').length).toBeGreaterThan(0)
+  })
+
+  describe('compares the words of each pair once', () => {
+    // In braces: a function beforeEach returns is run after the test.
+    beforeEach(() => {
+      vi.mocked(lineWords).mockClear()
+    })
+
+    it.each(['unified', 'split'] as const)(
+      'for both sides in the %s view',
+      (viewStyle) => {
+        render(<DiffViewer diff={edit} viewStyle={viewStyle} />)
+        expect(screen.getByText('single').className).toContain('bg-destructive')
+        expect(screen.getByText('small').className).toContain('bg-success')
+        expect(lineWords).toHaveBeenCalledTimes(1)
+      }
+    )
+
+    it('across a change of view and a collapse', () => {
+      const { rerender } = render(
+        <DiffViewer diff={edit} viewStyle='unified' />
+      )
+      rerender(
+        <I18nProvider i18n={i18n}>
+          <DiffViewer diff={edit} viewStyle='split' />
+        </I18nProvider>
+      )
+      expect(line('a small server').closest('tr')).toBe(
+        line('a single server').closest('tr')
+      )
+      fireEvent.click(screen.getByRole('button', { name: /a\.md/ }))
+      expect(screen.queryByText('small')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: /a\.md/ }))
+      expect(screen.getByText('small').className).toContain('bg-success')
+      expect(lineWords).toHaveBeenCalledTimes(1)
+    })
   })
 })
 
@@ -204,6 +248,24 @@ describe('DiffViewer files', () => {
     expect(screen.queryByText('f4.ts line 1')).toBeNull()
     expect(screen.getByRole('button', { name: /f5\.ts/ })).toBeInTheDocument()
     expect(await screen.findByText('f5.ts line 1')).toBeInTheDocument()
+  })
+
+  it('does not draw a file again on each later step', async () => {
+    const drawn: Record<string, number> = {}
+    const Counted = ({ file }: { file: DiffFile }) => {
+      drawn[file.path] = (drawn[file.path] ?? 0) + 1
+      return <p>{file.path} drawn</p>
+    }
+    render(<DiffViewer diff={large} viewStyle='unified' body={Counted} />)
+    expect(await screen.findByText('f5.ts drawn')).toBeInTheDocument()
+    expect(drawn).toEqual({
+      'f0.ts': 1,
+      'f1.ts': 1,
+      'f2.ts': 1,
+      'f3.ts': 1,
+      'f4.ts': 1,
+      'f5.ts': 1,
+    })
   })
 
   it("holds a waiting file's lines as text, for find in page", () => {
