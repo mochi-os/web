@@ -307,6 +307,23 @@ export * from './hooks/use-accent'
 export * from './components/ui/load-more'
 // Lib utilities
 export * from './lib/create-app-client'
+export {
+  HttpError,
+  isHttpError,
+  type HttpErrorCode,
+  type HttpHeaders,
+  type HttpParams,
+  type HttpRequestConfig,
+  type HttpResponse,
+  type HttpResponseType,
+  type MochiRequestOptions,
+  type TransferProgress,
+} from './lib/http'
+export {
+  createHttpClient,
+  type HttpClient,
+  type HttpMethodConfig,
+} from './lib/http-client'
 export * from './lib/saved-api'
 export * from './lib/api-client'
 export {

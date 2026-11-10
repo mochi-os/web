@@ -135,7 +135,7 @@ export function FindEntityPage({
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: [entityClass, 'directory-search', debouncedSearch],
     queryFn: async () => {
-      // Build an absolute URL so Axios ignores the entity-context baseURL set by apiClient.
+      // Build an absolute URL so the client ignores the entity-context baseURL set by apiClient.
       // Without this, getApiBasepath() (e.g. /forums/va7kZSfKM/-/) gets prepended to the
       // relative searchEndpoint, producing double /-/-/ when a fingerprint is in the page meta.
       const base = `${window.location.origin}${getAppPath()}/`

@@ -10,7 +10,7 @@ import { t } from '@lingui/core/macro'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { Paperclip, Plus, Upload, X } from 'lucide-react'
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from '../../lib/http'
 import { Button } from '../ui/button'
 import { Label } from '../ui/label'
 import {
@@ -94,7 +94,7 @@ export interface EntityCreateObjectDialogProps<TObject extends EntityObject> {
     recordId: string,
     objectId: string,
     files: File[],
-    onProgress?: (event: AxiosProgressEvent) => void
+    onProgress?: (event: TransferProgress) => void
   ) => Promise<unknown>
   /** Copies attachments the container already holds onto an object. */
   copyAttachments?: (

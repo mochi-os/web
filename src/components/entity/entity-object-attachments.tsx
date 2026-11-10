@@ -9,7 +9,7 @@ import { useState, useRef } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Download, Loader2, Paperclip, Trash2, Upload } from 'lucide-react'
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from '../../lib/http'
 import {
   Attachment,
   AttachmentAction,
@@ -55,7 +55,7 @@ export interface EntityObjectAttachmentsProps {
     containerId: string,
     objectId: string,
     files: File[],
-    onProgress?: (event: AxiosProgressEvent) => void
+    onProgress?: (event: TransferProgress) => void
   ) => Promise<unknown>
   deleteAttachment: (
     containerId: string,

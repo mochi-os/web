@@ -1,17 +1,12 @@
-/// <reference path="../types/axios.d.ts" />
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import axios, {
-  type AxiosError,
-  type AxiosInstance,
-  type AxiosRequestConfig,
-  type AxiosResponse,
-} from 'axios'
 import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
 import { detectHtmlResponse } from './error-normalizer'
 import { useAuthStore } from '../stores/auth-store'
+import type { HttpError, HttpRequestConfig, HttpResponse } from './http'
+import type { ResponseHandlers } from './http-client'
 
 const devConsole = globalThis.console
 const DEFAULT_TOAST_DEDUPE_TTL_MS = 10_000
@@ -23,11 +18,11 @@ const logDevError = (message: string, error: unknown) => {
   }
 }
 
-function getRequestMethod(config?: AxiosRequestConfig): string {
+function getRequestMethod(config?: HttpRequestConfig): string {
   return config?.method?.toUpperCase() ?? 'UNKNOWN'
 }
 
-function getRequestUrl(config?: AxiosRequestConfig): string {
+function getRequestUrl(config?: HttpRequestConfig): string {
   const base = config?.baseURL ?? ''
   const url = config?.url ?? ''
   return `${base}${url}` || '<unknown>'
@@ -39,7 +34,7 @@ export interface AttachInterceptorOptions {
 }
 
 function shouldShowGlobalErrorToast(
-  config: AxiosRequestConfig | undefined,
+  config: HttpRequestConfig | undefined,
   defaultShow: boolean
 ): boolean {
   const explicit = config?.mochi?.showGlobalErrorToast
@@ -61,7 +56,7 @@ function shouldShowGlobalErrorToast(
 }
 
 function getToastDedupeKey(
-  config: AxiosRequestConfig | undefined,
+  config: HttpRequestConfig | undefined,
   statusKey: string,
   message: string
 ): string {
@@ -75,7 +70,7 @@ function getToastDedupeKey(
 }
 
 function shouldEmitDedupedToast(
-  config: AxiosRequestConfig | undefined,
+  config: HttpRequestConfig | undefined,
   statusKey: string,
   message: string
 ): boolean {
@@ -109,7 +104,7 @@ function maybeToastGlobalError({
   description,
   defaultShow,
 }: {
-  config?: AxiosRequestConfig
+  config?: HttpRequestConfig
   statusKey: string
   title: string
   description?: string
@@ -141,8 +136,8 @@ function makeHandleApiResponseSuccess(
   opts: Required<AttachInterceptorOptions>
 ) {
   return function handleApiResponseSuccess<T>(
-    response: AxiosResponse<T>
-  ): AxiosResponse<T> {
+    response: HttpResponse<T>
+  ): HttpResponse<T> {
     // A 200 carrying index.html means the request fell through to the SPA
     // catch-all, so the path named no action - a routing mistake in the
     // caller's URL. Fail here rather than handing HTML back as data, which
@@ -193,8 +188,11 @@ function makeHandleApiResponseSuccess(
 
 function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
   return async function handleApiResponseError(
-    error: AxiosError
+    thrown: unknown
   ): Promise<never> {
+    // Read as the request error it nearly always is; anything else thrown on
+    // the way has no response, and is treated as a failed connection.
+    const error = (thrown ?? {}) as Partial<HttpError>
     const status = error.response?.status
 
     switch (status) {
@@ -301,7 +299,7 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
       default: {
         if (!error.response) {
           // Don't show network error for canceled requests (e.g., page refresh/navigation)
-          if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+          if (error.code === 'ERR_CANCELED') {
             logDevError('[API] Request canceled', error)
           } else {
             logDevError('[API] Network error', error)
@@ -319,20 +317,20 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
       }
     }
 
-    return Promise.reject(error)
+    return Promise.reject(thrown)
   }
 }
 
-export function attachApiResponseInterceptors(
-  client: AxiosInstance,
+/** The handlers every client gives its responses and failures. */
+export function createApiResponseHandlers(
   options?: AttachInterceptorOptions
-): void {
+): ResponseHandlers {
   const opts: Required<AttachInterceptorOptions> = {
     defaultShowGlobalErrorToast: options?.defaultShowGlobalErrorToast ?? true,
     suppress401Handling: options?.suppress401Handling ?? false,
   }
-  client.interceptors.response.use(
-    makeHandleApiResponseSuccess(opts),
-    makeHandleApiResponseError(opts)
-  )
+  return {
+    success: makeHandleApiResponseSuccess(opts),
+    failure: makeHandleApiResponseError(opts),
+  }
 }

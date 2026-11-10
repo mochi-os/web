@@ -2,47 +2,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { fakeNetwork } from '../test/fake-network'
 
 vi.mock('./toast-utils', () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }))
 
 import {
-  attachApiResponseInterceptors,
+  createApiResponseHandlers,
   setLogoutHandler,
 } from './api-response-interceptors'
+import { createHttpClient } from './http-client'
 import { useAuthStore } from '../stores/auth-store'
 import { toast } from './toast-utils'
 
-// An adapter that answers with a fixed status and body, so the interceptor
-// chain runs against a real axios instance without a network. The built-in
-// adapters reject an error status through settle(); a custom one must do the
-// same or the response interceptor sees a 401 as a success.
+// A client whose every request is answered with a fixed status and body, so
+// the handlers run against the real client without a network.
 function clientAnswering(
   status: number,
   data: unknown,
-  options?: Parameters<typeof attachApiResponseInterceptors>[1]
+  options?: Parameters<typeof createApiResponseHandlers>[0]
 ) {
-  const client = axios.create({
-    adapter: async (config: InternalAxiosRequestConfig) => {
-      const response = { data, status, statusText: '', headers: {}, config }
-      if (status >= 400) {
-        throw new AxiosError(
-          `Request failed with status code ${status}`,
-          status >= 500
-            ? AxiosError.ERR_BAD_RESPONSE
-            : AxiosError.ERR_BAD_REQUEST,
-          config,
-          undefined,
-          response
-        )
-      }
-      return response
-    },
-  })
-  attachApiResponseInterceptors(client, options)
-  return client
+  fakeNetwork(() => ({ status, body: data }))
+  return createHttpClient({ handlers: createApiResponseHandlers(options) })
 }
 
 describe('response interceptors', () => {
@@ -56,6 +38,7 @@ describe('response interceptors', () => {
   afterEach(() => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     useAuthStore.setState({ token: '' })
   })
 

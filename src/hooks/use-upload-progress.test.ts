@@ -1,17 +1,17 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The hook is the seam between axios and the composers, so what is asserted
+// The hook is the seam between the request client and the composers, so what is asserted
 // here is the contract they rely on: slices appear only when the caller asked
 // for them, the tiles never wait a frame for their first value, and the whole
 // thing goes back to null however the request ends.
 
 import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from '../lib/http'
 import { useUploadProgress } from './use-upload-progress'
 
-type Emit = (event: AxiosProgressEvent) => void
+type Emit = (event: TransferProgress) => void
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -47,13 +47,13 @@ function start(
 
   return {
     request,
-    emit: (e: AxiosProgressEvent) => act(() => emit(e)),
+    emit: (e: TransferProgress) => act(() => emit(e)),
     settled,
   }
 }
 
 const event = (loaded: number, total?: number) =>
-  ({ loaded, total }) as AxiosProgressEvent
+  ({ loaded, total }) as TransferProgress
 
 describe('useUploadProgress', () => {
   it('reports nothing while idle', () => {

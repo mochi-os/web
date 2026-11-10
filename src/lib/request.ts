@@ -1,13 +1,9 @@
-/// <reference path="../types/axios.d.ts" />
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
 import { t } from '@lingui/core/macro'
-import {
-  isAxiosError,
-  type AxiosRequestConfig,
-  type AxiosResponse,
-} from 'axios'
+import { isHttpError, type HttpRequestConfig, type HttpResponse } from './http'
+import type { HttpMethodConfig } from './http-client'
 import apiClient from './api-client'
 import { normalizeError } from './error-normalizer'
 
@@ -40,7 +36,7 @@ function getStatusErrorEnvelope(payload: unknown): {
 }
 
 function getErrorPayload(error: unknown): unknown {
-  if (isAxiosError(error)) {
+  if (isHttpError(error)) {
     return error.response?.data
   }
 
@@ -77,7 +73,7 @@ export class ApiError extends Error {
 const buildApiError = (
   error: unknown,
   fallbackMessage: string,
-  _requestConfig: AxiosRequestConfig
+  _requestConfig: HttpRequestConfig
 ): ApiError => {
   if (error instanceof ApiError) {
     return error
@@ -100,7 +96,7 @@ const buildApiError = (
 
 const logRequestError = (
   error: ApiError,
-  requestConfig: AxiosRequestConfig
+  requestConfig: HttpRequestConfig
 ): void => {
   if (!import.meta.env.DEV) {
     return
@@ -116,14 +112,14 @@ const logRequestError = (
 
 // Raw request that returns the full response without unwrapping the data envelope
 async function requestRaw<TResponse>(
-  config: AxiosRequestConfig
+  config: HttpRequestConfig
 ): Promise<TResponse> {
-  const requestConfig: AxiosRequestConfig = {
+  const requestConfig: HttpRequestConfig = {
     ...config,
   }
 
   try {
-    const response: AxiosResponse<TResponse> =
+    const response: HttpResponse<TResponse> =
       await apiClient.request<TResponse>(requestConfig)
     return response.data
   } catch (unknownError) {
@@ -138,14 +134,14 @@ async function requestRaw<TResponse>(
 }
 
 export async function request<TResponse>(
-  config: AxiosRequestConfig
+  config: HttpRequestConfig
 ): Promise<TResponse> {
-  const requestConfig: AxiosRequestConfig = {
+  const requestConfig: HttpRequestConfig = {
     ...config,
   }
 
   try {
-    const response: AxiosResponse<TResponse> =
+    const response: HttpResponse<TResponse> =
       await apiClient.request<TResponse>(requestConfig)
 
     const responseData = response.data as unknown
@@ -216,7 +212,7 @@ export async function request<TResponse>(
 export const requestHelpers = {
   get: <TResponse>(
     url: string,
-    config?: Omit<AxiosRequestConfig, 'url' | 'method'>
+    config?: Omit<HttpRequestConfig, 'url' | 'method'>
   ): Promise<TResponse> =>
     request<TResponse>({
       method: 'GET',
@@ -225,7 +221,7 @@ export const requestHelpers = {
     }),
   getRaw: <TResponse>(
     url: string,
-    config?: Omit<AxiosRequestConfig, 'url' | 'method'>
+    config?: Omit<HttpRequestConfig, 'url' | 'method'>
   ): Promise<TResponse> =>
     requestRaw<TResponse>({
       method: 'GET',
@@ -235,7 +231,7 @@ export const requestHelpers = {
   post: <TResponse, TBody = unknown>(
     url: string,
     data?: TBody,
-    config?: Omit<AxiosRequestConfig<TBody>, 'url' | 'method' | 'data'>
+    config?: HttpMethodConfig<TBody>
   ): Promise<TResponse> =>
     request<TResponse>({
       method: 'POST',
@@ -246,7 +242,7 @@ export const requestHelpers = {
   put: <TResponse, TBody = unknown>(
     url: string,
     data?: TBody,
-    config?: Omit<AxiosRequestConfig<TBody>, 'url' | 'method' | 'data'>
+    config?: HttpMethodConfig<TBody>
   ): Promise<TResponse> =>
     request<TResponse>({
       method: 'PUT',
@@ -257,7 +253,7 @@ export const requestHelpers = {
   patch: <TResponse, TBody = unknown>(
     url: string,
     data?: TBody,
-    config?: Omit<AxiosRequestConfig<TBody>, 'url' | 'method' | 'data'>
+    config?: HttpMethodConfig<TBody>
   ): Promise<TResponse> =>
     request<TResponse>({
       method: 'PATCH',
@@ -267,7 +263,7 @@ export const requestHelpers = {
     }),
   delete: <TResponse>(
     url: string,
-    config?: Omit<AxiosRequestConfig, 'url' | 'method'>
+    config?: Omit<HttpRequestConfig, 'url' | 'method'>
   ): Promise<TResponse> =>
     request<TResponse>({
       method: 'DELETE',
@@ -276,7 +272,7 @@ export const requestHelpers = {
     }),
   isAuthError: (error: unknown): boolean => {
     return (
-      (isAxiosError(error) && error.response?.status === 401) ||
+      (isHttpError(error) && error.response?.status === 401) ||
       (error instanceof ApiError && error.status === 401)
     )
   },

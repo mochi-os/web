@@ -6,7 +6,7 @@ import apiClient from './api-client'
 import { request, ApiError } from './request'
 
 // request() turns three shapes of failure into one ApiError: a transport or
-// HTTP failure from axios, a root-level status envelope, and a status
+// HTTP failure from the client, a root-level status envelope, and a status
 // envelope nested under data. Each is logged once in development.
 describe('request', () => {
   let errorLog: ReturnType<typeof vi.spyOn>

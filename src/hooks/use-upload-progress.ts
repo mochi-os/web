@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useCallback, useRef, useState } from 'react'
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from '../lib/http'
 import { uploadSlices, type UploadSlice } from '../lib/upload-slices'
 
 export interface Upload {
@@ -31,11 +31,11 @@ export interface UploadOptions {
  */
 export function useUploadProgress() {
   const [progress, setProgress] = useState<Upload | null>(null)
-  // Read inside `track`, which axios keeps for the life of the request, so it
+  // Read inside `track`, which the client keeps for the life of the request, so it
   // has to be a ref — a state value would be the one captured at call time.
   const sizesRef = useRef<readonly number[] | undefined>(undefined)
 
-  const track = useCallback((event: AxiosProgressEvent) => {
+  const track = useCallback((event: TransferProgress) => {
     const total = event.total ?? null
     const sent = event.loaded
     const sizes = sizesRef.current
@@ -52,7 +52,7 @@ export function useUploadProgress() {
   const upload = useCallback(
     async <Result>(
       request: (
-        onProgress: (event: AxiosProgressEvent) => void
+        onProgress: (event: TransferProgress) => void
       ) => Promise<Result>,
       options?: UploadOptions
     ): Promise<Result> => {
