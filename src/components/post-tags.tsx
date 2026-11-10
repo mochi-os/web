@@ -158,7 +158,7 @@ export function PostTagsTooltip({
               }
             }}
             className='text-foreground placeholder:text-muted-foreground h-7 w-full bg-transparent text-sm outline-none'
-            placeholder={t`Add tag...`}
+            placeholder={t`Add tag`}
           />
           {error && <p className='text-destructive text-xs'>{error}</p>}
         </div>

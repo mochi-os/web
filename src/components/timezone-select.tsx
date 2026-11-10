@@ -207,7 +207,7 @@ export function TimezoneSelect({
           className='mx-auto hidden w-full max-w-[calc(33svh*2.4)] shrink-0 px-2 sm:block'
         />
         <Command className='min-h-0 flex-1'>
-          <CommandInput placeholder={t`Search time zone...`} />
+          <CommandInput placeholder={t`Search time zone`} />
           <CommandList className='max-h-full min-h-0 flex-1'>
             <CommandEmpty>
               <Trans>No time zone found.</Trans>

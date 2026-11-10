@@ -115,7 +115,7 @@ describe('EntityViewOptionsBar', () => {
       // jsdom applies no media queries, so the classes say which bar shows.
       expect(open.closest('.sticky')?.className).toContain('lg:hidden')
       expect(
-        screen.getByPlaceholderText('Search...').closest('.hidden')?.className
+        screen.getByPlaceholderText('Search').closest('.hidden')?.className
       ).toContain('lg:block')
       fireEvent.click(open)
       const title = await screen.findByText('View controls')

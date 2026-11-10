@@ -358,7 +358,7 @@ export function EntityCommentThread({
           onFilesChange={handleReplyFilesChange}
           people={people}
           progress={uploadProgress}
-          placeholder={t`Reply to ${comment.name || comment.author}...`}
+          placeholder={t`Reply to ${comment.name || comment.author}`}
           autoFocus
         />
       )}

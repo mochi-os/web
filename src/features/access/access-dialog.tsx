@@ -199,7 +199,6 @@ export function AccessDialog({
                       setUserSearch(e.target.value)
                       setSelectedUser(null)
                     }}
-                    placeholder={t`Type to search...`}
                     className='ps-10'
                   />
                 </div>

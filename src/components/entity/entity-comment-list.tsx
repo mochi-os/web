@@ -321,7 +321,7 @@ export function EntityCommentList({
             onFilesChange={setNewFileCount}
             people={people}
             progress={uploadProgress}
-            placeholder={t`Add a comment...`}
+            placeholder={t`Add a comment`}
             rows={3}
           />
           {discardDialog}

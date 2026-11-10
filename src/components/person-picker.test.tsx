@@ -133,7 +133,7 @@ describe('PersonPicker', () => {
     it('searches the directory only from two typed characters', async () => {
       const directoryFn = vi.fn(async () => [] as Person[])
       show({ local: people, directoryFn })
-      const search = screen.getByPlaceholderText('Search...')
+      const search = screen.getByPlaceholderText('Search')
       fireEvent.change(search, { target: { value: 'a' } })
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 400))

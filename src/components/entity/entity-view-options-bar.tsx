@@ -197,7 +197,7 @@ export function EntityViewOptionsBar({
 
           <SearchInput
             aria-label={t`Search`}
-            placeholder={t`Search...`}
+            placeholder={t`Search`}
             value={filters.search}
             onValueChange={updateSearch}
           />
@@ -299,7 +299,7 @@ export function EntityViewOptionsBar({
         <div className='ms-auto flex items-center gap-2'>
           <Input
             type='search'
-            placeholder={t`Search...`}
+            placeholder={t`Search`}
             value={filters.search}
             onChange={(e) => updateSearch(e.target.value)}
             className='h-9 w-[200px] text-xs'

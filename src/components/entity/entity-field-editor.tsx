@@ -288,8 +288,8 @@ export function EntityFieldEditor({
       case 'enumerated':
         return (
           <Select value={value} onValueChange={onChange} disabled={disabled}>
-            <SelectTrigger className='h-9 w-full'>
-              <SelectValue placeholder={t`Select...`} />
+            <SelectTrigger className='h-9 w-full' aria-label={field.name}>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {options.map((opt) => (
@@ -380,7 +380,7 @@ export function EntityFieldEditor({
             directoryFn={searchUsers}
             assetUrl={personAsset}
             disabled={disabled}
-            placeholder={t`Select...`}
+            placeholder={t`Select`}
             emptyMessage={t`No people found`}
           />
         )
@@ -629,7 +629,7 @@ function ChecklistEditor({
             value={newItemText}
             onChange={(e) => setNewItemText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t`Add item...`}
+            placeholder={t`Add item`}
             className='flex-1 rounded-sm border-none bg-transparent text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
           />
           {newItemText && (

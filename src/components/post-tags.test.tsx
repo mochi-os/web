@@ -53,7 +53,7 @@ describe('PostTagsTooltip', () => {
 
   it('names the slash among the characters a tag may hold', async () => {
     const { onAdd } = show()
-    const input = await screen.findByPlaceholderText('Add tag...')
+    const input = await screen.findByPlaceholderText('Add tag')
     fireEvent.change(input, { target: { value: 'a_b' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(
