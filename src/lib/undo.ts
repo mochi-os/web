@@ -87,7 +87,9 @@ export function undoChain<T>() {
         const later = list[index]
         tidy()
         if (later) {
-          later.before = entry.before
+          // A click that never remembered a value hands nothing on, so the
+          // later click keeps its own.
+          later.before = entry.before ?? later.before
           return null
         }
         return entry.before ?? null

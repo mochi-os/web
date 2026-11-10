@@ -29,6 +29,15 @@ describe('undoChain', () => {
     expect(second.refused()).toEqual({ value: 1 })
   })
 
+  it('keeps the later click its own value when the refused one remembered none', () => {
+    const chain = undoChain<number>()
+    const first = chain('a')
+    const second = chain('a')
+    second.remember(2)
+    expect(first.refused()).toBeNull()
+    expect(second.refused()).toEqual({ value: 2 })
+  })
+
   it('undoes nothing for an earlier click once a later one is taken', () => {
     const chain = undoChain<number>()
     const first = chain('a')
