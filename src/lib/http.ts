@@ -1,18 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// The request engine under apiClient and createAppClient.
-//
-// It replaces axios and keeps what the apps relied on from it: the same URL
-// joining, query string, body encoding, JSON parsing, status rule, error codes
-// and messages, so error readers and the token's origin check see what they
-// saw before. Only the features the apps use are here.
-//
-// A request goes by fetch(), apart from one that reports progress, which goes
-// by XMLHttpRequest: fetch() reports no upload progress in any browser, and
-// XMLHttpRequest counts download bytes the way axios did, as they arrive over
-// the wire. Inside the shell, shell-fetch.ts hands most requests to the shell
-// page instead and falls back to sendDirect() here.
+// The request engine under apiClient and createAppClient. Requests go by
+// fetch(), apart from ones that report progress, which go by XMLHttpRequest:
+// fetch() reports no upload progress. Inside the shell, shell-fetch.ts sends
+// most requests through the shell page and falls back to sendDirect().
 
 export interface TransferProgress {
   loaded: number
@@ -67,10 +59,7 @@ export interface HttpResponse<T = unknown> {
   config: HttpRequestConfig
 }
 
-/**
- * axios's codes, so code that tells failures apart keeps working. A response
- * outside 2xx is ERR_BAD_REQUEST for 4xx and ERR_BAD_RESPONSE otherwise.
- */
+/** A response outside 2xx is ERR_BAD_REQUEST for 4xx, ERR_BAD_RESPONSE otherwise. */
 export type HttpErrorCode =
   | 'ERR_BAD_REQUEST'
   | 'ERR_BAD_RESPONSE'
@@ -78,12 +67,8 @@ export type HttpErrorCode =
   | 'ECONNABORTED'
   | 'ERR_CANCELED'
 
-/**
- * The config as a response or error keeps it: everything the request had
- * apart from its Authorization header. Errors are logged, kept as the cause of
- * an ApiError and handed to any code that catches them, none of which needs
- * the session token; the request itself was sent with it.
- */
+// Responses and errors keep the config without the session token: errors are
+// logged and passed around, and none of their readers needs it.
 function withoutAuthorization(config: HttpRequestConfig): HttpRequestConfig {
   if (!config.headers) return config
   const headers: HttpHeaders = {}
@@ -94,16 +79,13 @@ function withoutAuthorization(config: HttpRequestConfig): HttpRequestConfig {
 }
 
 /**
- * A failed request. It has axios's error shape: `response` is there only
- * when the server answered, and `status` and `data` repeat its fields, so
- * readers of either shape (normalizeError, extractStatus) find them. Its
- * config carries no Authorization header (see withoutAuthorization).
+ * A failed request. `response` is there only when the server answered;
+ * `status` and `data` repeat its fields for readers of either shape.
  */
 export class HttpError<T = unknown> extends Error {
   readonly code: HttpErrorCode
   readonly config: HttpRequestConfig
-  // Declared, not initialised: the fields exist only when the server
-  // answered, as on axios's error, which `'response' in error` checks rely on.
+  // Declared, not initialised, so `'response' in error` is false without one.
   declare readonly response?: HttpResponse<T>
   declare readonly status?: number
   declare readonly data?: T
@@ -132,9 +114,8 @@ export function isHttpError(error: unknown): error is HttpError {
   return error instanceof HttpError
 }
 
-/* eslint-disable lingui/no-unlocalized-strings -- axios's own messages, word
-   for word, so a caller sees what it saw before; normalizeError translates the
-   network one. */
+/* eslint-disable lingui/no-unlocalized-strings -- kept word for word for
+   existing readers; normalizeError translates the network one. */
 const messages = {
   network: 'Network Error',
   status: (status: number) => `Request failed with status code ${status}`,
@@ -166,9 +147,8 @@ function isAbsoluteURL(url: string): boolean {
 }
 
 /**
- * baseURL and url joined as axios joined them. isSameOriginRequest decides
- * where the token may go from this same function, so the check and the
- * request can never disagree about the destination.
+ * baseURL and url joined. isSameOriginRequest uses this same function, so the
+ * token check and the request always agree on the destination.
  */
 export function buildFullPath(
   baseURL: string | undefined,
@@ -180,8 +160,7 @@ export function buildFullPath(
   return `${baseURL.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`
 }
 
-// axios's query encoding: encodeURIComponent with `:`, `$`, `,` left plain
-// and a space as `+`.
+// encodeURIComponent with `:`, `$`, `,` left plain and a space as `+`.
 function encodeParam(value: string): string {
   return encodeURIComponent(value)
     .replace(/%3A/gi, ':')
@@ -206,10 +185,7 @@ export function buildURL(config: HttpRequestConfig): string {
 // ---------------------------------------------------------------------------
 // Headers and body
 
-/**
- * Header sets merged left to right, names compared without case, as axios
- * merged them. An `undefined` value removes the header.
- */
+/** Merged left to right, names compared without case; `undefined` removes one. */
 export function mergeHeaders(
   ...sets: Array<HttpHeaders | undefined>
 ): HttpHeaders {
@@ -238,18 +214,9 @@ function withoutContentType(headers: HttpHeaders): HttpHeaders {
 }
 
 /**
- * The request as it goes on the wire: the body encoded as axios's
- * transformRequest encoded it, and the headers final.
- *
- * - No body: no Content-Type.
- * - FormData: no Content-Type, whatever the caller set, so the browser writes
- *   the multipart boundary. A hand-set `multipart/form-data` has none, and
- *   the server could not read the upload.
- * - URLSearchParams: its text.
- * - A plain object or array, or a string under a JSON Content-Type: JSON. A
- *   string that already parses is sent as it is (trimmed), and one that does
- *   not is sent as a JSON string, as axios did.
- * - Blob, ArrayBuffer and typed arrays: as they are.
+ * The body encoded and the headers final. FormData never gets a Content-Type,
+ * so the browser writes the multipart boundary. Objects become JSON; a string
+ * under a JSON type is sent as it is if it parses, else as a JSON string.
  */
 export function prepareBody(config: HttpRequestConfig): HttpRequestConfig {
   const data: unknown = config.data
@@ -290,8 +257,7 @@ export function prepareBody(config: HttpRequestConfig): HttpRequestConfig {
         : mergeHeaders(headers, { 'Content-Type': 'application/json' }),
     }
   }
-  // A number or boolean: axios sent these as they were, under a JSON type
-  // as JSON.
+  // A number or boolean: as JSON under a JSON type, else as text.
   return {
     ...config,
     data: json ? JSON.stringify(data) : String(data),
@@ -310,10 +276,8 @@ export function headerPairs(headers: HttpHeaders | undefined) {
 // Responses
 
 /**
- * The response settled as axios settled it: a 2xx resolves, anything else
- * rejects with the response attached. With no response type, a body that
- * parses as JSON is parsed and any other stays text, so an HTML page reaches
- * detectHtmlResponse as a string.
+ * A 2xx resolves, anything else rejects with the response attached. With no
+ * response type, JSON is parsed and anything else stays text.
  */
 export function settle(
   config: HttpRequestConfig,
@@ -361,19 +325,14 @@ export function headerRecord(
 
 export interface SendOptions {
   /**
-   * Sends no cookies at all to any origin, where withCredentials is not set.
-   * For the shell's sandboxed frame, whose token is its only credential.
-   * fetch() only: XMLHttpRequest has no such setting, and without
-   * withCredentials it sends cookies to its own origin alone, which in the
-   * frame is opaque.
+   * No cookies to any origin unless withCredentials is set: for the shell's
+   * frame, whose token is its only credential. fetch() only; XMLHttpRequest
+   * cannot express it.
    */
   omitCredentials?: boolean
 }
 
-/**
- * Sends a prepared request (see prepareBody) straight to the server: by
- * XMLHttpRequest when it reports progress, by fetch() otherwise.
- */
+/** Sends a prepared request (see prepareBody) straight to the server. */
 export function sendDirect(
   config: HttpRequestConfig,
   options: SendOptions = {}
@@ -417,9 +376,6 @@ async function sendFetch(
       method: (config.method ?? 'GET').toUpperCase(),
       headers: headerPairs(config.headers),
       body: config.data as BodyInit | undefined,
-      // As XMLHttpRequest: cookies go to this origin always, and to another
-      // only with withCredentials. In the shell's sandboxed frame none go at
-      // all, said outright rather than left to the frame's opaque origin.
       credentials: credentials(config, options),
       keepalive: config.keepalive,
       signal: controller.signal,
@@ -448,9 +404,8 @@ async function sendFetch(
   }
 }
 
-// axios's progress reports: at most three a second, the latest one kept for
-// the next slot, the count never past the total, and the last one delivered
-// when the request ends.
+// At most three reports a second, the latest kept for the next slot, and the
+// last always delivered when the request ends.
 function progressReporter(listener: (event: TransferProgress) => void) {
   const interval = 1000 / 3
   let last = 0

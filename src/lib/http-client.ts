@@ -1,12 +1,10 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// A request client: defaults merged into every request, a step that adjusts
-// each one before it goes (base URL, token, cookies), and handlers that see
-// every response and failure (the HTML guard, toasts, the 401 logout). The
-// steps run in the order axios ran its interceptors: prepare, send, then
-// success or failure. A failure the success handler raises does not reach the
-// failure handler, as in axios.
+// A request client: defaults merged into every request, a prepare step (base
+// URL, token, cookies), then handlers for every response and failure (HTML
+// guard, toasts, 401 logout). A failure the success handler raises does not
+// reach the failure handler.
 
 import {
   mergeHeaders,

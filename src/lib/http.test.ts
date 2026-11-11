@@ -1,10 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-// What the request engine kept from axios, which the apps were written
-// against: where a request goes, what its body and headers are, what comes
-// back, and how each kind of failure looks. Driven through a real client with
-// the browser's transports faked (see fake-network.ts).
+// What the apps rely on from the request engine: where a request goes, its
+// body and headers, what comes back, and how each failure looks. Driven
+// through a real client with the browser's transports faked (fake-network.ts).
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeNetwork } from '../test/fake-network'
@@ -19,7 +18,7 @@ afterEach(() => {
 const json = { 'Content-Type': 'application/json' }
 
 describe('the URL', () => {
-  it('joins baseURL and url with one slash, as axios did', () => {
+  it('joins baseURL and url with one slash', () => {
     expect(buildFullPath('/feeds/', '/-/list')).toBe('/feeds/-/list')
     expect(buildFullPath('/feeds', '-/list')).toBe('/feeds/-/list')
     expect(buildFullPath('/feeds//', '/-/list')).toBe('/feeds/-/list')
@@ -34,13 +33,13 @@ describe('the URL', () => {
     expect(buildFullPath('/feeds/', 'https://elsewhere.example/x')).toBe(
       'https://elsewhere.example/x'
     )
-    // Without "//" a scheme-like string is a relative path, as in axios.
+    // Without "//" a scheme-like string is a relative path.
     expect(buildFullPath('/feeds/', 'javascript:alert(1)')).toBe(
       '/feeds/javascript:alert(1)'
     )
   })
 
-  it('encodes params as axios did and leaves out undefined and null', () => {
+  it('encodes params and leaves out undefined and null', () => {
     expect(
       buildURL({
         url: '/x',
@@ -208,14 +207,14 @@ describe('a failure', () => {
       .get('/x')
       .catch((e: unknown) => e)) as HttpError
     // Safari's wording never reaches the caller: normalizeError translates
-    // only axios's.
+    // only "Network Error".
     expect(error.message).toBe('Network Error')
     expect(error.code).toBe('ERR_NETWORK')
     expect('response' in error).toBe(false)
     expect(error.status).toBeUndefined()
   })
 
-  it('of time is ECONNABORTED with axios wording', async () => {
+  it('of time is ECONNABORTED with its fixed wording', async () => {
     vi.useFakeTimers()
     fakeNetwork(() => new Promise(() => {}))
     const result = createHttpClient()
