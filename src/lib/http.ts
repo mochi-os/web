@@ -79,9 +79,25 @@ export type HttpErrorCode =
   | 'ERR_CANCELED'
 
 /**
+ * The config as a response or error keeps it: everything the request had
+ * apart from its Authorization header. Errors are logged, kept as the cause of
+ * an ApiError and handed to any code that catches them, none of which needs
+ * the session token; the request itself was sent with it.
+ */
+function withoutAuthorization(config: HttpRequestConfig): HttpRequestConfig {
+  if (!config.headers) return config
+  const headers: HttpHeaders = {}
+  for (const [name, value] of Object.entries(config.headers)) {
+    if (name.toLowerCase() !== 'authorization') headers[name] = value
+  }
+  return { ...config, headers }
+}
+
+/**
  * A failed request. It has axios's error shape: `response` is there only
  * when the server answered, and `status` and `data` repeat its fields, so
- * readers of either shape (normalizeError, extractStatus) find them.
+ * readers of either shape (normalizeError, extractStatus) find them. Its
+ * config carries no Authorization header (see withoutAuthorization).
  */
 export class HttpError<T = unknown> extends Error {
   readonly code: HttpErrorCode
@@ -101,7 +117,7 @@ export class HttpError<T = unknown> extends Error {
     super(message)
     this.name = 'HttpError'
     this.code = code
-    this.config = config
+    this.config = withoutAuthorization(config)
     if (response) {
       Object.assign(this, {
         response,
@@ -314,12 +330,19 @@ export function settle(
       // Not JSON: the text as it is.
     }
   }
-  const response: HttpResponse = { data, status, statusText, headers, config }
+  const kept = withoutAuthorization(config)
+  const response: HttpResponse = {
+    data,
+    status,
+    statusText,
+    headers,
+    config: kept,
+  }
   if (status >= 200 && status < 300) return response
   throw new HttpError(
     messages.status(status),
     status >= 400 && status < 500 ? 'ERR_BAD_REQUEST' : 'ERR_BAD_RESPONSE',
-    config,
+    kept,
     response
   )
 }
@@ -336,18 +359,43 @@ export function headerRecord(
 // ---------------------------------------------------------------------------
 // Transports
 
+export interface SendOptions {
+  /**
+   * Sends no cookies at all to any origin, where withCredentials is not set.
+   * For the shell's sandboxed frame, whose token is its only credential.
+   * fetch() only: XMLHttpRequest has no such setting, and without
+   * withCredentials it sends cookies to its own origin alone, which in the
+   * frame is opaque.
+   */
+  omitCredentials?: boolean
+}
+
 /**
  * Sends a prepared request (see prepareBody) straight to the server: by
  * XMLHttpRequest when it reports progress, by fetch() otherwise.
  */
-export function sendDirect(config: HttpRequestConfig): Promise<HttpResponse> {
+export function sendDirect(
+  config: HttpRequestConfig,
+  options: SendOptions = {}
+): Promise<HttpResponse> {
   if (config.onUploadProgress || config.onDownloadProgress) {
     return sendXhr(config)
   }
-  return sendFetch(config)
+  return sendFetch(config, options)
 }
 
-async function sendFetch(config: HttpRequestConfig): Promise<HttpResponse> {
+function credentials(
+  config: HttpRequestConfig,
+  options: SendOptions
+): RequestCredentials {
+  if (config.withCredentials) return 'include'
+  return options.omitCredentials ? 'omit' : 'same-origin'
+}
+
+async function sendFetch(
+  config: HttpRequestConfig,
+  options: SendOptions
+): Promise<HttpResponse> {
   if (config.signal?.aborted) throw httpErrors.canceled(config)
 
   const controller = new AbortController()
@@ -370,9 +418,9 @@ async function sendFetch(config: HttpRequestConfig): Promise<HttpResponse> {
       headers: headerPairs(config.headers),
       body: config.data as BodyInit | undefined,
       // As XMLHttpRequest: cookies go to this origin always, and to another
-      // only with withCredentials. In the shell's sandboxed frame this origin
-      // is opaque, so none go at all.
-      credentials: config.withCredentials ? 'include' : 'same-origin',
+      // only with withCredentials. In the shell's sandboxed frame none go at
+      // all, said outright rather than left to the frame's opaque origin.
+      credentials: credentials(config, options),
       keepalive: config.keepalive,
       signal: controller.signal,
     })

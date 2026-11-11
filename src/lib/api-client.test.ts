@@ -29,6 +29,28 @@ afterEach(() => {
   vi.resetModules()
 })
 
+// Runs body as a page inside the shell's sandboxed frame: a parent window
+// whose document cannot be reached.
+async function inShell(body: () => Promise<void>) {
+  Object.defineProperty(window, 'parent', {
+    configurable: true,
+    get: () => ({
+      postMessage: () => {},
+      get document(): never {
+        throw new DOMException('Blocked', 'SecurityError')
+      },
+    }),
+  })
+  try {
+    await body()
+  } finally {
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => window,
+    })
+  }
+}
+
 describe('apiClient interceptor', () => {
   it('sends the token to a same-origin path', async () => {
     const { apiClient } = await import('./api-client')
@@ -50,6 +72,18 @@ describe('apiClient interceptor', () => {
     const { apiClient } = await import('./api-client')
     await apiClient.get('https://attacker.example/x')
     expect(authorizationOf(seen[0])).toBeUndefined()
+  })
+
+  it('sends no cookies inside the shell, and keeps them outside it', async () => {
+    await inShell(async () => {
+      const { apiClient } = await import('./api-client')
+      await apiClient.get('/_/identity')
+    })
+    vi.resetModules()
+    const { apiClient } = await import('./api-client')
+    await apiClient.get('/_/identity')
+    expect(seen[0].credentials).toBe('omit')
+    expect(seen[1].credentials).toBe('include')
   })
 })
 
@@ -76,35 +110,28 @@ describe('createAppClient interceptor', () => {
 
   it('drops cookies inside the shell, where the token is the only credential', async () => {
     // The sandboxed iframe has an opaque origin: cookies never travel, and a
-    // cross-site request with credentials would be refused outright.
-    Object.defineProperty(window, 'parent', {
-      configurable: true,
-      get: () => ({
-        postMessage: () => {},
-        get document(): never {
-          throw new DOMException('Blocked', 'SecurityError')
-        },
-      }),
-    })
-    try {
+    // cross-site request with credentials would be refused outright. fetch()
+    // says so outright; XMLHttpRequest, which cannot, sends without
+    // withCredentials.
+    await inShell(async () => {
       const { createAppClient } = await import('./create-app-client')
       const client = createAppClient({ appName: 'chat' })
       await client.get('-/list')
-      expect(seen[0].credentials).toBe('same-origin')
+      await client.post('-/upload', 'body', { onUploadProgress: () => {} })
+      expect(seen[0].credentials).toBe('omit')
       expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
-    } finally {
-      Object.defineProperty(window, 'parent', {
-        configurable: true,
-        get: () => window,
-      })
-    }
+      expect(seen[1]).toMatchObject({ by: 'xhr', withCredentials: false })
+      expect(authorizationOf(seen[1])).toBe(`Bearer ${TOKEN}`)
+    })
   })
 
   it('keeps cookies outside the shell', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'chat' })
     await client.get('-/list')
+    await client.post('-/upload', 'body', { onUploadProgress: () => {} })
     expect(seen[0].credentials).toBe('include')
+    expect(seen[1]).toMatchObject({ by: 'xhr', withCredentials: true })
   })
 
   it('withholds the token from an absolute foreign URL', async () => {

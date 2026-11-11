@@ -379,3 +379,54 @@ describe('the client', () => {
     expect((failure.mock.calls[0][0] as HttpError).config.timeout).toBe(5)
   })
 })
+
+// The session token goes out with the request and nowhere else: a response
+// and an error keep the config, and errors are logged and passed around.
+describe('the token', () => {
+  const token = { Authorization: 'Bearer secret', 'X-Kept': 'yes' }
+  const transports = {
+    fetch: {},
+    xhr: { onUploadProgress: () => {} },
+  }
+
+  for (const [by, extra] of Object.entries(transports)) {
+    it(`is sent, but kept out of the response and the error (${by})`, async () => {
+      const { sent } = fakeNetwork((request) =>
+        request.url === '/bad' ? { status: 500, body: { e: 1 } } : {}
+      )
+      const client = createHttpClient({ defaults: { headers: token } })
+
+      const response = await client.post('/ok', 'body', extra)
+      const failure = (await client
+        .post('/bad', 'body', extra)
+        .catch((e: unknown) => e)) as HttpError
+
+      expect(sent.map((request) => request.by)).toEqual([by, by])
+      expect(sent[0].headers.authorization).toBe('Bearer secret')
+      expect(sent[1].headers.authorization).toBe('Bearer secret')
+      for (const config of [
+        response.config,
+        failure.config,
+        failure.response?.config,
+      ]) {
+        expect(config?.headers).toEqual({ 'X-Kept': 'yes' })
+      }
+      expect(failure.status).toBe(500)
+      expect(failure.data).toEqual({ e: 1 })
+    })
+  }
+
+  it('is kept out of an error that has no response, whatever its case', async () => {
+    const network = fakeNetwork(() => new Promise(() => {}))
+    const client = createHttpClient({
+      defaults: { headers: { authorization: 'Bearer secret' } },
+    })
+    const failing = client
+      .post('/x', 'body', { onUploadProgress: () => {} })
+      .catch((e: unknown) => e)
+    network.xhrs[network.xhrs.length - 1].fail()
+    const failure = (await failing) as HttpError
+    expect(failure.code).toBe('ERR_NETWORK')
+    expect(failure.config.headers).toEqual({})
+  })
+})

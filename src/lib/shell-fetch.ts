@@ -168,16 +168,21 @@ function decode(
   return new TextDecoder().decode(buffer)
 }
 
+// Straight to the server. Inside the shell no cookie can or should go: the
+// frame's token is its only credential.
+function direct(config: HttpRequestConfig): Promise<HttpResponse> {
+  return sendDirect(config, { omitCredentials: isInShell() })
+}
+
 /**
  * Sends a prepared request (see prepareBody in http.ts): through the shell
  * page when this frame is in a shell that carries requests and the request is
  * one it takes, and straight to the server otherwise.
  */
 export function shellAdapter(config: HttpRequestConfig): Promise<HttpResponse> {
-  if (!isInShell() || getShellInitData()?.fetch !== true)
-    return sendDirect(config)
+  if (!isInShell() || getShellInitData()?.fetch !== true) return direct(config)
   const request = carried(config)
-  if (!request) return sendDirect(config)
+  if (!request) return direct(config)
   if (config.signal?.aborted) return Promise.reject(httpErrors.canceled(config))
   listen()
 
@@ -207,7 +212,7 @@ export function shellAdapter(config: HttpRequestConfig): Promise<HttpResponse> {
       // Refused before anything was sent, or a redirect the shell would not
       // follow on a read, which is safe to repeat: send it directly.
       if (reply.refused || (reply.redirect && read)) {
-        sendDirect(config).then(resolve, reject)
+        direct(config).then(resolve, reject)
         return
       }
       if (reply.redirect) {
@@ -259,7 +264,7 @@ export function shellAdapter(config: HttpRequestConfig): Promise<HttpResponse> {
     } catch {
       // A body postMessage cannot clone: send it directly.
       done()
-      sendDirect(config).then(resolve, reject)
+      direct(config).then(resolve, reject)
     }
   })
 }
