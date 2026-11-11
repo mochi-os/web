@@ -160,10 +160,13 @@ export function AuthenticatedLayout({
         <SearchProvider>
           <LayoutProvider>
             <SidebarProvider defaultOpen={defaultOpen}>
+              {/* A flex column, as SidebarInset is for a signed-in visitor:
+                  a page's fixed Main then fills the screen and its own
+                  container scrolls, rather than growing to its content. */}
               <div
                 className={cn(
                   '@container/content',
-                  'h-svh w-full overflow-auto'
+                  'flex h-svh w-full flex-col overflow-auto'
                 )}
               >
                 {children ?? <Outlet />}

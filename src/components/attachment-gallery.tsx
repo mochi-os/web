@@ -4,6 +4,8 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   type ReactNode,
   type SyntheticEvent,
@@ -51,6 +53,9 @@ export interface AttachmentGalleryProps {
   // for post/object galleries whose tiles render large; omit it for small
   // galleries (comments), whose tiles then stay on the thumbnail chain.
   getPreviewUrl?: (att: GalleryAttachment) => string
+  // Resolve the 640px medium variant. With it, a tile drawn small enough for
+  // the medium asks for it instead of the preview.
+  getMediumUrl?: (att: GalleryAttachment) => string
   // Target row height in px. 80 fits comments, 140 matches MapView thumbs, 200 for big posts. Default 140.
   rowHeight?: number
   // Cap on visible media items; overflow collapses into a "+N" overlay on the last tile.
@@ -77,6 +82,75 @@ export interface AttachmentGalleryProps {
 }
 
 const DEFAULT_ASPECT = 1.5
+
+// The long edge of the medium variant, in pixels (core's medium_size).
+const MEDIUM_EDGE = 640
+
+/**
+ * Whether a tile drawn at width x height CSS pixels is served by the medium:
+ * its longer side in device pixels fits within the medium's long edge. A tile
+ * not yet laid out (no width) takes the preview, as every tile did before.
+ */
+function tileTakesMedium(
+  width: number,
+  height: number,
+  density: number
+): boolean {
+  return width > 0 && Math.max(width, height) * density <= MEDIUM_EDGE
+}
+
+/**
+ * A media tile's image. Given a medium, it asks for the medium when the tile
+ * is drawn small enough and for the preview otherwise, reading its size before
+ * the first paint so that it fetches once. A tile that grows past the medium -
+ * its photo's own aspect ratio arrives with the image - moves up to the
+ * preview; one that shrinks keeps what it has.
+ */
+function TileImage({
+  medium,
+  preview,
+  alt,
+  className,
+  onLoad,
+}: {
+  medium?: string
+  preview: string
+  alt: string
+  className?: string
+  onLoad?: (event: SyntheticEvent<HTMLImageElement>) => void
+}) {
+  const box = useRef<HTMLSpanElement>(null)
+  const [src, setSrc] = useState<string | null>(medium ? null : preview)
+  useLayoutEffect(() => {
+    const element = box.current
+    if (!medium || !element) {
+      setSrc(preview)
+      return
+    }
+    const choose = () => {
+      const { width, height } = element.getBoundingClientRect()
+      const fits = tileTakesMedium(width, height, window.devicePixelRatio || 1)
+      setSrc((current) => (current === preview || !fits ? preview : medium))
+    }
+    choose()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(choose)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [medium, preview])
+  return (
+    <span ref={box} className='block h-full w-full'>
+      {src && (
+        <AttachmentImage
+          src={src}
+          alt={alt}
+          onLoad={onLoad}
+          className={className}
+        />
+      )}
+    </span>
+  )
+}
 
 function VideoTile({
   url,
@@ -141,6 +215,7 @@ export function AttachmentGallery({
   getUrl,
   getThumbnailUrl,
   getPreviewUrl,
+  getMediumUrl,
   rowHeight = 140,
   mediaCap,
   inline = false,
@@ -260,8 +335,9 @@ export function AttachmentGallery({
               onAspect={(r) => setAspect(attachment.id, r)}
             />
           ) : (
-            <AttachmentImage
-              src={resolveTile(attachment)}
+            <TileImage
+              medium={getMediumUrl?.(attachment)}
+              preview={resolveTile(attachment)}
               alt={attachment.caption || attachment.name}
               onLoad={(e: SyntheticEvent<HTMLImageElement>) => {
                 const img = e.currentTarget

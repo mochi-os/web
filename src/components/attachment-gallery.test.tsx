@@ -149,6 +149,75 @@ describe('AttachmentGallery tile loading', () => {
   })
 })
 
+// A gallery tile is drawn about 140px tall, so a 640px medium covers it on any
+// screen where the tile stays small, at a third of the preview's bytes. A tile
+// drawn larger than the medium still asks for the preview.
+describe('AttachmentGallery tile variant', () => {
+  function drawnAt(width: number, height: number, density = 2) {
+    vi.stubGlobal('devicePixelRatio', density)
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width,
+      height,
+      top: 0,
+      left: 0,
+      right: width,
+      bottom: height,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+  }
+
+  function showWithMedium() {
+    render(
+      <I18nProvider i18n={i18n}>
+        <AttachmentGallery
+          attachments={[attachment()]}
+          getPreviewUrl={(att) => `/app/entity/-/attachments/${att.id}/preview`}
+          getMediumUrl={(att) => `/app/entity/-/attachments/${att.id}/medium`}
+        />
+      </I18nProvider>
+    )
+    return screen.getByAltText('photo.jpg')
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('asks a tile drawn within the medium for the medium', () => {
+    drawnAt(210, 140)
+    expect(showWithMedium()).toHaveAttribute(
+      'src',
+      '/app/entity/-/attachments/a1/medium'
+    )
+  })
+
+  it('asks a tile drawn past the medium for the preview', () => {
+    drawnAt(700, 140)
+    expect(showWithMedium()).toHaveAttribute(
+      'src',
+      '/app/entity/-/attachments/a1/preview'
+    )
+  })
+
+  it('counts device pixels, not CSS pixels', () => {
+    drawnAt(210, 140, 4)
+    expect(showWithMedium()).toHaveAttribute(
+      'src',
+      '/app/entity/-/attachments/a1/preview'
+    )
+  })
+
+  it('takes the preview for a tile not yet laid out', () => {
+    drawnAt(0, 0)
+    expect(showWithMedium()).toHaveAttribute(
+      'src',
+      '/app/entity/-/attachments/a1/preview'
+    )
+  })
+})
+
 describe('AttachmentGallery file chips', () => {
   it('downloads through the shell instead of exposing a tokened href', () => {
     const { container } = show([
