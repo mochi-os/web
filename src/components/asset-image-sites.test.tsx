@@ -116,6 +116,33 @@ async function shown(element: () => Promise<ReactElement>) {
 }
 
 describe('shared components show their images through the shell', () => {
+  // Chrome outlines a sized <img> that has no src. Hidden until the bytes
+  // arrive, a tile shows its own background instead of a grey frame.
+  it('hides the image until its bytes arrive', async () => {
+    await boot()
+    const { AssetImage } = await import('./asset-image')
+    render(<AssetImage src={IMAGE} alt='' />)
+    const image = document.querySelector('img')!
+    expect(image.style.visibility).toBe('hidden')
+    await vi.waitFor(() =>
+      expect(posted.filter((message) => message.type === 'fetch')).toHaveLength(
+        1
+      )
+    )
+    const request = posted.find((message) => message.type === 'fetch')!
+    await act(async () => {
+      fromParent({
+        type: 'fetch.result',
+        id: request.id,
+        status: 200,
+        headers: [['content-type', 'image/png']],
+        body: new Uint8Array([137, 80, 78, 71]).buffer,
+      })
+    })
+    expect(image.getAttribute('src')).toBe('blob:mochi/image')
+    expect(image.style.visibility).toBe('')
+  })
+
   it('an attachment tile in a gallery', async () => {
     const sources = await shown(async () => {
       const { AttachmentImage } = await import('./attachment-image')

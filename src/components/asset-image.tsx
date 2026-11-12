@@ -23,6 +23,7 @@ export function AssetImage({
   alt,
   loading,
   ref,
+  style,
   ...rest
 }: AssetImageProps) {
   const image = useAssetImage(src, loading === 'lazy')
@@ -43,6 +44,11 @@ export function AssetImage({
       // No alt text painted into the box while the bytes are on their way.
       alt={image.pending ? '' : alt}
       loading={loading}
+      // Hidden, not unmounted, while the bytes are on their way: Chrome draws
+      // its broken-image outline around a sized <img> with no src, which showed
+      // as a grey frame inside every gallery tile until the photo arrived. The
+      // element stays laid out so the lazy-load observer still sees it.
+      style={image.pending ? { ...style, visibility: 'hidden' } : style}
     />
   )
 }
