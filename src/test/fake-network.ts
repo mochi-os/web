@@ -97,6 +97,9 @@ export function fakeNetwork(answer: Answerer = () => ({ body: {} })) {
     onabort: (() => void) | null = null
     private method = 'GET'
     private url = ''
+    // The browser's own timer for xhr.timeout, which ends the request with
+    // ontimeout. Under fake timers a test drives it with the clock.
+    private timer?: ReturnType<typeof setTimeout>
 
     constructor() {
       FakeXhr.instances.push(this)
@@ -132,8 +135,15 @@ export function fakeNetwork(answer: Answerer = () => ({ body: {} })) {
       }
       sent.push(this.request)
       const request = this.request
+      if (this.timeout > 0) {
+        this.timer = setTimeout(() => {
+          this.status = -1
+          this.ontimeout?.()
+        }, this.timeout)
+      }
       void Promise.resolve(answerer(request)).then((reply) => {
         if (this.status === -1) return
+        clearTimeout(this.timer)
         this.answered = reply
         this.status = reply.status ?? 200
         this.statusText = reply.statusText ?? ''
@@ -147,6 +157,7 @@ export function fakeNetwork(answer: Answerer = () => ({ body: {} })) {
     }
 
     abort() {
+      clearTimeout(this.timer)
       this.status = -1
       this.onabort?.()
     }
@@ -164,6 +175,7 @@ export function fakeNetwork(answer: Answerer = () => ({ body: {} })) {
 
     /** Fails as the browser does when the connection drops. */
     fail() {
+      clearTimeout(this.timer)
       this.status = -1
       this.onerror?.()
     }

@@ -446,6 +446,21 @@ describe('requests that go direct', () => {
     expect(requests()).toHaveLength(0)
   })
 
+  // Market saves a listing this way as the page closes. Only the browser's own
+  // keepalive request survives that; the shell's would die with the frame.
+  it('when the request must outlive the page', async () => {
+    const { client, direct } = await boot()
+    await client.post('save', { name: 'x' }, { keepalive: true })
+    expect(requests()).toHaveLength(0)
+    expect(direct).toHaveLength(1)
+    expect(direct[0]).toMatchObject({
+      by: 'fetch',
+      keepalive: true,
+      credentials: 'omit',
+    })
+    expect(direct[0].headers.authorization).toBe('Bearer app-token')
+  })
+
   it('outside this app, core routes included', async () => {
     const { apiClient, direct } = await boot()
     await apiClient.get('/people/abc/-/style')
@@ -507,6 +522,27 @@ describe('ending a carried request', () => {
     expect(error.code).toBe('ECONNABORTED')
     expect(aborts()).toHaveLength(1)
     expect(aborts()[0].id).toBe(requests()[0].id)
+  })
+
+  it('leaves no timer or listener behind once answered', async () => {
+    const { client } = await boot()
+    vi.useFakeTimers()
+    try {
+      const controller = new AbortController()
+      const added = vi.spyOn(controller.signal, 'addEventListener')
+      const removed = vi.spyOn(controller.signal, 'removeEventListener')
+      const result = client.get('one', {
+        signal: controller.signal,
+        timeout: 1000,
+      })
+      await answer({ status: 200, headers: [], body: json('ok') })
+      expect(await result).toBe('ok')
+      expect(added).toHaveBeenCalled()
+      expect(removed).toHaveBeenCalledTimes(added.mock.calls.length)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('draws request ids nobody can guess', async () => {

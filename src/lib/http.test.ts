@@ -214,6 +214,17 @@ describe('a failure', () => {
     expect(error.status).toBeUndefined()
   })
 
+  it('of the request itself keeps what failed as its cause', async () => {
+    fakeNetwork()
+    // A header value fetch() refuses: not the network, but reported as it.
+    const error = (await createHttpClient()
+      .get('/x', { headers: { 'X-Name': 'Zoë ✓' } })
+      .catch((e: unknown) => e)) as HttpError
+    expect(error.code).toBe('ERR_NETWORK')
+    expect(error.message).toBe('Network Error')
+    expect(error.cause).toBeInstanceOf(TypeError)
+  })
+
   it('of time is ECONNABORTED with its fixed wording', async () => {
     vi.useFakeTimers()
     fakeNetwork(() => new Promise(() => {}))
@@ -221,6 +232,22 @@ describe('a failure', () => {
       .get('/x', { timeout: 30000 })
       .catch((e: unknown) => e)
     await vi.advanceTimersByTimeAsync(30000)
+    const error = (await result) as HttpError
+    expect(error.code).toBe('ECONNABORTED')
+    expect(error.message).toBe('timeout of 30000ms exceeded')
+  })
+
+  it('of time is ECONNABORTED by XMLHttpRequest too', async () => {
+    vi.useFakeTimers()
+    fakeNetwork(() => new Promise(() => {}))
+    let settled = false
+    const result = createHttpClient()
+      .post('/x', 'a', { timeout: 30000, onUploadProgress: () => {} })
+      .catch((e: unknown) => e)
+      .finally(() => (settled = true))
+    await vi.advanceTimersByTimeAsync(29999)
+    expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
     const error = (await result) as HttpError
     expect(error.code).toBe('ECONNABORTED')
     expect(error.message).toBe('timeout of 30000ms exceeded')
@@ -298,14 +325,17 @@ describe('a request that reports progress', () => {
     // The count never passes the total, and an unknown total stays unknown.
     await vi.advanceTimersByTimeAsync(334)
     xhr.progress('upload', 120, 100)
-    await vi.advanceTimersByTimeAsync(334)
+    // The last report lands inside the wait: held, then delivered when the
+    // request ends, without waiting out its slot.
     xhr.progress('upload', 5)
+    expect(heard).toHaveLength(3)
     answer({ body: {} })
     await result
     expect(heard.slice(2)).toEqual([
       { loaded: 100, total: 100 },
       { loaded: 5, total: undefined },
     ])
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('reports download bytes too', async () => {
@@ -351,6 +381,48 @@ describe('a request that reports progress', () => {
     expect(refused.code).toBe('ERR_BAD_REQUEST')
     expect(refused.response?.data).toEqual({ error: 'too_large' })
   })
+})
+
+// However a request ends, its timeout timer and its listener on the caller's
+// signal go with it. One left behind holds memory for every request ever sent
+// on a long-lived signal.
+describe('a request that has ended', () => {
+  const transports = {
+    fetch: {},
+    xhr: { onUploadProgress: () => {} },
+  }
+  const endings = ['answered', 'refused', 'canceled', 'timed out'] as const
+
+  for (const [by, extra] of Object.entries(transports)) {
+    for (const ending of endings) {
+      it(`leaves no timer or listener behind when ${ending} (${by})`, async () => {
+        vi.useFakeTimers()
+        fakeNetwork(() =>
+          ending === 'answered'
+            ? { body: {} }
+            : ending === 'refused'
+              ? { status: 500, body: {} }
+              : new Promise(() => {})
+        )
+        const controller = new AbortController()
+        const added = vi.spyOn(controller.signal, 'addEventListener')
+        const removed = vi.spyOn(controller.signal, 'removeEventListener')
+        const result = createHttpClient()
+          .post('/x', 'a', {
+            ...extra,
+            signal: controller.signal,
+            timeout: 1000,
+          })
+          .catch((e: unknown) => e)
+        if (ending === 'canceled') controller.abort()
+        if (ending === 'timed out') await vi.advanceTimersByTimeAsync(1000)
+        await result
+        expect(added).toHaveBeenCalled()
+        expect(removed).toHaveBeenCalledTimes(added.mock.calls.length)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+    }
+  }
 })
 
 describe('the client', () => {

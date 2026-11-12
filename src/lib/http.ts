@@ -94,9 +94,10 @@ export class HttpError<T = unknown> extends Error {
     message: string,
     code: HttpErrorCode,
     config: HttpRequestConfig,
-    response?: HttpResponse<T>
+    response?: HttpResponse<T>,
+    cause?: unknown
   ) {
-    super(message)
+    super(message, cause === undefined ? undefined : { cause })
     this.name = 'HttpError'
     this.code = code
     this.config = withoutAuthorization(config)
@@ -126,8 +127,11 @@ const messages = {
 /* eslint-enable lingui/no-unlocalized-strings */
 
 export const httpErrors = {
-  network: (config: HttpRequestConfig) =>
-    new HttpError(messages.network, 'ERR_NETWORK', config),
+  // cause keeps what actually failed: the message stays "Network Error" for
+  // its readers, but a bad header, URL or body is not a network fault, and
+  // only the cause says which it was.
+  network: (config: HttpRequestConfig, cause?: unknown) =>
+    new HttpError(messages.network, 'ERR_NETWORK', config, undefined, cause),
   timeout: (config: HttpRequestConfig) =>
     new HttpError(
       messages.timeout(config.timeout ?? 0),
@@ -397,7 +401,7 @@ async function sendFetch(
     if (error instanceof HttpError) throw error
     if (ended === 'timeout') throw httpErrors.timeout(config)
     if (ended === 'canceled') throw httpErrors.canceled(config)
-    throw httpErrors.network(config)
+    throw httpErrors.network(config, error)
   } finally {
     clearTimeout(timer)
     config.signal?.removeEventListener('abort', cancel)
