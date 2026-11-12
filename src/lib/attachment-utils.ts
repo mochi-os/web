@@ -80,25 +80,33 @@ export function removePendingFile(
  * an <img>'s error event carries no status, so 404 and 503 look identical
  * until something fetches the same URL and reads the answer.
  *
- * 'unavailable' means the bytes may exist but cannot be served right now:
- * the server said 502/503/504 (its source host is unreachable — it retries
- * after a backoff), or the probe itself could not reach the server. A retry
- * later may simply work. Everything else — 404 above all — is 'missing':
- * the server answered, and the bytes are not to be had.
+ * 'available' means the server answered with an image: the load failed in
+ * passing - another transfer of the same original was in flight - and loading
+ * it again will work. 'missing' means the server said the bytes are gone (404
+ * or 410), or answered with something that is not an image - a page served
+ * for an address that names no attachment. Anything else is 'unavailable':
+ * the bytes may exist but cannot be
+ * served right now - the source host is unreachable (502/503/504, retried
+ * server-side after a backoff), the request was refused or limited, or the
+ * probe could not reach the server at all.
+ *
+ * Only the status is wanted, so the body is cancelled as soon as it arrives:
+ * the probe of an original must not download it a second time.
  */
 export async function classifyAttachmentFailure(
   url: string
-): Promise<'unavailable' | 'missing'> {
+): Promise<'available' | 'unavailable' | 'missing'> {
   try {
     const response = await fetch(url, { credentials: 'same-origin' })
-    if (
-      response.status === 502 ||
-      response.status === 503 ||
-      response.status === 504
-    ) {
-      return 'unavailable'
+    void response.body?.cancel().catch(() => {})
+    if (response.status >= 200 && response.status < 300) {
+      const type = response.headers?.get('content-type') ?? ''
+      return type.toLowerCase().startsWith('image/') ? 'available' : 'missing'
     }
-    return 'missing'
+    if (response.status === 404 || response.status === 410) {
+      return 'missing'
+    }
+    return 'unavailable'
   } catch {
     return 'unavailable'
   }
