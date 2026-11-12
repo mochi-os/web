@@ -89,6 +89,9 @@ export class HttpError<T = unknown> extends Error {
   declare readonly response?: HttpResponse<T>
   declare readonly status?: number
   declare readonly data?: T
+  // Set by hand, not through Error's options: apps type-check this file
+  // against ES2020, whose Error constructor takes no cause.
+  declare readonly cause?: unknown
 
   constructor(
     message: string,
@@ -97,8 +100,9 @@ export class HttpError<T = unknown> extends Error {
     response?: HttpResponse<T>,
     cause?: unknown
   ) {
-    super(message, cause === undefined ? undefined : { cause })
+    super(message)
     this.name = 'HttpError'
+    if (cause !== undefined) Object.assign(this, { cause })
     this.code = code
     this.config = withoutAuthorization(config)
     if (response) {
