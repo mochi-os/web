@@ -106,6 +106,23 @@ describe('response interceptors', () => {
     expect(toast.error).not.toHaveBeenCalled()
   })
 
+  it('toasts a dropped connection, but not a request that was never sent', async () => {
+    fakeNetwork(() => Promise.reject(new TypeError('Failed to fetch')))
+    const client = createHttpClient({ handlers: createApiResponseHandlers() })
+    await client.post('/x', {}).catch(() => {})
+    expect(toast.error).toHaveBeenCalledTimes(1)
+    vi.mocked(toast.error).mockClear()
+
+    // A header the browser refuses fails before anything leaves: the
+    // caller's fault, returned as it was thrown, with no toast and no logout.
+    const refused = await client
+      .post('/x', {}, { headers: { 'X-Name': 'Zoë ✓' } })
+      .catch((e: unknown) => e)
+    expect(refused).toBeInstanceOf(TypeError)
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(logout).not.toHaveBeenCalled()
+  })
+
   it('never toasts a query-style request: the section owning it shows the error', async () => {
     await clientAnswering(500, { error: 'boom' })
       .get('/x')

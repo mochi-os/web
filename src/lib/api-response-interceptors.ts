@@ -5,7 +5,7 @@ import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
 import { detectHtmlResponse } from './error-normalizer'
 import { useAuthStore } from '../stores/auth-store'
-import type { HttpError, HttpRequestConfig, HttpResponse } from './http'
+import { isHttpError, type HttpRequestConfig, type HttpResponse } from './http'
 import type { ResponseHandlers } from './http-client'
 
 const devConsole = globalThis.console
@@ -190,9 +190,15 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
   return async function handleApiResponseError(
     thrown: unknown
   ): Promise<never> {
-    // Read as the request error it nearly always is; anything else thrown on
-    // the way has no response, and is treated as a failed connection.
-    const error = (thrown ?? {}) as Partial<HttpError>
+    // Anything but an HttpError was thrown before the request left: a body
+    // that cannot be encoded, a header or URL the browser refuses. That is a
+    // fault in the caller, not the connection, so it gets no network toast
+    // and goes back as it was thrown.
+    if (!isHttpError(thrown)) {
+      logDevError('[API] Request not sent', thrown)
+      return Promise.reject(thrown)
+    }
+    const error = thrown
     const status = error.response?.status
 
     switch (status) {

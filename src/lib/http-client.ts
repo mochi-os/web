@@ -3,8 +3,9 @@
 
 // A request client: defaults merged into every request, a prepare step (base
 // URL, token, cookies), then handlers for every response and failure (HTML
-// guard, toasts, 401 logout). A failure the success handler raises does not
-// reach the failure handler.
+// guard, toasts, 401 logout). Everything that fails on the way out, prepare
+// and body encoding included, reaches the failure handler; a failure the
+// success handler raises does not.
 
 import {
   mergeHeaders,
@@ -72,12 +73,10 @@ export function createHttpClient({
       method: (config.method ?? defaults.method ?? 'GET').toUpperCase(),
       headers: mergeHeaders(defaults.headers, config.headers),
     }
-    if (prepare) merged = prepare(merged)
-    const ready = prepareBody(merged)
-
     let response: HttpResponse
     try {
-      response = await shellAdapter(ready)
+      if (prepare) merged = prepare(merged)
+      response = await shellAdapter(prepareBody(merged))
     } catch (error) {
       if (handlers) return handlers.failure(error)
       throw error

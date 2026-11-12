@@ -361,6 +361,11 @@ async function sendFetch(
 ): Promise<HttpResponse> {
   if (config.signal?.aborted) throw httpErrors.canceled(config)
 
+  // Built before anything is sent, so a param that cannot be encoded or a
+  // header the browser refuses throws as itself, not as a network failure.
+  const url = buildURL(config)
+  const headers = new Headers(headerPairs(config.headers))
+
   const controller = new AbortController()
   let ended: 'timeout' | 'canceled' | undefined
   const timer = config.timeout
@@ -376,9 +381,9 @@ async function sendFetch(
   config.signal?.addEventListener('abort', cancel)
 
   try {
-    const response = await fetch(buildURL(config), {
+    const response = await fetch(url, {
       method: (config.method ?? 'GET').toUpperCase(),
-      headers: headerPairs(config.headers),
+      headers,
       body: config.data as BodyInit | undefined,
       credentials: credentials(config, options),
       keepalive: config.keepalive,

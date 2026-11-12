@@ -214,15 +214,32 @@ describe('a failure', () => {
     expect(error.status).toBeUndefined()
   })
 
-  it('of the request itself keeps what failed as its cause', async () => {
-    fakeNetwork()
-    // A header value fetch() refuses: not the network, but reported as it.
+  it('of the connection keeps what the browser threw as its cause', async () => {
+    const thrown = new TypeError('Failed to fetch')
+    fakeNetwork(() => Promise.reject(thrown))
     const error = (await createHttpClient()
-      .get('/x', { headers: { 'X-Name': 'Zoë ✓' } })
+      .get('/x')
       .catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ERR_NETWORK')
-    expect(error.message).toBe('Network Error')
-    expect(error.cause).toBeInstanceOf(TypeError)
+    expect(error.cause).toBe(thrown)
+  })
+
+  it('of the request itself is thrown as it is, never as the network', async () => {
+    const { sent } = fakeNetwork()
+    const client = createHttpClient()
+    const header = await client
+      .get('/x', { headers: { 'X-Name': 'Zoë ✓' } })
+      .catch((e: unknown) => e)
+    expect(header).toBeInstanceOf(TypeError)
+    const param = await client
+      .get('/x', { params: { q: '\ud800' } })
+      .catch((e: unknown) => e)
+    expect(param).toBeInstanceOf(URIError)
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+    const body = await client.post('/x', circular).catch((e: unknown) => e)
+    expect(body).toBeInstanceOf(TypeError)
+    expect(sent).toHaveLength(0)
   })
 
   it('of time is ECONNABORTED with its fixed wording', async () => {
@@ -448,6 +465,42 @@ describe('the client', () => {
     await client.get('/bad').catch(() => {})
     expect(failure).toHaveBeenCalledTimes(1)
     expect((failure.mock.calls[0][0] as HttpError).config.timeout).toBe(5)
+  })
+
+  it('hands the failure handler what fails on the way out, but not what the success handler throws', async () => {
+    fakeNetwork()
+    const failure = vi.fn(async (error: unknown) => {
+      throw error
+    })
+    const broken = new Error('prepare failed')
+    const preparing = createHttpClient({
+      prepare: () => {
+        throw broken
+      },
+      handlers: { success: (response) => response, failure },
+    })
+    expect(await preparing.get('/x').catch((e: unknown) => e)).toBe(broken)
+    expect(failure).toHaveBeenLastCalledWith(broken)
+
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+    const encoding = createHttpClient({
+      handlers: { success: (response) => response, failure },
+    })
+    await encoding.post('/x', circular).catch(() => {})
+    expect(failure).toHaveBeenCalledTimes(2)
+
+    const rejected = new Error('not this one')
+    const succeeding = createHttpClient({
+      handlers: {
+        success: () => {
+          throw rejected
+        },
+        failure,
+      },
+    })
+    expect(await succeeding.get('/x').catch((e: unknown) => e)).toBe(rejected)
+    expect(failure).toHaveBeenCalledTimes(2)
   })
 })
 
