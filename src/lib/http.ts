@@ -67,15 +67,17 @@ export type HttpErrorCode =
   | 'ECONNABORTED'
   | 'ERR_CANCELED'
 
-// Responses and errors keep the config without the session token: errors are
-// logged and passed around, and none of their readers needs it.
-function withoutAuthorization(config: HttpRequestConfig): HttpRequestConfig {
-  if (!config.headers) return config
+// Responses and errors keep the config without the session token or the
+// body: errors are logged and passed around, a body can hold a passphrase or
+// a login code, and none of their readers needs either.
+function withoutSecrets(config: HttpRequestConfig): HttpRequestConfig {
+  const { data: _body, ...kept } = config
+  if (!config.headers) return kept
   const headers: HttpHeaders = {}
   for (const [name, value] of Object.entries(config.headers)) {
     if (name.toLowerCase() !== 'authorization') headers[name] = value
   }
-  return { ...config, headers }
+  return { ...kept, headers }
 }
 
 /**
@@ -104,7 +106,7 @@ export class HttpError<T = unknown> extends Error {
     this.name = 'HttpError'
     if (cause !== undefined) Object.assign(this, { cause })
     this.code = code
-    this.config = withoutAuthorization(config)
+    this.config = withoutSecrets(config)
     if (response) {
       Object.assign(this, {
         response,
@@ -302,7 +304,7 @@ export function settle(
       // Not JSON: the text as it is.
     }
   }
-  const kept = withoutAuthorization(config)
+  const kept = withoutSecrets(config)
   const response: HttpResponse = {
     data,
     status,
@@ -365,34 +367,38 @@ async function sendFetch(
 ): Promise<HttpResponse> {
   if (config.signal?.aborted) throw httpErrors.canceled(config)
 
-  // Built before anything is sent, so a param that cannot be encoded or a
-  // header the browser refuses throws as itself, not as a network failure.
+  // The whole request is built before anything is sent, so what the browser
+  // refuses to build throws as itself, not as a network failure: a param that
+  // cannot be encoded, a header it rejects, a URL carrying a user name, a body
+  // on a GET. Only what fails after that is the network's.
   const url = buildURL(config)
-  const headers = new Headers(headerPairs(config.headers))
-
   const controller = new AbortController()
+  const init: RequestInit = {
+    method: (config.method ?? 'GET').toUpperCase(),
+    headers: new Headers(headerPairs(config.headers)),
+    body: config.data as BodyInit | undefined,
+    credentials: credentials(config, options),
+    keepalive: config.keepalive,
+    signal: controller.signal,
+  }
+  new Request(new URL(url, document.baseURI), init)
+
   let ended: 'timeout' | 'canceled' | undefined
   const timer = config.timeout
     ? setTimeout(() => {
-        ended = 'timeout'
+        // The first to end the request names the outcome.
+        if (!ended) ended = 'timeout'
         controller.abort()
       }, config.timeout)
     : undefined
   const cancel = () => {
-    ended = 'canceled'
+    if (!ended) ended = 'canceled'
     controller.abort()
   }
   config.signal?.addEventListener('abort', cancel)
 
   try {
-    const response = await fetch(url, {
-      method: (config.method ?? 'GET').toUpperCase(),
-      headers,
-      body: config.data as BodyInit | undefined,
-      credentials: credentials(config, options),
-      keepalive: config.keepalive,
-      signal: controller.signal,
-    })
+    const response = await fetch(url, init)
     const body =
       config.responseType === 'blob'
         ? await response.blob()
@@ -511,7 +517,10 @@ function sendXhr(config: HttpRequestConfig): Promise<HttpResponse> {
           reject(error)
         }
       })
-    xhr.onerror = () => finish(() => reject(httpErrors.network(config)))
+    // XMLHttpRequest throws nothing on a dropped connection; its error event
+    // is what the browser gives, kept as the cause as axios kept it.
+    xhr.onerror = (event) =>
+      finish(() => reject(httpErrors.network(config, event)))
     xhr.ontimeout = () => finish(() => reject(httpErrors.timeout(config)))
     xhr.onabort = () =>
       finish(() =>

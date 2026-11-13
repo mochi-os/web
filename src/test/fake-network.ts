@@ -92,7 +92,7 @@ export function fakeNetwork(answer: Answerer = () => ({ body: {} })) {
     responseText = ''
     response: unknown = null
     onload: (() => void) | null = null
-    onerror: (() => void) | null = null
+    onerror: ((event: ProgressEvent) => void) | null = null
     ontimeout: (() => void) | null = null
     onabort: (() => void) | null = null
     private method = 'GET'
@@ -177,7 +177,7 @@ export function fakeNetwork(answer: Answerer = () => ({ body: {} })) {
     fail() {
       clearTimeout(this.timer)
       this.status = -1
-      this.onerror?.()
+      this.onerror?.(new ProgressEvent('error'))
     }
   }
 
