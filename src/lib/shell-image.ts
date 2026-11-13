@@ -48,9 +48,9 @@ export function carriedImage(src: string): string | null {
 type Outcome = {
   // The object URL of the image's bytes, or null to load it directly.
   object: string | null
-  // The server answered with an error: there is no image to show. Kept like
-  // an image, so a list of people without avatars does not ask for each one
-  // again every time a row, a filter or a picker remounts.
+  // The server has no image there, or could not reach the peer that has it.
+  // Kept like an image, so a list of people without avatars does not ask for
+  // each one again every time a row, a filter or a picker remounts.
   missing: boolean
 }
 
@@ -69,6 +69,13 @@ const raster = /^image\/(?!svg)[\w.+-]+/i
 
 const direct: Outcome = { object: null, missing: false }
 
+// Not found, or the server failing. Any other refusal, a 401 or 403 from an
+// asset token that expired before the shell sent its refresh, says nothing
+// about the image, so it is not kept and the next element asks again.
+function gone(status: number): boolean {
+  return status === 404 || status === 410 || status >= 500
+}
+
 async function load(url: string): Promise<Outcome> {
   const token = getShellInitData()?.asset
   if (!token) return direct
@@ -79,7 +86,7 @@ async function load(url: string): Promise<Outcome> {
     { revalidate: true }
   )
   if (!reply) return direct
-  if (reply.status >= 400) return { object: null, missing: true }
+  if (gone(reply.status)) return { object: null, missing: true }
   if (reply.status !== 200) return direct
   const type =
     reply.headers.find(

@@ -308,6 +308,25 @@ describe('avatars through the shell', () => {
     expect(second.container.querySelector('img')).toBeNull()
     expect(requests()).toHaveLength(1)
   })
+
+  it('asks again for an avatar refused for its token', async () => {
+    await boot()
+    const Avatar = await avatar()
+    const first = render(<Avatar />)
+    await answer(0, {
+      status: 401,
+      headers: [['content-type', 'text/plain']],
+      body: new ArrayBuffer(0),
+    })
+    // Not known to be missing: the <img> loads the address itself.
+    expect(first.container.querySelector('img')!.getAttribute('src')).toBe(
+      '/feeds/abc/-/avatar?token=asset-token'
+    )
+    first.unmount()
+
+    render(<Avatar />)
+    await vi.waitFor(() => expect(requests()).toHaveLength(2))
+  })
 })
 
 describe('images outside the shell', () => {
