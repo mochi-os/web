@@ -265,6 +265,49 @@ describe('avatars through the shell', () => {
     expect(element.getAttribute('src')).toBe('blob:mochi/1')
     expect(element.getAttribute('alt')).toBe('Avatar for Alice')
   })
+
+  async function avatar() {
+    const { EntityAvatar } = await import('../components/entity-avatar')
+    const { QueryClient, QueryClientProvider } =
+      await import('@tanstack/react-query')
+    const client = new QueryClient()
+    return () => (
+      <QueryClientProvider client={client}>
+        <EntityAvatar src='/feeds/abc/-/avatar' name='Alice' />
+      </QueryClientProvider>
+    )
+  }
+
+  it('hides the avatar while the shell fetches it', async () => {
+    await boot()
+    const Avatar = await avatar()
+    const view = render(<Avatar />)
+    await vi.waitFor(() => expect(requests()).toHaveLength(1))
+    const element = view.container.querySelector('img')!
+    expect(element.hasAttribute('src')).toBe(false)
+    expect(element.style.visibility).toBe('hidden')
+    await answer(0, image())
+    expect(element.style.visibility).toBe('')
+  })
+
+  it('shows a missing avatar faceless, and does not ask for it again when it remounts', async () => {
+    await boot()
+    const Avatar = await avatar()
+    const first = render(<Avatar />)
+    await answer(0, {
+      status: 404,
+      headers: [['content-type', 'text/plain']],
+      body: new ArrayBuffer(0),
+    })
+    // Faceless straight away: no <img> left to load the address itself.
+    expect(first.container.querySelector('img')).toBeNull()
+    first.unmount()
+
+    const second = render(<Avatar />)
+    await act(async () => {})
+    expect(second.container.querySelector('img')).toBeNull()
+    expect(requests()).toHaveLength(1)
+  })
 })
 
 describe('images outside the shell', () => {

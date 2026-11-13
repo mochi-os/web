@@ -89,7 +89,9 @@ export function EntityAvatar({
 
   const ringStyle = ring ? { borderWidth: 2, borderColor: ring } : undefined
 
-  return !resolvedSrc || failed ? (
+  // missing: the server has no avatar for it. Shown faceless straight away,
+  // rather than asking for the same address again only to fail.
+  return !resolvedSrc || failed || image.missing ? (
     <FacelessAvatar
       name={name}
       seed={seed ?? fingerprint ?? undefined}
@@ -114,7 +116,16 @@ export function EntityAvatar({
         'border-border inline-block max-w-none shrink-0 rounded-full border object-cover',
         className
       )}
-      style={{ width: px, height: px, ...ringStyle }}
+      // Hidden, not unmounted, while the bytes are on their way: Chrome draws
+      // its broken-image outline around a sized <img> with no src, which showed
+      // with the border as a white ring until the avatar arrived. Same as
+      // AssetImage.
+      style={{
+        width: px,
+        height: px,
+        ...ringStyle,
+        ...(image.pending ? { visibility: 'hidden' as const } : {}),
+      }}
     />
   )
 }

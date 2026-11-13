@@ -44,11 +44,20 @@ export function carriedImage(src: string): string | null {
   return url.href
 }
 
+// What the shell brought back for an address.
+type Outcome = {
+  // The object URL of the image's bytes, or null to load it directly.
+  object: string | null
+  // The server answered with an error: there is no image to show. Kept like
+  // an image, so a list of people without avatars does not ask for each one
+  // again every time a row, a filter or a picker remounts.
+  missing: boolean
+}
+
 type Entry = {
   users: number
-  // The object URL of the image's bytes, or null to load it directly.
-  result: Promise<string | null>
-  ready?: string | null
+  result: Promise<Outcome>
+  ready?: Outcome
   timer?: ReturnType<typeof setTimeout>
 }
 
@@ -58,32 +67,41 @@ const entries = new Map<string, Entry>()
 // serves it under would not survive into an object URL.
 const raster = /^image\/(?!svg)[\w.+-]+/i
 
-async function load(url: string): Promise<string | null> {
+const direct: Outcome = { object: null, missing: false }
+
+async function load(url: string): Promise<Outcome> {
   const token = getShellInitData()?.asset
-  if (!token) return null
+  if (!token) return direct
   const reply = await shellGet(
     url,
     // eslint-disable-next-line lingui/no-unlocalized-strings -- an HTTP header name
     [['Authorization', `Bearer ${token}`]],
     { revalidate: true }
   )
-  if (!reply || reply.status !== 200) return null
+  if (!reply) return direct
+  if (reply.status >= 400) return { object: null, missing: true }
+  if (reply.status !== 200) return direct
   const type =
     reply.headers.find(
       ([name]) => name.toLowerCase() === 'content-type'
     )?.[1] ?? ''
-  if (!raster.test(type)) return null
-  return URL.createObjectURL(new Blob([reply.body], { type }))
+  if (!raster.test(type)) return direct
+  return {
+    object: URL.createObjectURL(new Blob([reply.body], { type })),
+    missing: false,
+  }
 }
 
 function acquire(url: string): Entry {
   let entry = entries.get(url)
   if (!entry) {
     const created: Entry = { users: 0, result: load(url) }
-    void created.result.then((object) => {
-      created.ready = object
-      // A failure is not kept: the next element to show it tries again.
-      if (!object && entries.get(url) === created) entries.delete(url)
+    void created.result.then((outcome) => {
+      created.ready = outcome
+      // Anything the shell did not carry is not kept: the next element to
+      // show it tries again. An error from the server is kept, as above.
+      if (!outcome.object && !outcome.missing && entries.get(url) === created)
+        entries.delete(url)
     })
     entries.set(url, created)
     entry = created
@@ -101,7 +119,7 @@ function release(url: string, entry: Entry) {
   if (entry.users > 0) return
   entry.timer = setTimeout(() => {
     if (entries.get(url) === entry) entries.delete(url)
-    void entry.result.then((object) => {
+    void entry.result.then(({ object }) => {
       if (object) URL.revokeObjectURL(object)
     })
   }, LINGER)
@@ -112,6 +130,11 @@ export type AssetImageState = {
   src: string | undefined
   /** True while the shell is fetching it. */
   pending: boolean
+  /**
+   * True when the server answered the shell with an error. src is then the
+   * address as given, so an <img> still fails and fires its error handler.
+   */
+  missing: boolean
   /** The <img>, which a lazy image watches for nearing the screen. */
   ref: (element: Element | null) => void
 }
@@ -132,7 +155,7 @@ export function useAssetImage(
   const [near, setNear] = useState(!lazy)
   const [shown, setShown] = useState<{
     url: string
-    object: string | null
+    outcome: Outcome
   } | null>(null)
 
   useEffect(() => {
@@ -159,8 +182,8 @@ export function useAssetImage(
     if (!url || !near) return
     let live = true
     const entry = acquire(url)
-    void entry.result.then((object) => {
-      if (live) setShown({ url, object })
+    void entry.result.then((outcome) => {
+      if (live) setShown({ url, outcome })
     })
     return () => {
       live = false
@@ -168,11 +191,12 @@ export function useAssetImage(
     }
   }, [url, near])
 
-  if (!src) return { src: undefined, pending: false, ref: setElement }
-  if (!url) return { src, pending: false, ref: setElement }
-  const object = shown?.url === url ? shown.object : entries.get(url)?.ready
-  if (object !== undefined) {
-    return { src: object ?? src, pending: false, ref: setElement }
+  const settled = { pending: false, missing: false, ref: setElement }
+  if (!src) return { ...settled, src: undefined }
+  if (!url) return { ...settled, src }
+  const outcome = shown?.url === url ? shown.outcome : entries.get(url)?.ready
+  if (outcome) {
+    return { ...settled, src: outcome.object ?? src, missing: outcome.missing }
   }
-  return { src: undefined, pending: true, ref: setElement }
+  return { ...settled, src: undefined, pending: true }
 }
