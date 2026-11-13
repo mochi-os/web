@@ -239,7 +239,44 @@ describe('a failure', () => {
     circular.self = circular
     const body = await client.post('/x', circular).catch((e: unknown) => e)
     expect(body).toBeInstanceOf(TypeError)
+    // fetch() refuses these too, but only once called: built first, they
+    // fail before anything is sent.
+    const credentials = await client
+      .get('http://user:secret@example.com/x')
+      .catch((e: unknown) => e)
+    expect(credentials).toBeInstanceOf(TypeError)
+    const read = await client
+      .request({ method: 'GET', url: '/x', data: 'a' })
+      .catch((e: unknown) => e)
+    expect(read).toBeInstanceOf(TypeError)
     expect(sent).toHaveLength(0)
+  })
+
+  it('of the connection keeps the error event XMLHttpRequest gives', async () => {
+    const network = fakeNetwork(() => new Promise(() => {}))
+    const failing = createHttpClient()
+      .post('/x', 'a', { onUploadProgress: () => {} })
+      .catch((e: unknown) => e)
+    network.xhrs[network.xhrs.length - 1].fail()
+    const error = (await failing) as HttpError
+    expect(error.code).toBe('ERR_NETWORK')
+    expect(error.cause).toBeInstanceOf(ProgressEvent)
+    expect((error.cause as ProgressEvent).type).toBe('error')
+  })
+
+  it('of time and by the caller together is named by the first', async () => {
+    vi.useFakeTimers()
+    fakeNetwork(() => new Promise(() => {}))
+    const controller = new AbortController()
+    const result = createHttpClient()
+      .get('/x', { timeout: 1000, signal: controller.signal })
+      .catch((e: unknown) => e)
+    await vi.advanceTimersByTimeAsync(0)
+    // The timer fires, then the caller cancels before the abort settles.
+    vi.advanceTimersByTime(1000)
+    controller.abort()
+    const error = (await result) as HttpError
+    expect(error.code).toBe('ECONNABORTED')
   })
 
   it('of time is ECONNABORTED with its fixed wording', async () => {
@@ -504,8 +541,9 @@ describe('the client', () => {
   })
 })
 
-// The session token goes out with the request and nowhere else: a response
-// and an error keep the config, and errors are logged and passed around.
+// The session token and the body go out with the request and nowhere else: a
+// response and an error keep the config, and errors are logged and passed
+// around.
 describe('the token', () => {
   const token = { Authorization: 'Bearer secret', 'X-Kept': 'yes' }
   const transports = {
@@ -534,6 +572,8 @@ describe('the token', () => {
         failure.response?.config,
       ]) {
         expect(config?.headers).toEqual({ 'X-Kept': 'yes' })
+        // Nor the body, which can hold a passphrase or a login code.
+        expect(config && 'data' in config).toBe(false)
       }
       expect(failure.status).toBe(500)
       expect(failure.data).toEqual({ e: 1 })

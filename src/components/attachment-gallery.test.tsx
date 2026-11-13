@@ -42,8 +42,11 @@ function show(attachments: GalleryAttachment[] = [attachment()]) {
   )
 }
 
-function probe(status: number) {
-  const mock = vi.fn().mockResolvedValue({ status })
+function probe(status: number, type = 'image/jpeg') {
+  const mock = vi.fn().mockResolvedValue({
+    status,
+    headers: new Headers({ 'content-type': type }),
+  })
   vi.stubGlobal('fetch', mock)
   return mock
 }
@@ -85,6 +88,65 @@ describe('AttachmentGallery failure tiles', () => {
     await waitFor(() =>
       expect(screen.getByText('Unavailable')).toBeInTheDocument()
     )
+  })
+
+  it('loads the image again when the probe finds its bytes, rather than calling it missing', async () => {
+    const fetched = probe(200)
+    show()
+    fireEvent.error(screen.getByAltText('photo.jpg'))
+    await waitFor(() => expect(fetched).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(screen.getByAltText('photo.jpg')).toBeInTheDocument()
+    )
+    expect(screen.queryByText('Not found')).not.toBeInTheDocument()
+    expect(screen.queryByText('Unavailable')).not.toBeInTheDocument()
+  })
+
+  it('stops loading again after a bounded number of tries', async () => {
+    const fetched = probe(200)
+    show()
+    for (let tries = 1; tries <= 3; tries++) {
+      fireEvent.error(screen.getByAltText('photo.jpg'))
+      await waitFor(() => expect(fetched).toHaveBeenCalledTimes(tries))
+    }
+    await waitFor(() =>
+      expect(screen.getByText('Unavailable')).toBeInTheDocument()
+    )
+  })
+
+  it('reads only the status of the probe, cancelling its body', async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 200,
+        headers: new Headers({ 'content-type': 'image/jpeg' }),
+        body: { cancel },
+      })
+    )
+    show()
+    fireEvent.error(screen.getByAltText('photo.jpg'))
+    await waitFor(() => expect(cancel).toHaveBeenCalled())
+  })
+
+  it('calls a page answered in place of an image missing, without loading it again', async () => {
+    const fetched = probe(200, 'text/html; charset=utf-8')
+    show()
+    fireEvent.error(screen.getByAltText('photo.jpg'))
+    await waitFor(() =>
+      expect(screen.getByText('Not found')).toBeInTheDocument()
+    )
+    expect(fetched).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a refused probe as unavailable, not gone', async () => {
+    probe(401)
+    show()
+    fireEvent.error(screen.getByAltText('photo.jpg'))
+    await waitFor(() =>
+      expect(screen.getByText('Unavailable')).toBeInTheDocument()
+    )
+    expect(screen.queryByText('Not found')).not.toBeInTheDocument()
   })
 
   it('never probes a tile that loads', () => {

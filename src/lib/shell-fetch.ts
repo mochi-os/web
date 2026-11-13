@@ -61,8 +61,9 @@ type Reply = {
 }
 
 /* eslint-disable lingui/no-unlocalized-strings -- for the redirect a write
-   met, which a direct request follows instead; never shown, since the write
-   reached the server and normalizeError words the failure. */
+   met, which a direct request follows instead. The words are never shown:
+   with no response, the error reads as a network failure, so a client that
+   toasts shows "Network error" although the write reached the server. */
 const redirectMessage = 'Redirect not followed'
 /* eslint-enable lingui/no-unlocalized-strings */
 
