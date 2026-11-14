@@ -27,17 +27,41 @@ export async function subscribe(
     const registration = await navigator.serviceWorker.register(SW_PATH)
     await navigator.serviceWorker.ready
 
+    const key = urlBase64ToUint8Array(vapidPublicKey)
     let subscription = await registration.pushManager.getSubscription()
+    // A subscription made against another of the server's keys (made again,
+    // or the account came from another server) is refused by its push service,
+    // and the server removes its account: registering it again would only be
+    // removed again.
+    if (
+      subscription &&
+      !sameKey(subscription.options?.applicationServerKey, key)
+    ) {
+      await subscription.unsubscribe()
+      subscription = null
+    }
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: key,
       })
     }
     return subscription
   } catch {
     return null
   }
+}
+
+// sameKey compares a subscription's key with the server's. A browser that does
+// not report the key keeps its subscription, since no mismatch can be told.
+function sameKey(
+  current: ArrayBuffer | null | undefined,
+  key: ArrayBuffer
+): boolean {
+  if (!current) return true
+  const a = new Uint8Array(current)
+  const b = new Uint8Array(key)
+  return a.length === b.length && a.every((byte, i) => byte === b[i])
 }
 
 // There is deliberately no unsubscribe() here: the account row has to go too or
