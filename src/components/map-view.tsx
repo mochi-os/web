@@ -226,7 +226,39 @@ export interface MapViewProps {
   /** Aspect ratio as "width/height", e.g. "2/1" for 2:1. Defaults to "2/1" */
   aspectRatio?: string
   interactive?: boolean
+  /** Build the map only once its box nears the screen. The box stands empty
+   *  at its own size until then, so a list does not build a map, and fetch
+   *  its tiles, for every item below the fold, and scrolling does not jump
+   *  when one is built. */
+  lazy?: boolean
   className?: string
+}
+
+// How far outside the scroll container's box a lazy map starts building, so
+// its tiles have arrived by the time it scrolls into view.
+const LAZY_MARGIN = '300px'
+
+// The element a lazy map scrolls in, for its observer's root. Inside the
+// shell's sandboxed iframe the browser ignores rootMargin against the
+// viewport (see LoadMoreTrigger), so a map observed against it would only
+// be built once already on screen. An ancestor set to scroll that does not
+// overflow holds all it contains in view, so it is passed over for one that
+// does; none means the viewport.
+function scrollContainer(element: HTMLElement): HTMLElement | null {
+  for (
+    let parent = element.parentElement;
+    parent;
+    parent = parent.parentElement
+  ) {
+    const { overflowY } = getComputedStyle(parent)
+    if (
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      parent.scrollHeight > parent.clientHeight
+    ) {
+      return parent
+    }
+  }
+  return null
 }
 
 // Leaflet assigns string popup content with innerHTML. Place names come from
@@ -248,11 +280,33 @@ export function MapView({
   showCurrentLocation = false,
   aspectRatio = '2/1',
   interactive = false,
+  lazy = false,
   className = '',
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const tiles = useMapTiles()
+  const [near, setNear] = useState(!lazy)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (near || !container) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setNear(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          observer.disconnect()
+          setNear(true)
+        }
+      },
+      { root: scrollContainer(container), rootMargin: LAZY_MARGIN }
+    )
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [near])
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number
     lon: number
@@ -291,7 +345,7 @@ export function MapView({
   const effectiveZoom = zoom ?? getSmartZoom(category)
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!near || !containerRef.current || mapRef.current) return
 
     // Create map
     const map = L.map(containerRef.current, {
@@ -384,6 +438,7 @@ export function MapView({
       mapRef.current = null
     }
   }, [
+    near,
     lat,
     lon,
     effectiveZoom,

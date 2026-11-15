@@ -42,6 +42,7 @@ import { authenticatedUrl, shellDownload } from '../../lib/shell-bridge'
 import { toast } from '../../lib/toast-utils'
 import { useUploadProgress } from '../../hooks/use-upload-progress'
 import type { EntityAttachment as AttachmentData } from '../../types/entity-object'
+import { entityAttachmentsQuery } from './entity-queries'
 
 export interface EntityObjectAttachmentsProps {
   containerId: string
@@ -85,13 +86,9 @@ export function EntityObjectAttachments({
   const { progress: uploadProgress, upload } = useUploadProgress()
   const attachmentError = useAttachmentError()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['attachments', containerId, objectId],
-    queryFn: async () => {
-      const response = await listAttachments(containerId, objectId)
-      return response.data.attachments
-    },
-  })
+  const { data, isLoading } = useQuery(
+    entityAttachmentsQuery(listAttachments, containerId, objectId)
+  )
 
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {

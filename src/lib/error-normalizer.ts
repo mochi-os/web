@@ -6,10 +6,18 @@ import { msg } from '@lingui/core/macro'
 
 type JsonRecord = Record<string, unknown>
 
+// Whether text can be translated now. Lingui throws without an active locale,
+// and a request can fail before the app's catalogue has loaded - the sign-in
+// page sends its first requests then. Text a failure makes is made only with
+// a locale; without one it is left empty, and the caller's fallback, which is
+// translated where the error is shown, says what failed.
+export const translatable = (): boolean => Boolean(i18n.locale)
+
 // Resolved at call time, not module load: the catalogue is activated after
 // this module is evaluated, and the language can change underneath it.
 export const GENERIC_ERROR_MESSAGE = msg`An unexpected error occurred`
-export const genericErrorMessage = (): string => i18n._(GENERIC_ERROR_MESSAGE)
+export const genericErrorMessage = (): string =>
+  translatable() ? i18n._(GENERIC_ERROR_MESSAGE) : ''
 
 function isRecord(value: unknown): value is JsonRecord {
   return value !== null && typeof value === 'object'
@@ -143,6 +151,14 @@ export interface NormalizedError {
   source: string
 }
 
+// Whether error is a request that never reached the server: axios says
+// "Network Error" and fetch "Failed to fetch".
+function transportFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const own = asNonEmptyString(error.message)?.toLowerCase()
+  return own === 'network error' || own === 'failed to fetch'
+}
+
 export function normalizeError(
   error: unknown,
   fallback?: string
@@ -198,7 +214,9 @@ export function normalizeError(
       }
     }
 
-    if (!message) {
+    // A transport failure's own message is axios's or the browser's English,
+    // said below in the user's language instead.
+    if (!message && !transportFailure(error)) {
       const extracted = extractErrorFromPayloadWithSource(error)
       if (extracted.message) {
         message = extracted.message
@@ -211,15 +229,16 @@ export function normalizeError(
   if (!message && error instanceof Error) {
     const errorMessage = asNonEmptyString(error.message)
     if (errorMessage) {
-      if (
-        errorMessage.toLowerCase() === 'network error' ||
-        errorMessage.toLowerCase() === 'failed to fetch'
-      ) {
+      if (transportFailure(error)) {
         // Runtime lookup, not a macro: this file is imported by tests without
         // babel. The msgid stays in every catalog via the identical <Trans>
         // sentence in general-error.tsx.
-        message = i18n._('Please check your internet connection and try again.')
-        source = 'error.message (network)'
+        if (translatable()) {
+          message = i18n._(
+            'Please check your internet connection and try again.'
+          )
+          source = 'error.message (network)'
+        }
       } else {
         message = errorMessage
         source = 'error.message'

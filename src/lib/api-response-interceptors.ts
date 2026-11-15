@@ -10,7 +10,7 @@ import axios, {
 } from 'axios'
 import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
-import { detectHtmlResponse } from './error-normalizer'
+import { detectHtmlResponse, translatable } from './error-normalizer'
 import { useAuthStore } from '../stores/auth-store'
 
 const devConsole = globalThis.console
@@ -149,7 +149,9 @@ function makeHandleApiResponseSuccess(
     // surfaces later as a parse error or an empty component.
     const html = detectHtmlResponse(response.data)
     if (html) {
-      const summary = t`The server returned a web page instead of data.`
+      const summary = translatable()
+        ? t`The server returned a web page instead of data.`
+        : ''
       const error = new Error(
         html.detail ? `${summary} ${html.detail}` : summary
       ) as Error & { status?: number }
@@ -218,7 +220,9 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
               logoutHandler('Session expired')
             } else {
               useAuthStore.getState().clearAuth()
-              toast.error(t`Session expired. Please log in again.`)
+              if (translatable()) {
+                toast.error(t`Session expired. Please log in again.`)
+              }
             }
           }
         }
@@ -243,7 +247,7 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
           { error?: string; message?: string } | undefined
         const serverMessage = responseData?.message ?? responseData?.error
 
-        if (serverMessage) {
+        if (serverMessage && translatable()) {
           maybeToastGlobalError({
             config: error.config,
             statusKey: '409',
@@ -259,17 +263,19 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
         logDevError('[API] Server error', error)
         const responseData = error.response?.data as
           { error?: string; message?: string } | undefined
-        const errorMessage =
-          responseData?.error ??
-          responseData?.message ??
-          t`An unexpected error occurred`
-        maybeToastGlobalError({
-          config: error.config,
-          statusKey: '500',
-          title: t`Server error`,
-          description: errorMessage,
-          defaultShow: opts.defaultShowGlobalErrorToast,
-        })
+        if (translatable()) {
+          const errorMessage =
+            responseData?.error ??
+            responseData?.message ??
+            t`An unexpected error occurred`
+          maybeToastGlobalError({
+            config: error.config,
+            statusKey: '500',
+            title: t`Server error`,
+            description: errorMessage,
+            defaultShow: opts.defaultShowGlobalErrorToast,
+          })
+        }
         if (import.meta.env.DEV) {
           devConsole?.error?.(
             `[API] 500 Error for ${error.config?.method?.toUpperCase()} ${error.config?.baseURL}${error.config?.url}`
@@ -284,17 +290,19 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
         logDevError('[API] Server error', error)
         const responseData = error.response?.data as
           { error?: string; message?: string } | undefined
-        const errorMessage =
-          responseData?.error ??
-          responseData?.message ??
-          t`Unable to connect to remote server`
-        maybeToastGlobalError({
-          config: error.config,
-          statusKey: String(status),
-          title: t`Server error`,
-          description: errorMessage,
-          defaultShow: opts.defaultShowGlobalErrorToast,
-        })
+        if (translatable()) {
+          const errorMessage =
+            responseData?.error ??
+            responseData?.message ??
+            t`Unable to connect to remote server`
+          maybeToastGlobalError({
+            config: error.config,
+            statusKey: String(status),
+            title: t`Server error`,
+            description: errorMessage,
+            defaultShow: opts.defaultShowGlobalErrorToast,
+          })
+        }
         break
       }
 
@@ -305,13 +313,15 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
             logDevError('[API] Request canceled', error)
           } else {
             logDevError('[API] Network error', error)
-            maybeToastGlobalError({
-              config: error.config,
-              statusKey: 'network',
-              title: t`Network error`,
-              description: t`Please check your internet connection and try again.`,
-              defaultShow: opts.defaultShowGlobalErrorToast,
-            })
+            if (translatable()) {
+              maybeToastGlobalError({
+                config: error.config,
+                statusKey: 'network',
+                title: t`Network error`,
+                description: t`Please check your internet connection and try again.`,
+                defaultShow: opts.defaultShowGlobalErrorToast,
+              })
+            }
           }
         } else {
           logDevError('[API] Response error', error)

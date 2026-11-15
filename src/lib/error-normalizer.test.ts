@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
+import { AxiosError } from 'axios'
 import {
   normalizeError,
   detectHtmlResponse,
@@ -94,6 +95,19 @@ describe('normalizeError', () => {
 
   it('handles string error directly', () => {
     expect(normalizeError('Network error').message).toBe('Network error')
+  })
+
+  // A request that never reached the server says so in the user's language,
+  // not in axios's or the browser's English.
+  it("says a network failure in the catalogue's words, from axios and from fetch", () => {
+    for (const e of [
+      new AxiosError('Network Error', AxiosError.ERR_NETWORK),
+      new TypeError('Failed to fetch'),
+    ]) {
+      expect(normalizeError(e).message).toBe(
+        'Please check your internet connection and try again.'
+      )
+    }
   })
 
   it('handles raw Error object', () => {

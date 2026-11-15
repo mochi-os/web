@@ -52,7 +52,12 @@ import { canWrite, canComment } from '../../lib/entity-access'
 import { countEntityDescendants } from '../../lib/entity-tree'
 import { useShellOverlay } from '../../hooks/use-shell-overlay'
 import { EntityFieldEditor } from './entity-field-editor'
-import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
+import {
+  entityAttachmentsQuery,
+  entityCommentsQuery,
+  entityObjectsQuery,
+  entityPeopleQuery,
+} from './entity-queries'
 import {
   EntityCommentList,
   type EntityCommentListProps,
@@ -286,6 +291,20 @@ export function EntityObjectDetailPanel<
     const timer = setTimeout(() => setSlideSettled(true), 500)
     return () => clearTimeout(timer)
   }, [objectId])
+
+  // The tab bodies wait for the slide, but their data need not: the comments
+  // and attachments are asked for as the panel opens, with the bodies' own
+  // options, so the bodies mount on the answers rather than ask then.
+  const { listComments, listAttachments } = api
+  useEffect(() => {
+    if (!objectId) return
+    void queryClient.prefetchQuery(
+      entityCommentsQuery(listComments, containerId, objectId)
+    )
+    void queryClient.prefetchQuery(
+      entityAttachmentsQuery(listAttachments, containerId, objectId)
+    )
+  }, [queryClient, listComments, listAttachments, containerId, objectId])
 
   // When opening a different object, default to comments if it has any.
   const tabInitializedFor = useRef<string | null>(null)

@@ -53,7 +53,12 @@ export function notificationsAfter(
         created: frame.created,
         read: frame.read ?? 0,
       }
-      const after = rest.findIndex((held) => held.created > row.created)
+      // In the server's order: by time, then by id within one second.
+      const after = rest.findIndex(
+        (held) =>
+          held.created > row.created ||
+          (held.created === row.created && held.id > row.id)
+      )
       return after < 0
         ? [...rest, row]
         : [...rest.slice(0, after), row, ...rest.slice(after)]

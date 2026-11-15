@@ -1,21 +1,36 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import type { PreferencesData } from '../../types/settings'
 import { apiClient } from '../../lib/api-client'
 import { optimistic } from '../../lib/optimistic'
 
 const NO_TOAST = { mochi: { showGlobalErrorToast: false } } as const
 
-export function usePreferencesData(endpoint: string) {
-  return useQuery({
+/**
+ * The user's preferences, as the hook below and a route's loader ask for
+ * them. Fresh for long enough that a loader's answer is current when the page
+ * mounts, rather than asked for again; every change below refetches them.
+ */
+export function preferencesQuery(endpoint: string) {
+  return queryOptions({
     queryKey: ['user', 'preferences', endpoint],
     queryFn: async () => {
       const response = await apiClient.get<PreferencesData>(endpoint)
       return response.data
     },
+    staleTime: 30_000,
   })
+}
+
+export function usePreferencesData(endpoint: string) {
+  return useQuery(preferencesQuery(endpoint))
 }
 
 // The pick shows at once and goes back if refused; each caller shows the

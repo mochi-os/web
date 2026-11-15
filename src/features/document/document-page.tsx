@@ -1,7 +1,7 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { useEffect, useState } from 'react'
+import { queryOptions, useQuery } from '@tanstack/react-query'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { BookOpen, FileText, Loader2, Lock } from 'lucide-react'
 import { Main } from '../../components/layout/main'
@@ -15,6 +15,26 @@ interface DocumentResponse {
   name: string
   body: string
   html: string
+}
+
+/**
+ * One of the server-level documents, as the page below and a route's loader
+ * ask for it, so a loader that starts it beside the route's code hands the
+ * page its answer. Fresh across the page mounting; the documents change only
+ * when an administrator edits them.
+ */
+export function documentQuery(name: DocumentName) {
+  return queryOptions({
+    queryKey: ['document', name],
+    queryFn: async () => {
+      const response = await apiClient.post<DocumentResponse>(
+        '-/document/get',
+        { name }
+      )
+      return response.data.html ?? ''
+    },
+    staleTime: 30_000,
+  })
 }
 
 const typography = [
@@ -62,25 +82,7 @@ export function DocumentPage({
 }) {
   const { title, icon: Icon } = useDocumentMeta(name)
   usePageTitle(title)
-  const [html, setHtml] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient
-      .post<DocumentResponse>('-/document/get', { name })
-      .then((res) => {
-        if (cancelled) return
-        setHtml(res.data.html ?? '')
-      })
-      .catch(() => {
-        if (cancelled) return
-        setError('failed')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [name])
+  const { data: html, isError: error } = useQuery(documentQuery(name))
 
   return (
     <>
@@ -94,7 +96,7 @@ export function DocumentPage({
           <p className='text-destructive'>
             <Trans>Could not load this document. Please try again later.</Trans>
           </p>
-        ) : html === null ? (
+        ) : html === undefined ? (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <Loader2 className='size-4 animate-spin' />
             <span>

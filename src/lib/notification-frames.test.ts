@@ -37,6 +37,18 @@ describe('notificationsAfter', () => {
     expect(next?.[1].sender).toBe('sender-entity')
   })
 
+  // The server lists rows by time, then by id: a row updated in the same
+  // second as another arrived takes the same place in both.
+  it('puts a row sharing a second with others where its id puts it', () => {
+    const tied = [bell('a', 20), bell('c', 20)]
+    const next = notificationsAfter(tied, {
+      type: 'new',
+      web: true,
+      ...bell('b', 20),
+    })
+    expect(next?.map((row) => row.id)).toEqual(['a', 'b', 'c'])
+  })
+
   it('puts a row newer than every row held last', () => {
     const next = notificationsAfter(held, {
       type: 'new',

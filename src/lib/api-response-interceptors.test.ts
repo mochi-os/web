@@ -3,6 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { i18n } from '@lingui/core'
 
 vi.mock('./toast-utils', () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
@@ -120,6 +121,43 @@ describe('response interceptors', () => {
     )
       .post('/x')
       .catch(() => {})
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  // A request can fail before the app's catalogue has loaded, when Lingui
+  // throws for any message: the failure passes through as it came, with its
+  // status, and nothing is toasted into a page that has not drawn yet.
+  it('passes a failure through untouched and toasts nothing before a locale is active', async () => {
+    vi.spyOn(i18n, 'locale', 'get').mockReturnValue('')
+    for (const status of [409, 500, 502]) {
+      const failure = await clientAnswering(status, { error: 'boom' })
+        .post('/x')
+        .catch((e: unknown) => e)
+      expect(failure).toBeInstanceOf(AxiosError)
+      expect((failure as AxiosError).response?.status).toBe(status)
+    }
+    const html = await clientAnswering(200, '<!doctype html><html></html>')
+      .get('/x')
+      .catch((e: unknown) => e)
+    expect((html as Error).message).not.toMatch(/Lingui/)
+
+    const offline = axios.create({
+      adapter: async (config: InternalAxiosRequestConfig) => {
+        throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config)
+      },
+    })
+    attachApiResponseInterceptors(offline)
+    const lost = await offline.post('/x').catch((e: unknown) => e)
+    expect((lost as AxiosError).code).toBe(AxiosError.ERR_NETWORK)
+
+    // With no logout handler the interceptor clears the session itself and
+    // would say so in a toast.
+    setLogoutHandler(undefined as never)
+    const expired = await clientAnswering(401, {})
+      .get('/feeds/-/list')
+      .catch((e: unknown) => e)
+    expect((expired as AxiosError).response?.status).toBe(401)
+    expect(useAuthStore.getState().token).toBe('')
     expect(toast.error).not.toHaveBeenCalled()
   })
 

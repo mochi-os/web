@@ -611,3 +611,38 @@ describe('EntityObjectDetailPanel tabs', () => {
     )
   })
 })
+
+// The tab bodies wait for the open slide (500 ms) before they mount, but the
+// comments and attachments they show need not: the panel asks for both as it
+// opens, with the bodies' own options, so the bodies mount on the answers
+// rather than ask for them then.
+describe('EntityObjectDetailPanel comments and attachments', () => {
+  it('asks for them as it opens, and its tabs ask for neither again', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+    })
+    renderWithClient(
+      <EntityObjectDetailPanel
+        containerId='c-1'
+        objectId='obj-1'
+        design={design}
+        access='owner'
+        api={api}
+        onClose={() => {}}
+      />,
+      client
+    )
+
+    await waitFor(() => expect(api.listComments).toHaveBeenCalledTimes(1))
+    expect(api.listAttachments).toHaveBeenCalledTimes(1)
+    expect(api.listComments).toHaveBeenCalledWith('c-1', 'obj-1')
+    expect(api.listAttachments).toHaveBeenCalledWith('c-1', 'obj-1')
+    // Asked while the slide still plays: the tab bodies are not there yet.
+    expect(screen.queryByDisplayValue('Original')).toBeNull()
+
+    await screen.findByDisplayValue('Original')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(api.listComments).toHaveBeenCalledTimes(1)
+    expect(api.listAttachments).toHaveBeenCalledTimes(1)
+  })
+})

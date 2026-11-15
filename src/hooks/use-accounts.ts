@@ -3,7 +3,12 @@
 
 import { useMemo } from 'react'
 import { t } from '@lingui/core/macro'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { requestHelpers } from '../lib/request'
 import { handlePermissionError } from '../lib/permission-utils'
 import type {
@@ -34,22 +39,17 @@ function checkPermissionError(error: unknown): void {
   }
 }
 
-export function useAccounts(
-  appBase: string,
-  capability?: string
-): AccountsHookResult {
-  const queryClient = useQueryClient()
-  const queryParams = capability ? `?capability=${capability}` : ''
+// The two builders below silence query/exhaustive-deps: the request's query
+// string is derived from capability, which is already in the key, so it
+// varies with everything the request varies with. The rule cannot follow a
+// derived value.
 
-  // The two hooks below silence query/exhaustive-deps: queryParams is derived
-  // from capability, which is already in the key, so it varies with everything
-  // the request varies with. The rule cannot follow a derived value.
-  const {
-    data: providersData,
-    isLoading: isProvidersLoading,
-    error: providersError,
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-  } = useQuery({
+/** The account providers an app offers, as useAccounts and a route's loader
+ * ask for them. */
+export function accountProvidersQuery(appBase: string, capability?: string) {
+  const queryParams = capability ? `?capability=${capability}` : ''
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  return queryOptions({
     queryKey: ['accounts', 'providers', appBase, capability],
     queryFn: async () => {
       try {
@@ -64,14 +64,15 @@ export function useAccounts(
     },
     staleTime: Infinity,
   })
+}
 
-  const {
-    data: accountsData,
-    isLoading: isAccountsLoading,
-    error: accountsError,
-    refetch,
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-  } = useQuery({
+/** The user's connected accounts, as useAccounts and a route's loader ask for
+ * them. Fresh only across a page mounting after its loader, so an account
+ * added or removed in another tab shows on the next visit. */
+export function accountListQuery(appBase: string, capability?: string) {
+  const queryParams = capability ? `?capability=${capability}` : ''
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  return queryOptions({
     queryKey: ['accounts', 'list', appBase, capability],
     queryFn: async () => {
       try {
@@ -84,7 +85,28 @@ export function useAccounts(
         throw error
       }
     },
+    staleTime: 3_000,
   })
+}
+
+export function useAccounts(
+  appBase: string,
+  capability?: string
+): AccountsHookResult {
+  const queryClient = useQueryClient()
+
+  const {
+    data: providersData,
+    isLoading: isProvidersLoading,
+    error: providersError,
+  } = useQuery(accountProvidersQuery(appBase, capability))
+
+  const {
+    data: accountsData,
+    isLoading: isAccountsLoading,
+    error: accountsError,
+    refetch,
+  } = useQuery(accountListQuery(appBase, capability))
 
   // Memoize to prevent unstable references during loading
   // Use Array.isArray to handle cases where API returns non-array data
