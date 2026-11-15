@@ -104,6 +104,7 @@ export class ChatWebsocketManager {
   private readonly key?: (chat: string) => Promise<string | undefined>
   private readonly token?: () => string | undefined
   private readonly connections = new Map<string, ConnectionEntry>()
+  private readonly watchers = new Set<() => void>()
   private disposed = false
   private online: boolean
 
@@ -162,6 +163,10 @@ export class ChatWebsocketManager {
       }
     }
 
+    // A subscriber can join a socket that is already open, which changes
+    // ready() without any status changing.
+    this.notify()
+
     return () => {
       if (options.onMessage) {
         entry.messageListeners.delete(options.onMessage)
@@ -172,6 +177,30 @@ export class ChatWebsocketManager {
       if (!this.hasListeners(entry)) {
         this.scheduleIdleClose(entry)
       }
+      this.notify()
+    }
+  }
+
+  /**
+   * Whether a connection that something is subscribed to is open. A socket
+   * left open for its idle period after its last subscriber went counts for
+   * nothing: no handler hears what it carries.
+   */
+  ready(): boolean {
+    for (const entry of this.connections.values()) {
+      if (entry.status === 'ready' && this.hasListeners(entry)) return true
+    }
+    return false
+  }
+
+  /**
+   * Calls `listener` whenever a connection's status or subscribers change, so
+   * a reader of ready() knows to ask again. Returns the function that stops it.
+   */
+  watch(listener: () => void): () => void {
+    this.watchers.add(listener)
+    return () => {
+      this.watchers.delete(listener)
     }
   }
 
@@ -193,6 +222,8 @@ export class ChatWebsocketManager {
       this.closeSocket(entry, 'manual')
     })
     this.connections.clear()
+    this.notify()
+    this.watchers.clear()
     if (typeof window !== 'undefined') {
       window.removeEventListener('online', this.handleOnline)
       window.removeEventListener('offline', this.handleOffline)
@@ -574,6 +605,19 @@ export class ChatWebsocketManager {
             `[WebSocket] status listener error for ${entry.chat}`,
             error
           )
+        }
+      }
+    })
+    this.notify()
+  }
+
+  private notify() {
+    this.watchers.forEach((watcher) => {
+      try {
+        watcher()
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          devConsole?.error?.('[WebSocket] watcher error', error)
         }
       }
     })

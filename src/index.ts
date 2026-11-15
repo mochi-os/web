@@ -72,6 +72,11 @@ export {
   NotificationList,
   type Notification,
 } from './components/layout/notification-menu'
+export {
+  notificationsAfter,
+  applyNotificationsFrame,
+  type NotificationFrame,
+} from './lib/notification-frames'
 export * from './components/layout/authenticated-layout'
 export * from './components/layout/page-header'
 export * from './components/layout/page-utility-bar'
@@ -283,6 +288,7 @@ export {
   entityWebsocketManager,
   type EntityWebsocketEvent,
   type EntityWebsocketListener,
+  type EntityWebsocketOptions,
 } from './lib/entity-websocket-manager'
 export {
   websocketProtocols,

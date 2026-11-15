@@ -18,6 +18,8 @@ import {
   useQueryWithError,
   useInfiniteQueryWithError,
 } from './use-query-with-error'
+import { useGameWebsocketReady } from './use-game-websocket-manager'
+import { patchListedGame } from './use-game-websocket'
 
 /** One page of chat messages. Both apps' message endpoint answers this shape. */
 export interface GameMessagesPage {
@@ -62,12 +64,26 @@ const gameQueryKeys = {
 
 const DEFAULT_PAGE_SIZE = 30
 
+/**
+ * How often the games list is asked for again while no game socket is open,
+ * in milliseconds.
+ */
+const GAMES_POLL = 30_000
+
 interface CreateGameHooksOptions {
   /**
    * Extra keys a move invalidates, on success and on failure alike. chess
    * passes its move-history key; go has no equivalent.
    */
   extraMoveKeys?: (gameId: string) => QueryKey[]
+  /**
+   * Whether an accepted move is written into the games list from what the
+   * client sent, rather than the list being downloaded again. A move's
+   * variables name the columns it set, and the list row takes those it
+   * carries. chess and go pass true. words cannot: its row holds whose turn
+   * it is and the scores, which only the server works out.
+   */
+  patch?: boolean
 }
 
 type Result<F> = F extends (...args: never[]) => Promise<infer R> ? R : never
@@ -77,7 +93,7 @@ type Payload<F> = F extends (id: string, payload: infer P) => unknown
 
 export function createGameHooks<A extends GameApiShape>(
   gamesApi: A,
-  { extraMoveKeys }: CreateGameHooksOptions = {}
+  { extraMoveKeys, patch = false }: CreateGameHooksOptions = {}
 ) {
   type GamesResponse = Result<A['list']>
   type ViewResponse = Result<A['detail']>
@@ -144,13 +160,23 @@ export function createGameHooks<A extends GameApiShape>(
       >,
       'enabled' | 'staleTime' | 'gcTime'
     >
-  ) =>
-    useQueryWithError({
+  ) => {
+    // An open game socket writes each move of its game into the list
+    // (useGameWebsocket), so the list is polled only while none is open. What
+    // a socket misses is asked for again when it reopens, when the window
+    // regains focus, and by the poll while it is down. The layout and the page
+    // each observe the list, and that is still one request per interval: every
+    // update to the query re-arms all its observers' intervals together, and
+    // the first to fire starts a fetch that re-arms the rest.
+    const ready = useGameWebsocketReady()
+    return useQueryWithError({
       queryKey: gameQueryKeys.all(),
       queryFn: () => gamesApi.list() as Promise<GamesResponse>,
-      refetchInterval: 30000,
+      refetchInterval: ready ? false : GAMES_POLL,
+      refetchOnWindowFocus: true,
       ...options,
     })
+  }
 
   const useInfiniteMessagesQuery = (
     gameId?: string,
@@ -239,10 +265,21 @@ export function createGameHooks<A extends GameApiShape>(
           exact: true,
         })
         invalidateExtras(queryClient, variables.gameId)
-        queryClient.invalidateQueries({
-          queryKey: gameQueryKeys.all(),
-          exact: true,
-        })
+        if (patch) {
+          // As the move's own frame does: the row is patched, and the list
+          // downloaded again only when the move ended the game.
+          const { gameId, ...changes } = variables
+          patchListedGame(queryClient, gameQueryKeys.all(), gameId, () => ({
+            ...(changes as Record<string, unknown>),
+            draw_offer: null,
+            updated: Math.floor(Date.now() / 1000),
+          }))
+        } else {
+          queryClient.invalidateQueries({
+            queryKey: gameQueryKeys.all(),
+            exact: true,
+          })
+        }
         onSuccess?.(data, variables, context, mutation)
       },
       onError: (error, variables, context, mutation) => {

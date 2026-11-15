@@ -484,6 +484,58 @@ describe('requests that go direct', () => {
   })
 })
 
+// The root app's page at / is named '' by its first segment, which matches no
+// path, so it carried nothing and downloaded its whole bundle on every view.
+// It is carried the paths core sends the root app, and nothing else.
+describe('the root app’s page', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/')
+  })
+
+  it.each([['/-/icons'], ['/assets/index-abc.js'], ['/images/icon.svg']])(
+    'sends %s through the shell',
+    async (path) => {
+      const { apiClient, direct } = await boot()
+      const result = apiClient.get(path)
+      await answer({ status: 200, headers: [], body: json({ data: 1 }) })
+      expect((await result).data).toEqual({ data: 1 })
+      expect(requests()[0].url).toBe(`${window.location.origin}${path}`)
+      expect(header(requests()[0], 'Authorization')).toBe('Bearer app-token')
+      expect(direct).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    ['another app', '/feeds/-/list'],
+    ['another app’s assets', '/feeds/assets/index.js'],
+    ['an entity', '/1sfEACmTn/-/list'],
+    ['a core route', '/_/identity'],
+    ['the page', '/'],
+    ['a root path without its slash', '/assets'],
+    ['traversal', '/assets/../feeds/-/list'],
+    ['encoded traversal', '/assets/%2e%2e/feeds/-/list'],
+    ['an encoded slash', '/assets/x%2F..%2F..%2Ffeeds'],
+    ['an encoded slash in the first segment', '/assets%2Ffeeds/x'],
+    ['an encoded backslash', '/assets/x%5C..%5Cfeeds'],
+    ['a double slash', '/-//feeds/-/list'],
+    ['another origin', 'https://elsewhere.example/assets/index.js'],
+  ])('sends %s direct', async (_name, path) => {
+    const { apiClient, direct } = await boot()
+    await apiClient.get(path)
+    expect(direct).toHaveBeenCalledTimes(1)
+    expect(requests()).toHaveLength(0)
+  })
+
+  it('carries none of them for a page that is not at /', async () => {
+    window.history.replaceState({}, '', '/feeds/abc')
+    const { apiClient, direct } = await boot()
+    await apiClient.get('/-/icons')
+    await apiClient.get('/assets/index-abc.js')
+    expect(direct).toHaveBeenCalledTimes(2)
+    expect(requests()).toHaveLength(0)
+  })
+})
+
 describe('ending a carried request', () => {
   it('cancels through the shell when the caller aborts', async () => {
     const { client } = await boot()

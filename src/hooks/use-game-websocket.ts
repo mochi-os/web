@@ -68,6 +68,49 @@ interface MessagesPage {
   messages: GameWebsocketMessage[]
 }
 
+/** Now, in the seconds a game's `updated` is kept in. */
+const now = (): number => Math.floor(Date.now() / 1000)
+
+/**
+ * Writes a move into its game's row of the games list, in place of downloading
+ * the whole list again for one move. `changes` is handed the row and names
+ * what the move set; the row takes only the columns it carries, since a list
+ * row is narrower than the game's detail (chess's has no PGN, go's no SGF).
+ * The list is refetched instead when the move took the game out of play (any
+ * status but active: it ended, or go's went to scoring), and when the list
+ * does not hold the game at all.
+ */
+export function patchListedGame(
+  queryClient: QueryClient,
+  listKey: QueryKey,
+  gameId: string,
+  changes: (row: GameWebsocketGame) => Record<string, unknown>
+): void {
+  let held = false
+  let found = false
+  let playing = true
+  queryClient.setQueryData<ListCache>(listKey, (current) => {
+    if (!current?.games) return current
+    held = true
+    return {
+      ...current,
+      games: current.games.map((row) => {
+        if (row.id !== gameId) return row
+        found = true
+        const next: Record<string, unknown> = { ...row }
+        for (const [column, value] of Object.entries(changes(row))) {
+          if (column in row && value !== undefined) next[column] = value
+        }
+        playing = next.status === 'active'
+        return next as unknown as GameWebsocketGame
+      }),
+    }
+  })
+  if (held && (!found || !playing)) {
+    void queryClient.invalidateQueries({ queryKey: listKey, exact: true })
+  }
+}
+
 const isSameMessage = (
   incoming: GameWebsocketMessage,
   existing: GameWebsocketMessage
@@ -189,8 +232,8 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
   if (msgType === 'move') {
     // No mergeMove means the game cannot be patched from the frame at all -
     // words' rack and bag are private per-player state, so the copies in the
-    // frame are not this viewer's. The refetch below is then the only correct
-    // response.
+    // frame are not this viewer's. The refetches below are then the only
+    // correct response, the list's included.
     if (mergeMove) {
       queryClient.setQueryData<DetailCache>(keys.detail(gameId), (current) => {
         if (!current) return current
@@ -208,6 +251,18 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
           },
         }
       })
+      // A move frame carries no `updated`, so unless one does the row takes
+      // this clock's: it only orders the sidebar, and a refetch replaces it.
+      patchListedGame(queryClient, keys.all(), gameId, (row) => ({
+        ...mergeMove(row as G, payload),
+        fen: (payload.fen as string) || undefined,
+        status: (payload.status as string) || undefined,
+        winner: (payload.winner as string) || undefined,
+        draw_offer: null,
+        updated: typeof payload.updated === 'number' ? payload.updated : now(),
+      }))
+    } else {
+      void queryClient.invalidateQueries({ queryKey: keys.all(), exact: true })
     }
 
     // The merge above is responsiveness only; the refetch is authoritative and
@@ -223,7 +278,6 @@ const handleWebsocketPayload = <G extends GameWebsocketGame>(
       queryKey: keys.detail(gameId),
       exact: true,
     })
-    void queryClient.invalidateQueries({ queryKey: keys.all(), exact: true })
   }
 
   // A reconciliation snapshot is a cache signal, not something that happened in
@@ -309,6 +363,10 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
       return undefined
     }
 
+    // Whether this subscription's socket has been open, and has dropped since.
+    let opened = false
+    let dropped = false
+
     const unsubscribe = manager.subscribe(gameId, {
       chatKey: gameKey,
       onMessage: (event) => {
@@ -324,6 +382,34 @@ export function useGameWebsocket<G extends GameWebsocketGame>({
       },
       onStatusChange: (nextSnapshot) => {
         setSnapshot(nextSnapshot)
+        if (nextSnapshot.status === 'ready') {
+          // A move or message sent while the socket was down sent a frame
+          // that never arrived, and the list's poll stops again now that it is
+          // back (useGamesQuery), so what those frames would have changed is
+          // asked for once here: the game, its moves, its chat and the list.
+          if (dropped) {
+            void queryClient.invalidateQueries({
+              queryKey: keys.detail(gameId),
+              exact: true,
+            })
+            if (keys.moveHistory) {
+              void queryClient.invalidateQueries({
+                queryKey: keys.moveHistory(gameId),
+              })
+            }
+            void queryClient.invalidateQueries({
+              queryKey: keys.messages(gameId),
+            })
+            void queryClient.invalidateQueries({
+              queryKey: keys.all(),
+              exact: true,
+            })
+          }
+          opened = true
+          dropped = false
+        } else if (opened) {
+          dropped = true
+        }
       },
     })
 

@@ -236,6 +236,65 @@ describe('entityWebsocketManager', () => {
     stop()
   })
 
+  // A subscriber that fetched what the frames change before its socket was
+  // there missed whatever was sent meanwhile, on the first open as on a
+  // reconnect, so one that asks hears of every open.
+  it('tells a subscriber that asks of every open, the first included', () => {
+    const opens: string[] = []
+    const events: EntityWebsocketEvent[] = []
+    const stop = entityWebsocketManager.subscribe(
+      'opens',
+      (event) => events.push(event),
+      { open: () => opens.push('open') }
+    )
+    const first = socketsFor('opens')[0]
+    expect(opens).toEqual([])
+    first.open()
+    expect(opens).toEqual(['open'])
+    first.finishClose()
+    vi.advanceTimersByTime(60000)
+    const sockets = socketsFor('opens')
+    sockets[sockets.length - 1].open()
+    expect(opens).toEqual(['open', 'open'])
+    // The reconnect is told to every subscriber as before.
+    expect(events).toEqual([{ type: 'socket/reopen' }])
+    stop()
+  })
+
+  it('tells one that subscribes to a socket already open at once, and no other', async () => {
+    const opens: string[] = []
+    const stop = entityWebsocketManager.subscribe('openLive', () => {}, {
+      open: () => opens.push('first'),
+    })
+    socketsFor('openLive')[0].open()
+    const later = entityWebsocketManager.subscribe('openLive', () => {}, {
+      open: () => opens.push('later'),
+    })
+    expect(opens).toEqual(['first'])
+    await Promise.resolve()
+    expect(opens).toEqual(['first', 'later'])
+    later()
+    stop()
+  })
+
+  it('tells one that has left of nothing', async () => {
+    const opens: string[] = []
+    const stay = entityWebsocketManager.subscribe('openLeft', () => {})
+    const gone = entityWebsocketManager.subscribe('openLeft', () => {}, {
+      open: () => opens.push('gone'),
+    })
+    gone()
+    socketsFor('openLeft')[0].open()
+    // Subscribed to an open socket and gone before the microtask runs.
+    const brief = entityWebsocketManager.subscribe('openLeft', () => {}, {
+      open: () => opens.push('brief'),
+    })
+    brief()
+    await Promise.resolve()
+    expect(opens).toEqual([])
+    stay()
+  })
+
   it('starts afresh for subscribers who come after the last one left', () => {
     const before = entityWebsocketManager.subscribe('fresh', () => {})
     socketsFor('fresh')[0].open()
