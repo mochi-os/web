@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { i18n } from '@lingui/core'
 import { fakeNetwork } from '../test/fake-network'
 import { useAuthStore } from '../stores/auth-store'
-import type { HttpError } from './http'
+import { HttpError, httpErrors } from './http'
 import apiClient from './api-client'
-import { request, ApiError } from './request'
+import { request, requestHelpers, ApiError } from './request'
 
 // request() turns three shapes of failure into one ApiError: a transport or
 // HTTP failure from the client, a root-level status envelope, and a status
@@ -120,4 +121,71 @@ describe('the cause of an ApiError', () => {
       }
     })
   }
+})
+
+// The sign-in page sends its first requests before its catalogue has loaded,
+// and Lingui throws when a message is translated with no active locale: a
+// failure then is still an ApiError carrying its status, never Lingui's error.
+describe('request before a locale is active', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(i18n, 'locale', 'get').mockReturnValue('')
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('turns an HTTP failure into an ApiError with its status', async () => {
+    vi.spyOn(apiClient, 'request').mockRejectedValue(
+      new HttpError(
+        '',
+        'ERR_BAD_REQUEST',
+        {},
+        {
+          data: {},
+          status: 400,
+          statusText: '',
+          headers: {},
+          config: {},
+        }
+      )
+    )
+    const failure = (await request({ url: '/x' }).catch(
+      (e: unknown) => e
+    )) as ApiError
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.status).toBe(400)
+  })
+
+  it("turns a raw request's failure into an ApiError with its status too", async () => {
+    vi.spyOn(apiClient, 'request').mockRejectedValue(
+      new HttpError(
+        '',
+        'ERR_BAD_RESPONSE',
+        {},
+        {
+          data: {},
+          status: 503,
+          statusText: '',
+          headers: {},
+          config: {},
+        }
+      )
+    )
+    const failure = (await requestHelpers
+      .getRaw('/x')
+      .catch((e: unknown) => e)) as ApiError
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.status).toBe(503)
+  })
+
+  it('turns a network failure into an ApiError too', async () => {
+    vi.spyOn(apiClient, 'request').mockRejectedValue(
+      httpErrors.network({}, new TypeError('Failed to fetch'))
+    )
+    const failure = (await request({ url: '/x' }).catch(
+      (e: unknown) => e
+    )) as ApiError
+    expect(failure).toBeInstanceOf(ApiError)
+  })
 })

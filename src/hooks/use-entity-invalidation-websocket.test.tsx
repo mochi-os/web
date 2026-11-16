@@ -48,7 +48,36 @@ function setup(
 describe('useEntityInvalidationWebsocket', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useAuthStore.setState({ isInitialized: true, token: 'token-1' })
+    useAuthStore.setState({
+      isInitialized: true,
+      isAuthenticated: true,
+      token: 'token-1',
+    })
+  })
+
+  // Core refuses a socket with no signed-in user, and a refused one is
+  // retried for as long as the page is open.
+  it('opens no socket for a reader who is not signed in', () => {
+    useAuthStore.setState({ isAuthenticated: false, token: '' })
+    setup({
+      fingerprint: 'abc',
+      eventTypes: ['object.created'],
+      queryKey: ['objects'],
+    })
+    expect(subscribe).not.toHaveBeenCalled()
+  })
+
+  it('opens the socket once the reader signs in', () => {
+    useAuthStore.setState({ isAuthenticated: false, token: '' })
+    const { rerender } = setup({
+      fingerprint: 'abc',
+      eventTypes: ['object.created'],
+      queryKey: ['objects'],
+    })
+    useAuthStore.setState({ isAuthenticated: true, token: 'token-1' })
+    rerender()
+    expect(subscribe).toHaveBeenCalledTimes(1)
+    expect(subscribe.mock.calls[0][0]).toBe('abc')
   })
 
   it('waits for the auth store before opening a socket', () => {

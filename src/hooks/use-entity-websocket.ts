@@ -43,6 +43,7 @@ export function useEntityWebsocket({
 }: UseEntityWebsocketOptions) {
   const queryClient = useQueryClient()
   const authReady = useAuthStore((state) => state.isInitialized)
+  const signedIn = useAuthStore((state) => state.isAuthenticated)
   const authToken = useAuthStore((state) => state.token)
   // Keep the latest onSync without re-subscribing the socket on every render.
   const onSyncRef = useRef(onSync)
@@ -50,6 +51,10 @@ export function useEntityWebsocket({
 
   useEffect(() => {
     if (!authReady) return
+    // Core refuses a socket with no signed-in user, and the manager retries a
+    // refused one for as long as the page is open, so an anonymous reader
+    // gets none. Signing in on the page opens it.
+    if (!signedIn) return
     if (!fingerprint) return
 
     const invalidate = (queryKey: unknown[]) =>
@@ -145,5 +150,5 @@ export function useEntityWebsocket({
     }
 
     return entityWebsocketManager.subscribe(fingerprint, handleMessage)
-  }, [authReady, authToken, entity, fingerprint, queryClient])
+  }, [authReady, signedIn, authToken, entity, fingerprint, queryClient])
 }

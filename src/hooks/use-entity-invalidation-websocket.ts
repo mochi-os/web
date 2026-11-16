@@ -29,10 +29,15 @@ export function useEntityInvalidationWebsocket({
 }: UseEntityInvalidationWebsocketOptions) {
   const queryClient = useQueryClient()
   const authReady = useAuthStore((state) => state.isInitialized)
+  const signedIn = useAuthStore((state) => state.isAuthenticated)
   const authToken = useAuthStore((state) => state.token)
 
   useEffect(() => {
     if (!authReady) return
+    // Core refuses a socket with no signed-in user, and the manager retries a
+    // refused one for as long as the page is open, so an anonymous reader
+    // gets none. Signing in on the page opens it.
+    if (!signedIn) return
     if (!fingerprint) return
 
     const handleMessage = (data: EntityWebsocketEvent) => {
@@ -42,5 +47,13 @@ export function useEntityInvalidationWebsocket({
     }
 
     return entityWebsocketManager.subscribe(fingerprint, handleMessage)
-  }, [authReady, authToken, fingerprint, queryClient, eventTypes, queryKey])
+  }, [
+    authReady,
+    signedIn,
+    authToken,
+    fingerprint,
+    queryClient,
+    eventTypes,
+    queryKey,
+  ])
 }

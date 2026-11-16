@@ -11,6 +11,7 @@
 // and after a reconnect, for what changed while nothing was listening.
 
 import { queryOptions } from '@tanstack/react-query'
+import type { EntityAttachment, EntityComment } from '../../types/entity-object'
 
 /** How long an item list or people list counts as fresh, in milliseconds. */
 export const ENTITY_LIST_FRESH = 60_000
@@ -23,6 +24,49 @@ export function entityObjectsQuery<TList extends { objects: unknown[] }>(
     queryKey: ['objects', containerId],
     queryFn: async () => (await listObjects(containerId)).data,
     staleTime: ENTITY_LIST_FRESH,
+  })
+}
+
+/**
+ * How long an item's comments or attachments count as fresh, in
+ * milliseconds. The item panel starts both as it opens, and its tab bodies,
+ * which mount once the panel's slide has settled, take that answer rather
+ * than ask again. Only that long: nothing asks for them again when the page's
+ * websocket subscribes, so an item opened later reads them afresh.
+ */
+export const ENTITY_ITEM_FRESH = 5_000
+
+/** An item's comments, as the comment list and the item panel ask for them. */
+export function entityCommentsQuery(
+  listComments: (
+    containerId: string,
+    objectId: string
+  ) => Promise<{ data: { comments: EntityComment[]; count: number } }>,
+  containerId: string,
+  objectId: string
+) {
+  return queryOptions({
+    queryKey: ['comments', containerId, objectId],
+    queryFn: async () => (await listComments(containerId, objectId)).data,
+    staleTime: ENTITY_ITEM_FRESH,
+  })
+}
+
+/** An item's attachments, as the attachments field and the item panel ask
+ * for them. */
+export function entityAttachmentsQuery(
+  listAttachments: (
+    containerId: string,
+    objectId: string
+  ) => Promise<{ data: { attachments: EntityAttachment[] } }>,
+  containerId: string,
+  objectId: string
+) {
+  return queryOptions({
+    queryKey: ['attachments', containerId, objectId],
+    queryFn: async () =>
+      (await listAttachments(containerId, objectId)).data.attachments,
+    staleTime: ENTITY_ITEM_FRESH,
   })
 }
 

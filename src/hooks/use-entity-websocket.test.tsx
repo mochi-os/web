@@ -9,15 +9,17 @@ import type { EntityWebsocketEvent } from '../lib/entity-websocket-manager'
 
 const socket = vi.hoisted(() => ({
   handler: null as ((event: EntityWebsocketEvent) => void) | null,
+  keys: [] as string[],
 }))
 
 vi.mock('../lib/entity-websocket-manager', () => ({
   entityWebsocketManager: {
     subscribe: (
-      _key: string,
+      key: string,
       handler: (event: EntityWebsocketEvent) => void
     ) => {
       socket.handler = handler
+      socket.keys.push(key)
       return () => {}
     },
   },
@@ -37,7 +39,7 @@ function setup(age: number) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
-  renderHook(
+  const { rerender } = renderHook(
     () => useEntityWebsocket({ entity: 'project', fingerprint: 'fp' }),
     {
       wrapper,
@@ -45,13 +47,18 @@ function setup(age: number) {
   )
   const stale = (key: string[]) =>
     client.getQueryState(key)?.isInvalidated ?? false
-  return { stale }
+  return { stale, rerender }
 }
 
 describe('useEntityWebsocket held lists', () => {
   beforeEach(() => {
-    useAuthStore.setState({ isInitialized: true, token: 't' } as never)
+    useAuthStore.setState({
+      isInitialized: true,
+      isAuthenticated: true,
+      token: 't',
+    } as never)
     socket.handler = null
+    socket.keys = []
   })
 
   // The lists are held for a while, and what changed while this page was not
@@ -73,5 +80,31 @@ describe('useEntityWebsocket held lists', () => {
     socket.handler?.({ type: 'socket/reopen' })
     expect(stale(objects)).toBe(true)
     expect(stale(people)).toBe(true)
+  })
+})
+
+// Core refuses a socket with no signed-in user, and a refused one is retried
+// for as long as the page is open.
+describe('useEntityWebsocket for a reader who is not signed in', () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      isInitialized: true,
+      isAuthenticated: false,
+      token: '',
+    } as never)
+    socket.handler = null
+    socket.keys = []
+  })
+
+  it('opens no socket', () => {
+    setup(500)
+    expect(socket.keys).toEqual([])
+  })
+
+  it('opens it once the reader signs in', () => {
+    const { rerender } = setup(500)
+    useAuthStore.setState({ isAuthenticated: true, token: 't' } as never)
+    rerender()
+    expect(socket.keys).toEqual(['fp'])
   })
 })

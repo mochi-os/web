@@ -5,7 +5,7 @@ import { t } from '@lingui/core/macro'
 import { isHttpError, type HttpRequestConfig, type HttpResponse } from './http'
 import type { HttpMethodConfig } from './http-client'
 import apiClient from './api-client'
-import { normalizeError } from './error-normalizer'
+import { normalizeError, translatable } from './error-normalizer'
 
 const devConsole = globalThis.console
 
@@ -125,7 +125,7 @@ async function requestRaw<TResponse>(
   } catch (unknownError) {
     const apiError = buildApiError(
       unknownError,
-      t`Unexpected API error`,
+      translatable() ? t`Unexpected API error` : '',
       requestConfig
     )
     logRequestError(apiError, requestConfig)
@@ -201,7 +201,7 @@ export async function request<TResponse>(
     if (unknownError instanceof ApiError) throw unknownError
     const apiError = buildApiError(
       unknownError,
-      t`Unexpected API error`,
+      translatable() ? t`Unexpected API error` : '',
       requestConfig
     )
     logRequestError(apiError, requestConfig)

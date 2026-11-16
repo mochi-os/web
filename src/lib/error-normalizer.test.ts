@@ -12,6 +12,7 @@ import {
   detectHtmlResponse,
   GENERIC_ERROR_MESSAGE,
 } from './error-normalizer'
+import { httpErrors } from './http'
 
 function httpError(status: number, data: unknown) {
   return { response: { status, data } }
@@ -94,6 +95,19 @@ describe('normalizeError', () => {
 
   it('handles string error directly', () => {
     expect(normalizeError('Network error').message).toBe('Network error')
+  })
+
+  // A request that never reached the server says so in the user's language,
+  // not in the request client's or the browser's English.
+  it("says a network failure in the catalogue's words, from the client and from fetch", () => {
+    for (const e of [
+      httpErrors.network({}),
+      new TypeError('Failed to fetch'),
+    ]) {
+      expect(normalizeError(e).message).toBe(
+        'Please check your internet connection and try again.'
+      )
+    }
   })
 
   it('handles raw Error object', () => {

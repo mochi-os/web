@@ -66,7 +66,10 @@ describe('createEntityListStore', () => {
     const state = useStore.getState()
     expect(state.rows).toEqual([])
     expect(state.isLoading).toBe(false)
-    expect(state.error).toBe('Network error')
+    // A transport failure reads in the catalogue's words, not the client's.
+    expect(state.error).toBe(
+      'Please check your internet connection and try again.'
+    )
   })
 
   it('should handle an empty list', async () => {

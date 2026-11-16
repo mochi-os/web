@@ -22,7 +22,7 @@ import { getAppPath } from '../../lib/app-path'
 import { addressByAuthor, findCommentTextInTree } from '../../lib/comment-tree'
 import { CommentBox, useDiscardGuard } from '../comment-composer'
 import { EntityCommentThread } from './entity-comment-thread'
-import { entityPeopleQuery } from './entity-queries'
+import { entityCommentsQuery, entityPeopleQuery } from './entity-queries'
 import type { EntityComment } from '../../types/entity-object'
 
 export interface EntityCommentListProps {
@@ -97,13 +97,9 @@ export function EntityCommentList({
   const { progress: uploadProgress, upload } = useUploadProgress()
   const attachmentError = useAttachmentError()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['comments', containerId, objectId],
-    queryFn: async () => {
-      const response = await listComments(containerId, objectId)
-      return response.data
-    },
-  })
+  const { data, isLoading } = useQuery(
+    entityCommentsQuery(listComments, containerId, objectId)
+  )
 
   const { data: peopleData } = useQuery(
     entityPeopleQuery(listPeople, containerId)

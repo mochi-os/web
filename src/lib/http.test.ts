@@ -165,7 +165,9 @@ describe('the response', () => {
     const response = await createHttpClient().get('/x', {
       responseType: 'blob',
     })
-    expect(await (response.data as Blob).text()).toBe('bytes')
+    // Size, not .text(): jsdom's Blob has no .text(), and which Blob class
+    // arrives depends on the Response the test environment supplies.
+    expect((response.data as Blob).size).toBe('bytes'.length)
     expect(response.headers['content-disposition']).toBe(
       'attachment; filename="a.txt"'
     )
@@ -502,6 +504,17 @@ describe('the client', () => {
     await client.get('/bad').catch(() => {})
     expect(failure).toHaveBeenCalledTimes(1)
     expect((failure.mock.calls[0][0] as HttpError).config.timeout).toBe(5)
+  })
+
+  it('keeps a default that a request passes as undefined', async () => {
+    const { sent } = fakeNetwork(() => ({ status: 500, body: {} }))
+    const error = (await createHttpClient({
+      defaults: { timeout: 5, baseURL: '/app/' },
+    })
+      .get('x', { timeout: undefined, baseURL: undefined })
+      .catch((e: unknown) => e)) as HttpError
+    expect(error.config.timeout).toBe(5)
+    expect(sent[0].url).toBe('/app/x')
   })
 
   it('hands the failure handler what fails on the way out, but not what the success handler throws', async () => {
