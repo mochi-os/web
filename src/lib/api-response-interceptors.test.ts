@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { i18n } from '@lingui/core'
 import { fakeNetwork } from '../test/fake-network'
 
 vi.mock('./toast-utils', () => ({
@@ -13,6 +14,7 @@ import {
   setLogoutHandler,
 } from './api-response-interceptors'
 import { createHttpClient } from './http-client'
+import { HttpError } from './http'
 import { useAuthStore } from '../stores/auth-store'
 import { toast } from './toast-utils'
 
@@ -121,6 +123,39 @@ describe('response interceptors', () => {
     expect(refused).toBeInstanceOf(TypeError)
     expect(toast.error).not.toHaveBeenCalled()
     expect(logout).not.toHaveBeenCalled()
+  })
+
+  // A request can fail before the app's catalogue has loaded, when Lingui
+  // throws for any message: the failure passes through as it came, with its
+  // status, and nothing is toasted into a page that has not drawn yet.
+  it('passes a failure through untouched and toasts nothing before a locale is active', async () => {
+    vi.spyOn(i18n, 'locale', 'get').mockReturnValue('')
+    for (const status of [409, 500, 502]) {
+      const failure = await clientAnswering(status, { error: 'boom' })
+        .post('/x')
+        .catch((e: unknown) => e)
+      expect(failure).toBeInstanceOf(HttpError)
+      expect((failure as HttpError).response?.status).toBe(status)
+    }
+    const html = await clientAnswering(200, '<!doctype html><html></html>')
+      .get('/x')
+      .catch((e: unknown) => e)
+    expect((html as Error).message).not.toMatch(/Lingui/)
+
+    fakeNetwork(() => Promise.reject(new TypeError('Failed to fetch')))
+    const offline = createHttpClient({ handlers: createApiResponseHandlers() })
+    const lost = await offline.post('/x', {}).catch((e: unknown) => e)
+    expect((lost as HttpError).code).toBe('ERR_NETWORK')
+
+    // With no logout handler the interceptor clears the session itself and
+    // would say so in a toast.
+    setLogoutHandler(undefined as never)
+    const expired = await clientAnswering(401, {})
+      .get('/feeds/-/list')
+      .catch((e: unknown) => e)
+    expect((expired as HttpError).response?.status).toBe(401)
+    expect(useAuthStore.getState().token).toBe('')
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it('never toasts a query-style request: the section owning it shows the error', async () => {

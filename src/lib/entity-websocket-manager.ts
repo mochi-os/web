@@ -29,6 +29,18 @@ export interface EntityWebsocketEvent {
 
 export type EntityWebsocketListener = (event: EntityWebsocketEvent) => void
 
+export interface EntityWebsocketOptions {
+  /**
+   * Called whenever this subscription goes live: each time the key's socket
+   * opens, the first time included, and at once when it is already open.
+   * Whatever was sent before the socket was there never arrived, so a
+   * subscriber holding what its frames would change, fetched before then,
+   * asks for it again here. The socket/reopen event tells every subscriber of
+   * a reconnect alone.
+   */
+  open?: () => void
+}
+
 function getWebSocketUrl(key: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   // The token rides in the subprotocol, so the URL carries one only where the
@@ -44,6 +56,8 @@ class EntityWebsocketManager {
   private connections = new Map<string, WebSocket>()
   private reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private subscribers = new Map<string, Set<EntityWebsocketListener>>()
+  // Each key's subscribers that asked to hear of its socket opening.
+  private openers = new Map<string, Set<() => void>>()
   // Keys whose socket has opened once for the current subscribers: a later
   // open is a reconnect, and what was sent while it was down never arrived.
   private opened = new Set<string>()
@@ -54,15 +68,36 @@ class EntityWebsocketManager {
   private wakeListeners = false
 
   /** Subscribe to `key`. Returns the unsubscribe function. */
-  subscribe(key: string, callback: EntityWebsocketListener): () => void {
+  subscribe(
+    key: string,
+    callback: EntityWebsocketListener,
+    options: EntityWebsocketOptions = {}
+  ): () => void {
     this.watchWake()
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, new Set())
     }
     this.subscribers.get(key)!.add(callback)
+    // Its own function, so one subscriber's leaving never drops another's,
+    // even one that passed the same callback.
+    const open = options.open ? () => options.open?.() : undefined
+    if (open) {
+      if (!this.openers.has(key)) this.openers.set(key, new Set())
+      this.openers.get(key)!.add(open)
+      if (this.connections.get(key)?.readyState === WebSocket.OPEN) {
+        queueMicrotask(() => {
+          if (this.openers.get(key)?.has(open)) open()
+        })
+      }
+    }
     this.ensureConnection(key)
 
     return () => {
+      if (open) {
+        const openers = this.openers.get(key)
+        openers?.delete(open)
+        if (openers?.size === 0) this.openers.delete(key)
+      }
       const subs = this.subscribers.get(key)
       if (subs) {
         subs.delete(callback)
@@ -124,6 +159,7 @@ class EntityWebsocketManager {
         } else {
           this.opened.add(key)
         }
+        this.openers.get(key)?.forEach((open) => open())
       }
 
       ws.onmessage = (event) => {

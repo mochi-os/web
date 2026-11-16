@@ -181,6 +181,75 @@ describe('ChatWebsocketManager close races', () => {
   })
 })
 
+// The games list is polled only while no game socket is open, so what counts
+// as open, and the word that it changed, decide whether the list goes stale.
+describe('ChatWebsocketManager readiness', () => {
+  let manager: ChatWebsocketManager
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    MockWebSocket.instances = []
+    vi.stubGlobal('WebSocket', MockWebSocket)
+    manager = new ChatWebsocketManager({ base: 'http://localhost' })
+  })
+
+  afterEach(() => {
+    manager.dispose()
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it('is ready while a subscribed socket is open, and says when that changes', async () => {
+    const changed = vi.fn()
+    manager.watch(changed)
+    expect(manager.ready()).toBe(false)
+
+    const unsubscribe = manager.subscribe('c1', {
+      chatKey: 'k1',
+      onMessage: () => {},
+    })
+    await flush()
+    expect(manager.ready()).toBe(false)
+
+    changed.mockClear()
+    MockWebSocket.instances[0].open()
+    expect(manager.ready()).toBe(true)
+    expect(changed).toHaveBeenCalled()
+
+    // Left open for its idle period, the socket has no one to hear it.
+    changed.mockClear()
+    unsubscribe()
+    expect(manager.ready()).toBe(false)
+    expect(changed).toHaveBeenCalled()
+
+    // Rejoined before it closed: open again with no status change.
+    changed.mockClear()
+    manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
+    expect(manager.ready()).toBe(true)
+    expect(changed).toHaveBeenCalled()
+  })
+
+  it('is not ready once the socket drops', async () => {
+    manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
+    await flush()
+    MockWebSocket.instances[0].open()
+    expect(manager.ready()).toBe(true)
+
+    MockWebSocket.instances[0].finishClose(false)
+    expect(manager.ready()).toBe(false)
+  })
+
+  it('stops telling a watcher that has let go', async () => {
+    const changed = vi.fn()
+    const unwatch = manager.watch(changed)
+    unwatch()
+    manager.subscribe('c1', { chatKey: 'k1', onMessage: () => {} })
+    await flush()
+    MockWebSocket.instances[0].open()
+    expect(changed).not.toHaveBeenCalled()
+  })
+})
+
 // The socket URL carries the session JWT in its query string, because a browser
 // cannot set a header on a WebSocket handshake, so it needs the same
 // same-origin gate api-client.ts applies to the Authorization header.

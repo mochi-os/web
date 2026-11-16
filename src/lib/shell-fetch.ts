@@ -110,6 +110,24 @@ function segment(path: string): string {
   return match ? match[1] : ''
 }
 
+// The paths core sends the root app, the one served at /, as the shell lists
+// them (ROOT_PATHS in the menu's shell.js), which carries nothing else for
+// the root app's frame.
+const rootPaths = ['/assets/', '/-/', '/images/']
+
+// Whether the shell carries a request for path, a resolved pathname, from the
+// page at page: one in the page's own app, by its first segment, or for the
+// root app's page, one of the root app's paths, refusing what the server
+// would decode after the check - an encoded slash, backslash or dot - and an
+// empty segment.
+function own(page: string, path: string): boolean {
+  const app = segment(page)
+  if (app) return segment(path) === app
+  if (page !== '/') return false
+  if (/%(2f|5c|2e)/i.test(path) || path.includes('//')) return false
+  return rootPaths.some((prefix) => path.startsWith(prefix))
+}
+
 // The request as the shell takes it, or null when it must go direct. One
 // that reports progress or must outlive the page goes direct: the shell
 // reports neither upload progress nor a carried request's download, and a
@@ -125,9 +143,8 @@ function carried(config: HttpRequestConfig): Carried | null {
   } catch {
     return null
   }
-  const app = segment(new URL(window.location.href).pathname)
-  if (!app || url.origin !== origin || segment(url.pathname) !== app)
-    return null
+  const page = new URL(window.location.href).pathname
+  if (url.origin !== origin || !own(page, url.pathname)) return null
 
   // Already encoded by prepareBody, which also dropped the Content-Type of a
   // request with no body or a form.
