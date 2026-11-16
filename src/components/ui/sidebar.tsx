@@ -8,12 +8,23 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import {
+  getShellInitData,
   initShellBridge,
   isInShell,
   onShellMessage,
   safeCookieSet,
   shellSetSidebarState,
+  shellSetSidebarWidth,
 } from '../../lib/shell-bridge'
+import { getCookie } from '../../lib/cookies'
+import {
+  SIDEBAR_WIDTH_DEFAULT,
+  SIDEBAR_WIDTH_MIN,
+  SIDEBAR_WIDTH_STEP,
+  clampSidebarWidth,
+  maxSidebarWidth,
+  parseSidebarWidth,
+} from '../../lib/sidebar-width'
 import { useAuthStore } from '../../stores/auth-store'
 import { useScreenSize } from '../../hooks/use-screen-size'
 import { Button } from './button'
@@ -37,6 +48,7 @@ import { t } from '@lingui/core/macro'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+const SIDEBAR_WIDTH_COOKIE_NAME = 'sidebar_width'
 const SIDEBAR_WIDTH = '16rem'
 const SIDEBAR_WIDTH_MOBILE = '16rem'
 const SIDEBAR_WIDTH_ICON = '3rem'
@@ -50,6 +62,19 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  /** Whether this window offers the drag handle: desktop widths only. */
+  resizable: boolean
+  /** The dragged width in CSS pixels, clamped to this window; null is the default. */
+  width: number | null
+  /** Save a dragged width for every app, or null to go back to the default. */
+  setWidth: (width: number | null) => void
+}
+
+// The saved width as this page can first see it: the shell's init when it has
+// already landed, otherwise the cookie a top-level page shares across apps.
+function readSidebarWidth(): number | null {
+  if (isInShell()) return parseSidebarWidth(getShellInitData()?.sidebarWidth)
+  return parseSidebarWidth(getCookie(SIDEBAR_WIDTH_COOKIE_NAME))
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -77,9 +102,30 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   // Mobile (<768px) uses sheet overlay; tablet (768–1023px) uses inline icon rail
-  const { isMobile: isNarrow, isTablet, width } = useScreenSize()
+  const { isMobile: isNarrow, isTablet, isDesktop, width } = useScreenSize()
   const isMobile = isNarrow
   const [openMobile, setOpenMobile] = React.useState(false)
+
+  // Dragging is offered from 1024px only. Below that the sidebar is a phone
+  // sheet or a tablet icon rail, both fixed widths, and a saved desktop width
+  // is kept for when the window is wide again rather than applied there.
+  const resizable = isDesktop
+  const [savedWidth, setSavedWidth] = React.useState(readSidebarWidth)
+  const sidebarWidth =
+    resizable && savedWidth !== null
+      ? clampSidebarWidth(savedWidth, width)
+      : null
+  const setWidth = React.useCallback((value: number | null) => {
+    setSavedWidth(value)
+    // Same split as the open state: a cookie outside the shell, the shell's
+    // own storage inside it, where cookies are unavailable.
+    safeCookieSet(
+      value === null
+        ? `${SIDEBAR_WIDTH_COOKIE_NAME}=; path=/; max-age=0`
+        : `${SIDEBAR_WIDTH_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+    )
+    shellSetSidebarWidth(value)
+  }, [])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -139,8 +185,10 @@ function SidebarProvider({
     if (!isInShell()) return
     let cancelled = false
     initShellBridge().then((init) => {
-      if (cancelled || init.sidebarOpen === undefined) return
-      _setOpen(init.sidebarOpen)
+      if (cancelled) return
+      if (init.sidebarOpen !== undefined) _setOpen(init.sidebarOpen)
+      if (init.sidebarWidth !== undefined)
+        setSavedWidth(parseSidebarWidth(init.sidebarWidth))
     })
     return () => {
       cancelled = true
@@ -176,8 +224,22 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      resizable,
+      width: sidebarWidth,
+      setWidth,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      resizable,
+      sidebarWidth,
+      setWidth,
+    ]
   )
 
   return (
@@ -187,7 +249,8 @@ function SidebarProvider({
           data-slot='sidebar-wrapper'
           style={
             {
-              '--sidebar-width': SIDEBAR_WIDTH,
+              '--sidebar-width':
+                sidebarWidth === null ? SIDEBAR_WIDTH : `${sidebarWidth}px`,
               '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
               ...style,
             } as React.CSSProperties
@@ -297,6 +360,8 @@ function Sidebar({
         data-slot='sidebar-gap'
         className={cn(
           'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear',
+          // A drag moves the width on every frame; easing it lags the pointer.
+          'in-data-[resizing=true]:transition-none',
           'group-data-[collapsible=offcanvas]:w-0',
           'group-data-[side=right]:rotate-180',
           variant === 'floating' || variant === 'inset'
@@ -308,6 +373,7 @@ function Sidebar({
         data-slot='sidebar-container'
         className={cn(
           'absolute inset-y-0 z-10 hidden h-full w-(--sidebar-width) overflow-visible transition-[inset-inline,width] duration-200 ease-linear md:flex',
+          'in-data-[resizing=true]:transition-none',
           side === 'left'
             ? 'start-0 group-data-[collapsible=offcanvas]:-start-[calc(var(--sidebar-width))]'
             : 'end-0 group-data-[collapsible=offcanvas]:-end-[calc(var(--sidebar-width))]',
@@ -393,6 +459,173 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
         'rtl:[[data-side=left][data-state=collapsed]_&]:cursor-w-resize rtl:[[data-side=right][data-state=collapsed]_&]:cursor-e-resize',
         className
       )}
+      {...props}
+    />
+  )
+}
+
+type SidebarDrag = {
+  pointerId: number
+  startX: number
+  startWidth: number
+  // +1 when moving the pointer right on screen widens the sidebar, -1 when
+  // moving it left does. See widenSign.
+  sign: number
+  latest: number
+  frame: number | null
+  wrapper: HTMLElement
+  bodyCursor: string
+  bodyUserSelect: string
+}
+
+// Which way on screen a pointer or arrow key has to move to widen the sidebar:
+// +1 for right, -1 for left. A start-side sidebar sits on the left in
+// left-to-right text and on the right in right-to-left text; an end-side one is
+// the mirror of that.
+function widenSign(handle: HTMLElement): number {
+  const side = handle.closest('[data-slot=sidebar]')?.getAttribute('data-side')
+  const rtl = getComputedStyle(handle).direction === 'rtl'
+  return (side === 'right' ? -1 : 1) * (rtl ? -1 : 1)
+}
+
+// The sidebar's width as drawn, so a drag starts from what is on screen even
+// when it is still the rem default rather than a saved pixel width.
+function drawnWidth(handle: HTMLElement, fallback: number): number {
+  const container = handle.closest('[data-slot=sidebar-container]')
+  const width = container?.getBoundingClientRect().width
+  return width && width > 0 ? width : fallback
+}
+
+/**
+ * The drag handle on the sidebar's inner edge. Pointer events cover mouse,
+ * touch and pen, and pointer capture keeps a drag going when the pointer
+ * leaves the app's frame. While dragging, the width is written straight to the
+ * wrapper's --sidebar-width, so the app does not re-render on every move; it
+ * is saved once, on release. Double-click goes back to the default width.
+ */
+function SidebarResizeHandle({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const { resizable, isMobile, state, width, setWidth } = useSidebar()
+  const drag = React.useRef<SidebarDrag | null>(null)
+
+  const finish = React.useCallback(
+    (save: boolean) => {
+      const current = drag.current
+      if (!current) return
+      drag.current = null
+      if (current.frame !== null) cancelAnimationFrame(current.frame)
+      current.wrapper.removeAttribute('data-resizing')
+      document.body.style.cursor = current.bodyCursor
+      document.body.style.userSelect = current.bodyUserSelect
+      if (save && current.latest !== current.startWidth)
+        setWidth(current.latest)
+    },
+    [setWidth]
+  )
+
+  // Hidden or unmounted mid-drag (collapsed with the shortcut, or the window
+  // crossed a breakpoint): no pointerup will come, so restore the page here,
+  // and keep the width already on screen, which the wrapper would otherwise go
+  // on showing without it ever being saved. Keyed on `shown` because hiding
+  // renders null without unmounting.
+  const shown = resizable && !isMobile && state === 'expanded'
+  React.useEffect(() => {
+    if (!shown) return
+    return () => finish(true)
+  }, [shown, finish])
+
+  if (!shown) return null
+
+  const now = width ?? SIDEBAR_WIDTH_DEFAULT
+
+  return (
+    <div
+      data-sidebar='resize-handle'
+      data-slot='sidebar-resize-handle'
+      role='separator'
+      aria-orientation='vertical'
+      aria-label={t`Resize sidebar`}
+      aria-valuemin={SIDEBAR_WIDTH_MIN}
+      aria-valuemax={maxSidebarWidth(window.innerWidth)}
+      aria-valuenow={now}
+      tabIndex={0}
+      className={cn(
+        'absolute inset-y-0 -end-1.5 z-20 w-3 cursor-col-resize touch-none select-none focus-visible:outline-none',
+        // The line shows on hover, focus and while dragging; at rest the
+        // sidebar's own border is the edge.
+        'after:absolute after:inset-y-0 after:start-1/2 after:w-0.5 after:-translate-x-1/2 rtl:after:translate-x-1/2',
+        'after:bg-transparent after:transition-colors after:duration-150',
+        'hover:after:bg-border-strong focus-visible:after:bg-ring in-data-[resizing=true]:after:bg-border-strong',
+        className
+      )}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return
+        const handle = event.currentTarget
+        const wrapper = handle.closest<HTMLElement>(
+          '[data-slot=sidebar-wrapper]'
+        )
+        if (!wrapper) return
+        event.preventDefault()
+        handle.setPointerCapture(event.pointerId)
+        const startWidth = drawnWidth(handle, now)
+        drag.current = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startWidth,
+          sign: widenSign(handle),
+          latest: startWidth,
+          frame: null,
+          wrapper,
+          bodyCursor: document.body.style.cursor,
+          bodyUserSelect: document.body.style.userSelect,
+        }
+        wrapper.setAttribute('data-resizing', 'true')
+        // On the body too, so the cursor holds and no text is selected while
+        // the pointer is over the page rather than the handle.
+        document.body.style.cursor = 'col-resize'
+        document.body.style.userSelect = 'none'
+      }}
+      onPointerMove={(event) => {
+        const current = drag.current
+        if (!current || event.pointerId !== current.pointerId) return
+        current.latest = clampSidebarWidth(
+          current.startWidth + current.sign * (event.clientX - current.startX),
+          window.innerWidth
+        )
+        if (current.frame !== null) return
+        current.frame = requestAnimationFrame(() => {
+          current.frame = null
+          current.wrapper.style.setProperty(
+            '--sidebar-width',
+            `${current.latest}px`
+          )
+        })
+      }}
+      onPointerUp={() => finish(true)}
+      onPointerCancel={() => finish(true)}
+      onLostPointerCapture={() => finish(true)}
+      onDoubleClick={() => setWidth(null)}
+      onKeyDown={(event) => {
+        const handle = event.currentTarget
+        let next: number | null = null
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          // Arrows follow the screen, not the reading direction: the one
+          // pointing away from the sidebar widens it.
+          const right = event.key === 'ArrowRight' ? 1 : -1
+          next =
+            drawnWidth(handle, now) +
+            right * widenSign(handle) * SIDEBAR_WIDTH_STEP
+        } else if (event.key === 'Home') {
+          next = SIDEBAR_WIDTH_MIN
+        } else if (event.key === 'End') {
+          next = Number.POSITIVE_INFINITY
+        }
+        if (next === null) return
+        event.preventDefault()
+        setWidth(clampSidebarWidth(next, window.innerWidth))
+      }}
       {...props}
     />
   )
@@ -816,6 +1049,7 @@ export {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
+  SidebarResizeHandle,
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,

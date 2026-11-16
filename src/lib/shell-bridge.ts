@@ -117,6 +117,11 @@ type ShellInitData = {
    */
   progress?: boolean
   sidebarOpen?: boolean
+  /**
+   * The width the user dragged the sidebar to, in CSS pixels, shared by every
+   * app. Null when they never have, absent from an older shell.
+   */
+  sidebarWidth?: number | null
   domain?: DomainRouteInfo | null
   locale?: LocalePreferences | null
   /**
@@ -361,6 +366,14 @@ export function shellSetTitle(title: string): void {
 export function shellSetSidebarState(open: boolean): void {
   if (isInShell()) {
     window.parent.postMessage({ type: 'sidebar-state', open }, shellOrigin())
+  }
+}
+
+/** Tell the shell the width the user dragged the sidebar to, or null to go
+ * back to the default. The shell keeps it for every app. */
+export function shellSetSidebarWidth(width: number | null): void {
+  if (isInShell()) {
+    window.parent.postMessage({ type: 'sidebar-width', width }, shellOrigin())
   }
 }
 

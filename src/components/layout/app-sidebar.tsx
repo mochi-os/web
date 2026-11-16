@@ -15,6 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarResizeHandle,
   useSidebar,
 } from '../ui/sidebar'
 import { NavGroup } from './nav-group'
@@ -225,6 +226,9 @@ export function AppSidebar({
 
       {sidebarFooter && <SidebarFooter>{sidebarFooter}</SidebarFooter>}
 
+      {/* The collapse button sits above the handle, at the middle of the
+          same edge, so a press there still toggles. */}
+      {!isMobile && <SidebarResizeHandle />}
       {!isMobile && <CollapseBtn />}
     </Sidebar>
   )
