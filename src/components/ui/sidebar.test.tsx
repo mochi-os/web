@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import {
@@ -78,10 +78,17 @@ function renderHandle(
   const wrapper = result.container.querySelector<HTMLElement>(
     '[data-slot=sidebar-wrapper]'
   )!
+  const sidebar = result.container.querySelector<HTMLElement>(
+    '[data-slot=sidebar]'
+  )!
   return {
     ...result,
     wrapper,
+    container,
+    // The width React gives the sidebar, on the wrapper.
     width: () => wrapper.style.getPropertyValue('--sidebar-width'),
+    // The width a drag in progress draws, on the sidebar element over it.
+    dragged: () => sidebar.style.getPropertyValue('--sidebar-width'),
     handle: () => screen.queryByRole('separator', { name: 'Resize sidebar' }),
   }
 }
@@ -113,20 +120,25 @@ describe('SidebarResizeHandle', () => {
   })
 
   it('widens the sidebar as it is dragged and saves the width on release', () => {
-    const { handle, width, wrapper } = renderHandle()
+    const { handle, width, dragged, wrapper } = renderHandle()
     fireEvent.pointerDown(handle()!, { pointerId: 1, button: 0, clientX: 100 })
     // Easing is off while dragging, and the page selects no text.
     expect(wrapper).toHaveAttribute('data-resizing', 'true')
     expect(document.body.style.userSelect).toBe('none')
 
     fireEvent.pointerMove(handle()!, { pointerId: 1, clientX: 164 })
-    expect(width()).toBe('320px')
+    expect(dragged()).toBe('320px')
+    // Screen readers hear the width as it moves, not only once it is saved.
+    expect(handle()).toHaveAttribute('aria-valuenow', '320')
     // Nothing is saved until the pointer lets go.
     expect(savedCookie()).toBeUndefined()
+    expect(width()).toBe('16rem')
 
     fireEvent.pointerUp(handle()!, { pointerId: 1 })
     expect(savedCookie()).toBe('320')
     expect(width()).toBe('320px')
+    expect(dragged()).toBe('')
+    expect(handle()).toHaveAttribute('aria-valuenow', '320')
     expect(wrapper).not.toHaveAttribute('data-resizing')
     expect(document.body.style.userSelect).toBe('')
   })
@@ -210,5 +222,61 @@ describe('SidebarResizeHandle', () => {
     expect(savedCookie()).toBe('320')
     expect(wrapper).not.toHaveAttribute('data-resizing')
     expect(document.body.style.userSelect).toBe('')
+  })
+
+  it('steps 16 px a press from the saved width while the drawn one still eases', () => {
+    // The drawn width lags the presses: the container is still easing towards
+    // the first step when the second press lands.
+    const { handle, width } = renderHandle({ drawn: 256 })
+    fireEvent.keyDown(handle()!, { key: 'ArrowRight' })
+    fireEvent.keyDown(handle()!, { key: 'ArrowRight' })
+    expect(width()).toBe('288px')
+    fireEvent.keyDown(handle()!, { key: 'ArrowLeft' })
+    expect(width()).toBe('272px')
+  })
+
+  it('leaves no dragged width behind when the window turns tablet mid-drag', () => {
+    const { handle, width, dragged } = renderHandle()
+    fireEvent.pointerDown(handle()!, { pointerId: 1, button: 0, clientX: 100 })
+    fireEvent.pointerMove(handle()!, { pointerId: 1, clientX: 164 })
+    expect(dragged()).toBe('320px')
+
+    window.innerWidth = 900
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(handle()).toBeNull()
+    // The tablet rail keeps its fixed width, and the drag's width is kept for
+    // when the window is wide again.
+    expect(dragged()).toBe('')
+    expect(width()).toBe('16rem')
+    expect(savedCookie()).toBe('320')
+
+    window.innerWidth = 1280
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(width()).toBe('320px')
+  })
+
+  it('puts the spoken width back when a drag ends where it started', () => {
+    const { handle, dragged } = renderHandle()
+    fireEvent.pointerDown(handle()!, { pointerId: 1, button: 0, clientX: 100 })
+    fireEvent.pointerMove(handle()!, { pointerId: 1, clientX: 164 })
+    fireEvent.pointerMove(handle()!, { pointerId: 1, clientX: 100 })
+    fireEvent.pointerUp(handle()!, { pointerId: 1 })
+    expect(savedCookie()).toBeUndefined()
+    expect(dragged()).toBe('')
+    expect(handle()).toHaveAttribute('aria-valuenow', '256')
+  })
+
+  it('gives the widest width the window allows as the maximum', () => {
+    const { handle } = renderHandle()
+    expect(handle()).toHaveAttribute('aria-valuemax', '448')
+    window.innerWidth = 1100
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(handle()).toHaveAttribute('aria-valuemax', '440')
   })
 })

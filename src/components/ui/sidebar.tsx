@@ -111,6 +111,22 @@ function SidebarProvider({
   // is kept for when the window is wide again rather than applied there.
   const resizable = isDesktop
   const [savedWidth, setSavedWidth] = React.useState(readSidebarWidth)
+  // True while the shell's saved state is applied after the first paint, so
+  // the sidebar takes its width and open state at once rather than easing into
+  // them on every app load. Cleared after two frames: the first paints the
+  // settled sidebar with easing off, the second turns it back on.
+  const [settling, setSettling] = React.useState(false)
+  React.useEffect(() => {
+    if (!settling) return
+    let second = 0
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setSettling(false))
+    })
+    return () => {
+      cancelAnimationFrame(first)
+      cancelAnimationFrame(second)
+    }
+  }, [settling])
   const sidebarWidth =
     resizable && savedWidth !== null
       ? clampSidebarWidth(savedWidth, width)
@@ -186,6 +202,7 @@ function SidebarProvider({
     let cancelled = false
     initShellBridge().then((init) => {
       if (cancelled) return
+      setSettling(true)
       if (init.sidebarOpen !== undefined) _setOpen(init.sidebarOpen)
       if (init.sidebarWidth !== undefined)
         setSavedWidth(parseSidebarWidth(init.sidebarWidth))
@@ -247,6 +264,7 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot='sidebar-wrapper'
+          data-settling={settling ? 'true' : undefined}
           style={
             {
               '--sidebar-width':
@@ -361,7 +379,7 @@ function Sidebar({
         className={cn(
           'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear',
           // A drag moves the width on every frame; easing it lags the pointer.
-          'in-data-[resizing=true]:transition-none',
+          'in-data-[resizing=true]:transition-none in-data-[settling=true]:transition-none',
           'group-data-[collapsible=offcanvas]:w-0',
           'group-data-[side=right]:rotate-180',
           variant === 'floating' || variant === 'inset'
@@ -373,7 +391,7 @@ function Sidebar({
         data-slot='sidebar-container'
         className={cn(
           'absolute inset-y-0 z-10 hidden h-full w-(--sidebar-width) overflow-visible transition-[inset-inline,width] duration-200 ease-linear md:flex',
-          'in-data-[resizing=true]:transition-none',
+          'in-data-[resizing=true]:transition-none in-data-[settling=true]:transition-none',
           side === 'left'
             ? 'start-0 group-data-[collapsible=offcanvas]:-start-[calc(var(--sidebar-width))]'
             : 'end-0 group-data-[collapsible=offcanvas]:-end-[calc(var(--sidebar-width))]',
@@ -474,6 +492,14 @@ type SidebarDrag = {
   latest: number
   frame: number | null
   wrapper: HTMLElement
+  // The drag's width goes on the sidebar element, which overrides the
+  // wrapper's value for everything that draws the sidebar. The wrapper's value
+  // stays React's alone, so taking the override off at the end can never leave
+  // a width React does not know about.
+  sidebar: HTMLElement
+  handle: HTMLElement
+  // aria-valuenow as React last wrote it, put back when the drag saves nothing.
+  ariaNow: string | null
   bodyCursor: string
   bodyUserSelect: string
 }
@@ -500,14 +526,18 @@ function drawnWidth(handle: HTMLElement, fallback: number): number {
  * The drag handle on the sidebar's inner edge. Pointer events cover mouse,
  * touch and pen, and pointer capture keeps a drag going when the pointer
  * leaves the app's frame. While dragging, the width is written straight to the
- * wrapper's --sidebar-width, so the app does not re-render on every move; it
- * is saved once, on release. Double-click goes back to the default width.
+ * sidebar element's --sidebar-width, so the app does not re-render on every
+ * move; it is saved once, on release. Double-click goes back to the default
+ * width.
  */
 function SidebarResizeHandle({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
   const { resizable, isMobile, state, width, setWidth } = useSidebar()
+  // Read here, not from the context, so the handle's maximum follows the
+  // window even when the sidebar's own width does not change.
+  const { width: viewport } = useScreenSize()
   const drag = React.useRef<SidebarDrag | null>(null)
 
   const finish = React.useCallback(
@@ -517,6 +547,10 @@ function SidebarResizeHandle({
       drag.current = null
       if (current.frame !== null) cancelAnimationFrame(current.frame)
       current.wrapper.removeAttribute('data-resizing')
+      current.sidebar.style.removeProperty('--sidebar-width')
+      if (current.ariaNow === null)
+        current.handle.removeAttribute('aria-valuenow')
+      else current.handle.setAttribute('aria-valuenow', current.ariaNow)
       document.body.style.cursor = current.bodyCursor
       document.body.style.userSelect = current.bodyUserSelect
       if (save && current.latest !== current.startWidth)
@@ -527,8 +561,7 @@ function SidebarResizeHandle({
 
   // Hidden or unmounted mid-drag (collapsed with the shortcut, or the window
   // crossed a breakpoint): no pointerup will come, so restore the page here,
-  // and keep the width already on screen, which the wrapper would otherwise go
-  // on showing without it ever being saved. Keyed on `shown` because hiding
+  // and save the width the drag reached. Keyed on `shown` because hiding
   // renders null without unmounting.
   const shown = resizable && !isMobile && state === 'expanded'
   React.useEffect(() => {
@@ -548,7 +581,7 @@ function SidebarResizeHandle({
       aria-orientation='vertical'
       aria-label={t`Resize sidebar`}
       aria-valuemin={SIDEBAR_WIDTH_MIN}
-      aria-valuemax={maxSidebarWidth(window.innerWidth)}
+      aria-valuemax={maxSidebarWidth(viewport)}
       aria-valuenow={now}
       tabIndex={0}
       className={cn(
@@ -566,7 +599,8 @@ function SidebarResizeHandle({
         const wrapper = handle.closest<HTMLElement>(
           '[data-slot=sidebar-wrapper]'
         )
-        if (!wrapper) return
+        const sidebar = handle.closest<HTMLElement>('[data-slot=sidebar]')
+        if (!wrapper || !sidebar) return
         event.preventDefault()
         handle.setPointerCapture(event.pointerId)
         const startWidth = drawnWidth(handle, now)
@@ -578,6 +612,9 @@ function SidebarResizeHandle({
           latest: startWidth,
           frame: null,
           wrapper,
+          sidebar,
+          handle,
+          ariaNow: handle.getAttribute('aria-valuenow'),
           bodyCursor: document.body.style.cursor,
           bodyUserSelect: document.body.style.userSelect,
         }
@@ -597,10 +634,11 @@ function SidebarResizeHandle({
         if (current.frame !== null) return
         current.frame = requestAnimationFrame(() => {
           current.frame = null
-          current.wrapper.style.setProperty(
+          current.sidebar.style.setProperty(
             '--sidebar-width',
             `${current.latest}px`
           )
+          current.handle.setAttribute('aria-valuenow', String(current.latest))
         })
       }}
       onPointerUp={() => finish(true)}
@@ -612,10 +650,13 @@ function SidebarResizeHandle({
         let next: number | null = null
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           // Arrows follow the screen, not the reading direction: the one
-          // pointing away from the sidebar widens it.
+          // pointing away from the sidebar widens it. Each press steps from
+          // the saved width, not the drawn one, which is still easing towards
+          // the last press when the key is held or tapped quickly. The drawn
+          // width only stands in for the rem default before the first step.
           const right = event.key === 'ArrowRight' ? 1 : -1
           next =
-            drawnWidth(handle, now) +
+            (width ?? drawnWidth(handle, now)) +
             right * widenSign(handle) * SIDEBAR_WIDTH_STEP
         } else if (event.key === 'Home') {
           next = SIDEBAR_WIDTH_MIN
