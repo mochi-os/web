@@ -59,6 +59,15 @@ export interface HttpClient {
   ) => Promise<HttpResponse<T>>
 }
 
+// A key passed as undefined leaves the default in place, as Axios did. A
+// wrapper that forwards `timeout: options.timeout` must not wipe out the
+// client's own timeout when the caller sets none.
+function withoutUndefined<T extends object>(config: T): T {
+  return Object.fromEntries(
+    Object.entries(config).filter(([, value]) => value !== undefined)
+  ) as T
+}
+
 export function createHttpClient({
   defaults = {},
   prepare,
@@ -69,7 +78,7 @@ export function createHttpClient({
   ): Promise<HttpResponse<T>> {
     let merged: HttpRequestConfig = {
       ...defaults,
-      ...config,
+      ...withoutUndefined(config),
       method: (config.method ?? defaults.method ?? 'GET').toUpperCase(),
       headers: mergeHeaders(defaults.headers, config.headers),
     }
