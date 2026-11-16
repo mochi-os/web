@@ -83,29 +83,61 @@ function identifier(): string {
     ''
   )
 }
+// This page's own channel to the shell, made on its first carried request,
+// when the shell takes one (init's port). The shell answers on it, so no
+// answer meant for this page can reach the next one in the frame: the channel
+// goes with the page. Answers posted to the frame's window reach whichever
+// page holds it by then.
+let channel: MessagePort | null = null
+
 let listening = false
 
 // A carried GET's progress callbacks, by request id.
 const progressing = new Map<string, (received: number) => void>()
 
+function hear(message: Record<string, unknown>) {
+  if (message.type === 'fetch.progress') {
+    const report = progressing.get(message.id as string)
+    if (report && typeof message.received === 'number') report(message.received)
+    return
+  }
+  if (message.type !== 'fetch.result') return
+  const id = message.id as string
+  progressing.delete(id)
+  const settle = waiting.get(id)
+  if (!settle) return
+  waiting.delete(id)
+  settle(message as unknown as Reply)
+}
+
 function listen() {
   if (listening) return
   listening = true
+  // Once the page has its own channel, its requests go there and are answered
+  // there only: nothing posted to the frame's window settles them.
   onShellMessage((message) => {
-    if (message.type === 'fetch.progress') {
-      const report = progressing.get(message.id as string)
-      if (report && typeof message.received === 'number')
-        report(message.received)
-      return
-    }
-    if (message.type !== 'fetch.result') return
-    const id = message.id as string
-    progressing.delete(id)
-    const settle = waiting.get(id)
-    if (!settle) return
-    waiting.delete(id)
-    settle(message as unknown as Reply)
+    if (!channel) hear(message)
   })
+}
+
+// Sends a request, or its abort, to the shell. Throws, as postMessage does,
+// for a body that cannot be cloned.
+function send(message: Record<string, unknown>) {
+  if (getShellInitData()?.port !== true) {
+    window.parent.postMessage(message, shellOrigin())
+    return
+  }
+  if (!channel) {
+    const made = new MessageChannel()
+    made.port1.onmessage = (event: MessageEvent) => {
+      if (event.data && typeof event.data === 'object') hear(event.data)
+    }
+    window.parent.postMessage({ type: 'fetch.port' }, shellOrigin(), [
+      made.port2,
+    ])
+    channel = made.port1
+  }
+  channel.postMessage(message)
 }
 
 // axios's own adapter, which the request would have used without this one.
@@ -228,7 +260,7 @@ export const shellAdapter: AxiosAdapter = (config) => {
 
     function abandon() {
       done()
-      window.parent.postMessage({ type: 'fetch.abort', id }, shellOrigin())
+      send({ type: 'fetch.abort', id })
     }
 
     waiting.set(id, (reply) => {
@@ -328,17 +360,14 @@ export const shellAdapter: AxiosAdapter = (config) => {
     }
 
     try {
-      window.parent.postMessage(
-        {
-          type: 'fetch',
-          id,
-          url: request.url,
-          method: request.method,
-          headers: request.headers,
-          body: request.body,
-        },
-        shellOrigin()
-      )
+      send({
+        type: 'fetch',
+        id,
+        url: request.url,
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+      })
     } catch {
       // A body postMessage cannot clone: send it directly.
       done()
@@ -402,7 +431,7 @@ export function shellGet(
       waiting.delete(id)
       progressing.delete(id)
       try {
-        window.parent.postMessage({ type: 'fetch.abort', id }, shellOrigin())
+        send({ type: 'fetch.abort', id })
       } catch {
         // The shell has gone; nothing to end.
       }
@@ -436,18 +465,15 @@ export function shellGet(
       })
     })
     try {
-      window.parent.postMessage(
-        {
-          type: 'fetch',
-          id,
-          url,
-          method: 'GET',
-          headers,
-          ...(options.revalidate ? { cache: 'no-cache' } : {}),
-          ...(reports ? { progress: true } : {}),
-        },
-        shellOrigin()
-      )
+      send({
+        type: 'fetch',
+        id,
+        url,
+        method: 'GET',
+        headers,
+        ...(options.revalidate ? { cache: 'no-cache' } : {}),
+        ...(reports ? { progress: true } : {}),
+      })
       wait()
     } catch {
       waiting.delete(id)

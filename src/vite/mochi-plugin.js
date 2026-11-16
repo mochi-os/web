@@ -61,6 +61,96 @@ export async function loaderScript(entrySource, map, styles = []) {
   return `<script>${minified.code.trim()}</script>`
 }
 
+// A src declaration and its list, a url() - which a data URI's ';' may sit
+// inside - read whole.
+const fontSources = /(^|[{;\s])src:((?:url\([^)]*\)|[^;}])*)/g
+
+/**
+ * Drops each font's WOFF copy where its WOFF2 sits beside it. A font face's
+ * src list that offers both is served WOFF2 by every browser that can show the
+ * pages, so the WOFF was never fetched, yet the fontsource stylesheets the
+ * theme imports name both, and every app zip carried 23 of them (0.22 MB). A
+ * list with WOFF alone keeps it, as does a WOFF inlined as a data: address,
+ * which is no file. A WOFF file left named nowhere in the bundle is removed
+ * from it.
+ */
+// The entries of a src list, split at its own commas: one inside a url(), a
+// format() or a quoted string is part of the entry.
+function sourceEntries(list) {
+  const entries = []
+  let depth = 0
+  let quote = ''
+  let start = 0
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i]
+    if (quote) {
+      if (c === quote) quote = ''
+    } else if (c === '"' || c === "'") {
+      quote = c
+    } else if (c === '(') {
+      depth++
+    } else if (c === ')') {
+      depth--
+    } else if (c === ',' && depth === 0) {
+      entries.push(list.slice(start, i))
+      start = i + 1
+    }
+  }
+  entries.push(list.slice(start))
+  return entries
+}
+
+// An entry's format(), or '' where it names none.
+function sourceFormat(entry) {
+  return /format\(\s*["']?([\w-]+)["']?\s*\)/.exec(entry)?.[1] ?? ''
+}
+
+// An entry's file: its url(), unless that is inlined as a data: address,
+// which is no file in the zip.
+function sourceFile(entry) {
+  const url = /url\(\s*["']?([^"')]*)/.exec(entry)?.[1] ?? ''
+  return url && !url.startsWith('data:') ? url : ''
+}
+
+export function woffDrop(bundle) {
+  const dropped = new Set()
+  for (const item of Object.values(bundle)) {
+    if (item.type !== 'asset' || !item.fileName.endsWith('.css')) continue
+    const css = String(item.source)
+    item.source = css.replace(fontSources, (declaration, before, list) => {
+      const entries = sourceEntries(list)
+      if (!entries.some((entry) => sourceFormat(entry) === 'woff2')) {
+        return declaration
+      }
+      // Only a WOFF file goes; every other entry - local(), a url() naming
+      // no format, one inlined - stays as it was written.
+      const woff = (entry) =>
+        sourceFormat(entry) === 'woff' && sourceFile(entry) !== ''
+      const kept = entries.filter((entry) => !woff(entry))
+      if (kept.length === entries.length) return declaration
+      for (const entry of entries) {
+        if (!woff(entry)) continue
+        // By its file name, which the build hashes: the URL is relative to
+        // the stylesheet under base './', and absolute under an app's own.
+        dropped.add(path.posix.basename(sourceFile(entry).split(/[?#]/)[0]))
+      }
+      return before + 'src:' + kept.join(',')
+    })
+  }
+  for (const name of dropped) {
+    const file = Object.keys(bundle).find(
+      (key) => path.posix.basename(key) === name
+    )
+    if (!file) continue
+    const named = Object.values(bundle).some((item) => {
+      if (item.fileName === file) return false
+      const text = item.type === 'chunk' ? item.code : item.source
+      return typeof text === 'string' && text.includes(name)
+    })
+    if (!named) delete bundle[file]
+  }
+}
+
 /**
  * @param {Object} options
  * @param {boolean} [options.frame] Whether the app's pages load in the
@@ -105,6 +195,14 @@ export function mochiPlugin(options = {}) {
     load(id) {
       if (id === STUB_ID) return 'export const messages = {}'
       return null
+    },
+    // After every other plugin's: the stylesheet is emitted by Vite's own
+    // CSS plugin in this same hook, and is not in the bundle before it.
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        woffDrop(bundle)
+      },
     },
     transformIndexHtml: {
       order: 'post',
