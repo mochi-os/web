@@ -151,8 +151,8 @@ export interface NormalizedError {
   source: string
 }
 
-// Whether error is a request that never reached the server: axios says
-// "Network Error" and fetch "Failed to fetch".
+// Whether error is a request that never reached the server: the request
+// client says "Network Error" and a bare fetch "Failed to fetch".
 function transportFailure(error: unknown): boolean {
   if (!(error instanceof Error)) return false
   const own = asNonEmptyString(error.message)?.toLowerCase()
@@ -214,8 +214,8 @@ export function normalizeError(
       }
     }
 
-    // A transport failure's own message is axios's or the browser's English,
-    // said below in the user's language instead.
+    // A transport failure's own message is the client's or the browser's
+    // English, said below in the user's language instead.
     if (!message && !transportFailure(error)) {
       const extracted = extractErrorFromPayloadWithSource(error)
       if (extracted.message) {

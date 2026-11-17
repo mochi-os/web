@@ -5,7 +5,7 @@
 // per-app response shapes arrive as one type bundle:
 // createEntityApi<CrmApiShapes>({ request, endpoints, resourceKey: 'crm' })
 
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from './http'
 import type { AppClient } from './create-app-client'
 import type { EntityEndpoints } from './entity-endpoints'
 import type { AccessRule } from '../features/access/types'
@@ -47,7 +47,7 @@ export interface EntityApiShapes {
 
 /** Optional progress and stop for a long transfer, such as a full export. */
 export interface EntityTransferOptions {
-  onProgress?: (event: AxiosProgressEvent) => void
+  onProgress?: (event: TransferProgress) => void
   signal?: AbortSignal
 }
 
@@ -495,7 +495,7 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
       content: string,
       parent?: string,
       files?: File[],
-      onProgress?: (event: AxiosProgressEvent) => void
+      onProgress?: (event: TransferProgress) => void
     ): Promise<{ data: EntityComment }> => {
       const formData = new FormData()
       formData.append('content', content)
@@ -556,7 +556,7 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
       entityId: string,
       objectId: string,
       files: File[],
-      onProgress?: (event: AxiosProgressEvent) => void
+      onProgress?: (event: TransferProgress) => void
     ): Promise<EntityAttachmentListResponse> => {
       const formData = new FormData()
       for (const file of files) {
@@ -709,7 +709,7 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
     importData: async (
       entityId: string,
       file: Blob,
-      onProgress?: (event: AxiosProgressEvent) => void,
+      onProgress?: (event: TransferProgress) => void,
       design?: boolean,
       signal?: AbortSignal
     ): Promise<{

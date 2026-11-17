@@ -2,48 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { i18n } from '@lingui/core'
+import { fakeNetwork } from '../test/fake-network'
 
 vi.mock('./toast-utils', () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }))
 
 import {
-  attachApiResponseInterceptors,
+  createApiResponseHandlers,
   setLogoutHandler,
 } from './api-response-interceptors'
+import { createHttpClient } from './http-client'
+import { HttpError } from './http'
 import { useAuthStore } from '../stores/auth-store'
 import { toast } from './toast-utils'
 
-// An adapter that answers with a fixed status and body, so the interceptor
-// chain runs against a real axios instance without a network. The built-in
-// adapters reject an error status through settle(); a custom one must do the
-// same or the response interceptor sees a 401 as a success.
+// A client whose every request is answered with a fixed status and body, so
+// the handlers run against the real client without a network.
 function clientAnswering(
   status: number,
   data: unknown,
-  options?: Parameters<typeof attachApiResponseInterceptors>[1]
+  options?: Parameters<typeof createApiResponseHandlers>[0]
 ) {
-  const client = axios.create({
-    adapter: async (config: InternalAxiosRequestConfig) => {
-      const response = { data, status, statusText: '', headers: {}, config }
-      if (status >= 400) {
-        throw new AxiosError(
-          `Request failed with status code ${status}`,
-          status >= 500
-            ? AxiosError.ERR_BAD_RESPONSE
-            : AxiosError.ERR_BAD_REQUEST,
-          config,
-          undefined,
-          response
-        )
-      }
-      return response
-    },
-  })
-  attachApiResponseInterceptors(client, options)
-  return client
+  fakeNetwork(() => ({ status, body: data }))
+  return createHttpClient({ handlers: createApiResponseHandlers(options) })
 }
 
 describe('response interceptors', () => {
@@ -57,6 +40,7 @@ describe('response interceptors', () => {
   afterEach(() => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     useAuthStore.setState({ token: '' })
   })
 
@@ -124,6 +108,23 @@ describe('response interceptors', () => {
     expect(toast.error).not.toHaveBeenCalled()
   })
 
+  it('toasts a dropped connection, but not a request that was never sent', async () => {
+    fakeNetwork(() => Promise.reject(new TypeError('Failed to fetch')))
+    const client = createHttpClient({ handlers: createApiResponseHandlers() })
+    await client.post('/x', {}).catch(() => {})
+    expect(toast.error).toHaveBeenCalledTimes(1)
+    vi.mocked(toast.error).mockClear()
+
+    // A header the browser refuses fails before anything leaves: the
+    // caller's fault, returned as it was thrown, with no toast and no logout.
+    const refused = await client
+      .post('/x', {}, { headers: { 'X-Name': 'Zoë ✓' } })
+      .catch((e: unknown) => e)
+    expect(refused).toBeInstanceOf(TypeError)
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(logout).not.toHaveBeenCalled()
+  })
+
   // A request can fail before the app's catalogue has loaded, when Lingui
   // throws for any message: the failure passes through as it came, with its
   // status, and nothing is toasted into a page that has not drawn yet.
@@ -133,22 +134,18 @@ describe('response interceptors', () => {
       const failure = await clientAnswering(status, { error: 'boom' })
         .post('/x')
         .catch((e: unknown) => e)
-      expect(failure).toBeInstanceOf(AxiosError)
-      expect((failure as AxiosError).response?.status).toBe(status)
+      expect(failure).toBeInstanceOf(HttpError)
+      expect((failure as HttpError).response?.status).toBe(status)
     }
     const html = await clientAnswering(200, '<!doctype html><html></html>')
       .get('/x')
       .catch((e: unknown) => e)
     expect((html as Error).message).not.toMatch(/Lingui/)
 
-    const offline = axios.create({
-      adapter: async (config: InternalAxiosRequestConfig) => {
-        throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config)
-      },
-    })
-    attachApiResponseInterceptors(offline)
-    const lost = await offline.post('/x').catch((e: unknown) => e)
-    expect((lost as AxiosError).code).toBe(AxiosError.ERR_NETWORK)
+    fakeNetwork(() => Promise.reject(new TypeError('Failed to fetch')))
+    const offline = createHttpClient({ handlers: createApiResponseHandlers() })
+    const lost = await offline.post('/x', {}).catch((e: unknown) => e)
+    expect((lost as HttpError).code).toBe('ERR_NETWORK')
 
     // With no logout handler the interceptor clears the session itself and
     // would say so in a toast.
@@ -156,7 +153,7 @@ describe('response interceptors', () => {
     const expired = await clientAnswering(401, {})
       .get('/feeds/-/list')
       .catch((e: unknown) => e)
-    expect((expired as AxiosError).response?.status).toBe(401)
+    expect((expired as HttpError).response?.status).toBe(401)
     expect(useAuthStore.getState().token).toBe('')
     expect(toast.error).not.toHaveBeenCalled()
   })

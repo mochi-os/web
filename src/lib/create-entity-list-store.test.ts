@@ -66,7 +66,7 @@ describe('createEntityListStore', () => {
     const state = useStore.getState()
     expect(state.rows).toEqual([])
     expect(state.isLoading).toBe(false)
-    // A transport failure reads in the catalogue's words, not axios's.
+    // A transport failure reads in the catalogue's words, not the client's.
     expect(state.error).toBe(
       'Please check your internet connection and try again.'
     )

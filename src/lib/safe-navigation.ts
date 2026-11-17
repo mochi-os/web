@@ -1,6 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+import { buildFullPath } from './http'
+
 const SAFE_INTERNAL_PROTOCOLS = new Set(['http:', 'https:'])
 const SAFE_EXTERNAL_PROTOCOL = 'https:'
 
@@ -28,21 +30,16 @@ function isTrustedExternalHost(
 
 /**
  * True when a request built from `base` and `url` resolves to this origin, so
- * the session token may be attached. Mirrors axios's buildFullPath, which drops
- * the baseURL for a URL starting `//` - a route parameter decoding to `//host`
- * would otherwise carry the token off-origin. Absolute same-origin URLs keep
- * it.
+ * the session token may be attached. Joins them with the request client's own
+ * buildFullPath, which drops the baseURL for a URL starting `//` - a route
+ * parameter decoding to `//host` would otherwise carry the token off-origin.
+ * Absolute same-origin URLs keep it.
  */
 export function isSameOriginRequest(
   base: string | undefined,
   url: string | undefined
 ): boolean {
-  const target = url ?? ''
-  const absolute = /^([a-z][a-z\d+\-.]*:)?\/\//i.test(target)
-  const combined =
-    absolute || !base
-      ? target
-      : `${base.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`
+  const combined = buildFullPath(base, url)
 
   try {
     return (

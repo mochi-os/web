@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { fakeNetwork } from '../test/fake-network'
 
 vi.mock('./request', () => ({
   requestHelpers: {
@@ -16,7 +16,8 @@ vi.mock('./toast-utils', () => ({
 }))
 
 import { authManager, logoutRedirectTarget } from './auth-manager'
-import { attachApiResponseInterceptors } from './api-response-interceptors'
+import { createApiResponseHandlers } from './api-response-interceptors'
+import { createHttpClient } from './http-client'
 import { requestHelpers } from './request'
 import { useAuthStore } from '../stores/auth-store'
 
@@ -53,6 +54,7 @@ describe('authManager', () => {
   })
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     vi.mocked(requestHelpers.get).mockReset()
   })
 
@@ -61,25 +63,8 @@ describe('authManager', () => {
     // fall to the bare clearAuth path instead of the manager's logout.
     const logout = vi.spyOn(authManager, 'logout').mockResolvedValue(undefined)
     useAuthStore.setState({ token: 'session-token' })
-    const client = axios.create({
-      adapter: async (config: InternalAxiosRequestConfig) => {
-        const response = {
-          data: {},
-          status: 401,
-          statusText: '',
-          headers: {},
-          config,
-        }
-        throw new AxiosError(
-          'Request failed with status code 401',
-          AxiosError.ERR_BAD_REQUEST,
-          config,
-          undefined,
-          response
-        )
-      },
-    })
-    attachApiResponseInterceptors(client)
+    fakeNetwork(() => ({ status: 401, body: {} }))
+    const client = createHttpClient({ handlers: createApiResponseHandlers() })
     await client.get('/feeds/-/list').catch(() => {})
     expect(logout).toHaveBeenCalledWith('Session expired')
   })

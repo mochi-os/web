@@ -41,7 +41,7 @@ describe('isSameOriginRequest', () => {
     expect(isSameOriginRequest('', 'http://attacker.example/x')).toBe(false)
   })
 
-  it('refuses a protocol-relative URL, which axios treats as absolute', () => {
+  it('refuses a protocol-relative URL, which the client treats as absolute', () => {
     expect(isSameOriginRequest('/feeds/', '//attacker.example/-/info')).toBe(
       false
     )
@@ -57,15 +57,15 @@ describe('isSameOriginRequest', () => {
     expect(isSameOriginRequest('/feeds/', `${feedId}/-/info`)).toBe(false)
   })
 
-  it('refuses a scheme-bearing URL that axios leaves absolute', () => {
-    // "mochi://..." carries "//", so axios drops the baseURL and the request
+  it('refuses a scheme-bearing URL that the client leaves absolute', () => {
+    // "mochi://..." carries "//", so the client drops the baseURL and the request
     // leaves our origin.
     expect(isSameOriginRequest('/feeds/', 'mochi://peer/entity')).toBe(false)
     expect(isSameOriginRequest('', 'javascript:alert(1)')).toBe(false)
   })
 
   it('attaches when a scheme-like string is combined into a same-origin path', () => {
-    // Deliberate, and matches axios: without "//", "javascript:alert(1)" is
+    // Deliberate, and matches the client: without "//", "javascript:alert(1)" is
     // relative, so buildFullPath yields "/feeds/javascript:alert(1)" — a real
     // request to our own server. It 404s; it does not leave the origin.
     expect(isSameOriginRequest('/feeds/', 'javascript:alert(1)')).toBe(true)

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { AxiosAdapter, AxiosError, AxiosResponse } from 'axios'
+import type { HttpError } from './http'
+import { fakeNetwork } from '../test/fake-network'
 
 // The app runs in the shell's sandboxed iframe: window.parent is the shell,
 // whose document is out of reach, and every message from it carries it as the
@@ -44,6 +45,7 @@ afterEach(() => {
   })
   window.history.replaceState({}, '', '/')
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   vi.resetModules()
 })
 
@@ -85,8 +87,8 @@ async function answer(reply: Record<string, unknown>) {
 
 // boot starts the app as the shell would: the init message, carrying the
 // bridge and progress flags unless told otherwise, then the app's clients.
-// The direct path is axios's own adapter, replaced here by one that records
-// the request.
+// The direct path is the browser's fetch() and XMLHttpRequest, replaced here
+// by stand-ins that record the request and answer 'direct'.
 async function boot(
   options: { bridge?: boolean; progress?: boolean; port?: boolean } = {}
 ) {
@@ -106,15 +108,7 @@ async function boot(
   const { useAuthStore } = await import('../stores/auth-store')
   useAuthStore.setState({ token: 'app-token' })
 
-  const axios = (await import('axios')).default
-  const direct = vi.fn<AxiosAdapter>(async (config) => ({
-    data: 'direct',
-    status: 200,
-    statusText: 'OK',
-    headers: {},
-    config,
-  }))
-  vi.spyOn(axios, 'getAdapter').mockReturnValue(direct)
+  const direct = fakeNetwork(() => ({ body: 'direct' })).sent
 
   const { createAppClient } = await import('./create-app-client')
   const { apiClient } = await import('./api-client')
@@ -138,10 +132,10 @@ describe('requests through the shell', () => {
     expect(request.url).toBe(`${window.location.origin}/feeds/list?page=2`)
     expect(request.method).toBe('GET')
     expect(header(request, 'Authorization')).toBe('Bearer app-token')
-    // No body, no type, as axios's own adapter sends it.
+    // No body, no type, as a direct request sends it.
     expect(header(request, 'Content-Type')).toBeUndefined()
     expect(request.body).toBeUndefined()
-    expect(direct).not.toHaveBeenCalled()
+    expect(direct).toHaveLength(0)
   })
 
   it("carries the core client's requests in this app too", async () => {
@@ -154,10 +148,10 @@ describe('requests through the shell', () => {
     const request = requests()[0]
     expect(request.url).toBe(`${window.location.origin}/feeds/settings`)
     expect(header(request, 'Authorization')).toBe('Bearer app-token')
-    expect(direct).not.toHaveBeenCalled()
+    expect(direct).toHaveLength(0)
   })
 
-  it('rejects a refusing status as axios does, with the response', async () => {
+  it('rejects a refusing status as a direct request does, with the response', async () => {
     const { client } = await boot()
     const result = client.get('missing')
 
@@ -168,7 +162,7 @@ describe('requests through the shell', () => {
       body: json({ error: 'not_found' }),
     })
 
-    const error = (await result.catch((e: unknown) => e)) as AxiosError
+    const error = (await result.catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ERR_BAD_REQUEST')
     expect(error.response?.status).toBe(404)
     expect(error.response?.data).toEqual({ error: 'not_found' })
@@ -208,7 +202,7 @@ describe('requests through the shell', () => {
   it('returns binary bodies as the response type asks', async () => {
     const { client } = await boot()
     const bytes = new Uint8Array([1, 2, 3]).buffer
-    const result = client.instance.get('file', { responseType: 'arraybuffer' })
+    const result = client.request({ url: 'file', responseType: 'arraybuffer' })
     await answer({ status: 200, headers: [], body: bytes })
     expect(new Uint8Array((await result).data as ArrayBuffer)).toEqual(
       new Uint8Array([1, 2, 3])
@@ -217,7 +211,7 @@ describe('requests through the shell', () => {
 
   it('returns a blob typed from the response', async () => {
     const { client } = await boot()
-    const result = client.instance.get('image', { responseType: 'blob' })
+    const result = client.request({ url: 'image', responseType: 'blob' })
     await answer({
       status: 200,
       headers: [['content-type', 'image/png']],
@@ -448,7 +442,7 @@ describe('requests that go direct', () => {
   it('under a shell without the bridge', async () => {
     const { client, direct } = await boot({ bridge: false })
     expect(await client.get('list')).toBe('direct')
-    expect(direct).toHaveBeenCalledTimes(1)
+    expect(direct).toHaveLength(1)
     expect(requests()).toHaveLength(0)
   })
 
@@ -456,8 +450,23 @@ describe('requests that go direct', () => {
     const { client, direct } = await boot()
     await client.post('upload', 'x', { onUploadProgress: () => {} })
     await client.get('download', { onDownloadProgress: () => {} })
-    expect(direct).toHaveBeenCalledTimes(2)
+    expect(direct).toHaveLength(2)
     expect(requests()).toHaveLength(0)
+  })
+
+  // Market saves a listing this way as the page closes. Only the browser's own
+  // keepalive request survives that; the shell's would die with the frame.
+  it('when the request must outlive the page', async () => {
+    const { client, direct } = await boot()
+    await client.post('save', { name: 'x' }, { keepalive: true })
+    expect(requests()).toHaveLength(0)
+    expect(direct).toHaveLength(1)
+    expect(direct[0]).toMatchObject({
+      by: 'fetch',
+      keepalive: true,
+      credentials: 'omit',
+    })
+    expect(direct[0].headers.authorization).toBe('Bearer app-token')
   })
 
   it('outside this app, core routes included', async () => {
@@ -465,7 +474,7 @@ describe('requests that go direct', () => {
     await apiClient.get('/people/abc/-/style')
     await apiClient.post('/_/identity')
     await apiClient.get('https://elsewhere.example/feeds/list')
-    expect(direct).toHaveBeenCalledTimes(3)
+    expect(direct).toHaveLength(3)
     expect(requests()).toHaveLength(0)
   })
 
@@ -479,16 +488,16 @@ describe('requests that go direct', () => {
     const redirected = client.get('two')
     await answer({ redirect: true })
     expect(await redirected).toBe('direct')
-    expect(direct).toHaveBeenCalledTimes(2)
+    expect(direct).toHaveLength(2)
   })
 
   it('but a write that met a redirect is not repeated', async () => {
     const { client, direct } = await boot()
     const result = client.post('save', { name: 'x' })
     await answer({ redirect: true })
-    const error = (await result.catch((e: unknown) => e)) as AxiosError
+    const error = (await result.catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ERR_BAD_RESPONSE')
-    expect(direct).not.toHaveBeenCalled()
+    expect(direct).toHaveLength(0)
   })
 })
 
@@ -509,7 +518,7 @@ describe('the root app’s page', () => {
       expect((await result).data).toEqual({ data: 1 })
       expect(requests()[0].url).toBe(`${window.location.origin}${path}`)
       expect(header(requests()[0], 'Authorization')).toBe('Bearer app-token')
-      expect(direct).not.toHaveBeenCalled()
+      expect(direct).toHaveLength(0)
     }
   )
 
@@ -530,7 +539,7 @@ describe('the root app’s page', () => {
   ])('sends %s direct', async (_name, path) => {
     const { apiClient, direct } = await boot()
     await apiClient.get(path)
-    expect(direct).toHaveBeenCalledTimes(1)
+    expect(direct).toHaveLength(1)
     expect(requests()).toHaveLength(0)
   })
 
@@ -539,7 +548,7 @@ describe('the root app’s page', () => {
     const { apiClient, direct } = await boot()
     await apiClient.get('/-/icons')
     await apiClient.get('/assets/index-abc.js')
-    expect(direct).toHaveBeenCalledTimes(2)
+    expect(direct).toHaveLength(2)
     expect(requests()).toHaveLength(0)
   })
 })
@@ -552,7 +561,7 @@ describe('ending a carried request', () => {
     await vi.waitFor(() => expect(requests()).toHaveLength(1))
 
     controller.abort()
-    const error = (await result.catch((e: unknown) => e)) as AxiosError
+    const error = (await result.catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ERR_CANCELED')
     expect(aborts()).toEqual([{ type: 'fetch.abort', id: requests()[0].id }])
 
@@ -569,10 +578,31 @@ describe('ending a carried request', () => {
   it('times out through the shell', async () => {
     const { client } = await boot()
     const result = client.get('slow', { timeout: 20 })
-    const error = (await result.catch((e: unknown) => e)) as AxiosError
+    const error = (await result.catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ECONNABORTED')
     expect(aborts()).toHaveLength(1)
     expect(aborts()[0].id).toBe(requests()[0].id)
+  })
+
+  it('leaves no timer or listener behind once answered', async () => {
+    const { client } = await boot()
+    vi.useFakeTimers()
+    try {
+      const controller = new AbortController()
+      const added = vi.spyOn(controller.signal, 'addEventListener')
+      const removed = vi.spyOn(controller.signal, 'removeEventListener')
+      const result = client.get('one', {
+        signal: controller.signal,
+        timeout: 1000,
+      })
+      await answer({ status: 200, headers: [], body: json('ok') })
+      expect(await result).toBe('ok')
+      expect(added).toHaveBeenCalled()
+      expect(removed).toHaveBeenCalledTimes(added.mock.calls.length)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('draws request ids nobody can guess', async () => {
@@ -612,9 +642,9 @@ describe('ending a carried request', () => {
     const { client } = await boot()
     const result = client.get('list')
     await answer({ failed: true })
-    const error = (await result.catch((e: unknown) => e)) as AxiosError
+    const error = (await result.catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ERR_NETWORK')
-    expect((error as { response?: AxiosResponse }).response).toBeUndefined()
+    expect(error.response).toBeUndefined()
   })
 })
 
@@ -669,7 +699,7 @@ describe('a page’s own channel to the shell', () => {
     })
     expect(await second).toBe('second')
     expect(posted.filter((m) => m.type === 'fetch.port')).toHaveLength(1)
-    expect(direct).not.toHaveBeenCalled()
+    expect(direct).toHaveLength(0)
   })
 
   it('ends a carried request on it', async () => {

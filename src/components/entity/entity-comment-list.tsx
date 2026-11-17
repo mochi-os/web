@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { MessageSquare } from 'lucide-react'
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from '../../lib/http'
 import { EmptyState } from '../ui/empty-state'
 import { ListSkeleton } from '../ui/list-skeleton'
 import { toast } from '../../lib/toast-utils'
@@ -42,7 +42,7 @@ export interface EntityCommentListProps {
     content: string,
     parent?: string,
     files?: File[],
-    onProgress?: (event: AxiosProgressEvent) => void
+    onProgress?: (event: TransferProgress) => void
   ) => Promise<unknown>
   updateComment: (
     containerId: string,

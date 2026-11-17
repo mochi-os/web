@@ -6,40 +6,55 @@
 // the policy itself.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import type { InternalAxiosRequestConfig } from 'axios'
+import { fakeNetwork, type SentRequest } from '../test/fake-network'
 
 const TOKEN = 'test-token'
 
-// Swap in an adapter that answers every request locally and hands back the
-// config the interceptor produced, so nothing touches the network.
-function captureAdapter() {
-  const seen: InternalAxiosRequestConfig[] = []
-  const adapter = async (config: InternalAxiosRequestConfig) => {
-    seen.push(config)
-    return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
-  }
-  return { seen, adapter }
-}
+// Answer every request locally and keep what went out, as the client put it
+// on the wire, so nothing touches the network.
+let seen: SentRequest[]
 
-function authorizationOf(config: InternalAxiosRequestConfig): unknown {
-  const headers = config.headers as unknown as Record<string, unknown>
-  return headers?.Authorization
+function authorizationOf(request: SentRequest): unknown {
+  return request.headers.authorization
 }
 
 beforeEach(async () => {
+  seen = fakeNetwork().sent
   const { useAuthStore } = await import('../stores/auth-store')
   useAuthStore.setState({ token: TOKEN })
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   vi.resetModules()
 })
+
+// Runs body as a page inside the shell's sandboxed frame: a parent window
+// whose document cannot be reached.
+async function inShell(body: () => Promise<void>) {
+  Object.defineProperty(window, 'parent', {
+    configurable: true,
+    get: () => ({
+      postMessage: () => {},
+      get document(): never {
+        throw new DOMException('Blocked', 'SecurityError')
+      },
+    }),
+  })
+  try {
+    await body()
+  } finally {
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      get: () => window,
+    })
+  }
+}
 
 describe('apiClient interceptor', () => {
   it('sends the token to a same-origin path', async () => {
     const { apiClient } = await import('./api-client')
-    const { seen, adapter } = captureAdapter()
-    await apiClient.get('/_/identity', { adapter })
+    await apiClient.get('/_/identity')
 
     // Positive control: the token is in the store and the interceptor ran, so
     // an absent header below is a refusal rather than an unconfigured client.
@@ -49,16 +64,26 @@ describe('apiClient interceptor', () => {
 
   it('withholds the token from a protocol-relative URL', async () => {
     const { apiClient } = await import('./api-client')
-    const { seen, adapter } = captureAdapter()
-    await apiClient.get('//attacker.example/-/info', { adapter })
+    await apiClient.get('//attacker.example/-/info')
     expect(authorizationOf(seen[0])).toBeUndefined()
   })
 
   it('withholds the token from an absolute foreign URL', async () => {
     const { apiClient } = await import('./api-client')
-    const { seen, adapter } = captureAdapter()
-    await apiClient.get('https://attacker.example/x', { adapter })
+    await apiClient.get('https://attacker.example/x')
     expect(authorizationOf(seen[0])).toBeUndefined()
+  })
+
+  it('sends no cookies inside the shell, and keeps them outside it', async () => {
+    await inShell(async () => {
+      const { apiClient } = await import('./api-client')
+      await apiClient.get('/_/identity')
+    })
+    vi.resetModules()
+    const { apiClient } = await import('./api-client')
+    await apiClient.get('/_/identity')
+    expect(seen[0].credentials).toBe('omit')
+    expect(seen[1].credentials).toBe('include')
   })
 })
 
@@ -66,8 +91,7 @@ describe('createAppClient interceptor', () => {
   it('sends the token to a relative endpoint under the app baseURL', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'feeds' })
-    const { seen, adapter } = captureAdapter()
-    await client.get('abc/-/info', { adapter })
+    await client.get('abc/-/info')
 
     expect(seen).toHaveLength(1)
     expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
@@ -76,71 +100,59 @@ describe('createAppClient interceptor', () => {
   it('withholds the token when a route parameter decoded to //host', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'feeds' })
-    const { seen, adapter } = captureAdapter()
 
     // The live vector: /feeds/%2F%2Fattacker.example decodes to
     // "//attacker.example" and lands in the endpoint builder's first slot.
     const feedId = decodeURIComponent('%2F%2Fattacker.example')
-    await client.get(`${feedId}/-/info`, { adapter })
+    await client.get(`${feedId}/-/info`)
     expect(authorizationOf(seen[0])).toBeUndefined()
   })
 
   it('drops cookies inside the shell, where the token is the only credential', async () => {
     // The sandboxed iframe has an opaque origin: cookies never travel, and a
-    // cross-site request with credentials would be refused outright.
-    Object.defineProperty(window, 'parent', {
-      configurable: true,
-      get: () => ({
-        postMessage: () => {},
-        get document(): never {
-          throw new DOMException('Blocked', 'SecurityError')
-        },
-      }),
-    })
-    try {
+    // cross-site request with credentials would be refused outright. fetch()
+    // says so outright; XMLHttpRequest, which cannot, sends without
+    // withCredentials.
+    await inShell(async () => {
       const { createAppClient } = await import('./create-app-client')
       const client = createAppClient({ appName: 'chat' })
-      const { seen, adapter } = captureAdapter()
-      await client.get('-/list', { adapter })
-      expect(seen[0].withCredentials).toBe(false)
+      await client.get('-/list')
+      await client.post('-/upload', 'body', { onUploadProgress: () => {} })
+      expect(seen[0].credentials).toBe('omit')
       expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
-    } finally {
-      Object.defineProperty(window, 'parent', {
-        configurable: true,
-        get: () => window,
-      })
-    }
+      expect(seen[1]).toMatchObject({ by: 'xhr', withCredentials: false })
+      expect(authorizationOf(seen[1])).toBe(`Bearer ${TOKEN}`)
+    })
   })
 
   it('keeps cookies outside the shell', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'chat' })
-    const { seen, adapter } = captureAdapter()
-    await client.get('-/list', { adapter })
-    expect(seen[0].withCredentials).toBe(true)
+    await client.get('-/list')
+    await client.post('-/upload', 'body', { onUploadProgress: () => {} })
+    expect(seen[0].credentials).toBe('include')
+    expect(seen[1]).toMatchObject({ by: 'xhr', withCredentials: true })
   })
 
   it('withholds the token from an absolute foreign URL', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'feeds' })
-    const { seen, adapter } = captureAdapter()
-    await client.get('https://attacker.example/x', { adapter })
+    await client.get('https://attacker.example/x')
     expect(authorizationOf(seen[0])).toBeUndefined()
   })
 })
 
 // Where a request actually lands, not just what it carries. Every test above
 // reads headers, so nothing pinned the resolved URL, and a change that sent
-// class-level calls to the origin root passed the whole file. getUri is
-// axios's own public resolver, so these assert the real combination rather
-// than a restatement of it.
+// class-level calls to the origin root passed the whole file. These read the
+// URL the client handed to fetch(), so they assert the real combination
+// rather than a restatement of it.
 describe('app client URL resolution', () => {
   const uriOf = async (appName: string, url: string) => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName })
-    const { seen, adapter } = captureAdapter()
-    await client.get(url, { adapter })
-    return client.instance.getUri(seen[0])
+    await client.get(url)
+    return seen[0].url
   }
 
   // The regression: a leading slash is app-relative here, not origin-root.
@@ -171,9 +183,8 @@ describe('app client URL resolution', () => {
 describe('apiClient URL resolution', () => {
   it('sends a core endpoint to the origin root', async () => {
     const { apiClient } = await import('./api-client')
-    const { seen, adapter } = captureAdapter()
-    await apiClient.get('/_/identity', { adapter })
-    expect(apiClient.getUri(seen[0])).toBe('/_/identity')
+    await apiClient.get('/_/identity')
+    expect(seen[0].url).toBe('/_/identity')
   })
 })
 
@@ -239,13 +250,11 @@ describe('app endpoint tables resolve under their own app', async () => {
 
       const { createAppClient } = await import('./create-app-client')
       const client = createAppClient({ appName: app })
-      const resolved = await Promise.all(
-        paths.map(async (path) => {
-          const { seen, adapter } = captureAdapter()
-          await client.get(path, { adapter })
-          return [path, client.instance.getUri(seen[0])] as const
-        })
-      )
+      const resolved: Array<readonly [string, string]> = []
+      for (const path of paths) {
+        await client.get(path)
+        resolved.push([path, seen[seen.length - 1].url])
+      }
       for (const [path, uri] of resolved) {
         expect(uri, `${path} should resolve under /${app}/`).toMatch(
           new RegExp(`^/${app}/`)

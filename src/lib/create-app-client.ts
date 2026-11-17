@@ -1,17 +1,13 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import axios, {
-  type AxiosRequestConfig,
-  type InternalAxiosRequestConfig,
-} from 'axios'
 import { getApiBasepath, getAppPath, isDomainEntityRouting } from './app-path'
 import { isInShell } from './shell-bridge'
 import { useAuthStore } from '../stores/auth-store'
-import { attachApiResponseInterceptors } from './api-response-interceptors'
-import { clearContentTypeHeader } from './clear-content-type-header'
+import { createApiResponseHandlers } from './api-response-interceptors'
+import { mergeHeaders, type HttpRequestConfig, type HttpResponse } from './http'
+import { createHttpClient, type HttpMethodConfig } from './http-client'
 import { isSameOriginRequest } from './safe-navigation'
-import { shellAdapter } from './shell-fetch'
 
 export interface AppClientOptions {
   /**
@@ -25,25 +21,14 @@ export interface AppClientOptions {
 }
 
 /**
- * Creates a standardized axios instance for a Mochi application.
+ * Creates the request client for a Mochi application.
  * This ensures consistent auth token injection and base URL configuration.
  */
 export function createAppClient({
   appName,
   timeout = 30000,
 }: AppClientOptions = {}) {
-  const client = axios.create({
-    timeout,
-    // Inside the shell, requests go through the shell page (shell-fetch.ts).
-    adapter: shellAdapter,
-    withCredentials: true,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-  })
-
-  client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const prepare = (config: HttpRequestConfig): HttpRequestConfig => {
     // If baseURL is not already set and we have an appName or can getAppPath
     if (!config.baseURL) {
       if (isDomainEntityRouting()) {
@@ -64,17 +49,13 @@ export function createAppClient({
       }
     }
 
-    // Remove Content-Type for FormData so axios can set the multipart boundary
-    if (config.data instanceof FormData) {
-      clearContentTypeHeader(config.headers)
-    }
-
     // A leading slash does NOT mean "origin root" here. App endpoint tables
-    // write entity paths as `/${id}/-/action`, and axios combines those onto
-    // the app baseURL, which is what they need. Resetting baseURL for them sent
-    // every class-level call (`/-/list`) to the origin root, where it matched
-    // the SPA catch-all and returned HTML with a 200. Apps reaching core's
-    // /_/... endpoints go through apiClient, which applies that rule itself.
+    // write entity paths as `/${id}/-/action`, and buildFullPath combines
+    // those onto the app baseURL, which is what they need. Resetting baseURL
+    // for them sent every class-level call (`/-/list`) to the origin root,
+    // where it matched the SPA catch-all and returned HTML with a 200. Apps
+    // reaching core's /_/... endpoints go through apiClient, which applies
+    // that rule itself.
     // In sandboxed iframe, cookies are unavailable — always use Bearer auth only
     if (isInShell()) {
       config.withCredentials = false
@@ -84,25 +65,41 @@ export function createAppClient({
     const token = useAuthStore.getState().token
 
     if (token && isSameOriginRequest(config.baseURL, config.url)) {
-      config.headers.Authorization = token.startsWith('Bearer ')
-        ? token
-        : `Bearer ${token}`
+      config.headers = mergeHeaders(config.headers, {
+        Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`,
+      })
     }
 
     return config
+  }
+
+  // Inside the shell, requests go through the shell page (shell-fetch.ts).
+  const client = createHttpClient({
+    defaults: {
+      timeout,
+      withCredentials: true,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+    },
+    prepare,
+    handlers: createApiResponseHandlers({
+      defaultShowGlobalErrorToast: false,
+      suppress401Handling: isInShell(),
+    }),
   })
 
-  attachApiResponseInterceptors(client, {
-    defaultShowGlobalErrorToast: false,
-    suppress401Handling: isInShell(),
-  })
-
-  // We wrap the client to provide a cleaner async API (returning response.data)
+  // The methods answer with the response body. request answers with the
+  // whole response, for a caller that needs its status or headers.
   return {
-    instance: client,
+    request: <TResponse>(
+      config: HttpRequestConfig
+    ): Promise<HttpResponse<TResponse>> => client.request<TResponse>(config),
+
     get: async <TResponse>(
       url: string,
-      config?: Omit<AxiosRequestConfig, 'url' | 'method'>
+      config?: Omit<HttpRequestConfig, 'url' | 'method'>
     ): Promise<TResponse> => {
       const response = await client.get<TResponse>(url, config)
       return response.data
@@ -111,33 +108,33 @@ export function createAppClient({
     post: async <TResponse, TBody = unknown>(
       url: string,
       data?: TBody,
-      config?: Omit<AxiosRequestConfig<TBody>, 'url' | 'method' | 'data'>
+      config?: HttpMethodConfig<TBody>
     ): Promise<TResponse> => {
-      const response = await client.post<TResponse>(url, data, config)
+      const response = await client.post<TResponse, TBody>(url, data, config)
       return response.data
     },
 
     put: async <TResponse, TBody = unknown>(
       url: string,
       data?: TBody,
-      config?: Omit<AxiosRequestConfig<TBody>, 'url' | 'method' | 'data'>
+      config?: HttpMethodConfig<TBody>
     ): Promise<TResponse> => {
-      const response = await client.put<TResponse>(url, data, config)
+      const response = await client.put<TResponse, TBody>(url, data, config)
       return response.data
     },
 
     patch: async <TResponse, TBody = unknown>(
       url: string,
       data?: TBody,
-      config?: Omit<AxiosRequestConfig<TBody>, 'url' | 'method' | 'data'>
+      config?: HttpMethodConfig<TBody>
     ): Promise<TResponse> => {
-      const response = await client.patch<TResponse>(url, data, config)
+      const response = await client.patch<TResponse, TBody>(url, data, config)
       return response.data
     },
 
     delete: async <TResponse>(
       url: string,
-      config?: Omit<AxiosRequestConfig, 'url' | 'method'>
+      config?: Omit<HttpRequestConfig, 'url' | 'method'>
     ): Promise<TResponse> => {
       const response = await client.delete<TResponse>(url, config)
       return response.data

@@ -3,12 +3,14 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { i18n } from '@lingui/core'
-import { AxiosError } from 'axios'
+import { fakeNetwork } from '../test/fake-network'
+import { useAuthStore } from '../stores/auth-store'
+import { HttpError, httpErrors } from './http'
 import apiClient from './api-client'
 import { request, requestHelpers, ApiError } from './request'
 
 // request() turns three shapes of failure into one ApiError: a transport or
-// HTTP failure from axios, a root-level status envelope, and a status
+// HTTP failure from the client, a root-level status envelope, and a status
 // envelope nested under data. Each is logged once in development.
 describe('request', () => {
   let errorLog: ReturnType<typeof vi.spyOn>
@@ -79,6 +81,48 @@ describe('request', () => {
   })
 })
 
+// An ApiError keeps the failed request as its cause, and that cause is logged:
+// it carries everything but the session token.
+describe('the cause of an ApiError', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    useAuthStore.setState({ token: '' })
+  })
+
+  for (const [by, extra] of Object.entries({
+    fetch: {},
+    xhr: { onUploadProgress: () => {} },
+  })) {
+    it(`has no Authorization header (${by})`, async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.spyOn(console, 'log').mockImplementation(() => {})
+      const { sent } = fakeNetwork(() => ({ status: 403, body: { e: 1 } }))
+      useAuthStore.setState({ token: 'secret' })
+
+      const failure = (await request({
+        method: 'POST',
+        url: '/_/x',
+        data: 'body',
+        ...extra,
+      }).catch((e: unknown) => e)) as ApiError
+
+      expect(sent[0]).toMatchObject({ by })
+      expect(sent[0].headers.authorization).toBe('Bearer secret')
+      expect(failure).toBeInstanceOf(ApiError)
+      expect(failure.status).toBe(403)
+      expect(failure.data).toEqual({ e: 1 })
+      const cause = failure.cause as HttpError
+      for (const config of [cause.config, cause.response?.config]) {
+        expect(config?.headers).toEqual({
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        })
+      }
+    })
+  }
+})
+
 // The sign-in page sends its first requests before its catalogue has loaded,
 // and Lingui throws when a message is translated with no active locale: a
 // failure then is still an ApiError carrying its status, never Lingui's error.
@@ -93,13 +137,18 @@ describe('request before a locale is active', () => {
 
   it('turns an HTTP failure into an ApiError with its status', async () => {
     vi.spyOn(apiClient, 'request').mockRejectedValue(
-      new AxiosError('', AxiosError.ERR_BAD_REQUEST, undefined, undefined, {
-        data: {},
-        status: 400,
-        statusText: '',
-        headers: {},
-        config: {} as never,
-      })
+      new HttpError(
+        '',
+        'ERR_BAD_REQUEST',
+        {},
+        {
+          data: {},
+          status: 400,
+          statusText: '',
+          headers: {},
+          config: {},
+        }
+      )
     )
     const failure = (await request({ url: '/x' }).catch(
       (e: unknown) => e
@@ -110,13 +159,18 @@ describe('request before a locale is active', () => {
 
   it("turns a raw request's failure into an ApiError with its status too", async () => {
     vi.spyOn(apiClient, 'request').mockRejectedValue(
-      new AxiosError('', AxiosError.ERR_BAD_RESPONSE, undefined, undefined, {
-        data: {},
-        status: 503,
-        statusText: '',
-        headers: {},
-        config: {} as never,
-      })
+      new HttpError(
+        '',
+        'ERR_BAD_RESPONSE',
+        {},
+        {
+          data: {},
+          status: 503,
+          statusText: '',
+          headers: {},
+          config: {},
+        }
+      )
     )
     const failure = (await requestHelpers
       .getRaw('/x')
@@ -127,7 +181,7 @@ describe('request before a locale is active', () => {
 
   it('turns a network failure into an ApiError too', async () => {
     vi.spyOn(apiClient, 'request').mockRejectedValue(
-      new AxiosError('Network Error', AxiosError.ERR_NETWORK)
+      httpErrors.network({}, new TypeError('Failed to fetch'))
     )
     const failure = (await request({ url: '/x' }).catch(
       (e: unknown) => e

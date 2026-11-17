@@ -6,7 +6,7 @@
 // Every word comes from the app, so nothing here lands in other apps' catalogs.
 
 import { useEffect, useRef, useState } from 'react'
-import type { AxiosProgressEvent } from 'axios'
+import type { TransferProgress } from '../../lib/http'
 import { Copy } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -86,7 +86,7 @@ export interface EntityDuplicateApi extends EntityArchiveApi {
   importData: (
     entityId: string,
     file: Blob,
-    onProgress?: (event: AxiosProgressEvent) => void,
+    onProgress?: (event: TransferProgress) => void,
     design?: boolean,
     signal?: AbortSignal
   ) => Promise<unknown>
