@@ -9,14 +9,19 @@ import { fakeNetwork } from '../test/fake-network'
 // whose document is out of reach, and every message from it carries it as the
 // source (see shell-bridge.test.ts).
 let posted: Array<Record<string, unknown>>
+// The ports each message to the shell transferred, by message.
+let transferred: Map<Record<string, unknown>, unknown[]>
 
 beforeEach(() => {
   posted = []
+  transferred = new Map()
   // One object for the whole test: the bridge compares every message's source
   // with window.parent by identity.
   const parent = {
-    postMessage: (message: unknown) => {
+    postMessage: (message: unknown, _origin?: string, transfer?: unknown[]) => {
       posted.push(message as Record<string, unknown>)
+      if (transfer)
+        transferred.set(message as Record<string, unknown>, transfer)
     },
     get document(): never {
       throw new DOMException('Blocked', 'SecurityError')
@@ -84,7 +89,9 @@ async function answer(reply: Record<string, unknown>) {
 // bridge and progress flags unless told otherwise, then the app's clients.
 // The direct path is the browser's fetch() and XMLHttpRequest, replaced here
 // by stand-ins that record the request and answer 'direct'.
-async function boot(options: { bridge?: boolean; progress?: boolean } = {}) {
+async function boot(
+  options: { bridge?: boolean; progress?: boolean; port?: boolean } = {}
+) {
   const bridge = await import('./shell-bridge')
   const init = bridge.initShellBridge()
   fromParent({
@@ -95,6 +102,7 @@ async function boot(options: { bridge?: boolean; progress?: boolean } = {}) {
     ...(options.bridge === false || options.progress === false
       ? {}
       : { progress: true }),
+    ...(options.port ? { port: true } : {}),
   })
   await init
   const { useAuthStore } = await import('../stores/auth-store')
@@ -637,5 +645,81 @@ describe('ending a carried request', () => {
     const error = (await result.catch((e: unknown) => e)) as HttpError
     expect(error.code).toBe('ERR_NETWORK')
     expect(error.response).toBeUndefined()
+  })
+})
+
+describe('a page’s own channel to the shell', () => {
+  // The shell's end of the channel the page sent it, and what has come on it.
+  async function channel() {
+    await vi.waitFor(() =>
+      expect(posted.filter((m) => m.type === 'fetch.port')).toHaveLength(1)
+    )
+    const offer = posted.find((m) => m.type === 'fetch.port')!
+    const port = transferred.get(offer)?.[0] as MessagePort
+    const heard: Array<Record<string, unknown>> = []
+    port.onmessage = (event) => heard.push(event.data)
+    return { port, heard }
+  }
+
+  it('carries requests on it, answered on it, under a shell that takes one', async () => {
+    const { client, direct } = await boot({ port: true })
+    const first = client.get('list')
+    const { port, heard } = await channel()
+    await vi.waitFor(() => expect(heard).toHaveLength(1))
+    expect(heard[0]).toMatchObject({ type: 'fetch', method: 'GET' })
+    expect(requests()).toEqual([])
+
+    // An answer to the frame's window, as a page that took this one's place
+    // would see posted, settles nothing: only the channel's does.
+    fromParent({
+      type: 'fetch.result',
+      id: heard[0].id,
+      status: 200,
+      headers: [],
+      body: json('through the window'),
+    })
+    port.postMessage({
+      type: 'fetch.result',
+      id: heard[0].id,
+      status: 200,
+      headers: [['content-type', 'application/json']],
+      body: json({ data: 'on the channel' }),
+    })
+    expect(await first).toEqual({ data: 'on the channel' })
+
+    // One channel for the page, however many requests it carries.
+    const second = client.get('other')
+    await vi.waitFor(() => expect(heard).toHaveLength(2))
+    port.postMessage({
+      type: 'fetch.result',
+      id: heard[1].id,
+      status: 200,
+      headers: [],
+      body: json('second'),
+    })
+    expect(await second).toBe('second')
+    expect(posted.filter((m) => m.type === 'fetch.port')).toHaveLength(1)
+    expect(direct).toHaveLength(0)
+  })
+
+  it('ends a carried request on it', async () => {
+    const { client } = await boot({ port: true })
+    const controller = new AbortController()
+    const result = client.get('list', { signal: controller.signal })
+    const { heard } = await channel()
+    await vi.waitFor(() => expect(heard).toHaveLength(1))
+    controller.abort()
+    await result.catch(() => undefined)
+    await vi.waitFor(() => expect(heard).toHaveLength(2))
+    expect(heard[1]).toEqual({ type: 'fetch.abort', id: heard[0].id })
+    expect(aborts()).toEqual([])
+  })
+
+  it('is not made under a shell that takes none', async () => {
+    const { client } = await boot()
+    const result = client.get('list')
+    await answer({ status: 200, headers: [], body: json('window') })
+    expect(await result).toBe('window')
+    expect(posted.filter((m) => m.type === 'fetch.port')).toEqual([])
   })
 })
