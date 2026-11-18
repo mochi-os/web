@@ -25,3 +25,9 @@ export function loaderScript(
   manifest: Manifest,
   styles?: string[]
 ): Promise<string>
+
+/**
+ * Drops each font's WOFF file where its WOFF2 is offered beside it, from the
+ * stylesheets' src lists and from the bundle.
+ */
+export function woffDrop(bundle: Record<string, unknown>): void

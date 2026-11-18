@@ -116,6 +116,12 @@ type ShellInitData = {
    * once the whole body is in.
    */
   progress?: boolean
+  /**
+   * Whether the shell takes carried requests on a channel of the page's own
+   * (fetch.port), whose answers no later page in the frame can hear. Absent
+   * from an older shell, and requests then go to the frame's window.
+   */
+  port?: boolean
   sidebarOpen?: boolean
   /**
    * The width the user dragged the sidebar to, in CSS pixels, shared by every
