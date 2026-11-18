@@ -459,16 +459,21 @@ function fallbackExecCommandCopy(text: string): boolean {
   textArea.style.position = 'fixed'
   textArea.style.left = '-999999px'
   textArea.style.top = '-999999px'
-  // Append inside the open modal dialog rather than document.body: a Radix
-  // Dialog traps focus in its content scope, and a textarea outside it loses
-  // focus, so execCommand('copy') returns true having copied nothing.
-  const dialog =
+  // Append inside the open modal dialog or menu rather than document.body: a
+  // Radix Dialog traps focus in its content scope, and so does a DropdownMenu
+  // or ContextMenu while open - and a menu item's onSelect runs before the menu
+  // closes. A textarea outside the trap loses focus, so execCommand('copy')
+  // returns true having copied nothing. The nearest scope to the focused
+  // element wins, so a menu opened inside a dialog takes the textarea itself.
+  const trap =
     (activeElement &&
-      activeElement.closest('[role="dialog"], [role="alertdialog"]')) ||
+      activeElement.closest(
+        '[role="dialog"], [role="alertdialog"], [role="menu"]'
+      )) ||
     document.querySelector(
-      '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
+      '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], [role="menu"][data-state="open"]'
     )
-  const container = dialog || document.body
+  const container = trap || document.body
   container.appendChild(textArea)
 
   textArea.focus()
