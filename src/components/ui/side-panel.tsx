@@ -221,11 +221,22 @@ function SidePanelHeader({
       data-slot='side-panel-header'
       className={cn(
         'flex shrink-0 items-center gap-3 border-b px-6 py-4',
+        // Docked, it sits beside the page's own header, so it takes that
+        // header's height (page-header.tsx: py-2 round a min-h-11 row) and
+        // the two bottom borders run on as one line.
+        docked && 'py-2',
         className
       )}
       {...props}
     >
-      <div className='flex min-w-0 flex-1 items-center gap-2'>{children}</div>
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2',
+          docked && 'min-h-11'
+        )}
+      >
+        {children}
+      </div>
       {actions && (
         <div className='flex shrink-0 items-center gap-1'>{actions}</div>
       )}

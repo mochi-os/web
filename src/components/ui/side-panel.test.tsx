@@ -210,6 +210,16 @@ describe('SidePanel docked', () => {
     expect(screen.getByLabelText('Message')).not.toHaveAttribute('aria-hidden')
   })
 
+  // Beside the page's own header, the two bottom borders run as one line.
+  it("takes the page header's height", () => {
+    render(<Docked onOpenChange={vi.fn()} />)
+
+    const header = document.querySelector('[data-slot="side-panel-header"]')
+    expect(header).toHaveClass('py-2')
+    expect(header).not.toHaveClass('py-4')
+    expect(header?.firstElementChild).toHaveClass('min-h-11')
+  })
+
   it('renders nothing while closed', () => {
     render(<Docked onOpenChange={vi.fn()} open={false} />)
 
