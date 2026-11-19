@@ -7,6 +7,7 @@
 // panel with nothing to describe.
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { createPortal } from 'react-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { i18n } from '@lingui/core'
 import { I18nProvider } from '@lingui/react'
@@ -165,5 +166,86 @@ describe('SidePanel', () => {
     render(<Fixture onOpenChange={vi.fn()} />)
 
     expect(warn).not.toHaveBeenCalled()
+  })
+})
+
+describe('SidePanel docked', () => {
+  function Docked({
+    onOpenChange,
+    open = true,
+  }: {
+    onOpenChange: (open: boolean) => void
+    open?: boolean
+  }) {
+    return (
+      <I18nProvider i18n={i18n}>
+        <main>
+          <input aria-label='Message' />
+        </main>
+        <SidePanel docked open={open} onOpenChange={onOpenChange}>
+          <SidePanelHeader actions={<button>Watch</button>}>
+            <SidePanelTitle>Thread</SidePanelTitle>
+          </SidePanelHeader>
+          <SidePanelBody>
+            <input aria-label='Reply' />
+            {/* A menu opened from the pane lives outside it in the page. */}
+            {createPortal(<input aria-label='Menu' />, document.body)}
+          </SidePanelBody>
+          <SidePanelFooter>Footer</SidePanelFooter>
+        </SidePanel>
+      </I18nProvider>
+    )
+  }
+
+  // Beside the page, not over it: no dialog for the page to be hidden
+  // behind, and the pane is named by its title.
+  it('renders the slots in a named pane, not a dialog', () => {
+    render(<Docked onOpenChange={vi.fn()} />)
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.querySelector('[aria-modal]')).toBeNull()
+    const pane = screen.getByRole('complementary', { name: 'Thread' })
+    expect(pane).toHaveTextContent('Watch')
+    expect(pane).toHaveTextContent('Footer')
+    expect(screen.getByLabelText('Message')).not.toHaveAttribute('aria-hidden')
+  })
+
+  it('renders nothing while closed', () => {
+    render(<Docked onOpenChange={vi.fn()} open={false} />)
+
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+  })
+
+  it('closes from the close button in the header', () => {
+    const onOpenChange = vi.fn()
+    render(<Docked onOpenChange={onOpenChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('closes on Escape inside the pane only', () => {
+    const onOpenChange = vi.fn()
+    render(<Docked onOpenChange={onOpenChange} />)
+
+    fireEvent.keyDown(screen.getByLabelText('Message'), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByLabelText('Menu'), { key: 'Escape' })
+    expect(onOpenChange).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(screen.getByLabelText('Reply'), { key: 'Escape' })
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  // The reply box, a menu or an edit box that used Escape for itself.
+  it('stays open on an Escape something inside already handled', () => {
+    const onOpenChange = vi.fn()
+    render(<Docked onOpenChange={onOpenChange} />)
+    const reply = screen.getByLabelText('Reply')
+    reply.addEventListener('keydown', (event) => event.preventDefault())
+
+    fireEvent.keyDown(reply, { key: 'Escape' })
+
+    expect(onOpenChange).not.toHaveBeenCalled()
   })
 })

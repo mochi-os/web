@@ -6,6 +6,11 @@
 // holding the primary button or the message field. Each panel fills the three
 // slots and nothing else, so the header height, the close button, the padding
 // and the width steps are the same wherever a panel opens.
+//
+// A panel can also be docked: the same slots in an <aside> that sits in the
+// page's own layout beside the content, with no overlay and no focus trap, so
+// the page next to it stays usable. The caller decides when, usually by
+// screen width, and lays the page out as a row with the panel last.
 
 import * as React from 'react'
 import { t } from '@lingui/core/macro'
@@ -30,7 +35,22 @@ const SIZE_CLASS = {
   xl: 'sm:max-w-3xl',
 } as const
 
+// The docked pane's fixed width, the same step as the sheet's.
+const DOCKED_SIZE_CLASS = {
+  sm: 'w-sm',
+  md: 'w-md',
+  lg: 'w-2xl',
+  xl: 'w-3xl',
+} as const
+
 type SidePanelSize = keyof typeof SIZE_CLASS
+
+// Set inside a docked panel, where the header and title have no Radix Dialog
+// to talk to: the header closes through this, and the title names the pane.
+const DockedContext = React.createContext<{
+  close: () => void
+  titleId: string
+} | null>(null)
 
 type SidePanelProps = Omit<
   React.ComponentProps<typeof SheetContent>,
@@ -54,6 +74,11 @@ type SidePanelProps = Omit<
    * it on.
    */
   dismissOnOutsideClick?: boolean
+  /**
+   * In the page's layout beside the content instead of over it. The page
+   * stays usable, and Escape inside the pane closes it.
+   */
+  docked?: boolean
 }
 
 function SidePanel({
@@ -64,10 +89,24 @@ function SidePanel({
   label,
   description,
   dismissOnOutsideClick = false,
+  docked = false,
   className,
   children,
   ...props
 }: SidePanelProps) {
+  if (docked) {
+    return (
+      <DockedPanel
+        open={open}
+        onOpenChange={onOpenChange}
+        size={size}
+        label={label}
+        className={className}
+      >
+        {children}
+      </DockedPanel>
+    )
+  }
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={modal}>
       <SheetContent
@@ -99,6 +138,63 @@ function SidePanel({
   )
 }
 
+function DockedPanel({
+  open,
+  onOpenChange,
+  size,
+  label,
+  className,
+  children,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  size: SidePanelSize
+  label?: React.ReactNode
+  className?: string
+  children?: React.ReactNode
+}) {
+  const titleId = React.useId()
+  const docked = React.useMemo(
+    () => ({ close: () => onOpenChange(false), titleId }),
+    [onOpenChange, titleId]
+  )
+  if (!open) return null
+  return (
+    <DockedContext.Provider value={docked}>
+      <aside
+        data-slot='side-panel'
+        data-docked=''
+        aria-label={typeof label === 'string' ? label : undefined}
+        aria-labelledby={typeof label === 'string' ? undefined : titleId}
+        className={cn(
+          'bg-background flex h-full shrink-0 flex-col border-s',
+          DOCKED_SIZE_CLASS[size],
+          className
+        )}
+        onKeyDown={(event) => {
+          // Only a key pressed in the pane itself. React passes on keys from
+          // menus and dialogs portalled out of it, and those close themselves.
+          if (
+            event.key !== 'Escape' ||
+            event.defaultPrevented ||
+            !event.currentTarget.contains(event.target as Node)
+          )
+            return
+          event.preventDefault()
+          docked.close()
+        }}
+      >
+        {label && typeof label !== 'string' ? (
+          <span id={titleId} className='sr-only'>
+            {label}
+          </span>
+        ) : null}
+        {children}
+      </aside>
+    </DockedContext.Provider>
+  )
+}
+
 function SidePanelHeader({
   className,
   children,
@@ -108,6 +204,18 @@ function SidePanelHeader({
   /** Buttons that sit before the close button, such as watch or delete. */
   actions?: React.ReactNode
 }) {
+  const docked = React.useContext(DockedContext)
+  const close = (
+    <Button
+      variant='ghost'
+      size='icon'
+      className='size-8 shrink-0'
+      aria-label={t`Close`}
+      onClick={docked?.close}
+    >
+      <ArrowRightToLine className='size-4 rtl:-scale-x-100' />
+    </Button>
+  )
   return (
     <div
       data-slot='side-panel-header'
@@ -123,16 +231,7 @@ function SidePanelHeader({
       )}
       <Tooltip>
         <TooltipTrigger asChild>
-          <SheetClose asChild>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='size-8 shrink-0'
-              aria-label={t`Close`}
-            >
-              <ArrowRightToLine className='size-4 rtl:-scale-x-100' />
-            </Button>
-          </SheetClose>
+          {docked ? close : <SheetClose asChild>{close}</SheetClose>}
         </TooltipTrigger>
         <TooltipContent>{t`Close`}</TooltipContent>
       </Tooltip>
@@ -144,6 +243,21 @@ function SidePanelTitle({
   className,
   ...props
 }: React.ComponentProps<typeof SheetTitle>) {
+  const docked = React.useContext(DockedContext)
+  if (docked) {
+    // The heading SheetTitle would render, naming the pane instead.
+    return (
+      <h2
+        id={docked.titleId}
+        data-slot='side-panel-title'
+        className={cn(
+          'text-foreground min-w-0 truncate text-lg leading-tight font-semibold',
+          className
+        )}
+        {...(props as React.ComponentProps<'h2'>)}
+      />
+    )
+  }
   return (
     <SheetTitle
       data-slot='side-panel-title'
