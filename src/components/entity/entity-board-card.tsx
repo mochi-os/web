@@ -10,7 +10,7 @@ import { EntityAvatar } from '../entity-avatar'
 import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import { decimalPlaces } from '../../lib/locale-format'
-import { getAppPath } from '../../lib/app-path'
+import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
 import type {
   EntityChecklistItem,
   EntityClass,
@@ -201,22 +201,17 @@ export function EntityBoardCard<TObject extends EntityObject>({
         // fall back to the raw entity ID - show the avatar with a skeleton in
         // place of the name until it resolves.
         const name = peopleMap?.[value]
+        const assets = containerId
+          ? entityAddress(() => entityAssets.user(containerId, value))
+          : undefined
         return (
           <span
             key={field.id}
             className='inline-flex items-center gap-1.5 text-[10px] text-muted-foreground'
           >
             <EntityAvatar
-              src={
-                containerId
-                  ? `${getAppPath()}/${containerId}/-/user/${value}/asset/avatar`
-                  : undefined
-              }
-              styleUrl={
-                containerId
-                  ? `${getAppPath()}/${containerId}/-/user/${value}/asset/style`
-                  : undefined
-              }
+              src={assets && `${assets}/avatar`}
+              styleUrl={assets && `${assets}/style`}
               fingerprint={containerId ? undefined : value}
               seed={value}
               name={name}

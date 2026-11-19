@@ -269,6 +269,24 @@ describe('a GET carried for bytes the page uses', () => {
     expect(posted.find((m) => m.type === 'fetch')?.progress).toBeUndefined()
   })
 
+  it('carries nothing the browser would send to another path', async () => {
+    await boot()
+    const { shellGet } = await import('./shell-fetch')
+    for (const url of [
+      '/feeds/assets/../-/delete',
+      '/feeds/assets/%2e%2e/-/delete',
+      '/feeds/assets/..\\-\\delete',
+      '/feeds/x%2F-%2Fdelete/asset',
+    ]) {
+      expect(await shellGet(url, [])).toBeNull()
+    }
+    expect(requests()).toHaveLength(0)
+    // CONTROL: the same shell carries the path as written.
+    const plain = shellGet('/feeds/assets/photo.jpg', [])
+    await answer({ status: 200, headers: [], body: json({}) })
+    expect((await plain)?.status).toBe(200)
+  })
+
   it('leaves one that wants progress to the caller under a shell that reports none', async () => {
     await boot({ progress: false })
     const { shellGet } = await import('./shell-fetch')
@@ -473,8 +491,7 @@ describe('requests that go direct', () => {
     const { apiClient, direct } = await boot()
     await apiClient.get('/people/abc/-/style')
     await apiClient.post('/_/identity')
-    await apiClient.get('https://elsewhere.example/feeds/list')
-    expect(direct).toHaveLength(3)
+    expect(direct).toHaveLength(2)
     expect(requests()).toHaveLength(0)
   })
 
@@ -529,17 +546,27 @@ describe('the root app’s page', () => {
     ['a core route', '/_/identity'],
     ['the page', '/'],
     ['a root path without its slash', '/assets'],
-    ['traversal', '/assets/../feeds/-/list'],
-    ['encoded traversal', '/assets/%2e%2e/feeds/-/list'],
-    ['an encoded slash', '/assets/x%2F..%2F..%2Ffeeds'],
-    ['an encoded slash in the first segment', '/assets%2Ffeeds/x'],
     ['an encoded backslash', '/assets/x%5C..%5Cfeeds'],
-    ['a double slash', '/-//feeds/-/list'],
-    ['another origin', 'https://elsewhere.example/assets/index.js'],
   ])('sends %s direct', async (_name, path) => {
     const { apiClient, direct } = await boot()
     await apiClient.get(path)
     expect(direct).toHaveLength(1)
+    expect(requests()).toHaveLength(0)
+  })
+
+  // The client refuses these before the shell is asked: each would reach a
+  // path other than the one written, or another server.
+  it.each([
+    ['traversal', '/assets/../feeds/-/list'],
+    ['encoded traversal', '/assets/%2e%2e/feeds/-/list'],
+    ['an encoded slash', '/assets/x%2F..%2F..%2Ffeeds'],
+    ['an encoded slash in the first segment', '/assets%2Ffeeds/x'],
+    ['a double slash', '/-//feeds/-/list'],
+    ['another origin', 'https://elsewhere.example/assets/index.js'],
+  ])('sends %s nowhere', async (_name, path) => {
+    const { apiClient, direct } = await boot()
+    await expect(apiClient.get(path)).rejects.toThrow(Error)
+    expect(direct).toHaveLength(0)
     expect(requests()).toHaveLength(0)
   })
 

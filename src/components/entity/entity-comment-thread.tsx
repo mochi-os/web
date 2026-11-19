@@ -20,7 +20,7 @@ import {
 } from '../ui/dropdown-menu'
 import { EntityAvatar } from '../entity-avatar'
 import { useFormat } from '../../hooks/use-format'
-import { getAppPath } from '../../lib/app-path'
+import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
 import { MentionTextarea, renderMentions } from '../mention-textarea'
 import { ENTITY_LIMIT } from '../../lib/entity-api'
 import { textUnchanged } from '../../lib/change-detection'
@@ -143,8 +143,8 @@ export function EntityCommentThread({
 
   const assets =
     avatars?.get(comment.author) ??
-    `${getAppPath()}/${containerId}/-/comment/${comment.id}/asset`
-  const assetUrl = (slot: string) => `${assets}/${slot}`
+    entityAddress(() => entityAssets.comment(containerId, comment.id))
+  const assetUrl = (slot: string) => assets && `${assets}/${slot}`
   const avatar = (
     <EntityAvatar
       src={assetUrl('avatar')}

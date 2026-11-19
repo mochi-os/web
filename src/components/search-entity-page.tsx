@@ -141,6 +141,7 @@ export function FindEntityPage({
       const base = `${window.location.origin}${getAppPath()}/`
       const url = new URL(searchEndpoint, base)
       url.searchParams.set('search', debouncedSearch)
+      // method-ok: searchEndpoint is each app's directory search, all marked read
       const response = await requestHelpers.get<
         DirectoryEntry[] | { results: DirectoryEntry[] }
       >(url.href)

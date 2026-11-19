@@ -248,7 +248,7 @@ export function NotificationsSection({
                 toast.error(t`Blocked navigation to untrusted link`)
                 return
               }
-              window.open(target, '_blank', 'noopener,noreferrer')
+              window.open(target, '_blank', 'noopener,noreferrer') // method-ok: a notification's link opens a page
             }}
             actions={actions}
           />

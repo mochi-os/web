@@ -21,7 +21,7 @@ export function systemSettingsQuery(endpoint: string) {
   return queryOptions({
     queryKey: ['system', 'settings', endpoint],
     queryFn: async () => {
-      const response = await apiClient.get<SystemSettingsData>(endpoint)
+      const response = await apiClient.get<SystemSettingsData>(endpoint) // method-ok: systemSettingsQuery itself; the gate scans its callers
       return response.data
     },
     staleTime: 3_000,
@@ -29,7 +29,7 @@ export function systemSettingsQuery(endpoint: string) {
 }
 
 export function useSystemSettingsData(endpoint: string) {
-  return useQuery(systemSettingsQuery(endpoint))
+  return useQuery(systemSettingsQuery(endpoint)) // method-ok: useSystemSettingsData itself; the gate scans its callers
 }
 
 export function useSetSystemSetting(endpoint: string) {

@@ -27,7 +27,7 @@ import { Button } from '../ui/button'
 import { ConfirmDialog } from '../confirm-dialog'
 import { UploadProgress } from '../ui/upload-progress'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
-import { getAppPath } from '../../lib/app-path'
+import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
 import { useFormat } from '../../hooks/use-format'
 import { useImageObjectUrls } from '../../hooks/use-image-object-urls'
 import {
@@ -137,17 +137,25 @@ export function EntityObjectAttachments({
     e.target.value = ''
   }
 
-  const basePath = `${getAppPath()}/${containerId}/-/attachments/`
-  const attUrl = (id: string, suffix = '') =>
-    authenticatedUrl(`${basePath}${id}${suffix}`)
+  // Undefined for an id that cannot be one path segment: such an attachment
+  // is listed as a file whose download fails, never fetched from another path.
+  const attUrl = (id: string, variant?: 'thumbnail') => {
+    const address = entityAddress(() =>
+      entityAssets.attachment(containerId, id, variant)
+    )
+    return address && authenticatedUrl(address)
+  }
   // The shell sandbox ignores <a download>; the parent window saves it instead.
   const download = async (file: AttachmentData) => {
-    const ok = await shellDownload(attUrl(file.id), file.name)
+    const url = attUrl(file.id)
+    const ok = url ? await shellDownload(url, file.name) : false // method-ok: an attachment's address, an asset route
     if (!ok) toast.error(t`Download failed`)
   }
   const attachments: AttachmentData[] = data || []
-  const images = attachments.filter((a) => isImage(a.type) || isVideo(a.type))
-  const files = attachments.filter((a) => !isImage(a.type) && !isVideo(a.type))
+  const shown = (a: AttachmentData) =>
+    (isImage(a.type) || isVideo(a.type)) && attUrl(a.id) !== undefined
+  const images = attachments.filter(shown)
+  const files = attachments.filter((a) => !shown(a))
 
   if (isLoading) {
     return (
@@ -180,8 +188,8 @@ export function EntityObjectAttachments({
         {images.length > 0 && (
           <AttachmentGallery
             attachments={images}
-            getUrl={(att) => attUrl(att.id)}
-            getThumbnailUrl={(att) => attUrl(att.id, '/thumbnail')}
+            getUrl={(att) => attUrl(att.id) ?? ''}
+            getThumbnailUrl={(att) => attUrl(att.id, 'thumbnail') ?? ''}
             rowHeight={80}
             hideFiles
             renderMediaOverlay={

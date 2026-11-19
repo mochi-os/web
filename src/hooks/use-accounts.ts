@@ -39,22 +39,26 @@ function checkPermissionError(error: unknown): void {
   }
 }
 
-// The two builders below silence query/exhaustive-deps: the request's query
-// string is derived from capability, which is already in the key, so it
-// varies with everything the request varies with. The rule cannot follow a
-// derived value.
+// An accounts action under the app's own path: the caller's getAppPath(), or
+// '' on a domain route. No id goes into it; an account's id goes in the body.
+function endpoint(appBase: string, action: string): string {
+  return `${appBase}/-/accounts/${action}`
+}
+
+// The capability, when one is asked for, as the query.
+const only = (capability?: string) =>
+  capability ? { params: { capability } } : undefined
 
 /** The account providers an app offers, as useAccounts and a route's loader
  * ask for them. */
 export function accountProvidersQuery(appBase: string, capability?: string) {
-  const queryParams = capability ? `?capability=${capability}` : ''
-  // eslint-disable-next-line @tanstack/query/exhaustive-deps
   return queryOptions({
     queryKey: ['accounts', 'providers', appBase, capability],
     queryFn: async () => {
       try {
         const res = await requestHelpers.get<Provider[]>(
-          `${appBase}/-/accounts/providers${queryParams}`
+          endpoint(appBase, 'providers'),
+          only(capability)
         )
         return res || []
       } catch (error) {
@@ -70,14 +74,13 @@ export function accountProvidersQuery(appBase: string, capability?: string) {
  * them. Fresh only across a page mounting after its loader, so an account
  * added or removed in another tab shows on the next visit. */
 export function accountListQuery(appBase: string, capability?: string) {
-  const queryParams = capability ? `?capability=${capability}` : ''
-  // eslint-disable-next-line @tanstack/query/exhaustive-deps
   return queryOptions({
     queryKey: ['accounts', 'list', appBase, capability],
     queryFn: async () => {
       try {
         const res = await requestHelpers.get<Account[]>(
-          `${appBase}/-/accounts/list${queryParams}`
+          endpoint(appBase, 'list'),
+          only(capability)
         )
         return res || []
       } catch (error) {
@@ -137,7 +140,7 @@ export function useAccounts(
       formData.append('existing', addToExisting ? '1' : '0')
 
       const res = await requestHelpers.post<Account>(
-        `${appBase}/-/accounts/add`,
+        endpoint(appBase, 'add'),
         formData.toString(),
         formPost()
       )
@@ -156,7 +159,7 @@ export function useAccounts(
       formData.append('id', id)
 
       const res = await requestHelpers.post<boolean>(
-        `${appBase}/-/accounts/remove`,
+        endpoint(appBase, 'remove'),
         formData.toString(),
         formPost()
       )
@@ -181,7 +184,7 @@ export function useAccounts(
       fields: Record<string, string>
     }) => {
       const res = await requestHelpers.post<boolean>(
-        `${appBase}/-/accounts/update`,
+        endpoint(appBase, 'update'),
         { id, ...fields },
         NO_TOAST
       )
@@ -203,7 +206,7 @@ export function useAccounts(
       }
 
       const res = await requestHelpers.post<boolean>(
-        `${appBase}/-/accounts/verify`,
+        endpoint(appBase, 'verify'),
         formData.toString(),
         formPost()
       )
@@ -222,7 +225,7 @@ export function useAccounts(
       formData.append('id', id)
 
       const res = await requestHelpers.post<AccountTestResult>(
-        `${appBase}/-/accounts/test`,
+        endpoint(appBase, 'test'),
         formData.toString(),
         formPost()
       )

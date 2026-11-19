@@ -97,7 +97,7 @@ export async function classifyAttachmentFailure(
   url: string
 ): Promise<'available' | 'unavailable' | 'missing'> {
   try {
-    const response = await fetch(url, { credentials: 'same-origin' })
+    const response = await fetch(url, { credentials: 'same-origin' }) // method-ok: classifyAttachmentFailure itself; the gate scans its callers
     void response.body?.cancel().catch(() => {})
     if (response.status >= 200 && response.status < 300) {
       const type = response.headers?.get('content-type') ?? ''

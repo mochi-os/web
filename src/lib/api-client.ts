@@ -10,6 +10,7 @@ import {
 } from './api-response-interceptors'
 import { mergeHeaders, type HttpError, type HttpRequestConfig } from './http'
 import { createHttpClient } from './http-client'
+import { Refusal } from './request-path'
 import { isSameOriginRequest } from './safe-navigation'
 
 export { setLogoutHandler }
@@ -34,6 +35,16 @@ export const apiClient = createHttpClient({
     // This includes global auth endpoints (/_/) and cross-app requests (/chat/, /friends/, etc.)
     if (config.url?.startsWith('/')) {
       config.baseURL = ''
+    }
+
+    // This server only: no caller means another, and a route parameter that
+    // decoded to `//host` would otherwise send the request there and have its
+    // answer trusted as this server's.
+    if (!isSameOriginRequest(config.baseURL, config.url)) {
+      throw new Refusal(
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- for developers; normalizeError shows the caller's words
+        'Request not sent: the request resolves to another origin'
+      )
     }
 
     // In sandboxed iframe, cookies are unavailable — always use Bearer auth only

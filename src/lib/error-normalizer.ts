@@ -3,6 +3,7 @@
 
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
+import { Refusal } from './request-path'
 
 type JsonRecord = Record<string, unknown>
 
@@ -163,6 +164,20 @@ export function normalizeError(
   error: unknown,
   fallback?: string
 ): NormalizedError {
+  // A request refused before it was sent explains itself in English for
+  // developers; the person is shown the caller's own words. requestHelpers
+  // wraps it in an ApiError whose cause it is.
+  if (
+    error instanceof Refusal ||
+    (error instanceof Error &&
+      (error as { cause?: unknown }).cause instanceof Refusal)
+  ) {
+    return {
+      message: asNonEmptyString(fallback) ?? genericErrorMessage(),
+      source: 'fallback',
+    }
+  }
+
   if (typeof error === 'string') {
     const direct = asNonEmptyString(error)
     if (direct) {

@@ -62,16 +62,24 @@ describe('apiClient interceptor', () => {
     expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
   })
 
-  it('withholds the token from a protocol-relative URL', async () => {
+  // No caller means another server: a URL that resolves elsewhere is not
+  // sent, so neither the token nor trust in the answer can leave.
+  it.each([
+    ['a protocol-relative URL', '//attacker.example/-/info'],
+    ['an absolute foreign URL', 'https://attacker.example/x'],
+    ['a scheme-bearing URL', 'mochi://peer/entity'],
+    ['a URL on another port', 'http://localhost:4433/x'],
+  ])('sends nothing to %s', async (_name, url) => {
     const { apiClient } = await import('./api-client')
-    await apiClient.get('//attacker.example/-/info')
-    expect(authorizationOf(seen[0])).toBeUndefined()
+    await expect(apiClient.get(url)).rejects.toThrow(Error)
+    expect(seen).toHaveLength(0)
   })
 
-  it('withholds the token from an absolute foreign URL', async () => {
+  it('still sends an absolute URL on this origin, with the token', async () => {
     const { apiClient } = await import('./api-client')
-    await apiClient.get('https://attacker.example/x')
-    expect(authorizationOf(seen[0])).toBeUndefined()
+    await apiClient.get(`${window.location.origin}/forums/directory`)
+    expect(seen).toHaveLength(1)
+    expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
   })
 
   it('sends no cookies inside the shell, and keeps them outside it', async () => {
@@ -97,15 +105,16 @@ describe('createAppClient interceptor', () => {
     expect(authorizationOf(seen[0])).toBe(`Bearer ${TOKEN}`)
   })
 
-  it('withholds the token when a route parameter decoded to //host', async () => {
+  it('sends nothing when a route parameter decoded to //host', async () => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'feeds' })
 
     // The live vector: /feeds/%2F%2Fattacker.example decodes to
     // "//attacker.example" and lands in the endpoint builder's first slot.
+    // Sent, the attacker's answer would be shown as the feed and trusted.
     const feedId = decodeURIComponent('%2F%2Fattacker.example')
-    await client.get(`${feedId}/-/info`)
-    expect(authorizationOf(seen[0])).toBeUndefined()
+    await expect(client.get(`${feedId}/-/info`)).rejects.toThrow(Error)
+    expect(seen).toHaveLength(0)
   })
 
   it('drops cookies inside the shell, where the token is the only credential', async () => {
@@ -134,11 +143,36 @@ describe('createAppClient interceptor', () => {
     expect(seen[1]).toMatchObject({ by: 'xhr', withCredentials: true })
   })
 
-  it('withholds the token from an absolute foreign URL', async () => {
+  // An app client only talks to its own app: a URL, even one on this
+  // origin, is refused before anything is sent.
+  it.each([
+    ['an absolute foreign URL', 'https://attacker.example/x'],
+    ['a protocol-relative URL', '//attacker.example/x'],
+    ['an absolute URL on this origin', `${window.location.origin}/feeds/x`],
+  ])('sends nothing to %s', async (_name, url) => {
     const { createAppClient } = await import('./create-app-client')
     const client = createAppClient({ appName: 'feeds' })
-    await client.get('https://attacker.example/x')
-    expect(authorizationOf(seen[0])).toBeUndefined()
+    await expect(client.get(url)).rejects.toThrow(Error)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('sends nothing that resolves outside its base', async () => {
+    const { createAppClient } = await import('./create-app-client')
+    const client = createAppClient({ appName: 'feeds' })
+    await expect(client.get('abc/../../chat/-/list')).rejects.toThrow(Error)
+    await expect(
+      client.get('x', { baseURL: 'https://attacker.example/feeds/' })
+    ).rejects.toThrow(Error)
+    expect(seen).toHaveLength(0)
+
+    // Positive control: a base the caller names on this origin is honoured,
+    // as Air's request to core's /_/identity names '/'.
+    await client.get('/_/identity', { baseURL: '/' })
+    await client.get('info', { baseURL: '/repositories/abc/-/' })
+    expect(seen.map((request) => request.url)).toEqual([
+      '/_/identity',
+      '/repositories/abc/-/info',
+    ])
   })
 })
 
@@ -168,12 +202,6 @@ describe('app client URL resolution', () => {
 
   it('resolves a path written without the leading slash under the app', async () => {
     expect(await uriOf('feeds', 'abc123/-/info')).toBe('/feeds/abc123/-/info')
-  })
-
-  it('leaves an absolute URL alone', async () => {
-    expect(await uriOf('feeds', 'https://example.test/x')).toBe(
-      'https://example.test/x'
-    )
   })
 })
 

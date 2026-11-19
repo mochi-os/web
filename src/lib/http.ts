@@ -152,7 +152,7 @@ export const httpErrors = {
 // URLs
 
 /** `scheme://` or `//`: a URL that ignores baseURL. */
-function isAbsoluteURL(url: string): boolean {
+export function isAbsoluteURL(url: string): boolean {
   return /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url)
 }
 
@@ -168,6 +168,58 @@ export function buildFullPath(
   if (!baseURL || isAbsoluteURL(target)) return target
   if (!target) return baseURL
   return `${baseURL.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`
+}
+
+// A segment as the URL parser writes it inside a path: percent-encoded where
+// the parser encodes. Padded so the segment is never a dot segment and never
+// at an end of the input, where the parser would trim it.
+function parsedSegment(segment: string): string {
+  return new URL(`/x${segment}x`, 'http://h').pathname.slice(2, -1)
+}
+
+const absolute = /^([a-z][a-z\d+\-.]*:)?\/\/[^/]*/i
+
+/**
+ * Whether a request for url would reach a path other than the one written.
+ * The URL parser removes a dot segment in any spelling (`..`, `%2e%2e`,
+ * `.%2E`), reads a backslash as a slash and drops a tab or newline; an empty
+ * segment inside the path names a segment the caller did not; and core
+ * decodes the path before splitting it, so an encoded slash (`%2F`) is a
+ * separator there. Only the path is judged; a query or fragment is left to
+ * the server. Relative paths resolve against base, as fetch() resolves them
+ * against the document.
+ */
+export function rewritesPath(
+  url: string,
+  base: string = document.baseURI
+): boolean {
+  let resolved: URL
+  try {
+    resolved = new URL(url, base)
+  } catch {
+    return true
+  }
+  const end = url.search(/[?#]/)
+  let written = end === -1 ? url : url.slice(0, end)
+  if (/[\t\n\r\\]|%2f/i.test(written)) return true
+  let prefix = ''
+  const authority = absolute.exec(written)
+  if (authority) {
+    written = written.slice(authority[0].length) || '/'
+  } else if (!written) {
+    // No path: the base's own, with any query the url gives.
+    return resolved.pathname !== new URL(base).pathname
+  } else if (!written.startsWith('/')) {
+    // Relative to the base's directory, as the parser resolves it.
+    prefix = new URL('.', base).pathname
+  }
+  const segments = written.split('/')
+  // A leading empty segment is the path's own slash, a trailing one a path
+  // that ends in a slash; any other is a `//` the server would read as a
+  // segment the caller did not name.
+  if (segments.slice(1, -1).includes('')) return true
+  const expected = prefix + segments.map(parsedSegment).join('/')
+  return resolved.pathname !== expected
 }
 
 // encodeURIComponent with `:`, `$`, `,` left plain and a space as `+`.

@@ -8,6 +8,7 @@ import { normalizeEntityUrl } from '../lib/app-path'
 import { cn } from '../lib/utils'
 import { authenticatedUrl } from '../lib/shell-bridge'
 import { useAssetImage } from '../lib/shell-image'
+import { path, tryPath } from '../lib/request-path'
 import { FacelessAvatar } from './faceless-avatar'
 
 // Standard avatar tiers. Pick by intent, not pixels:
@@ -51,8 +52,10 @@ type EntityAvatarProps = {
   icon?: React.ComponentType<{ size?: number; className?: string }>
 }
 
-function fingerprintUrl(fingerprint: string, version?: string): string {
-  const base = `/${fingerprint}/-/avatar`
+// Null for a fingerprint that cannot be one path segment: initials instead.
+function fingerprintUrl(fingerprint: string, version?: string): string | null {
+  const base = tryPath(() => path`/${fingerprint}/-/avatar`)
+  if (!base) return null
   return version ? `${base}?v=${encodeURIComponent(version)}` : base
 }
 

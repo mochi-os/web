@@ -403,7 +403,7 @@ export function AttachmentGallery({
                   type='button'
                   onClick={(e) => {
                     e.stopPropagation()
-                    void shellDownload(resolveUrl(attachment), attachment.name)
+                    void shellDownload(resolveUrl(attachment), attachment.name) // method-ok: an attachment's address, an asset route
                   }}
                 >
                   <span className='sr-only'>{attachment.name}</span>

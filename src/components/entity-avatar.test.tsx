@@ -1,16 +1,11 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-vi.mock('../lib/request', () => ({
-  requestHelpers: { get: vi.fn(async () => ({ accent: '#123456' })) },
-}))
-
-import { requestHelpers } from '../lib/request'
 import { EntityAvatar } from './entity-avatar'
 import { GameHeader } from './layout/game-header'
 
@@ -21,13 +16,32 @@ function wrap(children: ReactNode) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
+// The style is fetched directly (useAccent's fetchStyle), never through the
+// app client and its token. The page sits under the app the style URL names:
+// only this app's own resources are fetched.
+const fetched = vi.fn(
+  async (_url: string, _init?: RequestInit) =>
+    new Response(JSON.stringify({ data: { accent: '#123456' } }))
+)
+
+function under(page: string) {
+  window.history.replaceState({}, '', page)
+  fetched.mockClear()
+  vi.stubGlobal('fetch', fetched)
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  window.history.replaceState({}, '', '/')
+})
+
 // The accent ring is fetched from a style URL on the CALLING app. There is
 // deliberately no fallback to /<fingerprint>/-/style on the people app: from
 // the shell's sandboxed iframe that cross-app request carries no cookies and
 // answers 403, and every app that renders an avatar was making it.
 describe('EntityAvatar accent', () => {
   beforeEach(() => {
-    vi.mocked(requestHelpers.get).mockClear()
+    under('/chat/')
   })
 
   it('fetches the accent from the style URL the app supplies', async () => {
@@ -41,8 +55,9 @@ describe('EntityAvatar accent', () => {
       )
     )
     await waitFor(() =>
-      expect(requestHelpers.get).toHaveBeenCalledWith(
-        '/chat/-/person/x/asset/style'
+      expect(fetched).toHaveBeenCalledWith(
+        `${window.location.origin}/chat/-/person/x/asset/style`,
+        expect.anything()
       )
     )
   })
@@ -55,7 +70,7 @@ describe('EntityAvatar accent', () => {
       '/9AbCdEfGh/-/avatar'
     )
     await Promise.resolve()
-    expect(requestHelpers.get).not.toHaveBeenCalled()
+    expect(fetched).not.toHaveBeenCalled()
   })
 
   it('makes no request when the caller already knows the accent', async () => {
@@ -70,13 +85,13 @@ describe('EntityAvatar accent', () => {
       )
     )
     await Promise.resolve()
-    expect(requestHelpers.get).not.toHaveBeenCalled()
+    expect(fetched).not.toHaveBeenCalled()
   })
 })
 
 describe('GameHeader opponent assets', () => {
   beforeEach(() => {
-    vi.mocked(requestHelpers.get).mockClear()
+    under('/chess/g1')
   })
 
   it('renders the avatar and fetches the accent from the game-bound URLs', async () => {
@@ -96,8 +111,9 @@ describe('GameHeader opponent assets', () => {
       '/chess/g1/-/user/p2/asset/avatar'
     )
     await waitFor(() =>
-      expect(requestHelpers.get).toHaveBeenCalledWith(
-        '/chess/g1/-/user/p2/asset/style'
+      expect(fetched).toHaveBeenCalledWith(
+        `${window.location.origin}/chess/g1/-/user/p2/asset/style`,
+        expect.anything()
       )
     )
   })
@@ -114,6 +130,6 @@ describe('GameHeader opponent assets', () => {
     )
     expect(screen.queryByRole('img')).toBeNull()
     await Promise.resolve()
-    expect(requestHelpers.get).not.toHaveBeenCalled()
+    expect(fetched).not.toHaveBeenCalled()
   })
 })

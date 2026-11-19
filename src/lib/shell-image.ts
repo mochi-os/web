@@ -18,6 +18,7 @@
 // image, an older shell, an SVG, a refusal - loads as before.
 
 import { useEffect, useState } from 'react'
+import { rewritesPath } from './http'
 import { getShellInitData, isInShell, isOwnResource } from './shell-bridge'
 import { shellGet } from './shell-fetch'
 
@@ -39,6 +40,8 @@ export function carriedImage(src: string): string | null {
     return null
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+  // Judged on the address as given: resolved, its dot segments are gone.
+  if (rewritesPath(src)) return null
   if (!isOwnResource(url.href)) return null
   url.searchParams.delete('token')
   return url.href

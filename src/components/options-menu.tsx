@@ -36,6 +36,7 @@ import { ConfirmDialog } from './confirm-dialog'
 import { toast } from '../lib/toast-utils'
 import { getErrorMessage } from '../lib/handle-server-error'
 import { getAppPath } from '../lib/app-path'
+import { path } from '../lib/request-path'
 import { shellClipboardWrite } from '../lib/shell-bridge'
 
 interface OptionsMenuProps {
@@ -117,7 +118,7 @@ export function OptionsMenu({
       const url =
         rssEntity === '*'
           ? `${window.location.origin}${getAppPath()}/rss?token=${encodeURIComponent(token)}`
-          : `${window.location.origin}${getAppPath()}/${rssEntity}/rss?token=${encodeURIComponent(token)}`
+          : `${window.location.origin}${getAppPath()}/${path`${rssEntity}/rss`}?token=${encodeURIComponent(token)}`
       const ok = await shellClipboardWrite(url)
       if (ok) toast.success(t`RSS URL copied to clipboard`)
     } catch (error) {

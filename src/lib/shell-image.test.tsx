@@ -186,6 +186,18 @@ describe('images through the shell', () => {
     ])
   })
 
+  it('carries no address the browser would send to another path', async () => {
+    await boot()
+    const { carriedImage } = await import('./shell-image')
+    expect(carriedImage('/feeds/abc/-/attachments/../../-/delete')).toBeNull()
+    expect(carriedImage('/feeds/abc/-/attachments/%2e%2e/thumbnail')).toBeNull()
+    expect(carriedImage('/feeds/abc/-/attachments/x%2Fy/thumbnail')).toBeNull()
+    // CONTROL: the same address as written is carried.
+    expect(carriedImage(THUMBNAIL)).toBe(
+      `${window.location.origin}${THUMBNAIL}`
+    )
+  })
+
   it('carries nothing without an asset token', async () => {
     const bridge = await import('./shell-bridge')
     const init = bridge.initShellBridge()

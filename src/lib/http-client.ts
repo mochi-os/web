@@ -8,12 +8,33 @@
 // success handler raises does not.
 
 import {
+  buildFullPath,
   mergeHeaders,
   prepareBody,
+  rewritesPath,
   type HttpRequestConfig,
   type HttpResponse,
 } from './http'
+import { Refusal } from './request-path'
 import { shellAdapter } from './shell-fetch'
+
+/**
+ * Throws, before anything is sent, when the browser would send the request to
+ * a path other than the one its baseURL and url join to: an id holding `../`
+ * or `..\` would otherwise move it to another action of the same app. Every
+ * client's requests pass here.
+ */
+function checkPath(config: HttpRequestConfig) {
+  const url = buildFullPath(config.baseURL, config.url)
+  if (rewritesPath(url)) {
+    // The path only: a query can carry a token.
+    const path = url.split(/[?#]/)[0]
+    throw new Refusal(
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- for developers; normalizeError shows the caller's words
+      `Request not sent: ${path} resolves to another path`
+    )
+  }
+}
 
 export interface ResponseHandlers {
   success: <T>(response: HttpResponse<T>) => HttpResponse<T>
@@ -85,6 +106,7 @@ export function createHttpClient({
     let response: HttpResponse
     try {
       if (prepare) merged = prepare(merged)
+      checkPath(merged)
       response = await shellAdapter(prepareBody(merged))
     } catch (error) {
       if (handlers) return handlers.failure(error)

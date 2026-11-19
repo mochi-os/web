@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { Bell } from 'lucide-react'
 import { EntityAvatar } from './entity-avatar'
+import { path, tryPath } from '../lib/request-path'
 
 export function NotificationSourceIcon({
   app,
@@ -20,18 +21,22 @@ export function NotificationSourceIcon({
   isUnread: boolean
 }) {
   const [iconFailed, setIconFailed] = useState(false)
+  // Undefined for a value that cannot be one path segment: initials, or the
+  // app's name, instead of a fetch of another path.
+  const assets = sender ? tryPath(() => path`/people/${sender}/-`) : undefined
+  const icon = tryPath(() => path`/${app}/images/icon.svg`)
 
   return (
     <div className='relative mt-0.5 shrink-0'>
       <div className='bg-primary/15 dark:bg-hover/70 flex size-7 items-center justify-center rounded-md'>
         {sender ? (
           <EntityAvatar
-            src={`/people/${sender}/-/avatar`}
-            styleUrl={`/people/${sender}/-/style`}
+            src={assets && `${assets}/avatar`}
+            styleUrl={assets && `${assets}/style`}
             size='sm'
             className='shrink-0'
           />
-        ) : iconFailed ? (
+        ) : iconFailed || !icon ? (
           name ? (
             <div className='text-hover-foreground flex size-6 items-center justify-center text-[10px] font-semibold uppercase'>
               {name.slice(0, 1)}
@@ -41,7 +46,7 @@ export function NotificationSourceIcon({
           )
         ) : (
           <img
-            src={`/${app}/images/icon.svg`}
+            src={icon}
             alt={name ?? ''}
             width={18}
             height={18}

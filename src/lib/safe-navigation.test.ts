@@ -6,6 +6,7 @@ import {
   isSameOriginRequest,
   isSameOriginResource,
   getSafeNavigationTarget,
+  safeRedirectPath,
 } from './safe-navigation'
 
 // jsdom serves the suite from http://localhost:3000 by default; assert it so a
@@ -151,6 +152,28 @@ describe('getSafeNavigationTarget', () => {
     expect(getSafeNavigationTarget('//attacker.example/x', ORIGIN)).toBeNull()
   })
 
+  // Each resolves on this origin to the pathname //evil.example/..., which a
+  // location reads as protocol-relative: https://evil.example/...
+  it.each([
+    ['/.//evil.example/x'],
+    ['/feeds/..//evil.example/x'],
+    ['/./\\evil.example'],
+    ['/%2e//evil.example/x'],
+    [`${ORIGIN}/.//evil.example/x`],
+  ])('rejects %s, which resolves to a //host path', (target) => {
+    // The shape this guards: same origin, pathname starting //.
+    const resolved = new URL(target, ORIGIN)
+    expect(resolved.origin).toBe(ORIGIN)
+    expect(resolved.pathname.startsWith('//')).toBe(true)
+    expect(new URL(resolved.pathname, ORIGIN).host).toBe('evil.example')
+
+    expect(getSafeNavigationTarget(target, ORIGIN)).toBeNull()
+  })
+
+  it('keeps a same-origin path holding a double slash after its start', () => {
+    expect(getSafeNavigationTarget('/feeds//abc', ORIGIN)).toBe('/feeds//abc')
+  })
+
   it('allows a trusted external host over https only', () => {
     const options = { trustedExternalHosts: ['checkout.stripe.com'] }
     expect(
@@ -177,5 +200,36 @@ describe('getSafeNavigationTarget', () => {
     expect(
       getSafeNavigationTarget('https://evilstripe.com/x', ORIGIN, options)
     ).toBeNull()
+  })
+})
+
+describe('safeRedirectPath', () => {
+  it('returns a same-origin target as a path', () => {
+    expect(safeRedirectPath('/feeds/abc?x=1#y', '/')).toBe('/feeds/abc?x=1#y')
+    expect(safeRedirectPath(`${ORIGIN}/login/rules`, '/')).toBe('/login/rules')
+  })
+
+  it.each([
+    [undefined],
+    [null],
+    [''],
+    ['https://evil.example/'],
+    ['//evil.example'],
+    ['/\\evil.example'],
+    ['/.//evil.example/x'],
+    ['/feeds/..//evil.example/x'],
+    ['/./\\evil.example'],
+    ['/login/../..//evil.example'],
+    ['/\t/evil.example'],
+    ['javascript:alert(1)'],
+    ['http://['],
+  ])('falls back for %s', (target) => {
+    expect(safeRedirectPath(target, '/fallback')).toBe('/fallback')
+  })
+
+  it('keeps an encoded tab as part of a path on this origin', () => {
+    const result = safeRedirectPath('/%09/evil.example', '/fallback')
+    expect(result).toBe('/%09/evil.example')
+    expect(new URL(result, ORIGIN).origin).toBe(ORIGIN)
   })
 })

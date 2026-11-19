@@ -344,7 +344,7 @@ export function shellNavigateExternal(url: string): void {
  * own origin.
  */
 export function shellOpenExternal(url: string): boolean {
-  return window.open(url, '_blank', 'noopener,noreferrer') !== null
+  return window.open(url, '_blank', 'noopener,noreferrer') !== null // method-ok: shellOpenExternal: an address off this origin
 }
 
 /**
@@ -554,7 +554,7 @@ function saveBlob(blob: Blob, name: string): void {
 /** Fetch a URL and save it to disk via a blob — only safe where this document
  * is same-origin and not sandboxed (the top window). */
 function directBlobDownload(url: string, name: string): Promise<boolean> {
-  return fetch(url, { credentials: 'same-origin' })
+  return fetch(url, { credentials: 'same-origin' }) // method-ok: shellDownload itself; the gate scans its callers
     .then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       return r.blob()

@@ -72,6 +72,7 @@ import { usePoll } from '../../hooks/use-poll'
 import { useShellStorage } from '../../hooks/use-shell-storage'
 import { useSearch } from '../../context/search-provider'
 import { getAppPath } from '../../lib/app-path'
+import { path, tryPath } from '../../lib/request-path'
 import { arraysEqual } from '../../lib/change-detection'
 import { canCreate, canDesign, canWrite } from '../../lib/entity-access'
 import { getErrorMessage } from '../../lib/handle-server-error'
@@ -518,17 +519,24 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       return
     }
     const appPath = getAppPath() || ''
-    const path = selectedObjectId
-      ? `${appPath}/${containerId}/${selectedObjectId}`
-      : `${appPath}/${containerId}`
+    // An id that cannot be one path segment leaves the address as it is,
+    // rather than writing a query or fragment the id chose.
+    const address = tryPath(() =>
+      selectedObjectId
+        ? path`${containerId}/${selectedObjectId}`
+        : path`${containerId}`
+    )
+    if (!address) return
     const viewParam =
-      activeViewId !== defaultViewId ? `?view=${activeViewId}` : ''
+      activeViewId !== defaultViewId
+        ? `?${new URLSearchParams({ view: activeViewId })}`
+        : ''
     const routerHistory = router.history as unknown as {
       _ignoreSubscribers?: boolean
     }
     routerHistory._ignoreSubscribers = true
     try {
-      window.history.replaceState(null, '', `${path}${viewParam}`)
+      window.history.replaceState(null, '', `${appPath}/${address}${viewParam}`)
     } finally {
       routerHistory._ignoreSubscribers = false
     }

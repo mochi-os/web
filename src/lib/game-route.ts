@@ -4,6 +4,16 @@
 // Which game a game app's view is showing, and when that view starts over.
 // Chess, go and words each keep one view mounted across their games' route.
 
+import { guardParams, paramShapes } from './route-params'
+
+/**
+ * The `params.parse` of a game route: not found for a `$gameId` that is not a
+ * game id, so a crafted address never reaches the view's requests.
+ *
+ *   params: { parse: parseGameParams }
+ */
+export const parseGameParams = guardParams({ gameId: paramShapes.id })
+
 /**
  * The `remountDeps` of a game route: a fresh view for every game.
  *
