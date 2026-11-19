@@ -12,7 +12,7 @@ import {
 import { cn } from '../lib/utils'
 import { useFormat } from '../hooks/use-format'
 import { useLingui } from '@lingui/react/macro'
-import { getAppPath } from '../lib/app-path'
+import { entityAddress, entityAssets } from '../lib/entity-endpoints'
 import { EntityAvatar } from './entity-avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
@@ -241,12 +241,11 @@ export const TreeRow = memo(function TreeRow({
 
       case 'user': {
         const name = peopleMap[value] || t`Unknown`
-        const avatarSrc = resourceId
-          ? `${getAppPath()}/${resourceId}/-/user/${value}/asset/avatar`
+        const assets = resourceId
+          ? entityAddress(() => entityAssets.user(resourceId, value))
           : undefined
-        const styleUrl = resourceId
-          ? `${getAppPath()}/${resourceId}/-/user/${value}/asset/style`
-          : undefined
+        const avatarSrc = assets && `${assets}/avatar`
+        const styleUrl = assets && `${assets}/style`
         return (
           <span className='inline-flex items-center gap-2 truncate max-w-full'>
             <EntityAvatar

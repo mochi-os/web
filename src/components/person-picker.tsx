@@ -52,7 +52,7 @@ export interface PersonPickerProps {
   friendsFn?: () => Promise<Person[]>
   /** A person's avatar or accent style, served by the caller's own app. Omit
    *  to show initials: the people app cannot be fetched from inside the shell. */
-  assetUrl?: (person: Person, asset: 'avatar' | 'style') => string
+  assetUrl?: (person: Person, asset: 'avatar' | 'style') => string | undefined
   /** Placeholder text */
   placeholder?: string
   /** The combobox field's accessible name, for a field whose visible label

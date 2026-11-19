@@ -120,7 +120,7 @@ async function requestRaw<TResponse>(
 
   try {
     const response: HttpResponse<TResponse> =
-      await apiClient.request<TResponse>(requestConfig)
+      await apiClient.request<TResponse>(requestConfig) // method-ok: requestHelpers itself; the gate scans its callers
     return response.data
   } catch (unknownError) {
     const apiError = buildApiError(
@@ -142,7 +142,7 @@ export async function request<TResponse>(
 
   try {
     const response: HttpResponse<TResponse> =
-      await apiClient.request<TResponse>(requestConfig)
+      await apiClient.request<TResponse>(requestConfig) // method-ok: requestHelpers itself; the gate scans its callers
 
     const responseData = response.data as unknown
 

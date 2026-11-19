@@ -18,7 +18,7 @@ import { useAttachmentError } from '../../hooks/use-attachment-error'
 import { useAuthStore } from '../../stores/auth-store'
 import { useUploadProgress } from '../../hooks/use-upload-progress'
 import { textUnchanged } from '../../lib/change-detection'
-import { getAppPath } from '../../lib/app-path'
+import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
 import { addressByAuthor, findCommentTextInTree } from '../../lib/comment-tree'
 import { CommentBox, useDiscardGuard } from '../comment-composer'
 import { EntityCommentThread } from './entity-comment-thread'
@@ -113,7 +113,7 @@ export function EntityCommentList({
       addressByAuthor(data?.comments ?? [], {
         getAuthor: (comment) => comment.author,
         getAddress: (comment) =>
-          `${getAppPath()}/${containerId}/-/comment/${comment.id}/asset`,
+          entityAddress(() => entityAssets.comment(containerId, comment.id)),
         getChildren: (comment) => comment.children,
       }),
     [data, containerId]

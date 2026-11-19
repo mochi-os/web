@@ -13,6 +13,7 @@ import {
   GENERIC_ERROR_MESSAGE,
 } from './error-normalizer'
 import { httpErrors } from './http'
+import { path } from './request-path'
 
 function httpError(status: number, data: unknown) {
   return { response: { status, data } }
@@ -157,6 +158,35 @@ describe('normalizeError', () => {
 // 200 with index.html. Two apps had independently worked around that (the
 // repositories client and the wikis page component) before the shared response
 // interceptor started rejecting it.
+describe('a request refused before it was sent', () => {
+  // path and the request guards explain a refusal in English for developers;
+  // the person sees the caller's own translated words, never that text.
+  function refusal(): unknown {
+    try {
+      return path`${'../delete'}/-/view`
+    } catch (error) {
+      return error
+    }
+  }
+
+  it('shows the fallback the caller gave', () => {
+    const normalized = normalizeError(refusal(), 'Could not load the post')
+    expect(normalized.message).toBe('Could not load the post')
+    expect(normalized.source).toBe('fallback')
+  })
+
+  it('shows the fallback when the refusal arrives wrapped, as requestHelpers wraps it', () => {
+    const wrapped = new Error('Unexpected API error', { cause: refusal() })
+    expect(normalizeError(wrapped, 'Could not load the post').message).toBe(
+      'Could not load the post'
+    )
+  })
+
+  it('shows the generic message when no fallback was given', () => {
+    expect(normalizeError(refusal()).message).not.toContain('refused')
+  })
+})
+
 describe('detectHtmlResponse', () => {
   const indexHtml =
     '<!doctype html>\n<html><head><title>Feeds</title></head><body><div id="root"></div></body></html>'

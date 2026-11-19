@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useEffect } from 'react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import {
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
+  isNotFound,
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { openGame, remountPerGame } from './game-route'
+import { openGame, parseGameParams, remountPerGame } from './game-route'
 
 const a = { id: 'a', status: 'active' }
 const b = { id: 'b', status: 'active' }
@@ -62,6 +63,59 @@ describe('remountPerGame', () => {
     await act(() => router.history.back())
     await screen.findByText('a')
     expect(mounts).toBe(3)
+  })
+})
+
+describe('parseGameParams', () => {
+  const GAME = '0193a1b2c3d4e5f60718293a4b5c6d7e'
+
+  it('takes a game id', () => {
+    expect(parseGameParams({ gameId: GAME })).toEqual({ gameId: GAME })
+  })
+
+  it.each([
+    ['a decoded climb', `${GAME}/%2D/resign?`],
+    ['a short id', GAME.slice(1)],
+    ['upper case', GAME.toUpperCase()],
+    ['empty', ''],
+  ])('answers not-found for %s', (_name, gameId) => {
+    let error: unknown
+    try {
+      parseGameParams({ gameId })
+    } catch (e) {
+      error = e
+    }
+    expect(isNotFound(error)).toBe(true)
+  })
+
+  it('renders not-found for the route, with nothing loaded', async () => {
+    const loader = vi.fn(() => null)
+    const root = createRootRoute({ component: Outlet })
+    const gameRoute = createRoute({
+      getParentRoute: () => root,
+      path: '$gameId',
+      params: { parse: parseGameParams },
+      remountDeps: remountPerGame,
+      loader,
+      component: () => <p>{gameRoute.useParams().gameId}</p>,
+      notFoundComponent: () => <p>not found</p>,
+    })
+    const router = createRouter({
+      routeTree: root.addChildren([gameRoute]),
+      history: createMemoryHistory({
+        initialEntries: [`/${GAME}%2F%252D%2Fresign%3F`],
+      }),
+    })
+    render(<RouterProvider router={router} />)
+    await screen.findByText('not found')
+    expect(loader).not.toHaveBeenCalled()
+
+    // CONTROL: a game id loads.
+    await act(() =>
+      router.navigate({ to: '/$gameId', params: { gameId: GAME } })
+    )
+    await screen.findByText(GAME)
+    expect(loader).toHaveBeenCalledTimes(1)
   })
 })
 

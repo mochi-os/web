@@ -22,6 +22,7 @@ import {
   headerRecord,
   httpErrors,
   HttpError,
+  rewritesPath,
   sendDirect,
   settle,
   type HttpRequestConfig,
@@ -341,7 +342,8 @@ const stall = 15000
  * window keeps them in the browser's cache, which a sandboxed frame has none
  * of. Null when the shell will not carry it (a shell that predates the
  * bridge, a URL outside this app, a refusal, a redirect, a network failure,
- * or a shell gone quiet), and the caller then loads it itself. progress hears
+ * or a shell gone quiet, or a URL the browser would send to a path other than
+ * the one written), and the caller then loads it itself. progress hears
  * the bytes received so far; a request that asks for it is carried only by a
  * shell that reports them, since one that does not shows a long download no
  * movement until it ends.
@@ -357,6 +359,7 @@ export function shellGet(
   const init = getShellInitData()
   if (!isInShell() || init?.fetch !== true) return Promise.resolve(null)
   if (options.progress && init.progress !== true) return Promise.resolve(null)
+  if (rewritesPath(url)) return Promise.resolve(null)
   listen()
   return new Promise((resolve) => {
     const id = identifier()

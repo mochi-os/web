@@ -74,7 +74,7 @@ import {
   EntityObjectLinks,
   type EntityObjectLinksProps,
 } from './entity-object-links'
-import { getAppPath } from '../../lib/app-path'
+import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
 import type { Person } from '../person-picker'
 import type {
   EntityAccess,
@@ -640,8 +640,12 @@ export function EntityObjectDetailPanel<
   // A member's avatar and accent through the app's own user-asset route: the
   // picker cannot fetch the people app from inside the shell. Both apps mount
   // the route at the same path under the container.
-  const personAsset = (person: Person, asset: 'avatar' | 'style') =>
-    `${getAppPath()}/${containerId}/-/user/${person.id}/asset/${asset}`
+  const personAsset = (person: Person, asset: 'avatar' | 'style') => {
+    const address = entityAddress(() =>
+      entityAssets.user(containerId, person.id)
+    )
+    return address && `${address}/${asset}`
+  }
 
   return (
     <SidePanel

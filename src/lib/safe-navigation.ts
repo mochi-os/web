@@ -97,6 +97,11 @@ export function getSafeNavigationTarget(
 
   if (resolvedTarget.origin === normalizedOrigin) {
     if (!SAFE_INTERNAL_PROTOCOLS.has(resolvedTarget.protocol)) return null
+    // '/.//evil.example/x' resolves here to the pathname '//evil.example/x',
+    // which as a location is protocol-relative and leaves the site. The
+    // shell refuses the same shape (emptyFirstSegment in the menu's
+    // shell.js); a backslash is already a slash in a resolved pathname.
+    if (resolvedTarget.pathname.startsWith('//')) return null
     return `${resolvedTarget.pathname}${resolvedTarget.search}${resolvedTarget.hash}`
   }
 
@@ -106,4 +111,17 @@ export function getSafeNavigationTarget(
   }
 
   return resolvedTarget.toString()
+}
+
+/**
+ * A redirect target as a path on this origin (pathname, search and hash),
+ * or fallback when the target is missing, unparseable, on another origin, or
+ * a path a location would read as another host. For a `?redirect=` value or
+ * a return path.
+ */
+export function safeRedirectPath(
+  target: string | null | undefined,
+  fallback: string
+): string {
+  return getSafeNavigationTarget(target, window.location.origin) ?? fallback
 }

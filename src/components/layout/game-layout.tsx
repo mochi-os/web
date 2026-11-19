@@ -12,6 +12,7 @@ import type { SidebarData } from './types'
 import { useSidebar } from '../ui/sidebar'
 import { EntityAvatar } from '../entity-avatar'
 import { cn } from '../../lib/utils'
+import { path, tryPath } from '../../lib/request-path'
 
 /** The game fields the shell reads. Each app's own Game is this and more. */
 export interface GameSummary {
@@ -36,11 +37,15 @@ function opponentIcon(appName: string, gameId: string, opponentId: string): FC {
   const cacheKey = `${appName}:${gameId}:${opponentId}`
   let Icon = opponentIconCache.get(cacheKey)
   if (!Icon) {
+    // Undefined for an id that cannot be one path segment: initials instead.
+    const assets = tryPath(
+      () => path`/${appName}/${gameId}/-/user/${opponentId}/asset`
+    )
     Icon = function OpponentIcon() {
       return (
         <EntityAvatar
-          src={`/${appName}/${gameId}/-/user/${opponentId}/asset/avatar`}
-          styleUrl={`/${appName}/${gameId}/-/user/${opponentId}/asset/style`}
+          src={assets && `${assets}/avatar`}
+          styleUrl={assets && `${assets}/style`}
           size='xs'
         />
       )
@@ -118,14 +123,17 @@ export function GameLayout<G extends GameSummary>({
   const { active, completed, newGame } = labels
 
   const sidebarData: SidebarData = useMemo(() => {
-    const sorted = [...games].sort((a, b) => b.updated - a.updated)
+    // A game whose id cannot be one path segment has no page to link to.
+    const sorted = games
+      .filter((g) => tryPath(() => path`/${g.id}`) !== undefined)
+      .sort((a, b) => b.updated - a.updated)
     const live = isLive ?? ((g: G) => g.status === 'active')
     const activeGames = sorted.filter((g) => live(g))
     const completedGames = sorted.filter((g) => !live(g))
 
     const entry = (game: G) => ({
       title: gameTitle(game),
-      url: `/${game.id}`,
+      url: path`/${game.id}`,
       icon:
         appName && opponentId
           ? opponentIcon(appName, game.id, opponentId(game))

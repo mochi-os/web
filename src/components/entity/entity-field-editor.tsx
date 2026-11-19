@@ -46,7 +46,10 @@ interface EntityFieldEditorProps {
    */
   searchUsers: (query: string) => Promise<Person[]>
   /** A person's avatar or accent style through the app's own asset route. */
-  personAsset?: (person: Person, asset: 'avatar' | 'style') => string
+  personAsset?: (
+    person: Person,
+    asset: 'avatar' | 'style'
+  ) => string | undefined
 }
 
 export function EntityFieldEditor({

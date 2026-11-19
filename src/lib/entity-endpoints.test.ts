@@ -7,7 +7,11 @@
 // the endpoints it adds on top.
 
 import { describe, it, expect } from 'vitest'
-import { entityEndpoints } from './entity-endpoints'
+import {
+  entityAddress,
+  entityAssets,
+  entityEndpoints,
+} from './entity-endpoints'
 
 describe('entityEndpoints', () => {
   describe('class-level endpoints (static strings)', () => {
@@ -203,5 +207,110 @@ describe('entityEndpoints', () => {
         'proj1/-/objects/obj1/activity'
       )
     })
+  })
+})
+
+describe('entityAssets', () => {
+  it('names a comment, activity and user asset', () => {
+    expect(entityAssets.comment('proj1', 'c1')).toBe('proj1/-/comment/c1/asset')
+    expect(entityAssets.activity('proj1', 'a1')).toBe(
+      'proj1/-/activity/a1/asset'
+    )
+    expect(entityAssets.user('proj1', 'u1')).toBe('proj1/-/user/u1/asset')
+  })
+  it('names an attachment and its thumbnail', () => {
+    expect(entityAssets.attachment('proj1', 'f1')).toBe(
+      'proj1/-/attachments/f1'
+    )
+    expect(entityAssets.attachment('proj1', 'f1', 'thumbnail')).toBe(
+      'proj1/-/attachments/f1/thumbnail'
+    )
+  })
+})
+
+describe('entityAddress', () => {
+  it('puts the path under the app path', () => {
+    window.history.replaceState({}, '', '/projects/abc')
+    expect(entityAddress(() => entityAssets.comment('E', 'c1'))).toBe(
+      '/projects/E/-/comment/c1/asset'
+    )
+  })
+  it('gives undefined for an id the path refuses', () => {
+    expect(entityAddress(() => entityAssets.comment('E', '..'))).toBeUndefined()
+    expect(entityAddress(() => entityAssets.user('E', ''))).toBeUndefined()
+  })
+})
+
+// Ids are route parameters, which the router has percent-decoded, and ids from
+// another server's answer. Whatever one holds, the request must reach the
+// action the builder names, with no inputs the id chose.
+describe('hostile ids', () => {
+  const base = 'https://mochi.example/projects/'
+
+  // Every builder of both tables, called with the hostile value in each id
+  // slot in turn.
+  const builders = [
+    ...Object.entries(entityEndpoints),
+    ...Object.entries(entityAssets),
+  ].filter(
+    (entry): entry is [string, (...ids: string[]) => string] =>
+      typeof entry[1] === 'function'
+  )
+
+  it('covers every builder in the tables', () => {
+    expect(builders).toHaveLength(61)
+  })
+
+  it.each([
+    ['a query', 'delete?x='],
+    ['a fragment', 'x#y'],
+    ['a backslash climb', '..\\..\\-\\access\\set?subject=a&level=design'],
+    ['an encoded climb', '%2e%2e'],
+  ])('keeps %s inside its segment', (_name, hostile) => {
+    for (const [name, build] of builders) {
+      const slots = build.length
+      for (let slot = 0; slot < slots; slot++) {
+        const ids = Array.from({ length: slots }, (_, i) =>
+          i === slot ? hostile : `id${i}`
+        )
+        // The thumbnail variant is a fixed word, not an id.
+        if (name === 'attachment' && slot === 2) continue
+        const benign = build(
+          ...Array.from({ length: slots }, (_, i) => `id${i}`)
+        )
+        const built = build(...ids)
+        const url = new URL(built, base)
+        expect(url.search, `${name}[${slot}]`).toBe('')
+        expect(url.hash, `${name}[${slot}]`).toBe('')
+        // Same number of segments as the benign path, and only the hostile
+        // slot differs.
+        const segments = url.pathname.split('/')
+        const expected = new URL(benign, base).pathname.split('/')
+        expect(segments.length, `${name}[${slot}]`).toBe(expected.length)
+        expect(
+          segments.filter((s, i) => s !== expected[i]),
+          `${name}[${slot}]`
+        ).toEqual([encodeURIComponent(hostile)])
+      }
+    }
+  })
+
+  it.each([
+    ['two dots', '..'],
+    ['a dot', '.'],
+    ['empty', ''],
+    ['a slash', 'a/b'],
+    ['a climb with a query', '../delete?x='],
+  ])('refuses an id that is %s', (_name, hostile) => {
+    for (const [name, build] of builders) {
+      const slots = build.length
+      for (let slot = 0; slot < slots; slot++) {
+        if (name === 'attachment' && slot === 2) continue
+        const ids = Array.from({ length: slots }, (_, i) =>
+          i === slot ? hostile : `id${i}`
+        )
+        expect(() => build(...ids), `${name}[${slot}]`).toThrow(Error)
+      }
+    }
   })
 })

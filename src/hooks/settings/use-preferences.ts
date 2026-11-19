@@ -22,7 +22,7 @@ export function preferencesQuery(endpoint: string) {
   return queryOptions({
     queryKey: ['user', 'preferences', endpoint],
     queryFn: async () => {
-      const response = await apiClient.get<PreferencesData>(endpoint)
+      const response = await apiClient.get<PreferencesData>(endpoint) // method-ok: preferencesQuery itself; the gate scans its callers
       return response.data
     },
     staleTime: 30_000,
@@ -30,7 +30,7 @@ export function preferencesQuery(endpoint: string) {
 }
 
 export function usePreferencesData(endpoint: string) {
-  return useQuery(preferencesQuery(endpoint))
+  return useQuery(preferencesQuery(endpoint)) // method-ok: usePreferencesData itself; the gate scans its callers
 }
 
 // The pick shows at once and goes back if refused; each caller shows the

@@ -16,7 +16,7 @@ import { EntityAvatar } from '../entity-avatar'
 import { ListSkeleton } from '../ui/list-skeleton'
 import { LoadMoreTrigger } from '../load-more-trigger'
 import { useFormat } from '../../hooks/use-format'
-import { getAppPath } from '../../lib/app-path'
+import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
 import { addressByAuthor } from '../../lib/comment-tree'
 import type { EntityActivity, EntityField } from '../../types/entity-object'
 
@@ -98,13 +98,16 @@ export function EntityActivityList({
       addressByAuthor(activities, {
         getAuthor: (activity) => activity.user,
         getAddress: (activity) =>
-          `${getAppPath()}/${containerId}/-/activity/${activity.id}/asset`,
+          entityAddress(() => entityAssets.activity(containerId, activity.id)),
       }),
     [activities, containerId]
   )
-  const assets = (activity: EntityActivity) =>
-    avatars.get(activity.user) ??
-    `${getAppPath()}/${containerId}/-/activity/${activity.id}/asset`
+  const asset = (activity: EntityActivity, slot: 'avatar' | 'style') => {
+    const address =
+      avatars.get(activity.user) ??
+      entityAddress(() => entityAssets.activity(containerId, activity.id))
+    return address && `${address}/${slot}`
+  }
 
   const loadMore = useCallback(() => {
     void fetchNextPage()
@@ -177,8 +180,8 @@ export function EntityActivityList({
           secondary: (
             <div className='flex items-center gap-2 text-xs text-muted-foreground'>
               <EntityAvatar
-                src={`${assets(activity)}/avatar`}
-                styleUrl={`${assets(activity)}/style`}
+                src={asset(activity, 'avatar')}
+                styleUrl={asset(activity, 'style')}
                 seed={activity.user}
                 name={activity.name || activity.user}
                 size='xs'

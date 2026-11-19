@@ -7,7 +7,13 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeNetwork } from '../test/fake-network'
-import { buildFullPath, buildURL, HttpError } from './http'
+import {
+  buildFullPath,
+  buildURL,
+  HttpError,
+  isHttpError,
+  rewritesPath,
+} from './http'
 import { createHttpClient } from './http-client'
 
 afterEach(() => {
@@ -551,6 +557,96 @@ describe('the client', () => {
     })
     expect(await succeeding.get('/x').catch((e: unknown) => e)).toBe(rejected)
     expect(failure).toHaveBeenCalledTimes(2)
+  })
+})
+
+// The URL parser removes dot segments (`%2e` spellings too), reads `\` as `/`
+// and drops tabs and newlines, so a joined path can reach a different action
+// from the one written. A route parameter or an id from data holding any of
+// these is refused before anything is sent.
+describe('a path the browser would rewrite', () => {
+  const base = 'https://mochi.example/projects/abc'
+
+  it.each([
+    ['/projects/E/-/objects/1/update'],
+    ['/projects/E/-/view?app=a/../b#x/../y'],
+    ['/projects/'],
+    ['/projects/E/-/objects/a%5Cb/update'],
+    ['/projects/E/-/objects/a b/update'],
+    ['/projects/E/-/objects/café/update'],
+    ['/projects/E/-/objects/a"<>`{}|/update'],
+    ['/projects/E/-/objects/.../update'],
+    ['https://mochi.example/projects/E/-/info'],
+    ['https://mochi.example'],
+    ['E/-/info'],
+    ['?page=2'],
+  ])('leaves %s alone', (url) => {
+    expect(rewritesPath(url, base)).toBe(false)
+  })
+
+  it.each([
+    ['a climb', '/projects/E/-/objects/../../-/access/set'],
+    ['a dot', '/projects/E/./-/info'],
+    ['a trailing climb', '/projects/E/-/objects/x/..'],
+    ['an encoded climb', '/projects/E/-/objects/%2e%2e/-/delete'],
+    ['a half-encoded climb', '/projects/E/-/objects/.%2E/-/delete'],
+    ['a backslash', '/projects/E/-/objects/..\\..\\-\\access\\set'],
+    ['a lone backslash', '/projects/E/-/objects/a\\b'],
+    ['an empty segment', '/projects/E/-/objects//delete'],
+    // Core decodes the path before splitting it.
+    ['an encoded slash', '/projects/E/-/objects/x%2Fcomments%2Fy/delete'],
+    ['a lower-case encoded slash', '/projects/E/-/objects/x%2fy/delete'],
+    ['a tab inside two dots', '/projects/E/-/objects/.\t./-/delete'],
+    ['a newline', '/projects/E/-/objects/a\nb'],
+    ['a relative climb', 'E/../../feeds/-/delete'],
+    ['an absolute climb', 'https://mochi.example/projects/../feeds/-/delete'],
+    ['a backslash in the host', 'https://evil.example\\@mochi.example/x'],
+    ['a scheme the base cannot hold', 'javascript:alert(1)'],
+    ['an unparseable URL', 'http://['],
+  ])('refuses %s', (_name, url) => {
+    expect(rewritesPath(url, base)).toBe(true)
+  })
+
+  it('judges the path only, before a query or fragment', () => {
+    expect(rewritesPath('/projects/E/-/list?path=../x', base)).toBe(false)
+    expect(rewritesPath('/projects/E/-/list#../x', base)).toBe(false)
+    expect(rewritesPath('/projects/E/../-/list?path=x', base)).toBe(true)
+  })
+
+  it('is not sent, and fails as the caller’s fault', async () => {
+    const { sent } = fakeNetwork()
+    const failure = vi.fn(async (error: unknown) => {
+      throw error
+    })
+    const client = createHttpClient({
+      prepare: (config) => ({ ...config, baseURL: '/projects/' }),
+      handlers: { success: (response) => response, failure },
+    })
+    // The trace from the review: a router parameter decoded from
+    // ..%5C..%5C-%5Caccess%5Cset%3Fsubject%3D...
+    const objectId = decodeURIComponent(
+      '..%5C..%5C-%5Caccess%5Cset%3Fsubject%3Dattacker%26level%3Ddesign%26x%3D'
+    )
+    const error = await client
+      .get(`E/-/objects/${objectId}`)
+      .catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(Error)
+    expect(isHttpError(error)).toBe(false)
+    expect(failure).toHaveBeenCalledWith(error)
+    for (const url of [
+      'E/-/objects/../../-/delete',
+      'E/-/objects/%2e%2e/%2e%2e/-/delete',
+      'E/-/objects//delete',
+    ]) {
+      await expect(client.post(url, {})).rejects.toThrow(Error)
+    }
+    expect(sent).toHaveLength(0)
+
+    // Positive control: the same client sends a path that stays as written.
+    await client.get('E/-/objects/1')
+    expect(sent.map((request) => request.url)).toEqual([
+      '/projects/E/-/objects/1',
+    ])
   })
 })
 

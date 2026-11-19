@@ -115,7 +115,7 @@ export function ImageLightbox({
   const handleDownload = useCallback(async () => {
     if (downloading || !currentMedia) return
     setDownloading(true)
-    const ok = await shellDownload(currentMedia.url, currentMedia.name)
+    const ok = await shellDownload(currentMedia.url, currentMedia.name) // method-ok: an attachment's address, an asset route
     setDownloading(false)
     if (!ok) toast.error(t`Download failed`)
   }, [currentMedia, downloading])
