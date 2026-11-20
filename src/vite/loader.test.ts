@@ -181,17 +181,18 @@ function server(dist: string, frame?: string, sheets = false, fonts = false) {
       }
       if (frame && !pathname.startsWith('/app/assets/')) {
         body = Buffer.from(
-          body
-            .toString('utf8')
-            .replace(
-              '<head>',
-              `<head><script>window.name = ${JSON.stringify(frame)}` +
-                (sheets
-                  ? ";Object.defineProperty(document, 'adoptedStyleSheets', { value: [], writable: true })"
-                  : '') +
-                (fonts ? ';' + FONTS : '') +
-                '</script>'
-            )
+          body.toString('utf8').replace(
+            '<head>',
+            `<head><script>window.name = ${JSON.stringify(frame)}` +
+              (sheets
+                ? ";Object.defineProperty(document, 'adoptedStyleSheets', { value: [], writable: true })"
+                : '') +
+              (fonts ? ';' + FONTS : '') +
+              // Web Crypto, which jsdom lacks and a browser has: the shell
+              // page's, where the test gave it one (framed).
+              ";if (parent.__subtle) Object.defineProperty(crypto, 'subtle', { value: parent.__subtle })" +
+              '</script>'
+          )
         )
       }
       const promise = Promise.resolve(body) as Promise<Buffer> & {
@@ -226,18 +227,28 @@ type Result = {
   error?: string
 }
 
+// Where the shell carries React's shared files from, for any app's frame.
+const MENU_SHARED = '/menu/assets/shared/'
+
 // The page in a frame of a shell page that carries fetches, as shell.js's
 // handleFetch does: GETs under the frame's own app, answered with the bytes.
 // dist is the build to serve, this file's own app unless another is named.
+// menu is how the shell answers for menu's shared files: refused, as a shell
+// without that case does, unless it is named - carried, the same bytes the
+// app holds; missing, a 404; page, not a script; tampered, other bytes under
+// the same name.
 function framed(
   name: string,
   answer: 'script' | 'refuse' | 'page' = 'script',
   sheets = false,
   fonts: boolean | 'refused' = false,
-  dist = output
+  dist = output,
+  menu?: 'carried' | 'missing' | 'page' | 'tampered',
+  subtle = true
 ) {
   const site = server(dist, name, sheets, fonts !== false)
   const carried: string[] = []
+  const asks: string[] = [] // every URL the frame asked the shell for
   const dom = new JSDOM(
     `<!doctype html><html><body><iframe name="${name}" src="${ORIGIN}/app/?_shell=1"></iframe></body></html>`,
     {
@@ -246,6 +257,7 @@ function framed(
       resources: site.loader,
       beforeParse(window: Window) {
         window.TextDecoder = TextDecoder
+        if (subtle) window.__subtle = globalThis.crypto.subtle
       },
     }
   )
@@ -275,6 +287,37 @@ function framed(
       )
     }
     const url = new URL(String(data.url))
+    asks.push(url.href)
+    if (url.pathname.startsWith(MENU_SHARED) && menu && answer !== 'refuse') {
+      carried.push(url.href)
+      if (menu === 'missing') {
+        reply({ status: 404, headers: [], body: new ArrayBuffer(0) })
+        return
+      }
+      let bytes = readFileSync(
+        path.join(dist, 'assets/shared', url.pathname.slice(MENU_SHARED.length))
+      )
+      if (menu === 'tampered') {
+        bytes = Buffer.concat([
+          Buffer.from('window.__tampered = true\n'),
+          bytes,
+        ])
+      }
+      reply({
+        status: 200,
+        headers: [
+          [
+            'content-type',
+            menu === 'page' ? 'text/html' : 'text/javascript; charset=utf-8',
+          ],
+        ],
+        body: bytes.buffer.slice(
+          bytes.byteOffset,
+          bytes.byteOffset + bytes.length
+        ),
+      })
+      return
+    }
     if (
       answer === 'refuse' ||
       !url.pathname.startsWith('/app/') ||
@@ -313,7 +356,7 @@ function framed(
   const frame = () =>
     (dom.window.document.querySelector('iframe') as HTMLIFrameElement)
       .contentWindow as unknown as Window
-  return { dom, frame, asked: site.asked, carried }
+  return { dom, frame, asked: site.asked, carried, asks }
 }
 
 async function result(window: () => Window): Promise<Result> {
@@ -879,18 +922,108 @@ describe('mochiPlugin: React comes from the shared files', () => {
     const shell = framed('mochi:bridge', 'script', false, false, dist)
     try {
       await until(() => shell.frame()?.__result, 'the app to render')
-      const entry = shell.carried.findIndex((url) =>
-        /\/assets\/index-[\w-]+\.js$/.test(url)
+      const entry = shell.asks.findIndex((url) =>
+        /\/app\/assets\/index-[\w-]+\.js$/.test(url)
       )
-      const files = shared(shell.carried).map((url) =>
-        shell.carried.indexOf(url)
-      )
+      // The first ask for each shared file, menu's copy or the app's own.
+      const first = new Map<string, number>()
+      shell.asks.forEach((url, at) => {
+        const match = /\/(?:app\/assets|menu\/assets)\/shared\/([^/]+)$/.exec(
+          url
+        )
+        if (match && !first.has(match[1])) first.set(match[1], at)
+      })
       expect(entry).toBeGreaterThanOrEqual(0)
-      expect(files.length).toBeGreaterThanOrEqual(4)
+      expect(first.size).toBeGreaterThanOrEqual(4)
       // THE POINT: the loader asks for what the entry imports as it asks for
       // the entry, so every shared file is asked for before the entry's text
       // has come back and been read.
-      expect(files.every((at) => at < entry)).toBe(true)
+      expect([...first.values()].every((at) => at < entry)).toBe(true)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("takes menu's copy of each shared file, and never asks for the app's own", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'carried'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      const menu = shell.carried.filter((url) => url.includes(MENU_SHARED))
+      expect(menu.length).toBeGreaterThanOrEqual(4)
+      expect(new Set(menu).size).toBe(menu.length)
+      // THE POINT: the app's own copy is neither carried nor fetched.
+      expect(shared(shell.asks)).toEqual([])
+      expect(scripts(shell.asked)).toEqual([])
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it.each([
+    ['refuses them, as a shell without that case does', undefined],
+    ['answers 404', 'missing'],
+    ['answers with a page', 'page'],
+  ] as const)(
+    "uses the app's own copy when the shell %s for menu's",
+    async (_name, menu) => {
+      const shell = framed('mochi:bridge', 'script', false, false, dist, menu)
+      try {
+        await until(() => shell.frame()?.__result, 'the app to render')
+        expectRendered(shell.frame().__result as Rendered)
+        // Each shared file asked of menu first, then carried from the app.
+        expect(
+          shell.asks.filter((url) => url.includes(MENU_SHARED)).length
+        ).toBeGreaterThanOrEqual(4)
+        expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+      } finally {
+        shell.dom.window.close()
+      }
+    }
+  )
+
+  it("never runs bytes from menu that are not the app's own", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'tampered'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      // THE POINT: menu answered other bytes under each file's name, and
+      // none of them ran.
+      expect(shell.frame().__tampered).toBeUndefined()
+      expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("uses the app's own copy where the frame has no Web Crypto to check menu's", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'carried',
+      false
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
     } finally {
       shell.dom.window.close()
     }

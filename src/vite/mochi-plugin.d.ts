@@ -13,9 +13,11 @@ export interface MochiPluginOptions {
    */
   frame?: boolean
   /**
-   * Whether a framed app takes React from fixed System.register files in its
-   * assets' shared/ folder rather than bundling it (default: true). false
-   * bundles React into the app, as before.
+   * Whether the build emits React as fixed System.register files in its
+   * assets' shared/ folder. A framed app then takes React from them rather
+   * than bundling it, from menu's copy where that is the same bytes (default:
+   * true; false bundles React into the app, as before). A page that never
+   * loads in the frame only hosts them for the apps (default: false).
    */
   shared?: boolean
 }
@@ -40,7 +42,11 @@ export function loaderScript(
   entry: string,
   manifest: Manifest,
   styles?: string[],
-  names?: Record<string, string>
+  shared?: {
+    names: Record<string, string>
+    files: Record<string, string>
+    menu: string
+  }
 ): Promise<string>
 
 /**

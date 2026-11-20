@@ -3,6 +3,7 @@
 
 // Mochi Vite plugin for common index.html transformations and locale filtering.
 
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { transformWithEsbuild } from 'vite'
 import { loader } from './loader.js'
@@ -61,13 +62,18 @@ export function manifest(bundle, entry, shared) {
   return [files, result]
 }
 
+// Where every app looks for the shared files first: menu's own copy, which
+// the shell carries to any app's frame (shell.js), so the browser keeps them
+// once for every app.
+const MENU_SHARED = '/menu/assets/shared/'
+
 /**
  * The page's inline loader script, in place of the module script that would
- * load the entry. names maps each bare name the build left external to its
- * file, relative to the entry's directory.
+ * load the entry. shared, where the build left React external, is { names,
+ * files, menu } as loader.js reads it.
  */
-export async function loaderScript(entrySource, map, styles = [], names = {}) {
-  const call = `(${loader.toString()})(${JSON.stringify(map)}, ${JSON.stringify(entrySource)}, ${JSON.stringify(styles)}, ${JSON.stringify(names)})`
+export async function loaderScript(entrySource, map, styles = [], shared) {
+  const call = `(${loader.toString()})(${JSON.stringify(map)}, ${JSON.stringify(entrySource)}, ${JSON.stringify(styles)}, ${JSON.stringify(shared ?? null)})`
   const minified = await transformWithEsbuild(call, 'loader.js', {
     minify: true,
     target: 'es2020',
@@ -172,9 +178,12 @@ export function woffDrop(bundle) {
  *   modules and loaded by the inline loader, which fetches it through the
  *   shell (see loader.js). The menu, which is the shell page itself, and the
  *   sign-in page, which never loads in the frame, keep native modules.
- * @param {boolean} [options.shared] Whether a framed app takes React from
- *   fixed files in its assets' shared/ folder rather than bundling it (default
- *   true). See shared-react.js. false bundles React into the app, as before.
+ * @param {boolean} [options.shared] Whether the build emits React as fixed
+ *   files in its assets' shared/ folder (see shared-react.js). A framed app
+ *   then takes React from them rather than bundling it, from menu's copy where
+ *   that is the same bytes; default true, and false bundles React into the
+ *   app, as before. A page that never loads in the frame only hosts them for
+ *   the apps: the menu does, with true; default false.
  */
 export function mochiPlugin(options = {}) {
   // BUILD_LOCALES=en builds only the `en` catalog; other locales resolve to an
@@ -182,8 +191,9 @@ export function mochiPlugin(options = {}) {
   const onlyEn = process.env.BUILD_LOCALES === 'en'
   const STUB_ID = '\0mochi-empty-locale'
   const frame = options.frame !== false
-  const shared = frame && options.shared !== false
+  const shared = frame ? options.shared !== false : options.shared === true
   let building = false
+  let emitting = false
   let root = ''
   let assetsDir = 'assets'
   let react = null // Promise of React's shared files, or of null
@@ -208,6 +218,7 @@ export function mochiPlugin(options = {}) {
     enforce: 'pre',
     config(_config, environment) {
       building = frame && environment.command === 'build'
+      emitting = shared && environment.command === 'build'
       if (!building) return null
       return {
         build: {
@@ -232,7 +243,7 @@ export function mochiPlugin(options = {}) {
     },
     // Built while the app is, and once per run of the build.
     buildStart() {
-      if (!building || !shared || react) return
+      if (!emitting || react) return
       react = sharedReact(root)
       // Awaited in generateBundle; this keeps a failure from being reported
       // as unhandled before then.
@@ -301,15 +312,24 @@ export function mochiPlugin(options = {}) {
         const built = react && (await react)
         const files = built ? bundled(built) : undefined
         const directory = path.posix.dirname(context.chunk.fileName)
-        const names = {}
-        for (const [name, file] of Object.entries(files?.names ?? {})) {
-          names[name] = path.posix.relative(directory, file)
+        const relative = (file) => path.posix.relative(directory, file)
+        let page
+        if (built) {
+          page = { names: {}, files: {}, menu: MENU_SHARED }
+          for (const [name, file] of Object.entries(files.names)) {
+            page.names[name] = relative(file)
+          }
+          for (const file of built.files) {
+            page.files[relative(inBundle(file.fileName))] = createHash('sha256')
+              .update(file.code)
+              .digest('base64')
+          }
         }
         const script = await loaderScript(
           found[1],
           manifest(context.bundle, context.chunk.fileName, files),
           styles,
-          names
+          page
         )
         return html.replace(stylesheet, '').replace(found[0], () => script)
       },

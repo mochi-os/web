@@ -23,13 +23,21 @@
 // the page had before, and in the frame taken through the shell too and in
 // place before the app runs.
 //
-// names maps each bare name the build left external - React's, which every
-// app takes from the same fixed files rather than bundling its own - to its
-// file, relative to the entry.
+// shared holds React's files, which every app takes from the same fixed
+// files rather than bundling its own (see shared-react.js): names maps each
+// bare name the build left external to its file, and files each file to the
+// SHA-256 of its bytes (base64), both relative to the entry. Each keeps its
+// address in the app's own folder, so the files' imports of each other always
+// resolve there. In the frame, its text is first asked of the shell from
+// menu, the folder every app's copy also sits in, which the browser then
+// keeps once for all of them; it runs only when its digest is the one this
+// app was built with. Anything else - a shell that will not carry it, a menu
+// without it, other bytes under its name, no Web Crypto - and the app's own
+// copy runs, as if menu had none.
 //
 // This function's source is inlined into the page, so it uses nothing from
 // its module.
-export function loader(manifest, entry, styles, names) {
+export function loader(manifest, entry, styles, shared) {
   'use strict'
 
   // A load failure reads as the browser's own for a failed dynamic import, so
@@ -87,14 +95,58 @@ export function loader(manifest, entry, styles, names) {
   }
 
   // The script's text as the shell fetched it, from the top window's cache, or
-  // null when the shell will not carry it and the script loads natively.
+  // null when the shell will not carry it and the script loads natively. A
+  // shared file's text comes from menu's copy where that is the same bytes.
   function carried(url, kind) {
     if (!bridged) return Promise.resolve(null)
     kind = kind || /javascript/i
     if (carrying[url]) return carrying[url]
-    return (carrying[url] = requested(url, kind).then(function (body) {
-      return body && new TextDecoder().decode(body)
-    }))
+    function own() {
+      return requested(url, kind).then(function (body) {
+        return body && new TextDecoder().decode(body)
+      })
+    }
+    var copy = menu[url]
+    return (carrying[url] = copy
+      ? requested(copy.url, kind)
+          .then(function (body) {
+            return verified(body, copy.digest)
+          })
+          .then(function (text) {
+            return text === null ? own() : text
+          })
+      : own())
+  }
+
+  // Shared file URL in the app's own folder -> { url, digest }: menu's copy of
+  // it and the SHA-256 its bytes must have.
+  var menu = Object.create(null)
+  var files = (shared && shared.files) || {}
+  Object.keys(files).forEach(function (file) {
+    var own = new URL(file, base)
+    var name = own.pathname.slice(own.pathname.lastIndexOf('/') + 1)
+    menu[own.href] = {
+      url: new URL(shared.menu + name, location.href).href,
+      digest: files[file],
+    }
+  })
+
+  // The text of body when its SHA-256 is digest, else null.
+  function verified(body, digest) {
+    var subtle = window.crypto && window.crypto.subtle
+    if (!body || !subtle) return Promise.resolve(null)
+    return subtle.digest('SHA-256', body).then(
+      function (hash) {
+        var bytes = new Uint8Array(hash)
+        var text = ''
+        for (var i = 0; i < bytes.length; i++)
+          text += String.fromCharCode(bytes[i])
+        return btoa(text) === digest ? new TextDecoder().decode(body) : null
+      },
+      function () {
+        return null
+      }
+    )
   }
 
   // The bytes of url as the shell fetched them, from the top window's cache,
@@ -250,7 +302,8 @@ export function loader(manifest, entry, styles, names) {
   var registry = Object.create(null) // URL -> load record
 
   var bare = Object.create(null) // bare name -> its file's URL
-  Object.keys(names || {}).forEach(function (name) {
+  var names = (shared && shared.names) || {}
+  Object.keys(names).forEach(function (name) {
     bare[name] = new URL(names[name], base).href
   })
 

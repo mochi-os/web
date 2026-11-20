@@ -11,6 +11,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -221,6 +222,48 @@ describe('mochiPlugin: React as shared files', () => {
     const root = app(MAIN)
     const native = await bundle(root, path.join(root, 'dist'), { frame: false })
     expect(existsSync(path.join(native, 'assets/shared'))).toBe(false)
+  }, 60000)
+
+  it("gives the page each shared file's SHA-256, and menu's folder", () => {
+    const page = readFileSync(path.join(framed, 'index.html'), 'utf8')
+    const emitted = shared(framed)
+    expect(emitted.length).toBeGreaterThanOrEqual(4)
+    for (const [name, bytes] of emitted) {
+      const digest = createHash('sha256').update(bytes).digest('base64')
+      // THE POINT: the digest of the bytes the app ships, so it runs only
+      // those from menu.
+      expect(page).toContain(
+        JSON.stringify(name.replace(/^assets\//, '')) +
+          ':' +
+          JSON.stringify(digest)
+      )
+    }
+    expect(page).toContain('"/menu/assets/shared/"')
+  })
+
+  it('hosts them on a page that never loads in the frame, with shared: true', async () => {
+    const root = app(MAIN)
+    const host = await bundle(root, path.join(root, 'dist'), {
+      frame: false,
+      shared: true,
+    })
+    // The same files every framed app carries.
+    const theirs = new Map(shared(host))
+    const ours = shared(framed)
+    expect([...theirs.keys()].sort()).toEqual(ours.map(([name]) => name).sort())
+    for (const [name, bytes] of ours) {
+      expect(bytes.equals(theirs.get(name)!)).toBe(true)
+    }
+    // The page itself is as it was: native modules, its own React.
+    const page = readFileSync(path.join(host, 'index.html'), 'utf8')
+    expect(page).toMatch(
+      /<script type="module" crossorigin src="\.\/assets\/index-/
+    )
+    expect(page).not.toContain('mochi:bridge')
+    const own = [...files(host)].filter(
+      ([name]) => !name.startsWith('assets/shared/')
+    )
+    expect(own.some(([, data]) => data.includes(MARKER))).toBe(true)
   }, 60000)
 
   it('builds without them where React is not installed', async () => {
