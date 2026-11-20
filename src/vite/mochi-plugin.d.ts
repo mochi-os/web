@@ -12,6 +12,12 @@ export interface MochiPluginOptions {
    * which fetches it through the shell.
    */
   frame?: boolean
+  /**
+   * Whether a framed app's build also emits React as fixed System.register
+   * files in its assets' shared/ folder (default: true). The app still bundles
+   * its own React. false builds exactly what the plugin built before.
+   */
+  shared?: boolean
 }
 
 export function mochiPlugin(options?: MochiPluginOptions): Plugin

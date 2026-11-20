@@ -6,6 +6,7 @@
 import path from 'node:path'
 import { transformWithEsbuild } from 'vite'
 import { loader } from './loader.js'
+import { sharedReact } from './shared-react.js'
 
 // The entry module script and the stylesheets Vite writes into the built page.
 const entryScript = /<script type="module"[^>]*\ssrc="([^"]+)"[^>]*><\/script>/
@@ -158,6 +159,10 @@ export function woffDrop(bundle) {
  *   modules and loaded by the inline loader, which fetches it through the
  *   shell (see loader.js). The menu, which is the shell page itself, and the
  *   sign-in page, which never loads in the frame, keep native modules.
+ * @param {boolean} [options.shared] Whether a framed app's build also emits
+ *   React as fixed files in its assets' shared/ folder (default true). See
+ *   shared-react.js. Nothing loads them yet: the app still bundles its own
+ *   React. false builds exactly what the plugin built before.
  */
 export function mochiPlugin(options = {}) {
   // BUILD_LOCALES=en builds only the `en` catalog; other locales resolve to an
@@ -165,7 +170,11 @@ export function mochiPlugin(options = {}) {
   const onlyEn = process.env.BUILD_LOCALES === 'en'
   const STUB_ID = '\0mochi-empty-locale'
   const frame = options.frame !== false
+  const shared = frame && options.shared !== false
   let building = false
+  let root = ''
+  let assetsDir = 'assets'
+  let react = null // Promise of React's shared files, or of null
 
   return {
     name: 'mochi',
@@ -186,6 +195,18 @@ export function mochiPlugin(options = {}) {
         },
       }
     },
+    configResolved(config) {
+      root = config.root
+      assetsDir = config.build.assetsDir
+    },
+    // Built while the app is, and once per run of the build.
+    buildStart() {
+      if (!building || !shared || react) return
+      react = sharedReact(root)
+      // Awaited in generateBundle; this keeps a failure from being reported
+      // as unhandled before then.
+      react.catch(() => {})
+    },
     resolveId(source) {
       if (!onlyEn) return null
       const m = /(?:^|\/)locales\/([^/]+)\/messages\.po$/.exec(source)
@@ -200,8 +221,16 @@ export function mochiPlugin(options = {}) {
     // CSS plugin in this same hook, and is not in the bundle before it.
     generateBundle: {
       order: 'post',
-      handler(_options, bundle) {
+      async handler(_options, bundle) {
         woffDrop(bundle)
+        const files = react && (await react)
+        for (const file of files ?? []) {
+          this.emitFile({
+            type: 'asset',
+            fileName: path.posix.join(assetsDir, 'shared', file.fileName),
+            source: file.code,
+          })
+        }
       },
     },
     transformIndexHtml: {
