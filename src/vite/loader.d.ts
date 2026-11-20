@@ -4,5 +4,6 @@
 export function loader(
   manifest: [string[], Array<[number, number[]]>],
   entry: string,
-  styles?: string[]
+  styles?: string[],
+  names?: Record<string, string>
 ): void

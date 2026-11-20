@@ -23,9 +23,13 @@
 // the page had before, and in the frame taken through the shell too and in
 // place before the app runs.
 //
+// names maps each bare name the build left external - React's, which every
+// app takes from the same fixed files rather than bundling its own - to its
+// file, relative to the entry.
+//
 // This function's source is inlined into the page, so it uses nothing from
 // its module.
-export function loader(manifest, entry, styles) {
+export function loader(manifest, entry, styles, names) {
   'use strict'
 
   // A load failure reads as the browser's own for a failed dynamic import, so
@@ -245,8 +249,13 @@ export function loader(manifest, entry, styles) {
 
   var registry = Object.create(null) // URL -> load record
 
+  var bare = Object.create(null) // bare name -> its file's URL
+  Object.keys(names || {}).forEach(function (name) {
+    bare[name] = new URL(names[name], base).href
+  })
+
   function resolve(specifier, parent) {
-    return new URL(specifier, parent).href
+    return bare[specifier] || new URL(specifier, parent).href
   }
 
   function record(url) {

@@ -67,8 +67,10 @@ process.stdout.write(JSON.stringify(names))`
 }
 
 /**
- * React's shared files, built from the copy installed where the app is: a
- * list of { fileName, code }, or null where React is not installed there.
+ * React's shared files, built from the copy installed where the app is, or
+ * null where React is not installed there: { files, names }, files a list of
+ * { fileName, code, imports } (imports the files it imports statically) and
+ * names each specifier's file.
  */
 export async function sharedReact(root) {
   const names = exportNames(root)
@@ -125,7 +127,32 @@ export async function sharedReact(root) {
     },
   })
   const output = (Array.isArray(result) ? result[0] : result).output
-  return output
-    .filter((item) => item.type === 'chunk')
-    .map((chunk) => ({ fileName: chunk.fileName, code: chunk.code }))
+  const files = []
+  const named = {}
+  for (const chunk of output) {
+    if (chunk.type !== 'chunk') continue
+    files.push({
+      fileName: chunk.fileName,
+      code: chunk.code,
+      imports: chunk.imports,
+    })
+    if (chunk.isEntry) named[ENTRIES[chunk.name]] = chunk.fileName
+  }
+  return { files, names: named }
+}
+
+/**
+ * Whether an import names React or react-dom, or a path inside either: what
+ * an app leaves to the shared files.
+ */
+export function isReact(id) {
+  return /^react(-dom)?(\/|$)/.test(id)
+}
+
+/**
+ * Whether a module the app's build bundled is React's own code: a file of the
+ * react or react-dom package, wherever pnpm keeps it.
+ */
+export function bundlesReact(id) {
+  return /[\\/]node_modules[\\/]react(-dom)?[\\/]/.test(id)
 }

@@ -157,23 +157,50 @@ describe('mochiPlugin: React as shared files', () => {
     expect(text).not.toMatch(/\bcaptureOwnerStack\b/)
   })
 
-  it("leaves the app's own files exactly as the plugin built them before", () => {
+  it('leaves React out of the app, and maps its four names in the page', () => {
     const own = [...files(framed)].filter(
       ([name]) => !name.startsWith('assets/shared/')
     )
-    const before = [...files(unshared)]
-    expect(own.map(([name]) => name).sort()).toEqual(
-      before.map(([name]) => name).sort()
-    )
-    const bytes = new Map(before)
-    for (const [name, data] of own)
-      expect(data.equals(bytes.get(name)!)).toBe(true)
-    // The app still carries its own React, and its page names no shared file.
+    // THE POINT: no file of the app's own holds React's code.
+    expect(own.some(([, data]) => data.includes(MARKER))).toBe(false)
+    const page = readFileSync(path.join(framed, 'index.html'), 'utf8')
+    for (const [name, file] of [
+      ['react', 'react'],
+      ['react-dom/client', 'react-dom-client'],
+      ['react/jsx-runtime', 'react-jsx-runtime'],
+    ]) {
+      expect(page).toMatch(
+        new RegExp('[{,]"?' + name + '"?:"shared/' + file + '-[\\w-]{8}\\.js"')
+      )
+    }
+  })
+
+  it('bundles React into the app with shared: false, as before', () => {
+    const own = [...files(unshared)]
     expect(own.some(([, data]) => data.includes(MARKER))).toBe(true)
-    expect(readFileSync(path.join(framed, 'index.html'), 'utf8')).not.toMatch(
+    expect(readFileSync(path.join(unshared, 'index.html'), 'utf8')).not.toMatch(
       /shared\//
     )
   })
+
+  it('fails the build when a chunk still bundles React', async () => {
+    // React's own file by its path, past the bare name the build leaves out.
+    const root = app(
+      `import React from '../node_modules/react/index.js'\nwindow.__react = React\n`
+    )
+    await expect(bundle(root, path.join(root, 'dist'))).rejects.toThrow(
+      /bundles .*node_modules\/react\/index\.js, which the shared files hold/
+    )
+  }, 60000)
+
+  it('fails the build when a React import has no shared file', async () => {
+    const root = app(
+      `import { renderToString } from 'react-dom/server'\nwindow.__render = renderToString\n`
+    )
+    await expect(bundle(root, path.join(root, 'dist'))).rejects.toThrow(
+      /imports react-dom\/server, which has no shared file/
+    )
+  }, 60000)
 
   it('gives the same files, byte for byte, from a different app', async () => {
     const root = app(OTHER)

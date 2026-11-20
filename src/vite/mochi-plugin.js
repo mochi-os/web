@@ -6,7 +6,7 @@
 import path from 'node:path'
 import { transformWithEsbuild } from 'vite'
 import { loader } from './loader.js'
-import { sharedReact } from './shared-react.js'
+import { bundlesReact, isReact, sharedReact } from './shared-react.js'
 
 // The entry module script and the stylesheets Vite writes into the built page.
 const entryScript = /<script type="module"[^>]*\ssrc="([^"]+)"[^>]*><\/script>/
@@ -17,11 +17,23 @@ const stylesheet = /<link rel="stylesheet"[^>]*\shref="([^"]+)"[^>]*>\s*/g
  * directly or not: [files, imports], files the paths relative to the entry's
  * directory and imports a list of [chunk, [dependencies]] as indices into
  * files. The page carries it, so it is kept small.
+ *
+ * shared, where the build left React to the shared files, is { names,
+ * imports }: names each bare name's file, imports each shared file's own
+ * static imports, every path in the bundle's terms. A chunk importing React is
+ * then taken to import its shared file, so that file is asked for with the
+ * chunk rather than once the chunk has been read.
  */
-export function manifest(bundle, entry) {
-  const imports = new Map()
+export function manifest(bundle, entry, shared) {
+  const names = shared?.names ?? {}
+  const imports = new Map(Object.entries(shared?.imports ?? {}))
   for (const item of Object.values(bundle)) {
-    if (item.type === 'chunk') imports.set(item.fileName, item.imports)
+    if (item.type === 'chunk') {
+      imports.set(
+        item.fileName,
+        item.imports.map((id) => names[id] ?? id)
+      )
+    }
   }
   const directory = path.posix.dirname(entry)
   const files = []
@@ -51,10 +63,11 @@ export function manifest(bundle, entry) {
 
 /**
  * The page's inline loader script, in place of the module script that would
- * load the entry.
+ * load the entry. names maps each bare name the build left external to its
+ * file, relative to the entry's directory.
  */
-export async function loaderScript(entrySource, map, styles = []) {
-  const call = `(${loader.toString()})(${JSON.stringify(map)}, ${JSON.stringify(entrySource)}, ${JSON.stringify(styles)})`
+export async function loaderScript(entrySource, map, styles = [], names = {}) {
+  const call = `(${loader.toString()})(${JSON.stringify(map)}, ${JSON.stringify(entrySource)}, ${JSON.stringify(styles)}, ${JSON.stringify(names)})`
   const minified = await transformWithEsbuild(call, 'loader.js', {
     minify: true,
     target: 'es2020',
@@ -159,10 +172,9 @@ export function woffDrop(bundle) {
  *   modules and loaded by the inline loader, which fetches it through the
  *   shell (see loader.js). The menu, which is the shell page itself, and the
  *   sign-in page, which never loads in the frame, keep native modules.
- * @param {boolean} [options.shared] Whether a framed app's build also emits
- *   React as fixed files in its assets' shared/ folder (default true). See
- *   shared-react.js. Nothing loads them yet: the app still bundles its own
- *   React. false builds exactly what the plugin built before.
+ * @param {boolean} [options.shared] Whether a framed app takes React from
+ *   fixed files in its assets' shared/ folder rather than bundling it (default
+ *   true). See shared-react.js. false bundles React into the app, as before.
  */
 export function mochiPlugin(options = {}) {
   // BUILD_LOCALES=en builds only the `en` catalog; other locales resolve to an
@@ -175,6 +187,21 @@ export function mochiPlugin(options = {}) {
   let root = ''
   let assetsDir = 'assets'
   let react = null // Promise of React's shared files, or of null
+
+  // The shared files in the bundle's terms: each bare name's file and each
+  // file's own imports, under the assets' shared/ folder.
+  const inBundle = (file) => path.posix.join(assetsDir, 'shared', file)
+  function bundled(built) {
+    const names = {}
+    for (const [name, file] of Object.entries(built.names)) {
+      names[name] = inBundle(file)
+    }
+    const imports = {}
+    for (const file of built.files) {
+      imports[inBundle(file.fileName)] = file.imports.map(inBundle)
+    }
+    return { names, imports }
+  }
 
   return {
     name: 'mochi',
@@ -191,7 +218,11 @@ export function mochiPlugin(options = {}) {
           // rather than styles each chunk injects as it executes: a page
           // painted unstyled until its code had loaded.
           cssCodeSplit: false,
-          rollupOptions: { output: { format: 'system' } },
+          rollupOptions: {
+            output: { format: 'system' },
+            // React comes from the shared files, as each chunk imports it.
+            ...(shared ? { external: isReact } : {}),
+          },
         },
       }
     },
@@ -223,11 +254,34 @@ export function mochiPlugin(options = {}) {
       order: 'post',
       async handler(_options, bundle) {
         woffDrop(bundle)
-        const files = react && (await react)
-        for (const file of files ?? []) {
+        const built = react && (await react)
+        if (building && shared) {
+          for (const item of Object.values(bundle)) {
+            if (item.type !== 'chunk') continue
+            // A name with no shared file would be asked for beside the chunk
+            // as a file of its own, which is not there.
+            for (const id of [...item.imports, ...item.dynamicImports]) {
+              if (isReact(id) && !built?.names[id]) {
+                this.error(
+                  `${item.fileName} imports ${id}, which has no shared file`
+                )
+              }
+            }
+            // A second React on the page breaks every hook.
+            const own = item.moduleIds.find(bundlesReact)
+            if (own) {
+              // The file, without Rollup's marks for a module it made.
+              const file = own.replace(/^\0/, '').replace(/\?.*$/, '')
+              this.error(
+                `${item.fileName} bundles ${file}, which the shared files hold`
+              )
+            }
+          }
+        }
+        for (const file of built?.files ?? []) {
           this.emitFile({
             type: 'asset',
-            fileName: path.posix.join(assetsDir, 'shared', file.fileName),
+            fileName: inBundle(file.fileName),
             source: file.code,
           })
         }
@@ -244,10 +298,18 @@ export function mochiPlugin(options = {}) {
           )
         }
         const styles = [...html.matchAll(stylesheet)].map((match) => match[1])
+        const built = react && (await react)
+        const files = built ? bundled(built) : undefined
+        const directory = path.posix.dirname(context.chunk.fileName)
+        const names = {}
+        for (const [name, file] of Object.entries(files?.names ?? {})) {
+          names[name] = path.posix.relative(directory, file)
+        }
         const script = await loaderScript(
           found[1],
-          manifest(context.bundle, context.chunk.fileName),
-          styles
+          manifest(context.bundle, context.chunk.fileName, files),
+          styles,
+          names
         )
         return html.replace(stylesheet, '').replace(found[0], () => script)
       },
