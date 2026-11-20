@@ -31,7 +31,7 @@ const MESSAGES = {
   clearFailed: fixture('test.clear-failed'),
 }
 
-function makeStore() {
+function makeStore(answered?: (result: unknown) => Row[] | null) {
   const api = {
     list: vi
       .fn<() => Promise<Row[]>>()
@@ -46,6 +46,7 @@ function makeStore() {
     itemId: (item) => item.id,
     inputId: (input) => input.id,
     toItem: (input) => input,
+    answered,
     messages: MESSAGES,
   })
   return { store, api }
@@ -170,5 +171,125 @@ describe('createSavedStore', () => {
     await store.loadSaved()
 
     expect(seen).not.toHaveBeenCalled()
+  })
+
+  describe('changes made while a load is in flight', () => {
+    const deferredList = (api: ReturnType<typeof makeStore>['api']) => {
+      let answer: (rows: Row[]) => void = () => {}
+      api.list.mockReturnValueOnce(new Promise((r) => (answer = r)))
+      return (rows: Row[]) => answer(rows)
+    }
+
+    it('keeps an addition the older list does not hold', async () => {
+      const { store, api } = makeStore()
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      store.addSaved({ id: 'b', name: 'Beta' })
+      answer([{ id: 'a', name: 'Alpha' }])
+      await loading
+
+      expect(store.isSaved('a')).toBe(true)
+      expect(store.isSaved('b')).toBe(true)
+    })
+
+    it('keeps a removal the older list still holds', async () => {
+      const { store, api } = makeStore()
+      api.list.mockResolvedValueOnce([
+        { id: 'a', name: 'Alpha' },
+        { id: 'b', name: 'Beta' },
+      ])
+      await store.loadSaved()
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      store.removeSaved('a')
+      answer([
+        { id: 'a', name: 'Alpha' },
+        { id: 'b', name: 'Beta' },
+      ])
+      await loading
+
+      expect(store.isSaved('a')).toBe(false)
+      expect(store.isSaved('b')).toBe(true)
+    })
+
+    it('leaves out an addition the server refused', async () => {
+      const { store, api } = makeStore()
+      api.add.mockRejectedValue(new Error('refused'))
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      store.addSaved({ id: 'b', name: 'Beta' })
+      await flush()
+      answer([{ id: 'a', name: 'Alpha' }])
+      await loading
+
+      expect(store.isSaved('b')).toBe(false)
+    })
+  })
+
+  describe('a list answered by a write', () => {
+    const answered = (result: unknown) => {
+      const saved = (result as { saved?: unknown } | null)?.saved
+      return Array.isArray(saved) ? (saved as Row[]) : null
+    }
+
+    it('takes the list an addition answered', async () => {
+      const { store, api } = makeStore(answered)
+      api.add.mockResolvedValue({
+        saved: [
+          { id: 'b', name: 'Beta' },
+          { id: 'c', name: 'Gamma' },
+        ],
+      })
+
+      store.addSaved({ id: 'b', name: 'Beta' })
+      await flush()
+
+      expect(store.isSaved('c')).toBe(true)
+    })
+
+    it('takes the list a removal answered', async () => {
+      const { store, api } = makeStore(answered)
+      await store.loadSaved()
+      api.remove.mockResolvedValue({ saved: [{ id: 'c', name: 'Gamma' }] })
+
+      store.removeSaved('a')
+      await flush()
+
+      expect(store.getSaved().map((row) => row.id)).toEqual(['c'])
+    })
+
+    it('ignores an answered list a later change has overtaken', async () => {
+      const { store, api } = makeStore(answered)
+      let answerFirst: (value: unknown) => void = () => {}
+      api.add
+        .mockReturnValueOnce(new Promise((r) => (answerFirst = r)))
+        .mockResolvedValueOnce({
+          saved: [
+            { id: 'c', name: 'Gamma' },
+            { id: 'b', name: 'Beta' },
+          ],
+        })
+
+      store.addSaved({ id: 'b', name: 'Beta' })
+      store.addSaved({ id: 'c', name: 'Gamma' })
+      await flush()
+      answerFirst({ saved: [{ id: 'b', name: 'Beta' }] })
+      await flush()
+
+      expect(store.isSaved('c')).toBe(true)
+    })
+
+    it('keeps the mirror when the answer holds no list', async () => {
+      const { store, api } = makeStore(answered)
+      api.add.mockResolvedValue({ saved: true })
+
+      store.addSaved({ id: 'b', name: 'Beta' })
+      await flush()
+
+      expect(store.isSaved('b')).toBe(true)
+    })
   })
 })
