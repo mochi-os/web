@@ -197,6 +197,7 @@ export function mochiPlugin(options = {}) {
   let root = ''
   let assetsDir = 'assets'
   let react = null // Promise of React's shared files, or of null
+  let failed = false // whether that promise rejected
 
   // The shared files in the bundle's terms: each bare name's file and each
   // file's own imports, under the assets' shared/ folder.
@@ -243,11 +244,16 @@ export function mochiPlugin(options = {}) {
     },
     // Built while the app is, and once per run of the build.
     buildStart() {
-      if (!emitting || react) return
+      // Built again only after a failure: in watch mode a passing failure
+      // would otherwise fail every rebuild after it.
+      if (!emitting || (react && !failed)) return
+      failed = false
       react = sharedReact(root)
       // Awaited in generateBundle; this keeps a failure from being reported
       // as unhandled before then.
-      react.catch(() => {})
+      react.catch(() => {
+        failed = true
+      })
     },
     resolveId(source) {
       if (!onlyEn) return null

@@ -121,13 +121,13 @@ export function loader(manifest, entry, styles, shared) {
   // Shared file URL in the app's own folder -> { url, digest }: menu's copy of
   // it and the SHA-256 its bytes must have.
   var menu = Object.create(null)
-  var files = (shared && shared.files) || {}
-  Object.keys(files).forEach(function (file) {
+  var digests = (shared && shared.files) || {}
+  Object.keys(digests).forEach(function (file) {
     var own = new URL(file, base)
     var name = own.pathname.slice(own.pathname.lastIndexOf('/') + 1)
     menu[own.href] = {
       url: new URL(shared.menu + name, location.href).href,
-      digest: files[file],
+      digest: digests[file],
     }
   })
 

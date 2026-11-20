@@ -244,7 +244,7 @@ function framed(
   fonts: boolean | 'refused' = false,
   dist = output,
   menu?: 'carried' | 'missing' | 'page' | 'tampered',
-  subtle = true
+  subtle: boolean | 'rejects' = true
 ) {
   const site = server(dist, name, sheets, fonts !== false)
   const carried: string[] = []
@@ -257,7 +257,11 @@ function framed(
       resources: site.loader,
       beforeParse(window: Window) {
         window.TextDecoder = TextDecoder
-        if (subtle) window.__subtle = globalThis.crypto.subtle
+        if (subtle === 'rejects') {
+          window.__subtle = {
+            digest: () => Promise.reject(new Error('digest failed')),
+          }
+        } else if (subtle) window.__subtle = globalThis.crypto.subtle
       },
     }
   )
@@ -1004,6 +1008,25 @@ describe('mochiPlugin: React comes from the shared files', () => {
       // THE POINT: menu answered other bytes under each file's name, and
       // none of them ran.
       expect(shell.frame().__tampered).toBeUndefined()
+      expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("uses the app's own copy when the digest of menu's fails", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'carried',
+      'rejects'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
       expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
     } finally {
       shell.dom.window.close()

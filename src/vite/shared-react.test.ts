@@ -32,6 +32,12 @@ const MARKER = 'react.transitional.element'
 // (core/server/web.go, match_hashed).
 const HASHED = /assets\/.*-[\w-]{8}\.[0-9A-Za-z]+$/
 
+// The only names the shell carries from menu's folder to an app's frame
+// (SHARED_FILE in apps/menu's shell.js). A name of another shape - a new hash
+// length from a Rollup upgrade, say - would be refused there, and every app
+// would quietly load its own copy.
+const SHELL = /^[A-Za-z0-9_-]+-[A-Za-z0-9_-]{8}\.js$/
+
 // An app that imports React, with React installed beside it, as each app's
 // web/ folder has it.
 function app(main: string) {
@@ -118,6 +124,7 @@ describe('mochiPlugin: React as shared files', () => {
     for (const [name, bytes] of emitted) {
       // THE POINT: a name the server caches for a year.
       expect(name).toMatch(HASHED)
+      expect(path.posix.basename(name)).toMatch(SHELL)
       expect(bytes.toString('utf8').trimStart()).toMatch(/^System\.register\(/)
     }
     // React's code is in them.
@@ -191,6 +198,15 @@ describe('mochiPlugin: React as shared files', () => {
     )
     await expect(bundle(root, path.join(root, 'dist'))).rejects.toThrow(
       /bundles .*node_modules\/react\/index\.js, which the shared files hold/
+    )
+  }, 60000)
+
+  it('fails the build when a dynamic React import has no shared file', async () => {
+    const root = app(
+      `import('react-dom/server').then((server) => { window.__server = server })\n`
+    )
+    await expect(bundle(root, path.join(root, 'dist'))).rejects.toThrow(
+      /imports react-dom\/server, which has no shared file/
     )
   }, 60000)
 
