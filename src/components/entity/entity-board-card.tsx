@@ -11,8 +11,8 @@ import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import { decimalPlaces } from '../../lib/locale-format'
 import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
+import { checklistItems } from './checklist'
 import type {
-  EntityChecklistItem,
   EntityClass,
   EntityDragPreview,
   EntityField,
@@ -165,29 +165,26 @@ export function EntityBoardCard<TObject extends EntityObject>({
           </span>
         )
 
-      case 'checklist':
-        try {
-          const items: EntityChecklistItem[] = JSON.parse(value)
-          if (items.length === 0) return null
-          const doneCount = items.filter((item) => item.done).length
-          const allDone = doneCount === items.length
-          return (
-            <span
-              key={field.id}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
-                allDone
-                  ? 'bg-success/10 text-success ring-success/30'
-                  : 'bg-surface-2 text-muted-foreground ring-border'
-              )}
-            >
-              <CheckSquare className='h-3 w-3' />
-              {doneCount}/{items.length}
-            </span>
-          )
-        } catch {
-          return null
-        }
+      case 'checklist': {
+        const items = checklistItems(value)
+        if (items.length === 0) return null
+        const doneCount = items.filter((item) => item.done).length
+        const allDone = doneCount === items.length
+        return (
+          <span
+            key={field.id}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
+              allDone
+                ? 'bg-success/10 text-success ring-success/30'
+                : 'bg-surface-2 text-muted-foreground ring-border'
+            )}
+          >
+            <CheckSquare className='h-3 w-3' />
+            {doneCount}/{items.length}
+          </span>
+        )
+      }
 
       case 'date':
         return (

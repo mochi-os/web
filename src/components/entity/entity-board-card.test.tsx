@@ -35,6 +35,34 @@ describe('EntityBoardCard', () => {
     expect(screen.getByText('1,234,567.5')).toBeInTheDocument()
   })
 
+  it('counts the done items of a checklist written with checked', () => {
+    render(
+      <EntityBoardCard
+        object={createMockEntityObject({
+          values: {
+            title: 'Deal',
+            steps: JSON.stringify([
+              { text: 'Draft', checked: true },
+              { text: 'Review', checked: false },
+            ]),
+          },
+        })}
+        fields={[
+          createMockEntityField({ id: 'title', name: 'Title', card: 1 }),
+          createMockEntityField({
+            id: 'steps',
+            name: 'Steps',
+            fieldtype: 'checklist',
+            card: 1,
+          }),
+        ]}
+        options={{}}
+        fallbackTitle={() => 'Untitled'}
+      />
+    )
+    expect(screen.getByText('1/2')).toBeInTheDocument()
+  })
+
   it('counts the nested children below the depth cap with a plural form', () => {
     // The Plural macro hands the count to the catalogue; a template literal
     // renders the same English without reaching i18n.
