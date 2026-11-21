@@ -467,11 +467,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     false
   )
 
-  // Collapsed board columns, by board and then by column field: two views
-  // that group by the same field share them. One key for the whole app, since
-  // useShellStorage keeps its last value when the key changes and finds
-  // nothing stored, so a key per board would carry one board's columns onto
-  // the next on a board-to-board navigation.
+  // Collapsed board columns, by board and then by column field, under one key
+  // for the whole app: two views that group by the same field share them.
   const [collapsedColumns, setCollapsedColumns] = useShellStorage<
     Record<string, Record<string, string[]>>
   >(`${storagePrefix}:board:collapsed`, {})
@@ -1555,16 +1552,23 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               onReorderColumns: handleReorderColumns,
               collapsedColumns: collapsedColumns[containerId]?.[columnField],
               onToggleColumnCollapsed: (columnId) => {
-                const board = collapsedColumns[containerId] ?? {}
-                const current = board[columnField] ?? []
-                setCollapsedColumns({
-                  ...collapsedColumns,
-                  [containerId]: {
-                    ...board,
-                    [columnField]: current.includes(columnId)
-                      ? current.filter((c) => c !== columnId)
-                      : [...current, columnId],
-                  },
+                // Folded or opened as the column on screen asks; the other
+                // boards and columns stored stay as they are.
+                const fold = !(
+                  collapsedColumns[containerId]?.[columnField] ?? []
+                ).includes(columnId)
+                setCollapsedColumns((previous) => {
+                  const board = previous[containerId] ?? {}
+                  const others = (board[columnField] ?? []).filter(
+                    (c) => c !== columnId
+                  )
+                  return {
+                    ...previous,
+                    [containerId]: {
+                      ...board,
+                      [columnField]: fold ? [...others, columnId] : others,
+                    },
+                  }
                 })
               },
               collapsedRows: rowField
@@ -1572,16 +1576,21 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 : undefined,
               onToggleRowCollapsed: (rowId) => {
                 if (!rowField) return
-                const board = collapsedRows[containerId] ?? {}
-                const current = board[rowField] ?? []
-                setCollapsedRows({
-                  ...collapsedRows,
-                  [containerId]: {
-                    ...board,
-                    [rowField]: current.includes(rowId)
-                      ? current.filter((r) => r !== rowId)
-                      : [...current, rowId],
-                  },
+                const fold = !(
+                  collapsedRows[containerId]?.[rowField] ?? []
+                ).includes(rowId)
+                setCollapsedRows((previous) => {
+                  const board = previous[containerId] ?? {}
+                  const others = (board[rowField] ?? []).filter(
+                    (r) => r !== rowId
+                  )
+                  return {
+                    ...previous,
+                    [containerId]: {
+                      ...board,
+                      [rowField]: fold ? [...others, rowId] : others,
+                    },
+                  }
                 })
               },
             })

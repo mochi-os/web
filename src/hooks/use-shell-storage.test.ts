@@ -186,4 +186,132 @@ describe('useShellStorage', () => {
     await answer('key', JSON.stringify('elsewhere'))
     expect(seen.current![0]).toBe('elsewhere')
   })
+
+  // The value each storage.set wrote for key, oldest first.
+  function writes(key: string) {
+    return sent('storage.set', key).map((write) => JSON.parse(write.value!))
+  }
+  const add = (id: string) => (previous: string[]) => [...previous, id]
+
+  it('applies a change made before the shell answers to the stored value, not the default', async () => {
+    const { result } = renderHook(() => useShellStorage<string[]>('key', []))
+    act(() => result.current[1](add('new')))
+    // Shown at once, built on what the hook has.
+    expect(result.current[0]).toEqual(['new'])
+    expect(result.current[2]).toBe(false)
+    // Nothing is written until the stored value is known: the default plus
+    // one change would replace it.
+    expect(writes('key')).toEqual([])
+    await answer('key', JSON.stringify(['kept']))
+    expect(result.current[0]).toEqual(['kept', 'new'])
+    expect(result.current[2]).toBe(true)
+    expect(writes('key')).toEqual([['kept', 'new']])
+  })
+
+  it('applies a change made before the shell answers to the default when nothing is stored', async () => {
+    const { result } = renderHook(() =>
+      useShellStorage<string[]>('key', ['default'])
+    )
+    act(() => result.current[1](add('new')))
+    await answer('key', null)
+    expect(result.current[0]).toEqual(['default', 'new'])
+    expect(writes('key')).toEqual([['default', 'new']])
+  })
+
+  it('composes two changes in one event, each building on the last', async () => {
+    const { result } = renderHook(() => useShellStorage('key', 0))
+    await answer('key', '5')
+    act(() => {
+      result.current[1]((previous) => previous + 1)
+      result.current[1]((previous) => previous + 1)
+    })
+    expect(result.current[0]).toBe(7)
+    expect(writes('key')).toEqual([6, 7])
+  })
+
+  it('composes changes made before the shell answers, in the order made', async () => {
+    const { result } = renderHook(() => useShellStorage<string[]>('key', []))
+    act(() => {
+      result.current[1](add('first'))
+      result.current[1](add('second'))
+    })
+    await answer('key', JSON.stringify(['kept']))
+    expect(result.current[0]).toEqual(['kept', 'first', 'second'])
+    expect(writes('key')).toEqual([['kept', 'first', 'second']])
+  })
+
+  it('applies an early change once under StrictMode, and keeps it from the abandoned read', async () => {
+    const { result } = renderHook(() => useShellStorage<string[]>('key', []), {
+      reactStrictMode: true,
+    })
+    act(() => result.current[1](add('new')))
+    // Both reads StrictMode made are answered with the value from before the
+    // change: the second must not lay it back over the change.
+    expect(sent('storage.get', 'key').length).toBeGreaterThan(1)
+    await answer('key', JSON.stringify(['kept']))
+    expect(result.current[0]).toEqual(['kept', 'new'])
+    expect(writes('key')).toEqual([['kept', 'new']])
+  })
+
+  it('lets a whole value set after an early change replace it', async () => {
+    const { result } = renderHook(() => useShellStorage<string[]>('key', []))
+    act(() => result.current[1](add('new')))
+    act(() => result.current[1](['whole']))
+    await answer('key', JSON.stringify(['kept']))
+    expect(result.current[0]).toEqual(['whole'])
+    expect(writes('key')).toEqual([['whole']])
+  })
+
+  it('keeps an early change to a key the hook has moved off, and shows only the new key', async () => {
+    const { result, rerender } = renderHook(
+      ({ key }) => useShellStorage<string[]>(key, []),
+      { initialProps: { key: 'first' } }
+    )
+    act(() => result.current[1](add('one')))
+    rerender({ key: 'second' })
+    act(() => result.current[1](add('two')))
+    await answer('first', JSON.stringify(['a']))
+    // The first key's answer is written back but not shown on the second.
+    expect(result.current[0]).toEqual(['one', 'two'])
+    await answer('second', JSON.stringify(['b']))
+    expect(writes('first')).toEqual([['a', 'one']])
+    expect(writes('second')).toEqual([['b', 'two']])
+    expect(result.current[0]).toEqual(['b', 'two'])
+  })
+
+  it('falls back on the default given with the key a change was made under', async () => {
+    const { result, rerender } = renderHook(
+      ({ key, fallback }) => useShellStorage<string[]>(key, fallback),
+      { initialProps: { key: 'first', fallback: ['first'] } }
+    )
+    await answer('first', null)
+    rerender({ key: 'second', fallback: ['second'] })
+    act(() => result.current[1](add('new')))
+    await answer('second', null)
+    expect(writes('second')).toEqual([['second', 'new']])
+  })
+
+  it('reads a key with nothing stored as its default, not the last key the hook showed', async () => {
+    const { result, rerender } = renderHook(
+      ({ key }) => useShellStorage<string[]>(key, []),
+      { initialProps: { key: 'first' } }
+    )
+    await answer('first', JSON.stringify(['a']))
+    expect(result.current[0]).toEqual(['a'])
+    rerender({ key: 'second' })
+    await answer('second', null)
+    expect(result.current[0]).toEqual([])
+    act(() => result.current[1](add('new')))
+    expect(writes('second')).toEqual([['new']])
+  })
+
+  it('keeps an early change when the component goes before the shell answers', async () => {
+    const { result, unmount } = renderHook(() =>
+      useShellStorage<string[]>('key', [])
+    )
+    act(() => result.current[1](add('new')))
+    unmount()
+    await answer('key', JSON.stringify(['kept']))
+    expect(writes('key')).toEqual([['kept', 'new']])
+  })
 })

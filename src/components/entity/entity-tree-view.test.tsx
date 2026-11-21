@@ -1,8 +1,9 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { createEvent } from '@testing-library/react'
+import { getItem, removeItem, setItem } from '../../lib/shell-storage'
 import {
   render,
   screen,
@@ -53,6 +54,78 @@ const dataTransfer = {
 }
 
 describe('EntityTreeView', () => {
+  // Two parents with a child each, the second stored open, in a container no
+  // other test uses.
+  const stored = 'tests:opened:tree:expanded'
+  afterEach(() => removeItem(stored))
+  const family = () => [
+    createMockEntityObject({ id: 'p1', rank: 'A', values: { title: 'Parent one' } }),
+    createMockEntityObject({ id: 'k1', parent: 'p1', rank: 'B', values: { title: 'Child one' } }),
+    createMockEntityObject({ id: 'p2', rank: 'C', values: { title: 'Parent two' } }),
+    createMockEntityObject({ id: 'k2', parent: 'p2', rank: 'D', values: { title: 'Child two' } }),
+  ]
+  const tree = () =>
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='opened'
+        storagePrefix='tests'
+        objects={family()}
+        peopleMap={{}}
+        viewFields='title'
+        onCardClick={vi.fn()}
+      />
+    )
+
+  it('opens a row clicked before the open rows are read, and keeps those open', async () => {
+    setItem(stored, JSON.stringify(['p2']))
+    tree()
+    // The stored rows are read asynchronously: this click lands first.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[0])
+    await screen.findByText('Child two')
+    expect(screen.getByText('Child one')).toBeTruthy()
+    expect(JSON.parse((await getItem(stored)) ?? '[]').sort()).toEqual(['p1', 'p2'])
+  })
+
+  it('leaves a row open that was clicked open before the read showed it already was', async () => {
+    setItem(stored, JSON.stringify(['p1']))
+    tree()
+    // The screen still shows it shut, so the click asks for it open.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[0])
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Collapse' }).length).toBe(1)
+    )
+    expect(screen.getByText('Child one')).toBeTruthy()
+    expect(JSON.parse((await getItem(stored)) ?? '[]')).toEqual(['p1'])
+  })
+
+  it('folds a section clicked before the folded sections are read, as the screen asked, keeping the others folded', async () => {
+    const sections = `${stored}:sections:status`
+    setItem(sections, JSON.stringify(['done', 'todo']))
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='opened'
+        storagePrefix='tests'
+        objects={[
+          createMockEntityObject({ id: 'a', values: { title: 'Alpha', status: 'todo' } }),
+          createMockEntityObject({ id: 'b', values: { title: 'Beta', status: 'done' } }),
+        ]}
+        peopleMap={{}}
+        viewFields='title'
+        statusField='status'
+        onCardClick={vi.fn()}
+      />
+    )
+    // Both sections still show open, so the click asks for To Do folded.
+    expect(screen.getByText('Alpha')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /To Do/ }))
+    await waitFor(() => expect(screen.queryByText('Beta')).toBeNull())
+    expect(screen.queryByText('Alpha')).toBeNull()
+    expect(JSON.parse((await getItem(sections)) ?? '[]').sort()).toEqual(['done', 'todo'])
+    removeItem(sections)
+  })
+
   it("reorders a grouped row among its parent's children, not the section's rows", async () => {
     // One parent in the "To Do" section, three children in "Done": the
     // rendered neighbours of a child are the other children, but the parent
