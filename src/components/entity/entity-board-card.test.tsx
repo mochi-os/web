@@ -12,6 +12,38 @@ import {
 import { EntityBoardCard } from './entity-board-card'
 
 describe('EntityBoardCard', () => {
+  // A loaded people list always holds the reader, so an empty one is still
+  // loading; one that lacks the person never will name them.
+  it('reads a person a loaded list lacks as unknown, never as the id', () => {
+    const person = 'p'.repeat(50)
+    const card = (peopleMap: Record<string, string>) => (
+      <EntityBoardCard
+        object={createMockEntityObject({
+          values: { title: 'Deal', reviewer: person },
+        })}
+        fields={[
+          createMockEntityField({ id: 'title', name: 'Title', card: 1 }),
+          createMockEntityField({
+            id: 'reviewer',
+            name: 'Reviewer',
+            fieldtype: 'user',
+            card: 1,
+          }),
+        ]}
+        options={{}}
+        peopleMap={peopleMap}
+        fallbackTitle={() => 'Untitled'}
+      />
+    )
+    const { rerender } = render(card({}))
+    expect(screen.queryByText('Unknown')).toBeNull()
+    rerender(card({ reader: 'Reader' }))
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.queryByText(person)).toBeNull()
+    rerender(card({ reader: 'Reader', [person]: 'Ada' }))
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+  })
+
   it('formats a number field for the locale', () => {
     const field = createMockEntityField({
       id: 'amount',

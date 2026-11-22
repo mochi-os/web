@@ -61,6 +61,7 @@ import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
 import { EntityContentScroller } from './entity-content-scroller'
 import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
+import { entityCascade, entityParentValues } from './entity-board-drop'
 import {
   EntityDuplicateDialog,
   type EntityDuplicateDialogProps,
@@ -707,26 +708,39 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
           // A move into another parent takes that parent's board column and
           // row, as the server copies them, so the card shows inside it at once.
+          // The object and each descendant take only what their own class
+          // accepts, and the move's own column and lane then cascade the same
+          // way, a column or a lane alone as well as both.
+          const moved = old.objects.find((o) => o.id === objectId)
           const newParent =
-            parent !== undefined
+            parent !== undefined && parent !== moved?.parent
               ? old.objects.find((o) => o.id === parent)
               : undefined
-          const sf = activeView?.columns || ''
-          const rowView = activeView?.rows || ''
+          const inherited = newParent
+            ? entityParentValues(design, newParent)
+            : {}
+          const cascaded: Record<string, string> = {}
+          if (field && value && value !== (moved?.values[field] || '')) {
+            cascaded[field] = value
+          }
+          if (
+            rf &&
+            rowValue !== undefined &&
+            rowValue !== (moved?.values[rf] || '')
+          ) {
+            cascaded[rf] = rowValue
+          }
 
           return {
             ...old,
             objects: old.objects.map((obj) => {
               if (obj.id === objectId) {
-                const updatedValues = { ...obj.values, [field]: value }
+                // An empty value keeps the column, as the server keeps it.
+                const placed = entityCascade(design, obj, inherited)
+                const updatedValues = { ...placed.values }
+                if (field && value) updatedValues[field] = value
                 if (rf && rowValue !== undefined) {
                   updatedValues[rf] = rowValue
-                }
-                if (newParent && sf) {
-                  updatedValues[sf] = newParent.values[sf] || ''
-                  if (rowView) {
-                    updatedValues[rowView] = newParent.values[rowView] || ''
-                  }
                 }
                 return {
                   ...obj,
@@ -736,13 +750,13 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                   ...(parent !== undefined ? { parent } : {}),
                 }
               }
-              // Cascade status/row changes to descendants (rank unchanged).
-              if (field && isDescendant(obj, objectId, old.objects)) {
-                const updatedValues = { ...obj.values, [field]: value }
-                if (rf && rowValue !== undefined) {
-                  updatedValues[rf] = rowValue
-                }
-                return { ...obj, values: updatedValues }
+              // Cascade column and row changes to descendants (rank unchanged).
+              if (isDescendant(obj, objectId, old.objects)) {
+                return entityCascade(
+                  design,
+                  entityCascade(design, obj, inherited),
+                  cascaded
+                )
               }
               return obj
             }),
@@ -793,24 +807,30 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         ['objects', containerId],
         (old) => {
           if (!old) return old
-          const newParent = parentId
-            ? old.objects.find((o) => o.id === parentId)
-            : null
-          const sf = activeView?.columns || ''
-          const rf = activeView?.rows || ''
+          // The object and its descendants take the new parent's board
+          // columns and rows, each what its own class accepts, as the server
+          // gives them.
+          const moved = old.objects.find((o) => o.id === objectId)
+          const newParent =
+            parentId && parentId !== moved?.parent
+              ? old.objects.find((o) => o.id === parentId)
+              : undefined
+          const inherited = newParent
+            ? entityParentValues(design, newParent)
+            : {}
           return {
             ...old,
             objects: old.objects.map((obj) => {
-              if (obj.id !== objectId) return obj
-              const updated = { ...obj, parent: parentId || '' }
-              if (newParent && sf) {
-                updated.values = {
-                  ...updated.values,
-                  [sf]: newParent.values[sf] || '',
+              if (obj.id === objectId) {
+                return {
+                  ...entityCascade(design, obj, inherited),
+                  parent: parentId || '',
                 }
-                if (rf) updated.values[rf] = newParent.values[rf] || ''
               }
-              return updated
+              if (isDescendant(obj, objectId, old.objects)) {
+                return entityCascade(design, obj, inherited)
+              }
+              return obj
             }),
           }
         }

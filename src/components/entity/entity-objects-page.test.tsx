@@ -11,8 +11,12 @@ import {
   waitFor,
   fireEvent,
   renderWithClient,
+  createMockEntityClass,
   createMockEntityDesign,
+  createMockEntityField,
+  createMockEntityObject,
   createMockEntityObjects,
+  createMockEntityOption,
   createMockEntityView,
 } from './entity-test-utils'
 import {
@@ -624,5 +628,154 @@ describe('EntityObjectsPage filling', () => {
       </SearchProvider>
     )
     await waitFor(() => expect(api.listObjects).toHaveBeenCalledTimes(2))
+  })
+})
+
+// Fields are per class, so a cascade gives a descendant a column only when its
+// own class has the field and offers the value, as the server stores it.
+describe('EntityObjectsPage cascades', () => {
+  const status = (ids: string[]) =>
+    ids.map((id) => createMockEntityOption({ id, name: id }))
+  const design = createMockEntityDesign({
+    classes: [
+      createMockEntityClass({ id: 'task' }),
+      createMockEntityClass({ id: 'note', rank: 1 }),
+      createMockEntityClass({ id: 'memo', rank: 2 }),
+    ],
+    fields: {
+      task: [createMockEntityField({ id: 'status', fieldtype: 'enumerated' })],
+      note: [createMockEntityField({ id: 'status', fieldtype: 'enumerated' })],
+      memo: [createMockEntityField({ id: 'title', fieldtype: 'text' })],
+    },
+    options: {
+      task: { status: status(['todo', 'in_progress', 'done']) },
+      note: { status: status(['todo', 'in_progress']) },
+    },
+    views: [
+      createMockEntityView({
+        id: 'board',
+        viewtype: 'board',
+        columns: 'status',
+      }),
+    ],
+  })
+  const objects = [
+    createMockEntityObject({ id: 'parent', values: { status: 'todo' } }),
+    createMockEntityObject({ id: 'other', values: { status: 'done' } }),
+    createMockEntityObject({
+      id: 'task',
+      parent: 'parent',
+      values: { status: 'todo' },
+    }),
+    createMockEntityObject({
+      id: 'note',
+      class: 'note',
+      parent: 'parent',
+      values: { status: 'todo' },
+    }),
+    createMockEntityObject({
+      id: 'memo',
+      class: 'memo',
+      parent: 'parent',
+      values: { title: 'Memo' },
+    }),
+    createMockEntityObject({
+      id: 'grand',
+      class: 'note',
+      parent: 'task',
+      values: { status: 'todo' },
+    }),
+  ]
+  const board = (
+    act: (slot: Record<string, (...args: never[]) => void>) => void
+  ) =>
+    function Board(
+      slot: { objects: EntityObject[] } & Record<string, unknown>
+    ) {
+      return (
+        <>
+          {slot.objects.map((o) => (
+            <span key={o.id} data-testid={o.id}>
+              {o.values.status ?? 'none'}
+            </span>
+          ))}
+          <button onClick={() => act(slot as never)}>act</button>
+        </>
+      )
+    }
+  const pending = () => {
+    const api = makeApi(objects)
+    // The answer never comes, so the board shows the optimistic copy.
+    ;(api.moveObject as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise(() => {})
+    )
+    ;(api.updateObject as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise(() => {})
+    )
+    return api
+  }
+
+  it('gives a moved card’s column only to descendants whose class offers it', async () => {
+    renderPage(
+      {
+        api: pending(),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject('parent' as never, 'done' as never, 1 as never)
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() =>
+      expect(screen.getByTestId('task')).toHaveTextContent('done')
+    )
+    expect(screen.getByTestId('parent')).toHaveTextContent('done')
+    // A note's status offers no done, and a memo has no status at all.
+    expect(screen.getByTestId('note')).toHaveTextContent('todo')
+    expect(screen.getByTestId('grand')).toHaveTextContent('todo')
+    expect(screen.getByTestId('memo')).toHaveTextContent('none')
+  })
+
+  it('gives a column both classes offer to every descendant', async () => {
+    renderPage(
+      {
+        api: pending(),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject(
+            'parent' as never,
+            'in_progress' as never,
+            1 as never
+          )
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() =>
+      expect(screen.getByTestId('note')).toHaveTextContent('in_progress')
+    )
+    expect(screen.getByTestId('grand')).toHaveTextContent('in_progress')
+    expect(screen.getByTestId('memo')).toHaveTextContent('none')
+  })
+
+  it('gives a reparented card and its descendants the new parent’s column each class offers', async () => {
+    renderPage(
+      {
+        api: pending(),
+        design,
+        renderBoard: board((slot) =>
+          slot.onReparentObject('task' as never, 'other' as never)
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() =>
+      expect(screen.getByTestId('task')).toHaveTextContent('done')
+    )
+    // The note under it offers no done.
+    expect(screen.getByTestId('grand')).toHaveTextContent('todo')
   })
 })

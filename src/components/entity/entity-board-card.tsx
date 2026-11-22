@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useRef } from 'react'
-import { Plural } from '@lingui/react/macro'
+import { Plural, useLingui } from '@lingui/react/macro'
 import { Check, CheckSquare } from 'lucide-react'
 import { Card } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
@@ -95,6 +95,7 @@ export function EntityBoardCard<TObject extends EntityObject>({
   dragPreview,
 }: EntityBoardCardProps<TObject>) {
   const { formatDate, formatNumber } = useFormat()
+  const { t } = useLingui()
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isNested = depth > 0
@@ -194,10 +195,16 @@ export function EntityBoardCard<TObject extends EntityObject>({
         )
 
       case 'user': {
-        // The people list may not have synced yet on a fresh subscribe. Never
-        // fall back to the raw entity ID - show the avatar with a skeleton in
-        // place of the name until it resolves.
-        const name = peopleMap?.[value]
+        // The people list may not have loaded yet. Never fall back to the raw
+        // entity ID - show the avatar with a skeleton in place of the name
+        // until it resolves. A loaded list always holds the reader, so one
+        // that is empty is still loading; a person a loaded list lacks reads
+        // as unknown rather than loading for ever.
+        const name =
+          peopleMap?.[value] ??
+          (peopleMap && Object.keys(peopleMap).length > 0
+            ? t`Unknown`
+            : undefined)
         const assets = containerId
           ? entityAddress(() => entityAssets.user(containerId, value))
           : undefined
