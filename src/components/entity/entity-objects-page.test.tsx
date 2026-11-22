@@ -32,6 +32,16 @@ import { toast } from '../../lib/toast-utils'
 import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 
 const invalidate = vi.fn()
+const navigation = vi.hoisted(() => ({
+  external: vi.fn(),
+  clipboard: vi.fn((_: string) => Promise.resolve(true)),
+}))
+
+vi.mock('../../lib/shell-bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/shell-bridge')>()),
+  shellNavigateExternal: (url: string) => navigation.external(url),
+  shellClipboardWrite: (text: string) => navigation.clipboard(text),
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
@@ -43,11 +53,19 @@ vi.mock('@tanstack/react-router', () => ({
 // Every label is a plain string the app resolves, so the fixture answers any
 // key with its own name. An assertion can then look for "exportData" on screen
 // without the test carrying 30 lines of wording it does not care about.
+// Share's entries' words, given as an app gives them.
+const share = {
+  feed: 'Post to a feed',
+  chat: 'Send in a chat',
+  copy: 'Copy link',
+}
 const labels = new Proxy({} as EntityObjectsPageLabels, {
   get: (_t, key: string) =>
-    key === 'createAction' || key === 'downloaded'
-      ? (arg?: string) => `${key}:${arg ?? ''}`
-      : key,
+    key === 'share'
+      ? share
+      : key === 'createAction' || key === 'downloaded'
+        ? (arg?: string) => `${key}:${arg ?? ''}`
+        : key,
 })
 
 function makeApi(objects: EntityObject[]): EntityObjectsPageApi<EntityObject> {
@@ -88,6 +106,7 @@ function renderPage(
     search: {},
     icon: FileText,
     labels,
+    shareUrl: () => 'https://x.test/crm/c1',
     api: makeApi(objects),
     entity: 'crm',
     storagePrefix: 'crms',
@@ -210,17 +229,42 @@ describe('EntityObjectsPage', () => {
     error.mockRestore()
   })
 
-  it('offers the share link through a named copy control', async () => {
+  it("copies the container's mochi:// join link from Share", async () => {
+    navigation.clipboard.mockClear()
     const api = makeApi(createMockEntityObjects(1))
     ;(api.share as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { link: 'https://x.test/l' },
+      data: { link: 'mochi://x.test/abc123' },
     })
     renderPage({ api })
     await openPageMenu()
-    fireEvent.click(await screen.findByText('shareAction'))
-    expect(
-      await screen.findByRole('button', { name: 'Copy' })
-    ).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Share' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy link' }))
+    await waitFor(() =>
+      expect(navigation.clipboard).toHaveBeenCalledWith('mochi://x.test/abc123')
+    )
+    expect(api.share).toHaveBeenCalledWith('c1')
+  })
+
+  it("posts the container's name and page address to a feed", async () => {
+    navigation.external.mockReset()
+    const api = makeApi(createMockEntityObjects(1))
+    ;(api.share as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { link: 'mochi://x.test/abc123' },
+    })
+    renderPage({ api })
+    await openPageMenu()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Share' }))
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: 'Post to a feed' })
+    )
+    expect(navigation.external).toHaveBeenCalledTimes(1)
+    const address = new URL(
+      navigation.external.mock.calls[0][0],
+      'https://here'
+    )
+    expect(address.pathname).toBe('/feeds/share')
+    expect(address.searchParams.get('text')).toBe('Acme Holdings')
+    expect(address.searchParams.get('url')).toBe('https://x.test/crm/c1')
   })
 
   it('titles the page with the container name', async () => {

@@ -24,7 +24,6 @@ import {
   Ellipsis,
   FileDown,
   GripVertical,
-  Link as LinkIcon,
   LogOut,
   Plus,
   SlidersHorizontal,
@@ -43,15 +42,10 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
 import { LoadingContent } from '../ui/loading-content'
-import {
-  ResponsiveDialog,
-  ResponsiveDialogContent,
-  ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
-} from '../ui/responsive-dialog'
 import { Switch } from '../ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ConfirmDialog } from '../confirm-dialog'
+import { ShareSubmenu, type ShareLabels } from '../share-menu'
 import type { FilterState } from '../filter-bar'
 import { EntityOptionDialog } from './entity-option-dialog'
 import { KeyboardShortcutsHelp } from './keyboard-shortcuts-help'
@@ -80,7 +74,6 @@ import { getErrorMessage } from '../../lib/handle-server-error'
 import { exportEntityArchive } from '../../lib/entity-export'
 import { rankBetween, rankCompare } from '../../lib/rank'
 import { shellSaveBlob } from '../../lib/shell-bridge'
-import { CopyButton } from '../ui/copy-button'
 import { toastAction } from '../../lib/toast-action'
 import { toast } from '../../lib/toast-utils'
 import type {
@@ -229,10 +222,8 @@ export interface EntityObjectsPageLabels {
   loading: string
   downloaded: (filename: string) => string
   exportFailed: string
-  /** Share link: the menu entry, then the dialog title. */
-  shareAction: string
-  shareTitle: string
-  shareFailed: string
+  /** Share's entries. */
+  share: ShareLabels
   /** Toasts for the writes the board and tree make without a dialog. */
   moveFailed: string
   columnCreateFailed: string
@@ -302,6 +293,8 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   initialObjectId?: string
   icon: LucideIcon
   labels: EntityObjectsPageLabels
+  /** The full address of the container's page, which a post of it links to. */
+  shareUrl: () => string
   api: EntityObjectsPageApi<TObject>
   /** Websocket entity name ("crm", "project"). */
   entity: string
@@ -345,6 +338,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   initialObjectId,
   icon: Icon,
   labels,
+  shareUrl,
   api,
   entity,
   storagePrefix,
@@ -367,24 +361,11 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const access = container.access
   const isOwner = container.owner.local
   const [unsubscribeOpen, setUnsubscribeOpen] = useState(false)
-  const [linkOpen, setLinkOpen] = useState(false)
-  const [shareLink, setShareLink] = useState('')
 
   // Destructured so a callback's dependency list compares strings by value
   // rather than the labels object, which an app builds inline every render.
-  const { noClasses, shareFailed } = labels
+  const { noClasses } = labels
 
-  const openLinkDialog = useCallback(async () => {
-    setShareLink('')
-    setLinkOpen(true)
-    try {
-      const response = await api.share(container.id)
-      setShareLink(response.data.link)
-    } catch (error) {
-      setLinkOpen(false)
-      toast.error(getErrorMessage(error, shareFailed))
-    }
-  }, [api, container.id, shareFailed])
 
   const handleDataExport = useCallback(async () => {
     const warming = toast.loading(labels.loading)
@@ -1438,12 +1419,16 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                   {duplicate.menuAction}
                 </DropdownMenuItem>
               )}
-              {/* Canonical menu tail: Link, Design, Settings, Unsubscribe. */}
+              {/* Canonical menu tail: Share, Design, Settings, Unsubscribe. */}
               {isOwner && (
-                <DropdownMenuItem onClick={() => void openLinkDialog()}>
-                  <LinkIcon className='size-4 me-2' />
-                  {labels.shareAction}
-                </DropdownMenuItem>
+                // A post or message of the container is its name and its
+                // page's address; its link is the mochi:// one another
+                // server joins by.
+                <ShareSubmenu
+                  share={() => ({ text: container.name, url: shareUrl() })}
+                  link={async () => (await api.share(container.id)).data.link}
+                  labels={labels.share}
+                />
               )}
               {canDesign(access) && designMenuItem}
               {settingsMenuItem}
@@ -1664,17 +1649,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         onAdd={handleAddColumn}
         title={labels.addColumn}
       />
-      <ResponsiveDialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <ResponsiveDialogContent>
-          <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle>{labels.shareTitle}</ResponsiveDialogTitle>
-          </ResponsiveDialogHeader>
-          <div className='bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm'>
-            <code className='flex-1 break-all'>{shareLink || '…'}</code>
-            <CopyButton value={shareLink} disabled={!shareLink} />
-          </div>
-        </ResponsiveDialogContent>
-      </ResponsiveDialog>
 
       <ConfirmDialog
         open={unsubscribeOpen}
