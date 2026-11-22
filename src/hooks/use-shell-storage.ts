@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getItem, setItem } from '../lib/shell-storage'
+import { readItem, setItem } from '../lib/shell-storage'
+
+// How long to wait before asking again after a read the shell did not answer,
+// in milliseconds, one entry per retry. After the last, a component still
+// showing the key asks again at the last interval, so the key becomes known
+// whenever the shell answers; one that has gone stops.
+const RETRY = [1000, 2000, 4000]
 
 /**
  * A new value, or a function from the value to the next one. The function
@@ -31,7 +37,9 @@ export type ShellStorageUpdate<T> = T | ((previous: T) => T)
  * the read answers, it shows at once on the value shown, and is applied again
  * to the stored value when the read comes back, which is what is kept: a
  * click in that window adds to what was stored instead of replacing it with
- * the default and one change.
+ * the default and one change. A read the shell does not answer in time is
+ * asked again a few times, the key unknown and those changes unwritten
+ * meanwhile; after the last it stays unknown.
  */
 export function useShellStorage<T>(
   key: string,
@@ -69,7 +77,7 @@ export function useShellStorage<T>(
     if (written.current !== key) written.current = null
     ready.current = written.current === key ? key : null
     setKnown(written.current === key)
-    getItem(key).then((stored) => {
+    const answered = (stored: string | null) => {
       // Updates made before any read of the key answered are applied to the
       // stored value by whichever read answers first, even one whose effect
       // has gone (StrictMode's first, or the key changed meanwhile), so they
@@ -116,7 +124,21 @@ export function useShellStorage<T>(
       }
       latest.current = next
       setValue(next)
-    })
+    }
+    // A read the shell did not answer says nothing of what is stored: the
+    // updates stay queued, nothing is written and the key stays unknown. It
+    // is asked again while the effect or a queued update still wants it.
+    const wanted = () => mounted || pending.current.has(key)
+    const read = (attempt: number) => {
+      void readItem(key).then((stored) => {
+        if (stored !== undefined) answered(stored)
+        else if (wanted() && (attempt < RETRY.length || mounted))
+          setTimeout(() => {
+            if (wanted()) read(attempt + 1)
+          }, RETRY[Math.min(attempt, RETRY.length - 1)])
+      })
+    }
+    read(0)
     return () => {
       mounted = false
     }

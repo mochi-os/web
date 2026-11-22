@@ -48,8 +48,8 @@ function sent(type: string, key: string): Sent[] {
     .filter((message) => message.type === type && message.key === key)
 }
 
-// The shell answers every read of key not yet answered. Waits on a real timer
-// so the hook's handling of the reply has run before the caller asserts.
+// The shell answers every read of key not yet answered. Waits on a timer so
+// the hook's handling of the reply has run before the caller asserts.
 async function answer(key: string, value: string | null) {
   const reads = sent('storage.get', key).filter(
     (read) => !answered.has(read.id!)
@@ -65,7 +65,8 @@ async function answer(key: string, value: string | null) {
       Object.defineProperty(event, 'source', { value: window.parent })
       window.dispatchEvent(event)
     }
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(0)
+    else await new Promise((resolve) => setTimeout(resolve, 0))
   })
 }
 
@@ -313,5 +314,107 @@ describe('useShellStorage', () => {
     unmount()
     await answer('key', JSON.stringify(['kept']))
     expect(writes('key')).toEqual([['kept', 'new']])
+  })
+
+  // A read the shell does not answer in time says nothing of what is stored:
+  // a change made before it is written only once a read of the key answers.
+  describe('when a read is not answered in time', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    // Runs timers one at a time (a read's timeout, the wait before asking
+    // again) until `done`, or until none is left.
+    async function step() {
+      await act(async () => {
+        await vi.advanceTimersToNextTimerAsync()
+      })
+    }
+    async function until(done: () => boolean) {
+      for (let count = 0; count < 50 && !done() && vi.getTimerCount(); count++)
+        await step()
+    }
+    const reads = () => sent('storage.get', 'key').length
+
+    it('keeps a change made before it queued, and applies it to the stored value once a later read answers', async () => {
+      const { result } = renderHook(() => useShellStorage<string[]>('key', []))
+      act(() => result.current[1](add('new')))
+      await step() // the read times out
+      expect(writes('key')).toEqual([])
+      expect(result.current[2]).toBe(false)
+      expect(result.current[0]).toEqual(['new'])
+      await until(() => reads() > 1)
+      expect(reads()).toBe(2) // asked again
+      await answer('key', JSON.stringify(['kept']))
+      expect(result.current[0]).toEqual(['kept', 'new'])
+      expect(result.current[2]).toBe(true)
+      expect(writes('key')).toEqual([['kept', 'new']])
+    })
+
+    it('keeps asking while it shows the key, past the back-off, with nothing written over it until an answer', async () => {
+      const { result } = renderHook(() => useShellStorage<string[]>('key', []))
+      act(() => result.current[1](add('new')))
+      await until(() => reads() === 5) // the first read, three retries backing off, then one at the last interval
+      // Past the back-off each read waits out its 2 s timeout and the last
+      // interval, 4 s, before the next is sent: no storm.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5999)
+      })
+      expect(reads()).toBe(5)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(reads()).toBe(6)
+      expect(vi.getTimerCount()).toBeGreaterThan(0)
+      expect(writes('key')).toEqual([])
+      expect(result.current[2]).toBe(false)
+      expect(result.current[0]).toEqual(['new'])
+      act(() => result.current[1](add('later')))
+      expect(writes('key')).toEqual([]) // a change made after is queued too
+      await answer('key', JSON.stringify(['kept']))
+      expect(result.current[2]).toBe(true)
+      expect(writes('key')).toEqual([['kept', 'new', 'later']])
+    })
+
+    it('stops asking for a component that went, once the back-off is spent', async () => {
+      const { result, unmount } = renderHook(() =>
+        useShellStorage<string[]>('key', [])
+      )
+      act(() => result.current[1](add('new')))
+      unmount()
+      await until(() => false)
+      expect(vi.getTimerCount()).toBe(0)
+      expect(reads()).toBe(4) // the first read and three retries
+      expect(writes('key')).toEqual([])
+    })
+
+    it('applies the change once under StrictMode, both reads having timed out', async () => {
+      const { result } = renderHook(() => useShellStorage<string[]>('key', []), {
+        reactStrictMode: true,
+      })
+      act(() => result.current[1](add('new')))
+      const first = reads()
+      expect(first).toBeGreaterThan(1)
+      await until(() => reads() >= 2 * first)
+      expect(writes('key')).toEqual([])
+      await answer('key', JSON.stringify(['kept']))
+      expect(result.current[0]).toEqual(['kept', 'new'])
+      expect(writes('key')).toEqual([['kept', 'new']])
+    })
+
+    it('keeps asking for a change made before the component went', async () => {
+      const { result, unmount } = renderHook(() =>
+        useShellStorage<string[]>('key', [])
+      )
+      act(() => result.current[1](add('new')))
+      unmount()
+      await until(() => reads() > 1)
+      expect(writes('key')).toEqual([])
+      await answer('key', JSON.stringify(['kept']))
+      expect(writes('key')).toEqual([['kept', 'new']])
+    })
   })
 })
