@@ -222,6 +222,42 @@ describe('shellRequestPermission', () => {
   })
 })
 
+describe('shellNavigateBack', () => {
+  it("asks the shell to go back, and takes the page's way out where it has nowhere to go", async () => {
+    const { shellNavigateBack } = await import('./shell-bridge')
+    const otherwise = vi.fn()
+    shellNavigateBack(otherwise)
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'navigate-back' },
+      window.location.origin
+    )
+    expect(otherwise).not.toHaveBeenCalled()
+
+    // THE POINT: a refusal runs the page's own way out, once.
+    dispatchFromParent({ type: 'navigate-back-refused' })
+    dispatchFromParent({ type: 'navigate-back-refused' })
+    expect(otherwise).toHaveBeenCalledTimes(1)
+  })
+
+  it('takes the way out of the latest back only, and none from another frame', async () => {
+    const { shellNavigateBack } = await import('./shell-bridge')
+    const first = vi.fn()
+    const second = vi.fn()
+    shellNavigateBack(first)
+    shellNavigateBack(second)
+    // A message from anything but the shell is not its answer.
+    const spoof = new MessageEvent('message', {
+      data: { type: 'navigate-back-refused' },
+      origin: window.location.origin,
+    })
+    window.dispatchEvent(spoof)
+    expect(second).not.toHaveBeenCalled()
+    dispatchFromParent({ type: 'navigate-back-refused' })
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('isInShell', () => {
   it('returns true when in a sandboxed iframe', async () => {
     const { isInShell } = await import('./shell-bridge')

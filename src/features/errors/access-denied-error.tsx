@@ -22,7 +22,7 @@ export function AccessDeniedError() {
           </Trans>
         </p>
         <div className='mt-6 flex gap-4'>
-          <Button variant='outline' onClick={() => shellNavigateBack()}>
+          <Button variant='outline' onClick={() => shellNavigateBack(() => navigate({ to: '/' }))}>
             <ChevronLeft className='size-4' />
             <Trans>Go back</Trans>
           </Button>
