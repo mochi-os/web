@@ -108,7 +108,7 @@ export function loader(manifest, entry, styles, shared) {
     }
     var copy = menu[url]
     return (carrying[url] = copy
-      ? requested(copy.url, kind)
+      ? requested(copy.url, kind, MENU_PATIENCE)
           .then(function (body) {
             return verified(body, copy.digest)
           })
@@ -119,9 +119,12 @@ export function loader(manifest, entry, styles, shared) {
   }
 
   // Shared file URL in the app's own folder -> { url, digest }: menu's copy of
-  // it and the SHA-256 its bytes must have.
+  // it and the SHA-256 its bytes must have. Empty without Web Crypto (plain
+  // HTTP away from localhost, say): menu's bytes could not be checked, so
+  // they are not asked for, and the app's own copy is the only one.
+  var subtle = window.crypto && window.crypto.subtle
   var menu = Object.create(null)
-  var digests = (shared && shared.files) || {}
+  var digests = (subtle && shared && shared.files) || {}
   Object.keys(digests).forEach(function (file) {
     var own = new URL(file, base)
     var name = own.pathname.slice(own.pathname.lastIndexOf('/') + 1)
@@ -131,10 +134,16 @@ export function loader(manifest, entry, styles, shared) {
     }
   })
 
+  // How long menu's copy has to start arriving before the app's own is asked
+  // for instead. Menu's copy is the one to try, not the one the page needs: a
+  // request lost on the way would otherwise hold the page for the full minute
+  // below before the app's own was even asked for, and then that one's too.
+  // Once bytes come, the usual 15 s between reports applies.
+  var MENU_PATIENCE = 10000
+
   // The text of body when its SHA-256 is digest, else null.
   function verified(body, digest) {
-    var subtle = window.crypto && window.crypto.subtle
-    if (!body || !subtle) return Promise.resolve(null)
+    if (!body) return Promise.resolve(null)
     return subtle.digest('SHA-256', body).then(
       function (hash) {
         var bytes = new Uint8Array(hash)
@@ -151,8 +160,9 @@ export function loader(manifest, entry, styles, shared) {
 
   // The bytes of url as the shell fetched them, from the top window's cache,
   // or null when it will not carry it or answers anything but a 200 whose
-  // content type kind matches.
-  function requested(url, kind) {
+  // content type kind matches. patience is how long the first bytes may take
+  // (default a minute).
+  function requested(url, kind, patience) {
     return new Promise(function (resolve) {
       var id = identifier()
       // The shell answers every request, refusals included; this is for one
@@ -175,7 +185,7 @@ export function loader(manifest, entry, styles, shared) {
           resolve(null)
         }, time)
       }
-      wait(60000)
+      wait(patience || 60000)
       moving[id] = function () {
         wait(15000)
       }

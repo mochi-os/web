@@ -100,3 +100,63 @@ describe('loader: a request the shell never answers', () => {
     expect(script.crossOrigin).toBe('anonymous')
   })
 })
+
+// React's shared files: menu's copy is asked for first, and the app's own is
+// the one the page needs. A shared file in the entry's closure, so it is
+// asked for as the page starts.
+describe("loader: menu's copy of a shared file", () => {
+  const SHARED = {
+    names: { react: 'shared/react-a1b2c3d4.js' },
+    files: { 'shared/react-a1b2c3d4.js': 'digest' },
+    menu: '/menu/assets/shared/',
+  }
+  const MANIFEST: [string[], Array<[number, number[]]>] = [
+    ['index-a.js', 'shared/react-a1b2c3d4.js'],
+    [[0, [1]]],
+  ]
+  const MENU = window.location.origin + '/menu/assets/shared/react-a1b2c3d4.js'
+  const OWN = window.location.origin + '/app/assets/shared/react-a1b2c3d4.js'
+  const asked = (url: string) =>
+    posted.filter((message) => message.type === 'fetch' && message.url === url)
+
+  // Web Crypto, which jsdom lacks and a browser in a secure context has.
+  function subtle(value: unknown) {
+    Object.defineProperty(window.crypto, 'subtle', {
+      configurable: true,
+      value,
+    })
+  }
+  afterEach(() => {
+    subtle(undefined)
+  })
+
+  it("asks for the app's own copy 10 s after menu's has not started", async () => {
+    subtle(globalThis.crypto.subtle)
+    vi.useFakeTimers()
+    loader(MANIFEST, './assets/index-a.js', [], SHARED)
+    await vi.advanceTimersByTimeAsync(0)
+    const menu = asked(MENU)[0]
+    expect(menu).toBeDefined()
+    expect(asked(OWN)).toEqual([])
+
+    await vi.advanceTimersByTimeAsync(9_999)
+    expect(asked(OWN)).toEqual([])
+    await vi.advanceTimersByTimeAsync(1)
+    // THE POINT: a lost request for menu's copy holds the page 10 s, not the
+    // minute a chunk is given, before the app's own copy is asked for.
+    expect(posted).toContainEqual({ type: 'fetch.abort', id: menu?.id })
+    expect(asked(OWN)).toHaveLength(1)
+    expect(document.querySelector('script[src]')).toBeNull()
+  })
+
+  it("asks only for the app's own copy where the frame has no Web Crypto", async () => {
+    subtle(undefined)
+    vi.useFakeTimers()
+    loader(MANIFEST, './assets/index-a.js', [], SHARED)
+    await vi.advanceTimersByTimeAsync(0)
+    // THE POINT: menu's bytes could not be checked, so they are not fetched
+    // only to be thrown away on every page view.
+    expect(asked(MENU)).toEqual([])
+    expect(asked(OWN)).toHaveLength(1)
+  })
+})

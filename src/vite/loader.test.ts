@@ -243,7 +243,7 @@ function framed(
   sheets = false,
   fonts: boolean | 'refused' = false,
   dist = output,
-  menu?: 'carried' | 'missing' | 'page' | 'tampered',
+  menu?: 'carried' | 'missing' | 'page' | 'tampered' | 'redirect' | 'partial',
   subtle: boolean | 'rejects' = true
 ) {
   const site = server(dist, name, sheets, fonts !== false)
@@ -294,8 +294,17 @@ function framed(
     asks.push(url.href)
     if (url.pathname.startsWith(MENU_SHARED) && menu && answer !== 'refuse') {
       carried.push(url.href)
-      if (menu === 'missing') {
+      // partial: menu has every file but react-dom/client's, as a menu built
+      // with one file other than the app's would.
+      if (
+        menu === 'missing' ||
+        (menu === 'partial' && url.pathname.includes('/react-dom-client-'))
+      ) {
         reply({ status: 404, headers: [], body: new ArrayBuffer(0) })
+        return
+      }
+      if (menu === 'redirect') {
+        reply({ redirect: true })
         return
       }
       let bytes = readFileSync(
@@ -975,6 +984,7 @@ describe('mochiPlugin: React comes from the shared files', () => {
     ['refuses them, as a shell without that case does', undefined],
     ['answers 404', 'missing'],
     ['answers with a page', 'page'],
+    ['answers with a redirect', 'redirect'],
   ] as const)(
     "uses the app's own copy when the shell %s for menu's",
     async (_name, menu) => {
@@ -992,6 +1002,32 @@ describe('mochiPlugin: React comes from the shared files', () => {
       }
     }
   )
+
+  it("takes the files menu has from menu, and the one it lacks from the app's own", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'partial'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      // THE POINT: one page, React's files from two places, one React.
+      expectRendered(shell.frame().__result as Rendered)
+      const own = shared(shell.carried)
+      expect(own).toHaveLength(1)
+      expect(own[0]).toMatch(/\/react-dom-client-[\w-]{8}\.js$/)
+      const menu = shell.carried.filter(
+        (url) =>
+          url.includes(MENU_SHARED) && !url.includes('/react-dom-client-')
+      )
+      expect(menu.length).toBeGreaterThanOrEqual(3)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
 
   it("never runs bytes from menu that are not the app's own", async () => {
     const shell = framed(
@@ -1046,6 +1082,9 @@ describe('mochiPlugin: React comes from the shared files', () => {
     try {
       await until(() => shell.frame()?.__result, 'the app to render')
       expectRendered(shell.frame().__result as Rendered)
+      // THE POINT: menu's copy, which could not be checked, is never asked
+      // for, so it is not downloaded only to be thrown away.
+      expect(shell.asks.filter((url) => url.includes(MENU_SHARED))).toEqual([])
       expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
     } finally {
       shell.dom.window.close()
