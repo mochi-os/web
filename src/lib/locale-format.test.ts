@@ -17,6 +17,8 @@ import {
   formatRelativeTime,
   formatUserTimestamp,
   formatWeekdayDay,
+  formatWeekdayNarrow,
+  formatWeekdayShort,
   formatLongDate,
   formatMonthName,
   formatMonthShort,
@@ -149,6 +151,46 @@ describe("a column header puts the weekday and the day in the language's order",
     const japanese = formatWeekdayDay(TUESDAY, 'UTC')
     expect(japanese).toContain('22')
     expect(japanese).toContain('火')
+  })
+})
+
+describe("a calendar's column heading takes the weekday's narrow form", () => {
+  // Sunday to Saturday, at noon UTC and read in UTC.
+  const week = Array.from(
+    { length: 7 },
+    (_, index) => new Date(Date.UTC(2026, 8, 20 + index, 12))
+  )
+  const headings = () => week.map((day) => formatWeekdayNarrow(day, 'UTC'))
+
+  it('tells every day apart where a cut short name would not', () => {
+    // Arabic's short names all begin "ال", Cantonese's "星期", Gaelic's "Di".
+    for (const language of ['ar', 'yue', 'gd', 'vi']) {
+      load(language)
+      expect(new Set(headings()).size).toBe(7)
+    }
+  })
+
+  it("keeps the language's own narrow form whole", () => {
+    load('vi')
+    expect(headings()).toEqual(['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'])
+    load('he')
+    expect(headings()[1]).toBe('ב׳')
+  })
+
+  it("keeps English's own initials, repeated letters and all", () => {
+    load('en')
+    expect(headings()).toEqual(['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+  })
+
+  it('takes the abbreviated name whole where the language has no narrow form of its own', () => {
+    for (const language of ['sw', 'ur', 'yi', 'ps', 'bho']) {
+      load(language)
+      expect(headings()).toEqual(
+        week.map((day) => formatWeekdayShort(day, 'UTC'))
+      )
+      // Not the English initials Intl answers in their place.
+      expect(headings()).not.toEqual(['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+    }
   })
 })
 

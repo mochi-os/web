@@ -21,6 +21,11 @@ import { Wheel } from './wheel'
 export interface MiniMonthProps {
   /** The day the main view is showing; the mini month opens on its month. */
   selected: string
+  /**
+   * The day drawn as chosen: the one the main view is on, or a date field's
+   * value. None when nothing is chosen, as for an empty field.
+   */
+  chosen?: string
   /** Today in the user's own zone. */
   today: string
   /** Draws the ISO week number in each row's gutter. */
@@ -32,6 +37,7 @@ export interface MiniMonthProps {
 /** A month at a glance: click a day to jump, the header to change month or year. */
 export function MiniMonth({
   selected,
+  chosen,
   today,
   weekNumbers = true,
   onSelect,
@@ -86,19 +92,29 @@ export function MiniMonth({
         )}
       >
         {weekNumbers && <span />}
-        {days.slice(0, 7).map((day) => (
-          <span key={day} className='text-muted-foreground'>
-            {format
-              .formatWeekdayShort(new Date(format.timestampAt(day, 720) * 1000))
-              .slice(0, 2)}
-          </span>
-        ))}
+        {/* Each heading in the language's own narrow form, never a cut
+            name, with the whole name for a reader and on hover. */}
+        {days.slice(0, 7).map((day) => {
+          const noon = new Date(format.timestampAt(day, 720) * 1000)
+          const name = format.formatWeekday(noon)
+          return (
+            <span
+              key={day}
+              title={name}
+              className='text-muted-foreground min-w-0 truncate'
+            >
+              <span aria-hidden='true'>{format.formatWeekdayNarrow(noon)}</span>
+              <span className='sr-only'>{name}</span>
+            </span>
+          )
+        })}
         {days.map((day, index) => (
           <Cell
             key={day}
             day={day}
             index={index}
             month={month}
+            chosen={chosen}
             today={today}
             weekNumbers={weekNumbers}
             onSelect={(picked) => {
@@ -116,6 +132,7 @@ function Cell({
   day,
   index,
   month,
+  chosen,
   today,
   weekNumbers,
   onSelect,
@@ -123,11 +140,14 @@ function Cell({
   day: string
   index: number
   month: number
+  chosen?: string
   today: string
   weekNumbers: boolean
   onSelect: (day: string) => void
 }) {
   const format = useFormat()
+  const noon = new Date(format.timestampAt(day, 720) * 1000)
+  const picked = day === chosen
   return (
     <>
       {/* The row's middle day is in the ISO week most of it is in. */}
@@ -136,16 +156,27 @@ function Cell({
           {weekNumber(addDays(day, 3))}
         </span>
       )}
+      {/* The chosen day is drawn as the time picker draws its chosen hour;
+          today keeps its colour only while it is not the one chosen. */}
       <button
         type='button'
         onClick={() => onSelect(day)}
+        aria-label={format.formatLongDate(noon)}
+        aria-pressed={chosen === undefined ? undefined : picked}
+        aria-current={day === today ? 'date' : undefined}
         className={cn(
-          'hover:bg-hover rounded-sm py-0.5',
-          monthOf(day) !== month && 'text-muted-foreground/60',
-          day === today && 'text-primary font-semibold'
+          'rounded-sm py-0.5',
+          picked
+            ? 'bg-primary text-primary-foreground'
+            : [
+                'hover:bg-hover',
+                monthOf(day) !== month && 'text-muted-foreground/60',
+                day === today && 'text-primary',
+              ],
+          day === today && 'font-semibold'
         )}
       >
-        {format.formatDayNumber(new Date(format.timestampAt(day, 720) * 1000))}
+        {format.formatDayNumber(noon)}
       </button>
     </>
   )

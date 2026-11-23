@@ -18,6 +18,7 @@ import {
   formatHour,
   formatWeekday,
   formatWeekdayShort,
+  formatWeekdayNarrow,
   formatWeekdayDay,
   formatMonthName,
   formatMonthShort,
@@ -82,11 +83,13 @@ export function useFormat() {
       // Two ends already written, joined as the language joins a range.
       formatRange: (start: string, finish: string, broken?: boolean) =>
         formatRange(start, finish, broken),
-      formatHour: (date: Date) =>
-        formatHour(date, locale.timeFormat, locale.timezone),
+      formatHour: (date: Date, zone?: string) =>
+        formatHour(date, locale.timeFormat, zone || locale.timezone),
       formatWeekday: (date: Date) => formatWeekday(date, locale.timezone),
       formatWeekdayShort: (date: Date) =>
         formatWeekdayShort(date, locale.timezone),
+      formatWeekdayNarrow: (date: Date) =>
+        formatWeekdayNarrow(date, locale.timezone),
       formatWeekdayDay: (date: Date) => formatWeekdayDay(date, locale.timezone),
       formatMonthName: (date: Date, options?: { inline?: boolean }) =>
         formatMonthName(date, locale.timezone, options),

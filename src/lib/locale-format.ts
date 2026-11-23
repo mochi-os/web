@@ -346,10 +346,55 @@ export function formatWeekday(date: Date, timezone?: string): string {
   )
 }
 
-/** The weekday abbreviated, for narrow column headers and the mini month. */
+/** The weekday abbreviated, for narrow column headers. */
 export function formatWeekdayShort(date: Date, timezone?: string): string {
   return calendarFormatter('weekdayShort', timezone, {
     weekday: 'short',
+  }).format(date)
+}
+
+// Whether Intl has no narrow weekdays of a language's own and answers the
+// root locale's, English initials, in their place: as it does for Bhojpuri,
+// Pashto, Swahili, Urdu and Yiddish. English's own are the same letters.
+const rootNarrow = new Map<string, boolean>()
+
+function narrowFallsBack(lang: string): boolean {
+  let answer = rootNarrow.get(lang)
+  if (answer === undefined) {
+    const week = Array.from(
+      { length: 7 },
+      (_, index) => new Date(Date.UTC(2000, 0, 2 + index, 12))
+    )
+    const names = (locale: string) => {
+      const formatter = new Intl.DateTimeFormat(locale, {
+        weekday: 'narrow',
+        timeZone: 'UTC',
+      })
+      return week.map((day) => formatter.format(day)).join(' ')
+    }
+    let english = false
+    try {
+      english = new Intl.Locale(lang).language === 'en'
+    } catch {
+      english = lang.toLowerCase().startsWith('en')
+    }
+    answer = !english && names(lang) === names('und')
+    rootNarrow.set(lang, answer)
+  }
+  return answer
+}
+
+/**
+ * The weekday as a calendar's column heading writes it, which CLDR keeps
+ * apart for exactly that: "M" in English, "ث" in Arabic, "T3" in
+ * Vietnamese, "二" in Cantonese. Where the language has none of its own the
+ * abbreviated name is taken whole; a name is never cut, since many languages
+ * tell their days apart only past the first letters.
+ */
+export function formatWeekdayNarrow(date: Date, timezone?: string): string {
+  if (narrowFallsBack(tag())) return formatWeekdayShort(date, timezone)
+  return calendarFormatter('weekdayNarrow', timezone, {
+    weekday: 'narrow',
   }).format(date)
 }
 

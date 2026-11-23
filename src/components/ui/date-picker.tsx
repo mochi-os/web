@@ -138,8 +138,10 @@ export function DatePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent align='end' className='w-64 p-2'>
+          {/* An empty field opens on today's month with no day chosen. */}
           <MiniMonth
             selected={DAY.test(value) ? value : today}
+            chosen={DAY.test(value) ? value : undefined}
             today={today}
             weekNumbers={false}
             onSelect={pick}

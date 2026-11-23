@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { useLingui } from '@lingui/react/macro'
 import { useFormat } from '../../hooks/use-format'
 import { descriptionText } from '../../lib/html'
+import { coveredDays } from './layout'
 import { useEventStatus } from './status'
 import type { CalendarEvent } from './types'
 
@@ -22,23 +23,33 @@ export function useEventTooltip(): (event: CalendarEvent) => string {
   const status = useEventStatus()
   return useCallback(
     (event: CalendarEvent) => {
-      const start = new Date(event.start * 1000)
-      const last = new Date(Math.max(event.start, event.finish - 1) * 1000)
-      const oneDay = format.zonedDay(start) === format.zonedDay(last)
+      // The days the grids draw it on: an all-day occurrence's by its own
+      // date, never its instants, which are midnight in whatever zone it
+      // was expanded in; a timed one's in the zone each end was written in,
+      // as its block and chip are labelled.
+      const covered = coveredDays(event, format.zonedDay)
+      const oneDay = covered.start === covered.finish
       let span: string
       if (event.allday) {
+        const noon = (day: string) =>
+          new Date(format.timestampAt(day, 720) * 1000)
         span = oneDay
-          ? format.formatLongDate(start)
-          : format.formatDayRange(start, last)
-      } else if (oneDay) {
-        const day = format.formatLongDate(start)
-        const from = format.formatClock(start)
-        const to = format.formatClock(new Date(event.finish * 1000))
-        span = t`${day}, ${from} to ${to}`
+          ? format.formatLongDate(noon(covered.start))
+          : format.formatDayRange(noon(covered.start), noon(covered.finish))
       } else {
-        const from = `${format.formatLongDate(start)} ${format.formatClock(start)}`
-        const to = `${format.formatLongDate(new Date(event.finish * 1000))} ${format.formatClock(new Date(event.finish * 1000))}`
-        span = t`${from} to ${to}`
+        const start = new Date(event.start * 1000)
+        const finish = new Date(event.finish * 1000)
+        const zone = event.zone ?? {}
+        if (oneDay) {
+          const day = format.formatLongDate(start, zone.start)
+          const from = format.formatClock(start, zone.start)
+          const to = format.formatClock(finish, zone.finish)
+          span = t`${day}, ${from} to ${to}`
+        } else {
+          const from = `${format.formatLongDate(start, zone.start)} ${format.formatClock(start, zone.start)}`
+          const to = `${format.formatLongDate(finish, zone.finish)} ${format.formatClock(finish, zone.finish)}`
+          span = t`${from} to ${to}`
+        }
       }
       const lines = [event.title || t`(No title)`]
       const state = status(event.status)

@@ -6,6 +6,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { MonthGrid } from './month-grid'
+import { addDays } from './layout'
 import { PAGE_HOLD_MS, TOUCH_HOLD_MS } from './gesture'
 import type { CalendarEvent, DayMove } from './types'
 
@@ -287,6 +288,62 @@ describe('MonthGrid dragging a chip', () => {
     frame()
     expect(onStep).toHaveBeenLastCalledWith(-1)
     fireEvent.pointerUp(window, pointer('mouse', 150, 210))
+  })
+})
+
+describe('MonthGrid placing a chip in its own zone', () => {
+  // 01:00 to 02:00 on Thursday the 24th in Tokyo, which is 16:00 to 17:00 on
+  // Wednesday in the user's zone, UTC.
+  const tokyo: CalendarEvent = {
+    key: 'e7',
+    title: 'Tokyo call',
+    colour: '#2563eb',
+    start: at('2026-09-23', 960),
+    finish: at('2026-09-23', 1020),
+    allday: false,
+    zone: { start: 'Asia/Tokyo', finish: 'Asia/Tokyo' },
+  }
+
+  it('draws it on the day its own zone gives it, as its clock reads', () => {
+    show([tokyo])
+    const placed = chip('Tokyo call')
+    expect(cell('2026-09-24').contains(placed)).toBe(true)
+    expect(cell('2026-09-23').contains(placed)).toBe(false)
+    expect(placed.textContent).toMatch(/01:00/)
+    // A chip, in the day's list, not a bar in its band.
+    expect(placed.closest('[data-list]')).not.toBeNull()
+  })
+
+  it('moves it to the day two cells on from its own when dragged two cells', () => {
+    const { onMove } = show([tokyo])
+    const placed = chip('Tokyo call')
+    const from = (placed.closest('[data-day]') as HTMLElement).dataset.day!
+    fireEvent.pointerDown(placed, pointer('mouse', 350, 300))
+    over(addDays(from, 2))
+    fireEvent.pointerMove(window, pointer('mouse', 550, 300))
+    fireEvent.pointerUp(window, pointer('mouse', 550, 300))
+    // Two days on from the 24th it falls on in Tokyo, as the calendars app
+    // measures the move.
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e7',
+      day: '2026-09-26',
+      copy: false,
+    })
+  })
+
+  it('draws an occurrence of no length at midnight as a chip on its day', () => {
+    show([
+      {
+        ...meeting,
+        key: 'e8',
+        title: 'Midnight',
+        start: at('2026-09-24', 0),
+        finish: at('2026-09-24', 0),
+      },
+    ])
+    const placed = chip('Midnight')
+    expect(cell('2026-09-24').contains(placed)).toBe(true)
+    expect(placed.closest('[data-list]')).not.toBeNull()
   })
 })
 

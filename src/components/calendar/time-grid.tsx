@@ -86,6 +86,29 @@ export interface TimeGridProps {
   onStep?: (direction: number) => void
 }
 
+/** A wall-clock reading: a day and the minutes into it. */
+interface Moment {
+  day: string
+  minutes: number
+}
+
+/**
+ * Where a block a drag can take sits, and what it is of its occurrence: an
+ * occurrence crossing midnight draws one block on each day it covers, and
+ * a later day's runs from 00:00.
+ */
+interface Place {
+  day: string
+  /** The block's top and height, in minutes by the clock. */
+  start: number
+  height: number
+  band: boolean
+  /** Where the occurrence itself begins, in its start's zone. */
+  origin: Moment
+  /** The block holds the occurrence's end, and alone resizes it. */
+  last: boolean
+}
+
 type Drag =
   | {
       mode: 'create'
@@ -110,6 +133,13 @@ type Drag =
       grab: number
       /** Where it began, so a drop that never moved writes nothing. */
       from: { day: string; start: number; band: boolean }
+      /**
+       * Where the occurrence begins, which the block taken may not: a move
+       * shifts it by as much as the block has moved.
+       */
+      origin: Moment
+      /** The block taken holds the occurrence's end. */
+      last: boolean
       moved: boolean
       /** Alt held: a copy lands here and the original stays. */
       copy: boolean
@@ -134,19 +164,49 @@ type Move = Extract<Drag, { mode: 'move' }>
 type Resize = Extract<Drag, { mode: 'resize' }>
 
 /**
- * The day a moved bar from the band begins on: its own first day, shifted by
- * as many days as the pointer has gone from the day it took hold of, so a bar
- * held by a later day, or one that began before the days shown, does not jump
- * to start under the pointer. A block lifted from the grid begins on the day
- * it is dropped on.
+ * The day a moved occurrence begins on in the band: its own first day,
+ * shifted by as many days as the pointer has gone from the day it took hold
+ * of, so a bar held by a later day, or one that began before the days shown,
+ * does not jump to start under the pointer. A block lifted from the grid
+ * moves its occurrence's first day by the days its own day moved, so a
+ * later day's block of one crossing midnight does too.
  */
 function opening(
   current: Move,
   zonedDay: (date: Date, zone?: string) => string
 ): string {
-  if (!current.from.band) return current.day
-  const first = coveredDays(current.event, zonedDay).start
+  const first = current.from.band
+    ? coveredDays(current.event, zonedDay).start
+    : current.origin.day
   return addDays(first, daysBetween(current.from.day, current.day))
+}
+
+type Instant = (day: string, minutes: number, zone?: string) => number
+
+/**
+ * Where a moved occurrence begins: its own start, shifted by as many days
+ * and minutes as the block taken has moved, whichever of its days that
+ * block was. A bar lifted from the band begins where it is dropped.
+ */
+function movedStart(current: Move, timestampAt: Instant): number {
+  if (current.from.band)
+    return timestampAt(current.day, current.start, current.zone?.start)
+  return timestampAt(
+    addDays(current.origin.day, daysBetween(current.from.day, current.day)),
+    current.origin.minutes + current.start - current.from.start,
+    current.zone?.start
+  )
+}
+
+/**
+ * Where a resized occurrence ends: where the last day's block was dragged
+ * to, and never sooner after the occurrence's own start than a block lasts.
+ */
+function resizedFinish(current: Resize, timestampAt: Instant): number {
+  return Math.max(
+    current.event.start + MINIMUM * 60,
+    timestampAt(current.day, current.finish, current.zone?.finish)
+  )
 }
 
 export function TimeGrid({
@@ -233,6 +293,8 @@ export function TimeGrid({
         event: CalendarEvent
         start: number
         finish: number
+        origin: Moment
+        last: boolean
         backwards?: boolean
       }[]
     >()
@@ -264,6 +326,8 @@ export function TimeGrid({
               event,
               start: from.minutes,
               finish: from.minutes + MINIMUM,
+              origin: from,
+              last: true,
               backwards: true,
             })
           }
@@ -274,6 +338,8 @@ export function TimeGrid({
           event,
           start: day === from.day ? from.minutes : 0,
           finish: day === to.day ? to.minutes : 1440,
+          origin: from,
+          last: day === to.day,
         })
       }
     }
@@ -283,6 +349,8 @@ export function TimeGrid({
         event: CalendarEvent
         start: number
         finish: number
+        origin: Moment
+        last: boolean
         backwards?: boolean
         column: number
         width: number
@@ -328,12 +396,13 @@ export function TimeGrid({
       return { ...shiftedEvent(event, shift, format), key }
     }
     const covered = coveredDays(event, format.zonedDay)
-    const start = format.timestampAt(drag.day, 0)
+    const first = opening(drag, format.zonedDay)
+    const start = format.timestampAt(first, 0)
     return {
       ...event,
       key,
       allday: true,
-      date: drag.day,
+      date: first,
       start,
       finish: start + (daysBetween(covered.start, covered.finish) + 1) * 86400,
     }
@@ -526,11 +595,7 @@ export function TimeGrid({
         })
         return
       }
-      const start = format.timestampAt(
-        current.day,
-        current.start,
-        current.zone?.start
-      )
+      const start = movedStart(current, format.timestampAt)
       onMove({
         key,
         start,
@@ -541,16 +606,8 @@ export function TimeGrid({
     }
     onMove({
       key,
-      start: format.timestampAt(
-        current.day,
-        current.start,
-        current.zone?.start
-      ),
-      finish: format.timestampAt(
-        current.day,
-        current.finish,
-        current.zone?.finish
-      ),
+      start: current.event.start,
+      finish: resizedFinish(current, format.timestampAt),
     })
   }, [length, format, onCreate, onMove])
 
@@ -813,10 +870,7 @@ export function TimeGrid({
   const startMove = (
     event: React.PointerEvent,
     item: CalendarEvent,
-    day: string,
-    start: number,
-    height: number,
-    band = false
+    place: Place
   ) => {
     // Stopped first: a read-only block must not fall through to the grid
     // beneath it and start creating an event.
@@ -826,10 +880,11 @@ export function TimeGrid({
     const at = pointAt(event.clientX, event.clientY)
     if (!at) return
     down(event)
+    const { start, band } = place
     const grab = band ? 0 : snap(at.minutes, SNAP) - start
     // A bar is held by the day under the pointer, which may be any of its
     // days, and moves by as many days as the pointer goes from there.
-    const held = band ? at.day : day
+    const held = band ? at.day : place.day
     arming.current = arm(event, (moved) => {
       if (moved)
         point.current = {
@@ -845,13 +900,15 @@ export function TimeGrid({
         start,
         band,
         // A bar dragged into the grid takes the default length there.
-        length: band ? length : height,
+        length: band ? length : place.height,
         duration: band
           ? length * 60
           : Math.max(MINIMUM * 60, item.finish - item.start),
         zone: item.zone,
         grab,
         from: { day: held, start, band },
+        origin: place.origin,
+        last: place.last,
         moved: false,
         copy: point.current.alt,
         keyboard: false,
@@ -859,6 +916,8 @@ export function TimeGrid({
     })
   }
 
+  // Only the block holding the occurrence's end has a handle to drag; the
+  // resize keeps the occurrence's own start.
   const startResize = (
     event: React.PointerEvent,
     item: CalendarEvent,
@@ -894,17 +953,16 @@ export function TimeGrid({
 
   /**
    * The arrow keys move a focused block by one step, or a day; with Shift
-   * they move its end. Enter drops it where it is and Escape puts it back.
-   * The first arrow lifts the block; until then Enter opens it.
+   * they move its end, which only the block holding it does. Enter drops it
+   * where it is and Escape puts it back. The first arrow lifts the block;
+   * until then Enter opens it.
    */
   const keyed = (
     event: React.KeyboardEvent,
     item: CalendarEvent,
-    day: string,
-    start: number,
-    height: number,
-    band = false
+    place: Place
   ) => {
+    const { day, start, height, band } = place
     const current = dragRef.current
     const own =
       current &&
@@ -936,6 +994,7 @@ export function TimeGrid({
     // one is under way does nothing.
     if (event.shiftKey) {
       if (own?.mode === 'move' || band || horizontal) return
+      if (!own && !place.last) return
       const base: Resize =
         own?.mode === 'resize'
           ? own
@@ -974,10 +1033,16 @@ export function TimeGrid({
             zone: item.zone,
             grab: 0,
             from: { day, start, band },
+            origin: place.origin,
+            last: place.last,
             moved: false,
             copy: false,
             keyboard: true,
           }
+    // Where the block's top stands when the occurrence itself starts at
+    // 00:00: the top of the day for its first day's block, and above it for
+    // a later day's, whose top is the midnight the occurrence runs through.
+    const midnight = base.from.start - base.origin.minutes
     let next: Move = { ...base }
     if (horizontal) {
       // Left is earlier where the days run left to right.
@@ -986,13 +1051,14 @@ export function TimeGrid({
       if (!days.includes(next.day)) onStep?.(shift)
     } else if (base.band) {
       // Down leaves the band for the first working hour of the day.
-      if (vertical > 0) next = { ...next, band: false, start: hours.start * 60 }
-    } else if (base.start === 0 && vertical < 0) {
-      // Up from the top of the day lifts the block into the band.
+      if (vertical > 0)
+        next = { ...next, band: false, start: midnight + hours.start * 60 }
+    } else if (base.start <= midnight && vertical < 0) {
+      // Up from an occurrence starting at 00:00 lifts it into the band.
       next = { ...next, band: true }
     } else {
       next.start = Math.max(
-        0,
+        midnight,
         Math.min(1440 - base.length, base.start + vertical * SNAP)
       )
     }
@@ -1005,31 +1071,24 @@ export function TimeGrid({
 
   // --- What a dragged block says ---
 
-  const clockAt = (day: string, minutes: number, zone?: string) =>
-    format.formatClock(
-      new Date(format.timestampAt(day, minutes, zone) * 1000),
-      zone
-    )
-
-  /** The clock readings a dragged block would begin and end at. */
-  const span = (current: Move | Resize): [string, string] => {
+  /** Where a dragged occurrence would begin and end, as it would be written. */
+  const instants = (current: Move | Resize): [number, number] => {
     if (current.mode === 'resize') {
-      return [
-        clockAt(current.day, current.start, current.zone?.start),
-        clockAt(current.day, current.finish, current.zone?.finish),
-      ]
+      return [current.event.start, resizedFinish(current, format.timestampAt)]
     }
-    const start = format.timestampAt(
-      current.day,
-      current.start,
-      current.zone?.start
-    )
+    const start = movedStart(current, format.timestampAt)
+    return [start, start + current.duration]
+  }
+
+  /**
+   * The clock readings a dragged occurrence would begin and end at: its own,
+   * which the block taken, a later day's of one crossing midnight, is not.
+   */
+  const span = (current: Move | Resize): [string, string] => {
+    const [start, end] = instants(current)
     return [
       format.formatClock(new Date(start * 1000), current.zone?.start),
-      format.formatClock(
-        new Date((start + current.duration) * 1000),
-        current.zone?.finish
-      ),
+      format.formatClock(new Date(end * 1000), current.zone?.finish),
     ]
   }
 
@@ -1050,7 +1109,9 @@ export function TimeGrid({
     if (current.mode === 'move' && current.band) {
       return t`Moving to ${dayName(opening(current, format.zonedDay))}`
     }
-    const day = dayName(current.day)
+    // The day the occurrence would begin on, in the zone it begins in.
+    const begins = new Date(instants(current)[0] * 1000)
+    const day = dayName(format.zonedDay(begins, current.zone?.start))
     const [from, to] = span(current)
     return t`${day}, ${from} to ${to}`
   }
@@ -1093,6 +1154,31 @@ export function TimeGrid({
 
   const lifted = drag && drag.mode !== 'create' ? drag : null
 
+  /**
+   * Where a dragged block is drawn on its day, in pixels: a later day's
+   * block of an occurrence crossing midnight, moved earlier than the day's
+   * top by the arrows, shows what of it is still on the day.
+   */
+  const drawn = (current: Move | Resize) => {
+    const top = Math.max(0, current.start)
+    const end =
+      current.mode === 'move' ? current.start + current.length : current.finish
+    return { top: (top / 60) * HOUR, height: ((end - top) / 60) * HOUR }
+  }
+
+  /** Where a bar in the band sits: its first day, a day at a time. */
+  const barPlace = (event: CalendarEvent): Place => {
+    const first = coveredDays(event, format.zonedDay).start
+    return {
+      day: first,
+      start: 0,
+      height: length,
+      band: true,
+      origin: { day: first, minutes: 0 },
+      last: false,
+    }
+  }
+
   // The dragged block's element: focusable, so the arrow keys keep driving
   // it, and coloured as the block it stands for.
   const ghostProps = lifted
@@ -1101,16 +1187,21 @@ export function TimeGrid({
         tabIndex: -1,
         'data-testid': 'ghost',
         onKeyDown: (event: React.KeyboardEvent) =>
-          keyed(
-            event,
-            lifted.event,
-            lifted.day,
-            lifted.start,
-            lifted.mode === 'move'
-              ? lifted.length
-              : lifted.finish - lifted.start,
-            lifted.mode === 'move' && lifted.band
-          ),
+          keyed(event, lifted.event, {
+            day: lifted.day,
+            start: lifted.start,
+            height:
+              lifted.mode === 'move'
+                ? lifted.length
+                : lifted.finish - lifted.start,
+            band: lifted.mode === 'move' && lifted.band,
+            origin:
+              lifted.mode === 'move'
+                ? lifted.origin
+                : { day: lifted.day, minutes: lifted.start },
+            // A resize is only ever lifted from the block holding the end.
+            last: lifted.mode === 'move' ? lifted.last : true,
+          }),
       }
     : null
 
@@ -1212,28 +1303,12 @@ export function TimeGrid({
                 type='button'
                 data-key={event.key}
                 onPointerDown={(pointer) =>
-                  startMove(
-                    pointer,
-                    event,
-                    coveredDays(event, format.zonedDay).start,
-                    0,
-                    length,
-                    true
-                  )
+                  startMove(pointer, event, barPlace(event))
                 }
                 onClick={(pointer) =>
                   onSelect(event.key, pointer.currentTarget)
                 }
-                onKeyDown={(pointer) =>
-                  keyed(
-                    pointer,
-                    event,
-                    coveredDays(event, format.zonedDay).start,
-                    0,
-                    length,
-                    true
-                  )
-                }
+                onKeyDown={(pointer) => keyed(pointer, event, barPlace(event))}
                 title={tooltip(event)}
                 className={cn(
                   'hover:bg-hover absolute flex h-[26px] items-center gap-1.5 overflow-hidden rounded-md px-2 text-start text-sm',
@@ -1270,6 +1345,8 @@ export function TimeGrid({
         className='min-h-0 flex-1 overflow-y-auto'
       >
         <div className='flex'>
+          {/* Each hour read from a day with no clock change, in UTC: a day
+              the clocks go forward on has no 02:00 to read. */}
           <div className='w-14 shrink-0'>
             {Array.from({ length: 24 }, (_, hour) => (
               <div
@@ -1280,7 +1357,8 @@ export function TimeGrid({
                 <span className='absolute end-1 -top-1.5'>
                   {hour > 0
                     ? format.formatHour(
-                        new Date(format.timestampAt(days[0], hour * 60) * 1000)
+                        new Date(Date.UTC(2000, 0, 1, hour)),
+                        'UTC'
                       )
                     : ''}
                 </span>
@@ -1327,11 +1405,25 @@ export function TimeGrid({
 
                   {(blocks.get(day) ?? []).map((item) => {
                     const dragging = lifted?.event.key === item.event.key
-                    // A resized block is drawn by its ghost alone; a moved one
+                    // A resized block is drawn by its ghost alone, beside the
+                    // occurrence's blocks on its earlier days; a moved one
                     // stays, faded, where it was, and whole when a copy lands.
-                    if (dragging && lifted.mode === 'resize') return null
+                    if (
+                      dragging &&
+                      lifted.mode === 'resize' &&
+                      lifted.day === day
+                    )
+                      return null
                     const start = item.start
                     const end = Math.max(item.finish, item.start + MINIMUM)
+                    const place: Place = {
+                      day,
+                      start: item.start,
+                      height: Math.max(MINIMUM, item.finish - item.start),
+                      band: false,
+                      origin: item.origin,
+                      last: item.last,
+                    }
                     return (
                       <div
                         key={item.event.key}
@@ -1339,25 +1431,13 @@ export function TimeGrid({
                         tabIndex={0}
                         data-key={item.event.key}
                         onPointerDown={(pointer) =>
-                          startMove(
-                            pointer,
-                            item.event,
-                            day,
-                            item.start,
-                            Math.max(MINIMUM, item.finish - item.start)
-                          )
+                          startMove(pointer, item.event, place)
                         }
                         onClick={(pointer) =>
                           onSelect(item.event.key, pointer.currentTarget)
                         }
                         onKeyDown={(pointer) =>
-                          keyed(
-                            pointer,
-                            item.event,
-                            day,
-                            item.start,
-                            Math.max(MINIMUM, item.finish - item.start)
-                          )
+                          keyed(pointer, item.event, place)
                         }
                         title={tooltip(item.event)}
                         className={cn(
@@ -1421,7 +1501,9 @@ export function TimeGrid({
                             />
                           </div>
                         )}
-                        {!item.event.readonly && (
+                        {/* An earlier day's block ends at midnight, which is
+                            not the occurrence's end. */}
+                        {!item.event.readonly && item.last && (
                           <div
                             role='presentation'
                             className='absolute inset-x-0 bottom-0 h-2 cursor-ns-resize'
@@ -1452,26 +1534,11 @@ export function TimeGrid({
                         {...ghostProps}
                         className='bg-surface-2 pointer-events-none absolute inset-x-0 z-20 overflow-hidden rounded-md border px-2 py-0.5 text-start text-sm leading-5 shadow-md outline-none'
                         style={{
-                          top: `${(lifted.start / 60) * HOUR}px`,
-                          height: `${Math.max(
-                            LINE,
-                            (((lifted.mode === 'move'
-                              ? lifted.start + lifted.length
-                              : lifted.finish) -
-                              lifted.start) /
-                              60) *
-                              HOUR -
-                              1
-                          )}px`,
+                          top: `${drawn(lifted).top}px`,
+                          height: `${Math.max(LINE, drawn(lifted).height - 1)}px`,
                         }}
                       >
-                        {(((lifted.mode === 'move'
-                          ? lifted.start + lifted.length
-                          : lifted.finish) -
-                          lifted.start) /
-                          60) *
-                          HOUR >=
-                        PAIR ? (
+                        {drawn(lifted).height >= PAIR ? (
                           <>
                             <div className='text-muted-foreground flex items-center gap-1 text-xs leading-4'>
                               <EventDot

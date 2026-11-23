@@ -482,6 +482,185 @@ describe('TimeGrid dragging between the band and the grid', () => {
   })
 })
 
+describe("TimeGrid moving an occurrence crossing midnight by a later day's block", () => {
+  // 22:00 on Tuesday to 02:00 on Wednesday: a block on each day, the second
+  // running from 00:00.
+  const overnight: CalendarEvent = {
+    key: 'e6',
+    title: 'Night shift',
+    colour: '#2563eb',
+    start: at('2026-09-22', 1320),
+    finish: at('2026-09-23', 120),
+    allday: false,
+  }
+  const blocks = () =>
+    [
+      ...screen.getByTestId('hours').querySelectorAll('[data-key="e6"]'),
+    ] as HTMLElement[]
+
+  it('moves the occurrence by as much as the block was moved, from its own start', () => {
+    const { onMove } = show([overnight])
+    const [, second] = blocks()
+    fireEvent.pointerDown(second, pointer('mouse', x('2026-09-23'), y(60)))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-23'), y(120)))
+    expect(ghost()!.textContent).toMatch(/23:00 to 03:00/)
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-23'), y(120)))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-22', 1380),
+      finish: at('2026-09-23', 180),
+      copy: false,
+    })
+  })
+
+  it('moves the occurrence a day sideways by its later block, keeping its times', () => {
+    const { onMove } = show([overnight])
+    const [, second] = blocks()
+    fireEvent.pointerDown(second, pointer('mouse', x('2026-09-23'), y(60)))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-24'), y(60)))
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-24'), y(60)))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-23', 1320),
+      finish: at('2026-09-24', 120),
+      copy: false,
+    })
+  })
+
+  it('resizes from the last day alone, keeping the occurrence own start', () => {
+    const { onMove } = show([overnight])
+    const [first, second] = blocks()
+    expect(first.querySelector('[role="presentation"]')).toBeNull()
+    const handle = second.querySelector('[role="presentation"]') as HTMLElement
+    fireEvent.pointerDown(handle, pointer('mouse', x('2026-09-23'), y(119)))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-23'), y(180)))
+    expect(ghost()!.textContent).toMatch(/22:00 to 03:00/)
+    // The block on the first day stays while the last day's is resized.
+    expect(blocks()).toHaveLength(1)
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-23'), y(180)))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-22', 1320),
+      finish: at('2026-09-23', 180),
+    })
+  })
+
+  it('moves the occurrence by a step from its later block with the arrows', () => {
+    const { onMove } = show([overnight])
+    const [, second] = blocks()
+    fireEvent.keyDown(second, { key: 'ArrowDown' })
+    expect(ghost()!.textContent).toMatch(/22:15 to 02:15/)
+    fireEvent.keyDown(ghost()!, { key: 'Enter' })
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-22', 1335),
+      finish: at('2026-09-23', 135),
+      copy: false,
+    })
+  })
+
+  it('moves the occurrence earlier by a step from its later block with Up', () => {
+    const { onMove } = show([overnight])
+    const [, second] = blocks()
+    fireEvent.keyDown(second, { key: 'ArrowUp' })
+    expect(ghost()!.textContent).toMatch(/21:45 to 01:45/)
+    // Drawn from the top of the day, as much of it as is still on the day.
+    expect(ghost()!.style.top).toBe('0px')
+    expect(ghost()!.style.height).toBe(`${(105 / 60) * 80 - 1}px`)
+    fireEvent.keyDown(ghost()!, { key: 'Enter' })
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-22', 1305),
+      finish: at('2026-09-23', 105),
+      copy: false,
+    })
+  })
+
+  describe('one starting just after midnight and running into the next day', () => {
+    // 00:30 on Tuesday to 01:00 on Wednesday.
+    const long: CalendarEvent = {
+      ...overnight,
+      start: at('2026-09-22', 30),
+      finish: at('2026-09-23', 60),
+    }
+
+    it('lifts into the band by Up from its later block only once it starts at 00:00', () => {
+      const { onMove } = show([long])
+      const [, second] = blocks()
+      fireEvent.keyDown(second, { key: 'ArrowUp' })
+      fireEvent.keyDown(ghost()!, { key: 'ArrowUp' })
+      expect(ghost()!.textContent).toMatch(/00:00 to 00:30/)
+      fireEvent.keyDown(ghost()!, { key: 'ArrowUp' })
+      fireEvent.keyDown(ghost()!, { key: 'Enter' })
+      expect(onMove).toHaveBeenCalledWith({
+        key: 'e6',
+        start: at('2026-09-22', 0),
+        finish: at('2026-09-23', 0),
+        allday: true,
+        copy: false,
+      })
+    })
+
+    it('comes down from the band to start at the first working hour', () => {
+      const { onMove } = show([long])
+      const [, second] = blocks()
+      for (let step = 0; step < 3; step++)
+        fireEvent.keyDown(ghost() ?? second, { key: 'ArrowUp' })
+      fireEvent.keyDown(ghost()!, { key: 'ArrowDown' })
+      fireEvent.keyDown(ghost()!, { key: 'Enter' })
+      expect(onMove).toHaveBeenCalledWith({
+        key: 'e6',
+        start: at('2026-09-22', 480),
+        finish: at('2026-09-23', 510),
+        copy: false,
+      })
+    })
+  })
+
+  it('moves the end with Shift and the arrows from the last day alone', () => {
+    const { onMove } = show([overnight])
+    const [first, second] = blocks()
+    fireEvent.keyDown(first, { key: 'ArrowDown', shiftKey: true })
+    expect(ghost()).toBeNull()
+    fireEvent.keyDown(second, { key: 'ArrowDown', shiftKey: true })
+    expect(ghost()!.textContent).toMatch(/22:00 to 02:15/)
+    fireEvent.keyDown(ghost()!, { key: 'Enter' })
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-22', 1320),
+      finish: at('2026-09-23', 135),
+    })
+  })
+
+  it('makes the occurrence all-day from its own first day when its later block lands in the band', () => {
+    const { onMove } = show([overnight])
+    const [, second] = blocks()
+    fireEvent.pointerDown(second, pointer('mouse', x('2026-09-23'), y(60)))
+    fireEvent.pointerMove(window, pointer('mouse', x('2026-09-23'), 50))
+    // Two days wide from Tuesday's column.
+    expect(ghost()!.style.width).toMatch(/^calc\(28\.57\d*% - 2px\)$/)
+    expect(ghost()!.style.insetInlineStart).toMatch(/^14\.28\d*%$/)
+    fireEvent.pointerUp(window, pointer('mouse', x('2026-09-23'), 50))
+    expect(onMove).toHaveBeenCalledWith({
+      key: 'e6',
+      start: at('2026-09-22', 0),
+      finish: at('2026-09-23', 0),
+      allday: true,
+      copy: false,
+    })
+  })
+
+  it('tells a screen reader the day the occurrence would begin on', () => {
+    show([overnight])
+    const [, second] = blocks()
+    fireEvent.keyDown(second, { key: 'ArrowDown' })
+    const live = document.querySelector('[aria-live="polite"]')!
+    expect(live.textContent).toContain('Tuesday')
+    expect(live.textContent).not.toContain('Wednesday')
+    expect(live.textContent).toMatch(/22:15 to 02:15/)
+  })
+})
+
 describe('TimeGrid copying and dropping elsewhere', () => {
   it('copies rather than moves while Alt is held, and says so on the block', () => {
     const { onMove } = show([meeting])

@@ -18,19 +18,33 @@ vi.mock('../../hooks/use-format', async (importOriginal) => {
   }
 })
 
-function show(today: string) {
+function show(today: string, chosen?: string) {
   const { container } = render(
     <I18nProvider i18n={i18n}>
-      <MiniMonth selected='2026-09-22' today={today} onSelect={vi.fn()} />
+      <MiniMonth
+        selected='2026-09-22'
+        chosen={chosen}
+        today={today}
+        onSelect={vi.fn()}
+      />
     </I18nProvider>
   )
   return container.firstChild as HTMLElement
 }
 
+// A day's button by the number it shows: its name is the whole date.
+function day(number: string): HTMLElement {
+  const found = screen
+    .getAllByRole('button')
+    .filter((button) => button.textContent === number)
+  expect(found).toHaveLength(1)
+  return found[0]
+}
+
 describe('MiniMonth', () => {
   it("colours today's number in the primary colour on a plain background", () => {
     show('2026-09-22')
-    const today = screen.getByRole('button', { name: '22' })
+    const today = day('22')
     expect(today.classList.contains('text-primary')).toBe(true)
     expect(today.classList.contains('font-semibold')).toBe(true)
     expect(today.classList.contains('bg-primary')).toBe(false)
@@ -40,10 +54,71 @@ describe('MiniMonth', () => {
   it('leaves every other day in the plain text colour', () => {
     show('2026-09-22')
     for (const name of ['21', '23', '15']) {
-      const day = screen.getByRole('button', { name })
-      expect(day.classList.contains('text-primary')).toBe(false)
-      expect(day.classList.contains('font-semibold')).toBe(false)
+      const other = day(name)
+      expect(other.classList.contains('text-primary')).toBe(false)
+      expect(other.classList.contains('font-semibold')).toBe(false)
     }
+  })
+
+  it('names each day by its whole date, and today as the current date', () => {
+    show('2026-09-22')
+    const today = screen.getByRole('button', {
+      name: 'Tuesday, September 22, 2026',
+    })
+    expect(today.textContent).toBe('22')
+    expect(today.getAttribute('aria-current')).toBe('date')
+    expect(day('23').getAttribute('aria-label')).toBe(
+      'Wednesday, September 23, 2026'
+    )
+    expect(day('23').hasAttribute('aria-current')).toBe(false)
+  })
+
+  it('draws the chosen day as chosen, and presses it alone', () => {
+    show('2026-09-22', '2026-09-25')
+    const chosen = day('25')
+    expect(chosen.classList.contains('bg-primary')).toBe(true)
+    expect(chosen.classList.contains('text-primary-foreground')).toBe(true)
+    expect(chosen.getAttribute('aria-pressed')).toBe('true')
+    const today = day('22')
+    expect(today.getAttribute('aria-pressed')).toBe('false')
+    expect(today.classList.contains('bg-primary')).toBe(false)
+    expect(today.classList.contains('text-primary')).toBe(true)
+  })
+
+  it('draws today chosen as chosen, not in the colour of today', () => {
+    show('2026-09-22', '2026-09-22')
+    const today = day('22')
+    expect(today.classList.contains('bg-primary')).toBe(true)
+    expect(today.classList.contains('text-primary-foreground')).toBe(true)
+    expect(today.classList.contains('text-primary')).toBe(false)
+  })
+
+  it('presses no day when none is chosen', () => {
+    show('2026-09-22')
+    const pressed = screen
+      .getAllByRole('button')
+      .filter((button) => button.hasAttribute('aria-pressed'))
+    expect(pressed).toEqual([])
+  })
+
+  it("heads each column with the weekday's narrow form, uncut, and its whole name", () => {
+    const month = show('2026-09-22')
+    const headings = [...month.querySelectorAll('span[title]')]
+    expect(headings.map((heading) => heading.getAttribute('title'))).toEqual([
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ])
+    expect(
+      headings.map(
+        (heading) => heading.querySelector('[aria-hidden]')?.textContent
+      )
+    ).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+    expect(screen.getByText('Monday').classList.contains('sr-only')).toBe(true)
   })
 
   it('shades no day at all', () => {

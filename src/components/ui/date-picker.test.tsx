@@ -100,10 +100,30 @@ describe('DatePicker', () => {
     const { onChange } = show('--04-12')
     fireEvent.click(screen.getByRole('button', { name: 'Choose a date' }))
     expect(await screen.findByRole('button', { name: 'Next year' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: '15' }))
+    fireEvent.click(screen.getByRole('button', { name: /\b15, \d{4}$/ }))
     expect(onChange).toHaveBeenLastCalledWith(
       expect.stringMatching(/^\d{4}-\d{2}-15$/)
     )
+  })
+
+  it('draws the value as the chosen day of the month grid', async () => {
+    show('2026-09-22')
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a date' }))
+    const chosen = await screen.findByRole('button', {
+      name: 'Tuesday, September 22, 2026',
+    })
+    expect(chosen.getAttribute('aria-pressed')).toBe('true')
+    expect(chosen.classList.contains('bg-primary')).toBe(true)
+  })
+
+  it('chooses no day in the month grid of an empty field', async () => {
+    show('')
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a date' }))
+    await screen.findByRole('button', { name: 'Next year' })
+    const pressed = screen
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true')
+    expect(pressed).toEqual([])
   })
 
   it('opens a month grid whose header steps months and years, and picks a day from it', async () => {
@@ -111,7 +131,9 @@ describe('DatePicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Choose a date' }))
     expect(await screen.findByRole('button', { name: 'September' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Next year' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: '15' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tuesday, September 15, 2026' })
+    )
     expect(onChange).toHaveBeenLastCalledWith('2026-09-15')
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'September' })).toBeNull()

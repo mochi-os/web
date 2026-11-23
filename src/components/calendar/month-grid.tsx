@@ -252,15 +252,14 @@ export function MonthGrid({
     }
     const opens = new Map<string, string>()
     for (const event of laid) {
-      const begins = format.zonedDay(new Date(event.start * 1000))
-      const ends = format.zonedDay(new Date((event.finish - 1) * 1000))
-      if (!event.allday && begins === ends) {
-        opens.set(event.key, begins)
-        slot(begins).chips.push(event)
-        continue
-      }
+      // A timed occurrence within one day is a chip on that day, read in its
+      // own zone as its clock label is; one of no length, at midnight too.
       const covered = coveredDays(event, format.zonedDay)
       opens.set(event.key, covered.start)
+      if (!event.allday && covered.start === covered.finish) {
+        slot(covered.start).chips.push(event)
+        continue
+      }
       const to = covered.finish < last ? covered.finish : last
       for (
         let day = covered.start > first ? covered.start : first;

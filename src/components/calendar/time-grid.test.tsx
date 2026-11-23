@@ -1,12 +1,33 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { TimeGrid } from './time-grid'
 import type { CalendarEvent } from './types'
+
+// The user's zone; the provider's default is UTC.
+let zone: string | undefined
+
+vi.mock('../../context/locale-provider', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../../context/locale-provider')>()
+  return {
+    ...original,
+    useLocale: () => {
+      const value = original.useLocale()
+      return zone
+        ? { ...value, locale: { ...value.locale, timezone: zone } }
+        : value
+    },
+  }
+})
+
+afterEach(() => {
+  zone = undefined
+})
 
 const WEEK = [
   '2026-09-21',
@@ -72,6 +93,39 @@ describe('TimeGrid', () => {
     expect(header.classList.contains('py-1')).toBe(true)
     expect(header.textContent).toMatch(/Tue/)
     expect(header.textContent).toMatch(/\b22\b/)
+  })
+})
+
+describe('TimeGrid hours', () => {
+  it('labels every hour once on the day the clocks go forward', () => {
+    // 8 March 2026 in New York has no 02:00: 01:59 EST is followed by 03:00.
+    zone = 'America/New_York'
+    render(
+      <I18nProvider i18n={i18n}>
+        <TimeGrid
+          days={['2026-03-08']}
+          events={[]}
+          duration={60}
+          hours={{ start: 8, finish: 17 }}
+          workdays={[1, 2, 3, 4, 5]}
+          today='2026-03-08'
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+          onMove={vi.fn()}
+          onDay={vi.fn()}
+        />
+      </I18nProvider>
+    )
+    const labels = [
+      ...screen
+        .getByTestId('scroller')
+        .querySelectorAll<HTMLElement>('.w-14 > div > span'),
+    ].map((label) => label.textContent)
+    expect(labels).toEqual(
+      Array.from({ length: 24 }, (_, hour) =>
+        hour === 0 ? '' : `${hour < 10 ? '0' : ''}${hour}:00`
+      )
+    )
   })
 })
 
