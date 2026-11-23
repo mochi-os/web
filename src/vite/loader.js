@@ -126,9 +126,9 @@ export function loader(manifest, entry, styles, shared) {
   var menu = Object.create(null)
   var digests = (subtle && shared && shared.files) || {}
   Object.keys(digests).forEach(function (file) {
-    var own = new URL(file, base)
-    var name = own.pathname.slice(own.pathname.lastIndexOf('/') + 1)
-    menu[own.href] = {
+    var address = new URL(file, base)
+    var name = address.pathname.slice(address.pathname.lastIndexOf('/') + 1)
+    menu[address.href] = {
       url: new URL(shared.menu + name, location.href).href,
       digest: digests[file],
     }

@@ -64,8 +64,9 @@ export function manifest(bundle, entry, shared) {
 
 // Where every app looks for the shared files first: menu's own copy, which
 // the shell carries to any app's frame (shell.js), so the browser keeps them
-// once for every app.
-const MENU_SHARED = '/menu/assets/shared/'
+// once for every app. Exported for menu's tests, which hold it, the folder
+// menu's build emits into and the shell's rule (SHARED_FILE) to one another.
+export const MENU_SHARED = '/menu/assets/shared/'
 
 /**
  * The page's inline loader script, in place of the module script that would

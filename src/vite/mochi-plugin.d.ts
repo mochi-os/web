@@ -24,6 +24,9 @@ export interface MochiPluginOptions {
 
 export function mochiPlugin(options?: MochiPluginOptions): Plugin
 
+/** The address of menu's folder of shared files, where apps look first. */
+export const MENU_SHARED: string
+
 export type Manifest = [string[], Array<[number, number[]]>]
 
 /** React's shared files in the bundle's terms: see manifest(). */

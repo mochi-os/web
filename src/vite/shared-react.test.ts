@@ -35,7 +35,9 @@ const HASHED = /assets\/.*-[\w-]{8}\.[0-9A-Za-z]+$/
 // The only names the shell carries from menu's folder to an app's frame
 // (SHARED_FILE in apps/menu's shell.js). A name of another shape - a new hash
 // length from a Rollup upgrade, say - would be refused there, and every app
-// would quietly load its own copy.
+// would quietly load its own copy. A copy, as this repo cannot read menu's:
+// menu's shared-react-contract.test.ts checks the real rule against the real
+// files.
 const SHELL = /^[A-Za-z0-9_-]+-[A-Za-z0-9_-]{8}\.js$/
 
 // An app that imports React, with React installed beside it, as each app's
