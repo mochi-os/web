@@ -9,5 +9,5 @@ export function loader(
     names: Record<string, string>
     files: Record<string, string>
     menu: string
-  }
+  } | null
 ): void

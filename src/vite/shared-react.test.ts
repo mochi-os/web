@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  rmSync,
   readdirSync,
   readFileSync,
   symlinkSync,
@@ -16,7 +17,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { mochiPlugin, type MochiPluginOptions } from './mochi-plugin.js'
 
 // lib/web's own node_modules, where React is installed.
@@ -40,10 +41,22 @@ const HASHED = /assets\/.*-[\w-]{8}\.[0-9A-Za-z]+$/
 // files.
 const SHELL = /^[A-Za-z0-9_-]+-[A-Za-z0-9_-]{8}\.js$/
 
+// A folder of its own for each app the tests build, removed once they have
+// run. Its node_modules is a link, which removing the folder leaves alone.
+const made: string[] = []
+function temporary() {
+  const folder = mkdtempSync(path.join(tmpdir(), 'mochi-shared-react-'))
+  made.push(folder)
+  return folder
+}
+afterAll(() => {
+  for (const folder of made) rmSync(folder, { recursive: true, force: true })
+})
+
 // An app that imports React, with React installed beside it, as each app's
 // web/ folder has it.
 function app(main: string) {
-  const root = mkdtempSync(path.join(tmpdir(), 'mochi-shared-react-'))
+  const root = temporary()
   mkdirSync(path.join(root, 'src'))
   writeFileSync(
     path.join(root, 'index.html'),
@@ -285,7 +298,7 @@ describe('mochiPlugin: React as shared files', () => {
   }, 60000)
 
   it('builds without them where React is not installed', async () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'mochi-shared-react-'))
+    const root = temporary()
     writeFileSync(
       path.join(root, 'index.html'),
       '<!doctype html><html><head><script type="module" src="/main.js"></script></head><body></body></html>'

@@ -4,6 +4,7 @@
 
 import {
   mkdtempSync,
+  rmSync,
   mkdirSync,
   readFileSync,
   symlinkSync,
@@ -870,12 +871,13 @@ function expectRendered(app: Rendered) {
 }
 
 describe('mochiPlugin: React comes from the shared files', () => {
+  let app = ''
   let dist = ''
   const shared = (urls: string[]) =>
     urls.filter((url) => url.includes('/app/assets/shared/'))
 
   beforeAll(async () => {
-    const app = mkdtempSync(path.join(tmpdir(), 'mochi-loader-react-'))
+    app = mkdtempSync(path.join(tmpdir(), 'mochi-loader-react-'))
     for (const [name, text] of Object.entries(REACT_APP)) {
       mkdirSync(path.dirname(path.join(app, name)), { recursive: true })
       writeFileSync(path.join(app, name), text)
@@ -897,6 +899,11 @@ describe('mochiPlugin: React comes from the shared files', () => {
       build: { outDir: dist, emptyOutDir: true },
     })
   }, 60000)
+
+  // Its node_modules holds links, which removing the folder leaves alone.
+  afterAll(() => {
+    if (app) rmSync(app, { recursive: true, force: true })
+  })
 
   it('renders with one React as a top-level page', async () => {
     const site = server(dist)
