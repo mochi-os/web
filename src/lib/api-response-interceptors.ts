@@ -5,8 +5,14 @@ import { t } from '@lingui/core/macro'
 import { toast } from './toast-utils'
 import { detectHtmlResponse, translatable } from './error-normalizer'
 import { useAuthStore } from '../stores/auth-store'
-import { isHttpError, type HttpRequestConfig, type HttpResponse } from './http'
+import {
+  isHttpError,
+  type HttpError,
+  type HttpRequestConfig,
+  type HttpResponse,
+} from './http'
 import type { ResponseHandlers } from './http-client'
+import { authEndpoints } from './auth-endpoints'
 
 const devConsole = globalThis.console
 const DEFAULT_TOAST_DEDUPE_TTL_MS = 10_000
@@ -128,6 +134,57 @@ function maybeToastGlobalError({
 
 let logoutHandler: ((reason?: string) => void) | null = null
 
+// The identity check under way, shared by every 401 that arrives while it is.
+let checking: Promise<boolean> | null = null
+
+/** Whether a request went to one of core's own `/_/` endpoints. */
+function corePath(config?: HttpRequestConfig): boolean {
+  try {
+    return new URL(
+      getRequestUrl(config),
+      globalThis.location?.origin ?? 'http://localhost'
+    ).pathname.startsWith('/_/')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Whether a 401 means this session has ended. Core's own endpoints say so in
+ * the body. Any other 401 is an app's answer, possibly relaying another
+ * server's - whose body can be anything, core's words included - and says
+ * nothing about this session, so core is asked: its identity endpoint answers
+ * 401 only for a session it no longer holds. When it cannot be asked, the
+ * session is kept and the request's own error stands.
+ */
+async function sessionEnded(error: HttpError): Promise<boolean> {
+  const body = error.response?.data as { error?: unknown } | undefined
+  if (body?.error === 'authentication_required' && corePath(error.config)) {
+    return true
+  }
+  if (!checking) {
+    const token = useAuthStore.getState().token
+    checking = globalThis
+      .fetch(authEndpoints.identity, {
+        credentials: 'same-origin',
+        headers: token
+          ? {
+              Accept: 'application/json',
+              Authorization: token.startsWith('Bearer ')
+                ? token
+                : `Bearer ${token}`,
+            }
+          : { Accept: 'application/json' },
+      })
+      .then((response) => response.status === 401)
+      .catch(() => false)
+      .finally(() => {
+        checking = null
+      })
+  }
+  return checking
+}
+
 export const setLogoutHandler = (handler: (reason?: string) => void) => {
   logoutHandler = handler
 }
@@ -219,7 +276,7 @@ function makeHandleApiResponseError(opts: Required<AttachInterceptorOptions>) {
         const hadSession = useAuthStore.getState().token
 
         if (!isAuthEndpoint && hadSession) {
-          if (!opts.suppress401Handling) {
+          if (!opts.suppress401Handling && (await sessionEnded(error))) {
             if (logoutHandler) {
               logoutHandler('Session expired')
             } else {

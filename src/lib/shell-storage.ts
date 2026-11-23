@@ -40,6 +40,16 @@ if (typeof window !== 'undefined') {
 
 /** Get an item from storage (async when in shell, sync-wrapped otherwise) */
 export async function getItem(key: string): Promise<string | null> {
+  return (await readItem(key)) ?? null
+}
+
+/**
+ * Read an item as getItem does, but answer undefined when the shell does not
+ * answer within 2 seconds, which says nothing of what is stored; null is
+ * nothing stored. For useShellStorage, which must not write over a value it
+ * could not read.
+ */
+export async function readItem(key: string): Promise<string | null | undefined> {
   if (!isInShell()) {
     try {
       return localStorage.getItem(namespaced(key))
@@ -53,11 +63,10 @@ export async function getItem(key: string): Promise<string | null> {
     pendingRequests.set(id, resolve)
     window.parent.postMessage({ type: 'storage.get', id, key }, shellOrigin())
 
-    // Timeout after 2 seconds
     setTimeout(() => {
       if (pendingRequests.has(id)) {
         pendingRequests.delete(id)
-        resolve(null)
+        resolve(undefined)
       }
     }, 2000)
   })

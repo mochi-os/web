@@ -24,7 +24,6 @@ import {
   Ellipsis,
   FileDown,
   GripVertical,
-  Link as LinkIcon,
   LogOut,
   Plus,
   SlidersHorizontal,
@@ -43,15 +42,10 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
 import { LoadingContent } from '../ui/loading-content'
-import {
-  ResponsiveDialog,
-  ResponsiveDialogContent,
-  ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
-} from '../ui/responsive-dialog'
 import { Switch } from '../ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ConfirmDialog } from '../confirm-dialog'
+import { ShareSubmenu, type ShareLabels } from '../share-menu'
 import type { FilterState } from '../filter-bar'
 import { EntityOptionDialog } from './entity-option-dialog'
 import { KeyboardShortcutsHelp } from './keyboard-shortcuts-help'
@@ -61,6 +55,7 @@ import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
 import { EntityContentScroller } from './entity-content-scroller'
 import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
+import { entityCascade, entityParentValues } from './entity-board-drop'
 import {
   EntityDuplicateDialog,
   type EntityDuplicateDialogProps,
@@ -79,7 +74,6 @@ import { getErrorMessage } from '../../lib/handle-server-error'
 import { exportEntityArchive } from '../../lib/entity-export'
 import { rankBetween, rankCompare } from '../../lib/rank'
 import { shellSaveBlob } from '../../lib/shell-bridge'
-import { CopyButton } from '../ui/copy-button'
 import { toastAction } from '../../lib/toast-action'
 import { toast } from '../../lib/toast-utils'
 import type {
@@ -228,10 +222,8 @@ export interface EntityObjectsPageLabels {
   loading: string
   downloaded: (filename: string) => string
   exportFailed: string
-  /** Share link: the menu entry, then the dialog title. */
-  shareAction: string
-  shareTitle: string
-  shareFailed: string
+  /** Share's entries. */
+  share: ShareLabels
   /** Toasts for the writes the board and tree make without a dialog. */
   moveFailed: string
   columnCreateFailed: string
@@ -301,6 +293,8 @@ export interface EntityObjectsPageProps<TObject extends EntityObject> {
   initialObjectId?: string
   icon: LucideIcon
   labels: EntityObjectsPageLabels
+  /** The full address of the container's page, which a post of it links to. */
+  shareUrl: () => string
   api: EntityObjectsPageApi<TObject>
   /** Websocket entity name ("crm", "project"). */
   entity: string
@@ -344,6 +338,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   initialObjectId,
   icon: Icon,
   labels,
+  shareUrl,
   api,
   entity,
   storagePrefix,
@@ -366,24 +361,11 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const access = container.access
   const isOwner = container.owner.local
   const [unsubscribeOpen, setUnsubscribeOpen] = useState(false)
-  const [linkOpen, setLinkOpen] = useState(false)
-  const [shareLink, setShareLink] = useState('')
 
   // Destructured so a callback's dependency list compares strings by value
   // rather than the labels object, which an app builds inline every render.
-  const { noClasses, shareFailed } = labels
+  const { noClasses } = labels
 
-  const openLinkDialog = useCallback(async () => {
-    setShareLink('')
-    setLinkOpen(true)
-    try {
-      const response = await api.share(container.id)
-      setShareLink(response.data.link)
-    } catch (error) {
-      setLinkOpen(false)
-      toast.error(getErrorMessage(error, shareFailed))
-    }
-  }, [api, container.id, shareFailed])
 
   const handleDataExport = useCallback(async () => {
     const warming = toast.loading(labels.loading)
@@ -467,11 +449,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     false
   )
 
-  // Collapsed board columns, by board and then by column field: two views
-  // that group by the same field share them. One key for the whole app, since
-  // useShellStorage keeps its last value when the key changes and finds
-  // nothing stored, so a key per board would carry one board's columns onto
-  // the next on a board-to-board navigation.
+  // Collapsed board columns, by board and then by column field, under one key
+  // for the whole app: two views that group by the same field share them.
   const [collapsedColumns, setCollapsedColumns] = useShellStorage<
     Record<string, Record<string, string[]>>
   >(`${storagePrefix}:board:collapsed`, {})
@@ -710,26 +689,39 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
           // A move into another parent takes that parent's board column and
           // row, as the server copies them, so the card shows inside it at once.
+          // The object and each descendant take only what their own class
+          // accepts, and the move's own column and lane then cascade the same
+          // way, a column or a lane alone as well as both.
+          const moved = old.objects.find((o) => o.id === objectId)
           const newParent =
-            parent !== undefined
+            parent !== undefined && parent !== moved?.parent
               ? old.objects.find((o) => o.id === parent)
               : undefined
-          const sf = activeView?.columns || ''
-          const rowView = activeView?.rows || ''
+          const inherited = newParent
+            ? entityParentValues(design, newParent)
+            : {}
+          const cascaded: Record<string, string> = {}
+          if (field && value && value !== (moved?.values[field] || '')) {
+            cascaded[field] = value
+          }
+          if (
+            rf &&
+            rowValue !== undefined &&
+            rowValue !== (moved?.values[rf] || '')
+          ) {
+            cascaded[rf] = rowValue
+          }
 
           return {
             ...old,
             objects: old.objects.map((obj) => {
               if (obj.id === objectId) {
-                const updatedValues = { ...obj.values, [field]: value }
+                // An empty value keeps the column, as the server keeps it.
+                const placed = entityCascade(design, obj, inherited)
+                const updatedValues = { ...placed.values }
+                if (field && value) updatedValues[field] = value
                 if (rf && rowValue !== undefined) {
                   updatedValues[rf] = rowValue
-                }
-                if (newParent && sf) {
-                  updatedValues[sf] = newParent.values[sf] || ''
-                  if (rowView) {
-                    updatedValues[rowView] = newParent.values[rowView] || ''
-                  }
                 }
                 return {
                   ...obj,
@@ -739,13 +731,13 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                   ...(parent !== undefined ? { parent } : {}),
                 }
               }
-              // Cascade status/row changes to descendants (rank unchanged).
-              if (field && isDescendant(obj, objectId, old.objects)) {
-                const updatedValues = { ...obj.values, [field]: value }
-                if (rf && rowValue !== undefined) {
-                  updatedValues[rf] = rowValue
-                }
-                return { ...obj, values: updatedValues }
+              // Cascade column and row changes to descendants (rank unchanged).
+              if (isDescendant(obj, objectId, old.objects)) {
+                return entityCascade(
+                  design,
+                  entityCascade(design, obj, inherited),
+                  cascaded
+                )
               }
               return obj
             }),
@@ -796,24 +788,30 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         ['objects', containerId],
         (old) => {
           if (!old) return old
-          const newParent = parentId
-            ? old.objects.find((o) => o.id === parentId)
-            : null
-          const sf = activeView?.columns || ''
-          const rf = activeView?.rows || ''
+          // The object and its descendants take the new parent's board
+          // columns and rows, each what its own class accepts, as the server
+          // gives them.
+          const moved = old.objects.find((o) => o.id === objectId)
+          const newParent =
+            parentId && parentId !== moved?.parent
+              ? old.objects.find((o) => o.id === parentId)
+              : undefined
+          const inherited = newParent
+            ? entityParentValues(design, newParent)
+            : {}
           return {
             ...old,
             objects: old.objects.map((obj) => {
-              if (obj.id !== objectId) return obj
-              const updated = { ...obj, parent: parentId || '' }
-              if (newParent && sf) {
-                updated.values = {
-                  ...updated.values,
-                  [sf]: newParent.values[sf] || '',
+              if (obj.id === objectId) {
+                return {
+                  ...entityCascade(design, obj, inherited),
+                  parent: parentId || '',
                 }
-                if (rf) updated.values[rf] = newParent.values[rf] || ''
               }
-              return updated
+              if (isDescendant(obj, objectId, old.objects)) {
+                return entityCascade(design, obj, inherited)
+              }
+              return obj
             }),
           }
         }
@@ -1421,12 +1419,16 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                   {duplicate.menuAction}
                 </DropdownMenuItem>
               )}
-              {/* Canonical menu tail: Link, Design, Settings, Unsubscribe. */}
+              {/* Canonical menu tail: Share, Design, Settings, Unsubscribe. */}
               {isOwner && (
-                <DropdownMenuItem onClick={() => void openLinkDialog()}>
-                  <LinkIcon className='size-4 me-2' />
-                  {labels.shareAction}
-                </DropdownMenuItem>
+                // A post or message of the container is its name and its
+                // page's address; its link is the mochi:// one another
+                // server joins by.
+                <ShareSubmenu
+                  share={() => ({ text: container.name, url: shareUrl() })}
+                  link={async () => (await api.share(container.id)).data.link}
+                  labels={labels.share}
+                />
               )}
               {canDesign(access) && designMenuItem}
               {settingsMenuItem}
@@ -1555,16 +1557,23 @@ export function EntityObjectsPage<TObject extends EntityObject>({
               onReorderColumns: handleReorderColumns,
               collapsedColumns: collapsedColumns[containerId]?.[columnField],
               onToggleColumnCollapsed: (columnId) => {
-                const board = collapsedColumns[containerId] ?? {}
-                const current = board[columnField] ?? []
-                setCollapsedColumns({
-                  ...collapsedColumns,
-                  [containerId]: {
-                    ...board,
-                    [columnField]: current.includes(columnId)
-                      ? current.filter((c) => c !== columnId)
-                      : [...current, columnId],
-                  },
+                // Folded or opened as the column on screen asks; the other
+                // boards and columns stored stay as they are.
+                const fold = !(
+                  collapsedColumns[containerId]?.[columnField] ?? []
+                ).includes(columnId)
+                setCollapsedColumns((previous) => {
+                  const board = previous[containerId] ?? {}
+                  const others = (board[columnField] ?? []).filter(
+                    (c) => c !== columnId
+                  )
+                  return {
+                    ...previous,
+                    [containerId]: {
+                      ...board,
+                      [columnField]: fold ? [...others, columnId] : others,
+                    },
+                  }
                 })
               },
               collapsedRows: rowField
@@ -1572,16 +1581,21 @@ export function EntityObjectsPage<TObject extends EntityObject>({
                 : undefined,
               onToggleRowCollapsed: (rowId) => {
                 if (!rowField) return
-                const board = collapsedRows[containerId] ?? {}
-                const current = board[rowField] ?? []
-                setCollapsedRows({
-                  ...collapsedRows,
-                  [containerId]: {
-                    ...board,
-                    [rowField]: current.includes(rowId)
-                      ? current.filter((r) => r !== rowId)
-                      : [...current, rowId],
-                  },
+                const fold = !(
+                  collapsedRows[containerId]?.[rowField] ?? []
+                ).includes(rowId)
+                setCollapsedRows((previous) => {
+                  const board = previous[containerId] ?? {}
+                  const others = (board[rowField] ?? []).filter(
+                    (r) => r !== rowId
+                  )
+                  return {
+                    ...previous,
+                    [containerId]: {
+                      ...board,
+                      [rowField]: fold ? [...others, rowId] : others,
+                    },
+                  }
                 })
               },
             })
@@ -1635,17 +1649,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         onAdd={handleAddColumn}
         title={labels.addColumn}
       />
-      <ResponsiveDialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <ResponsiveDialogContent>
-          <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle>{labels.shareTitle}</ResponsiveDialogTitle>
-          </ResponsiveDialogHeader>
-          <div className='bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm'>
-            <code className='flex-1 break-all'>{shareLink || '…'}</code>
-            <CopyButton value={shareLink} disabled={!shareLink} />
-          </div>
-        </ResponsiveDialogContent>
-      </ResponsiveDialog>
 
       <ConfirmDialog
         open={unsubscribeOpen}

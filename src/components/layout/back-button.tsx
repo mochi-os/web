@@ -27,21 +27,8 @@ export function BackButton({
   const [isFallbackPending, setIsFallbackPending] = useState(false)
   const isFallbackPendingRef = useRef(false)
 
-  const handleClick = async () => {
+  const fallback = async () => {
     if (isFallbackPendingRef.current) return
-
-    // Prefer real in-app history; the page-supplied destination is only for a
-    // deep link or fresh tab. history.back() is a silent no-op inside the shell
-    // iframe, so ask the shell to pop the top window's history instead.
-    if (router.history.canGoBack()) {
-      if (isInShell()) {
-        shellNavigateBack()
-      } else {
-        router.history.back()
-      }
-      return
-    }
-
     isFallbackPendingRef.current = true
     setIsFallbackPending(true)
     try {
@@ -50,6 +37,25 @@ export function BackButton({
       isFallbackPendingRef.current = false
       setIsFallbackPending(false)
     }
+  }
+
+  const handleClick = () => {
+    if (isFallbackPendingRef.current) return
+
+    // Prefer real in-app history; the page-supplied destination is only for a
+    // deep link or fresh tab. history.back() is a silent no-op inside the shell
+    // iframe, so ask the shell to pop the top window's history instead, and
+    // take the page's destination where the shell has nowhere to go back to.
+    if (router.history.canGoBack()) {
+      if (isInShell()) {
+        shellNavigateBack(() => void fallback())
+      } else {
+        router.history.back()
+      }
+      return
+    }
+
+    void fallback()
   }
 
   return (

@@ -6,8 +6,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 
+const navigate = vi.hoisted(() => ({ to: vi.fn() }))
 vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigate.to,
 }))
 vi.mock('../../lib/shell-bridge', () => ({
   shellNavigateBack: vi.fn(),
@@ -22,7 +23,17 @@ import { AccessDeniedError } from './access-denied-error'
 describe('error pages go back through the shell bridge', () => {
   beforeEach(() => {
     vi.mocked(shellNavigateBack).mockClear()
+    navigate.to.mockClear()
   })
+
+  // Where the shell has nowhere to go back to, as on a page opened straight
+  // from a link, the page goes home rather than doing nothing.
+  const refused = () => {
+    const otherwise = vi.mocked(shellNavigateBack).mock.calls[0][0]
+    expect(otherwise).toBeTypeOf('function')
+    otherwise?.()
+    expect(navigate.to).toHaveBeenCalledWith({ to: '/' })
+  }
 
   it('not found', () => {
     render(
@@ -32,6 +43,7 @@ describe('error pages go back through the shell bridge', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /go back/i }))
     expect(shellNavigateBack).toHaveBeenCalledTimes(1)
+    refused()
   })
 
   it('access denied', () => {
@@ -43,5 +55,6 @@ describe('error pages go back through the shell bridge', () => {
     expect(screen.getByText('Access denied')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /go back/i }))
     expect(shellNavigateBack).toHaveBeenCalledTimes(1)
+    refused()
   })
 })

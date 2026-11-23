@@ -295,16 +295,24 @@ export function getShellInitData(): ShellInitData | null {
   return shellInitData
 }
 
+// What the page would do instead if the shell has nowhere to go back to.
+let backOtherwise: (() => void) | null = null
+
 /**
  * Ask the shell to navigate back. history.back() silently no-ops in the
  * sandboxed iframe, which has no real history entries - every push was relayed
- * to the top window, and the shell pops it there.
+ * to the top window, and the shell pops it there. The shell never goes back
+ * past the page it first loaded, so the site cannot walk the user off it;
+ * there it answers 'navigate-back-refused', and `otherwise` runs, the page's
+ * own way out (its app's home, say). A shell that predates the answer stays
+ * silent, and nothing happens, as before.
  */
-export function shellNavigateBack(): void {
+export function shellNavigateBack(otherwise?: () => void): void {
   if (!isInShell()) {
     window.history.back()
     return
   }
+  backOtherwise = otherwise ?? null
   window.parent.postMessage({ type: 'navigate-back' }, shellOrigin())
 }
 
@@ -1214,6 +1222,13 @@ if (typeof window !== 'undefined') {
         downloadCallbacks.delete(data.id as number)
         cb(data.ok as boolean)
       }
+    }
+
+    // The shell had nowhere to go back to: the page's own way out instead.
+    if (data.type === 'navigate-back-refused') {
+      const otherwise = backOtherwise
+      backOtherwise = null
+      otherwise?.()
     }
 
     // Handle permission-result

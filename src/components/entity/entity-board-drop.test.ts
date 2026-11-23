@@ -2,11 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect } from 'vitest'
-import type { EntityDesign, EntityObject } from '../../types/entity-object'
+import type {
+  EntityDesign,
+  EntityField,
+  EntityObject,
+} from '../../types/entity-object'
 import {
   entityBoardDropAction,
   entityBoardDropTarget,
   entityBoardTopAllowed,
+  entityCascade,
+  entityCascadeAccepts,
+  entityParentValues,
 } from './entity-board-drop'
 
 /** Gives `el` a box `height` tall starting at `top`, as layout would. */
@@ -237,5 +244,57 @@ describe('entityBoardTopAllowed', () => {
     const top = { ...design, hierarchy: { task: ['', 'ticket'] } }
     expect(entityBoardTopAllowed(top, 'task', true, 'status', 'todo')).toBe(false)
     expect(entityBoardTopAllowed(top, 'task', true, 'status', '')).toBe(true)
+  })
+})
+
+describe('entityCascadeAccepts', () => {
+  const field = (id: string, fieldtype: string, extra: Partial<EntityField> = {}) =>
+    ({ id, name: id, fieldtype, flags: '', multi: 0, rank: 0, card: 1, position: '', rows: 1, ...extra }) as EntityField
+  const option = (id: string) => ({ id, name: id, colour: '', icon: '', rank: 0 })
+  const design: Pick<EntityDesign, 'fields' | 'options'> = {
+    fields: {
+      task: [
+        field('status', 'enumerated'),
+        field('done', 'checkbox'),
+        field('points', 'number', { min: '1', max: '10' }),
+        field('due', 'date', { min: '2026-01-01' }),
+        field('code', 'text', { minlength: 2, maxlength: 4 }),
+        field('owner', 'user'),
+      ],
+      note: [],
+    },
+    options: { task: { status: [option('todo'), option('done')] } },
+  }
+
+  it('refuses a field the class does not have', () => {
+    expect(entityCascadeAccepts(design, 'note', 'status', 'todo')).toBe(false)
+    expect(entityCascadeAccepts(design, 'note', 'status', '')).toBe(false)
+  })
+
+  it('takes only what the field accepts', () => {
+    expect(entityCascadeAccepts(design, 'task', 'status', 'done')).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'status', 'resolved')).toBe(false)
+    expect(entityCascadeAccepts(design, 'task', 'status', '')).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'done', '1')).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'done', 'yes')).toBe(false)
+    expect(entityCascadeAccepts(design, 'task', 'points', '5')).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'points', '11')).toBe(false)
+    expect(entityCascadeAccepts(design, 'task', 'points', '1e3')).toBe(false)
+    expect(entityCascadeAccepts(design, 'task', 'due', '2026-02-01')).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'due', '2025-12-31')).toBe(false)
+    expect(entityCascadeAccepts(design, 'task', 'code', 'abc')).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'code', 'abcde')).toBe(false)
+    expect(entityCascadeAccepts(design, 'task', 'owner', 'p'.repeat(50))).toBe(true)
+    expect(entityCascadeAccepts(design, 'task', 'owner', 'x/-/delete?')).toBe(false)
+  })
+
+  it('gives an object only the values its class accepts, and keeps it when it takes none', () => {
+    const task = { id: 't', class: 'task', parent: '', rank: 'V', created: 1, updated: 1, values: { status: 'todo' } }
+    expect(entityCascade(design, task, { status: 'done', points: '99' }).values).toEqual({ status: 'done' })
+    expect(entityCascade(design, task, { status: 'resolved' })).toBe(task)
+    expect(entityParentValues(
+      { views: [{ columns: 'status', rows: 'owner' } as EntityDesign['views'][number]] },
+      { ...task, values: { status: 'done' } }
+    )).toEqual({ status: 'done', owner: '' })
   })
 })

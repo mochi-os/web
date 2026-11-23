@@ -4,10 +4,7 @@
 import { useState, type ReactNode } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import {
-  Check,
-  Copy,
   Gavel,
-  Link as LinkIcon,
   Link2,
   Loader2,
   MoreHorizontal,
@@ -25,14 +22,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { Button } from './ui/button'
-import {
-  ResponsiveDialog,
-  ResponsiveDialogContent,
-  ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
-} from './ui/responsive-dialog'
 import { ConfirmDialog } from './confirm-dialog'
+import { ShareSubmenu, type ShareLabels } from './share-menu'
 import { toast } from '../lib/toast-utils'
 import { getErrorMessage } from '../lib/handle-server-error'
 import { getAppPath } from '../lib/app-path'
@@ -43,16 +34,20 @@ interface OptionsMenuProps {
   entityId?: string
   /** Offer the RSS submenu for the whole app when there is no entity. */
   showRss?: boolean
-  /** Heading for the share link dialog, e.g. "Feed link". */
-  linkTitle: ReactNode
+  /** The app's words for Share's entries. */
+  shareLabels: ShareLabels
+  /** The entity's name, which a post of it in a feed starts with. */
+  shareName?: string
+  /** The full address of the entity's page, which that post links to. */
+  shareUrl?: () => string
   onSources?: () => void
   onModeration?: () => void
   onSettings?: () => void
   onUnsubscribe?: () => void
   unsubscribePending?: boolean
-  /** Show the share link entry — owner only, the action is owner-gated. */
+  /** Show the Share entry — owner only, the action is owner-gated. */
   canShare?: boolean
-  /** Creates a share link for the entity. */
+  /** Creates the mochi:// link another server joins the entity by. */
   createShareLink: (entityId: string) => Promise<string>
   /** Issues an RSS token for the entity, or for the whole app when "*". */
   createRssToken: (entity: string, mode: 'posts' | 'all') => Promise<string>
@@ -69,7 +64,9 @@ interface OptionsMenuProps {
 export function OptionsMenu({
   entityId,
   showRss,
-  linkTitle,
+  shareLabels,
+  shareName,
+  shareUrl,
   onSources,
   onModeration,
   onSettings,
@@ -85,31 +82,6 @@ export function OptionsMenu({
   const rssEntity = entityId || (showRss ? '*' : null)
 
   const [revokeRssOpen, setRevokeRssOpen] = useState(false)
-  const [linkOpen, setLinkOpen] = useState(false)
-  const [link, setLink] = useState('')
-  const [copied, setCopied] = useState(false)
-
-  const openLinkDialog = async () => {
-    if (!entityId) return
-    setLink('')
-    setCopied(false)
-    setLinkOpen(true)
-    try {
-      setLink(await createShareLink(entityId))
-    } catch (error) {
-      setLinkOpen(false)
-      toast.error(getErrorMessage(error, t`Failed to create link`))
-    }
-  }
-
-  const copyLink = async () => {
-    if (!link) return
-    const ok = await shellClipboardWrite(link)
-    if (ok) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
 
   const handleCopyRssUrl = async (mode: 'posts' | 'all') => {
     if (!rssEntity) return
@@ -184,12 +156,15 @@ export function OptionsMenu({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           )}
-          {/* Canonical menu tail: Link, Design (n/a here), Settings, Unsubscribe. */}
+          {/* Canonical menu tail: Share, Design (n/a here), Settings, Unsubscribe. */}
+          {/* A post or message of the entity is its name and its page's
+              address; its link is the mochi:// one another server joins by. */}
           {canShare && entityId && (
-            <DropdownMenuItem onSelect={() => void openLinkDialog()}>
-              <LinkIcon className='size-4' />
-              <Trans>Link</Trans>
-            </DropdownMenuItem>
+            <ShareSubmenu
+              share={() => ({ text: shareName ?? '', url: shareUrl?.() })}
+              link={() => createShareLink(entityId)}
+              labels={shareLabels}
+            />
           )}
           {onSettings && (
             <DropdownMenuItem onSelect={onSettings}>
@@ -215,30 +190,6 @@ export function OptionsMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <ResponsiveDialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <ResponsiveDialogContent>
-          <ResponsiveDialogHeader>
-            <ResponsiveDialogTitle>{linkTitle}</ResponsiveDialogTitle>
-          </ResponsiveDialogHeader>
-          <div className='bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm'>
-            <code className='flex-1 break-all'>{link || '…'}</code>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => void copyLink()}
-              disabled={!link}
-              className='shrink-0'
-            >
-              {copied ? (
-                <Check className='size-4' />
-              ) : (
-                <Copy className='size-4' />
-              )}
-            </Button>
-          </div>
-        </ResponsiveDialogContent>
-      </ResponsiveDialog>
 
       <ConfirmDialog
         open={revokeRssOpen}

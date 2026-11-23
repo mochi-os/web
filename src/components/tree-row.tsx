@@ -4,6 +4,7 @@
 import { memo, useRef, type CSSProperties, type DragEvent } from 'react'
 import {
   Calendar,
+  Check,
   CheckSquare,
   ChevronRight,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useFormat } from '../hooks/use-format'
+import { decimalPlaces } from '../lib/locale-format'
 import { useLingui } from '@lingui/react/macro'
 import { entityAddress, entityAssets } from '../lib/entity-endpoints'
 import { EntityAvatar } from './entity-avatar'
@@ -163,7 +165,7 @@ export const TreeRow = memo(function TreeRow({
   onDragEnd,
 }: TreeRowProps) {
   const rowRef = useRef<HTMLTableRowElement>(null)
-  const { formatDate } = useFormat()
+  const { formatDate, formatNumber } = useFormat()
   const { t } = useLingui()
 
   let borderColor: string | undefined
@@ -182,6 +184,11 @@ export const TreeRow = memo(function TreeRow({
     value: string,
     isTitleField: boolean
   ) => {
+    // An unticked box is stored as "0" (or "false"), which reads as empty,
+    // as the board card leaves it out.
+    if (field.fieldtype === 'checkbox' && value !== '1' && value !== 'true') {
+      value = ''
+    }
     if (!value) {
       if (field.fieldtype === 'date') {
         return (
@@ -285,6 +292,26 @@ export const TreeRow = memo(function TreeRow({
         } catch {
           return <span className='text-muted-foreground'>—</span>
         }
+      }
+
+      case 'checkbox':
+        return (
+          <Check
+            role='img'
+            aria-label={field.name}
+            className='size-4 text-foreground'
+          />
+        )
+
+      case 'number': {
+        const numeric = Number(value)
+        return (
+          <span className='truncate tabular-nums'>
+            {Number.isFinite(numeric)
+              ? formatNumber(numeric, decimalPlaces(value))
+              : value}
+          </span>
+        )
       }
 
       case 'text':

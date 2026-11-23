@@ -109,6 +109,39 @@ describe('EntityFieldEditor', () => {
 
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     })
+
+    it('toggles one item of a list written without ids', () => {
+      const { onChange } = show({
+        field,
+        value: JSON.stringify([
+          { text: 'Draft', done: false },
+          { text: 'Review', done: false },
+        ]),
+      })
+
+      fireEvent.click(screen.getAllByRole('switch')[0])
+
+      expect(onChange).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(onChange.mock.calls[0][0])).toEqual([
+        { id: 'item-0', text: 'Draft', done: true },
+        { id: 'item-1', text: 'Review', done: false },
+      ])
+    })
+
+    it('reads an item marked checked as done', () => {
+      show({
+        field,
+        readOnly: true,
+        value: JSON.stringify([
+          { text: 'Draft', checked: true },
+          { text: 'Review', checked: false },
+        ]),
+      })
+
+      expect(
+        screen.getByRole('progressbar', { name: 'Steps' })
+      ).toHaveAttribute('aria-valuenow', '50')
+    })
   })
 
   describe('text pattern', () => {

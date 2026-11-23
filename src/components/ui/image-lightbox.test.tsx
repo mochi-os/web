@@ -17,6 +17,7 @@ import { ImageLightbox, type LightboxMedia } from './image-lightbox'
 const shellStore = new Map<string, string>()
 vi.mock('../../lib/shell-storage', () => ({
   getItem: vi.fn(async (key: string) => shellStore.get(key) ?? null),
+  readItem: vi.fn(async (key: string) => shellStore.get(key) ?? null),
   setItem: vi.fn(async (key: string, value: string) => {
     shellStore.set(key, value)
   }),

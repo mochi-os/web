@@ -3,7 +3,9 @@
 
 // Synchronous mirror of the saved items each app stores server-side:
 // `isSaved()` answers without awaiting, mutations apply optimistically and roll
-// back on failure. Call `loadSaved()` once after login. Messages stay
+// back on failure. A change made while a load is in flight is replayed over
+// the list that load answers, which may have been read before the change
+// reached the server. Call `loadSaved()` once after login. Messages stay
 // MessageDescriptors, resolved at mutation time so a locale switch shows in the
 // next toast.
 
@@ -38,6 +40,11 @@ export interface SavedStoreOptions<TItem, TInput> {
   inputId: (input: TInput) => string
   /** The row to show immediately, before the server confirms it. */
   toItem: (input: TInput) => TItem
+  /**
+   * The saved list an add or remove answered, or null when the answer holds
+   * none. Taken only when no other change has been made since.
+   */
+  answered?: (result: unknown) => TItem[] | null
   messages: SavedStoreMessages
 }
 
@@ -59,10 +66,33 @@ export function createSavedStore<TItem, TInput>({
   itemId,
   inputId,
   toItem,
+  answered,
   messages,
 }: SavedStoreOptions<TItem, TInput>): SavedStore<TItem, TInput> {
   let cache: TItem[] = []
   let inflight: Promise<void> | null = null
+  // Changes made since the load in flight began, to replay over its answer.
+  let pending: Array<(items: TItem[]) => TItem[]> = []
+  let changes = 0
+
+  const note = (change: (items: TItem[]) => TItem[]) => {
+    changes += 1
+    if (inflight) pending.push(change)
+  }
+
+  // Take the list a write answered, unless another change has followed it.
+  const adopt = (result: unknown, at: number) => {
+    if (!answered || changes !== at) return
+    const items = answered(result)
+    if (!items) return
+    cache = items
+    emit()
+  }
+
+  const without = (id: string) => (items: TItem[]) =>
+    items.filter((item) => itemId(item) !== id)
+  const including = (item: TItem) => (items: TItem[]) =>
+    items.some((row) => itemId(row) === itemId(item)) ? items : [item, ...items]
 
   const emit = () => window.dispatchEvent(new Event(eventName))
 
@@ -74,15 +104,17 @@ export function createSavedStore<TItem, TInput>({
   // existing mirror is left untouched.
   const loadSaved = (): Promise<void> => {
     if (inflight) return inflight
+    pending = []
     inflight = api
       .list()
       .then((items) => {
-        cache = items
+        cache = pending.reduce((rows, change) => change(rows), items)
         emit()
       })
       .catch(() => {})
       .finally(() => {
         inflight = null
+        pending = []
       })
     return inflight
   }
@@ -90,31 +122,42 @@ export function createSavedStore<TItem, TInput>({
   const addSaved = (input: TInput): void => {
     const id = inputId(input)
     if (isSaved(id)) return
-    cache = [toItem(input), ...cache]
+    const item = toItem(input)
+    cache = [item, ...cache]
+    note(including(item))
+    const at = changes
     emit()
     void toastAction(api.add(input), {
       loading: i18n._(messages.saving),
       success: i18n._(messages.saved),
       error: (e) => getErrorMessage(e, i18n._(messages.addFailed)),
-    }).catch(() => {
-      cache = cache.filter((item) => itemId(item) !== id)
-      emit()
     })
+      .then((result) => adopt(result, at))
+      .catch(() => {
+        cache = without(id)(cache)
+        note(without(id))
+        emit()
+      })
   }
 
   const removeSaved = (id: string): void => {
     const previous = cache.find((item) => itemId(item) === id)
     if (!previous) return
-    cache = cache.filter((item) => itemId(item) !== id)
+    cache = without(id)(cache)
+    note(without(id))
+    const at = changes
     emit()
     void toastAction(api.remove(id), {
       loading: i18n._(messages.removing),
       success: i18n._(messages.removed),
       error: (e) => getErrorMessage(e, i18n._(messages.removeFailed)),
-    }).catch(() => {
-      cache = [previous, ...cache]
-      emit()
     })
+      .then((result) => adopt(result, at))
+      .catch(() => {
+        cache = including(previous)(cache)
+        note(including(previous))
+        emit()
+      })
   }
 
   const toggleSaved = (input: TInput): boolean => {
@@ -130,6 +173,7 @@ export function createSavedStore<TItem, TInput>({
   const clearSaved = (): void => {
     const previous = cache
     cache = []
+    note(() => [])
     emit()
     void toastAction(api.clear(), {
       loading: i18n._(messages.clearing),
@@ -137,6 +181,7 @@ export function createSavedStore<TItem, TInput>({
       error: (e) => getErrorMessage(e, i18n._(messages.clearFailed)),
     }).catch(() => {
       cache = previous
+      note(() => previous)
       emit()
     })
   }

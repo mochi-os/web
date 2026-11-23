@@ -326,13 +326,13 @@ export function EntityTreeView<TObject extends EntityObject>({
   // Toggle expand/collapse
   const toggleExpand = useCallback(
     (objectId: string) => {
-      const set = new Set(expandedList)
-      if (set.has(objectId)) {
-        set.delete(objectId)
-      } else {
-        set.add(objectId)
-      }
-      setExpandedList([...set])
+      // Open or shut as the row on screen asks; the rest of what is stored
+      // stays as it is.
+      const open = !expandedList.includes(objectId)
+      setExpandedList((previous) => {
+        const others = previous.filter((id) => id !== objectId)
+        return open ? [...others, objectId] : others
+      })
     },
     [expandedList, setExpandedList]
   )
@@ -391,13 +391,11 @@ export function EntityTreeView<TObject extends EntityObject>({
 
   const toggleSection = useCallback(
     (sectionId: string) => {
-      const set = new Set(collapsedSections)
-      if (set.has(sectionId)) {
-        set.delete(sectionId)
-      } else {
-        set.add(sectionId)
-      }
-      setCollapsedSections([...set])
+      const collapse = !collapsedSections.includes(sectionId)
+      setCollapsedSections((previous) => {
+        const others = previous.filter((id) => id !== sectionId)
+        return collapse ? [...others, sectionId] : others
+      })
     },
     [collapsedSections, setCollapsedSections]
   )
@@ -640,7 +638,9 @@ export function EntityTreeView<TObject extends EntityObject>({
       moveToSection(dragged, sectionId)
 
       if (collapsedSectionSet.has(sectionId)) {
-        setCollapsedSections(collapsedSections.filter((id) => id !== sectionId))
+        setCollapsedSections((previous) =>
+          previous.filter((id) => id !== sectionId)
+        )
       }
 
       clearDragState()
@@ -650,7 +650,6 @@ export function EntityTreeView<TObject extends EntityObject>({
       onMoveObject,
       moveToSection,
       collapsedSectionSet,
-      collapsedSections,
       setCollapsedSections,
       clearDragState,
     ]
@@ -688,7 +687,9 @@ export function EntityTreeView<TObject extends EntityObject>({
       }
       moveToSection(dragged, sectionId)
       if (collapsedSectionSet.has(sectionId)) {
-        setCollapsedSections(collapsedSections.filter((id) => id !== sectionId))
+        setCollapsedSections((previous) =>
+          previous.filter((id) => id !== sectionId)
+        )
       }
       clearDragState()
       return
@@ -718,7 +719,9 @@ export function EntityTreeView<TObject extends EntityObject>({
         // collapsed parent is visibly applied instead of appearing to do
         // nothing.
         if (!expanded.has(over)) {
-          setExpandedList([...expandedList, over])
+          setExpandedList((previous) =>
+            previous.includes(over) ? previous : [...previous, over]
+          )
         }
       } else if (
         (position === 'before' || position === 'after') &&
