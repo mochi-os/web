@@ -24,8 +24,6 @@ const KEYBOARD_REVEAL = /focus-visible:|focus-within:|group-focus-within/
 const EXEMPT: Record<string, string> = {
   // A tap sets data-active on the bubble, which reveals the labels.
   'components/action-pill.tsx': 'touch reveal via group-data-[active=true]',
-  // Message times: decoration, nothing to press.
-  'components/game/game-chat-message-list.tsx': 'decoration only',
   // The drag grip: decoration, and its touch reveal is a separate cn() argument.
   'components/tree-row.tsx': 'decoration only',
 }

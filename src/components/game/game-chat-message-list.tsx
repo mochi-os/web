@@ -65,6 +65,17 @@ interface GameChatMessageListProps<M extends GameChatMessage> {
   systemLabels?: GameChatSystemLabels
   /** The move line. chess marks captures, go localises "Pass". */
   renderMove: (message: M, isSent: boolean) => ReactNode
+  /**
+   * Name the sender above the first bubble of each run of received messages
+   * from one member. Words sets it when a game has more than one opponent;
+   * with one, every received bubble is theirs.
+   */
+  showNames?: boolean
+}
+
+// A chat line, as against a move or a system line.
+function isBubble(message: GameChatMessage): boolean {
+  return message.type !== 'system' && message.type !== 'move'
 }
 
 export function GameChatMessageList<M extends GameChatMessage>({
@@ -76,8 +87,9 @@ export function GameChatMessageList<M extends GameChatMessage>({
   emptyLabel,
   systemLabels = {},
   renderMove,
+  showNames = false,
 }: GameChatMessageListProps<M>) {
-  const { formatDate, formatDateTime } = useFormat()
+  const { formatDate, formatDateTime, zonedDay, timestampAt } = useFormat()
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const prevScrollHeightRef = useRef<number>(0)
@@ -86,18 +98,20 @@ export function GameChatMessageList<M extends GameChatMessage>({
   const isInitialLoadRef = useRef(true)
   const prevMessageCountRef = useRef<number>(0)
 
+  // Grouped by the day each message has in the user's zone, the zone its
+  // time is shown in, so a message never sits under another day's heading.
+  // The key is a YYYY-MM-DD string, which keeps insertion order.
   const groupedMessages = useMemo(() => {
     const groups: Record<string, M[]> = {}
     chatMessages.forEach((message) => {
-      const d = new Date(message.created * 1000)
-      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const date = zonedDay(new Date(message.created * 1000))
       if (!groups[date]) {
         groups[date] = []
       }
       groups[date].push(message)
     })
     return groups
-  }, [chatMessages])
+  }, [chatMessages, zonedDay])
 
   const handleLoadMore = useCallback(() => {
     if (messagesQuery.isFetchingNextPage || !messagesQuery.hasNextPage) return
@@ -203,7 +217,9 @@ export function GameChatMessageList<M extends GameChatMessage>({
         <Fragment key={key}>
           <div className='my-2 flex items-center justify-center'>
             <div className='text-muted-foreground text-[10px]'>
-              {formatDate(new Date(key + 'T00:00:00'))}
+              {/* Noon of the day in the user's zone: an instant that is
+                  that day there, whichever way a DST change moves midnight. */}
+              {formatDate(new Date(timestampAt(key, 720) * 1000))}
             </div>
           </div>
 
@@ -258,6 +274,18 @@ export function GameChatMessageList<M extends GameChatMessage>({
               )
             }
 
+            // A run is the bubbles one member sends between other lines; a
+            // move, a system line or another sender ends it.
+            const previous =
+              index > 0 ? groupedMessages[key][index - 1] : undefined
+            const named =
+              showNames &&
+              !isSent &&
+              Boolean(message.name) &&
+              (!previous ||
+                !isBubble(previous) ||
+                previous.member !== message.member)
+
             return (
               <div
                 key={`${message.id}-${index}`}
@@ -266,9 +294,15 @@ export function GameChatMessageList<M extends GameChatMessage>({
                   isSent ? 'items-end' : 'items-start'
                 )}
               >
+                {named && (
+                  <span className='text-muted-foreground ms-1 text-[11px] font-semibold'>
+                    {message.name}
+                  </span>
+                )}
                 <div className='flex items-end gap-1.5'>
+                  {/* Shown on hover, and always where there is no hover. */}
                   {isSent && (
-                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 text-[9px]'>
+                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-[9px]'>
                       {formatDateTime(new Date(message.created * 1000))}
                     </span>
                   )}
@@ -285,7 +319,7 @@ export function GameChatMessageList<M extends GameChatMessage>({
                   </div>
 
                   {!isSent && (
-                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 text-[9px]'>
+                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-[9px]'>
                       {formatDateTime(new Date(message.created * 1000))}
                     </span>
                   )}

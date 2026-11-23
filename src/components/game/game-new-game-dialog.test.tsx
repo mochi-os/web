@@ -47,7 +47,6 @@ const labels: GameNewGameDialogLabels = {
   emptyMessage: 'No friends found',
   cancel: 'Cancel',
   submit: 'Start game',
-  submitting: 'Creating...',
 }
 
 const base = {
@@ -143,6 +142,9 @@ describe('GameNewGameDialog', () => {
     expect(submit).toBeDisabled()
     expect(submit).toHaveAttribute('aria-busy', 'true')
     expect(submit?.querySelector('[data-slot="button-spinner"]')).not.toBeNull()
+    // The label stays while busy, so the labels carry no busy wording: the
+    // fixture above, typed against them, holds none.
+    expect(submit).toHaveTextContent(/^Start game$/)
   })
 
   it('closes from the cancel button', () => {

@@ -37,8 +37,8 @@ export interface GameNewGameDialogLabels {
   placeholder: string
   emptyMessage: string
   cancel: ReactNode
+  /** Kept while submitting: the icon turns to a spinner, the label stays. */
   submit: ReactNode
-  submitting: ReactNode
 }
 
 export interface GameNewGameDialogProps {
@@ -113,9 +113,7 @@ export function GameNewGameDialog({
 
         <div className='space-y-4'>
           <div className='space-y-2'>
-            <Label>
-              {labels.opponentLabel}
-            </Label>
+            <Label>{labels.opponentLabel}</Label>
             {isLoading ? (
               <Skeleton className='h-9 w-full' />
             ) : error ? (
