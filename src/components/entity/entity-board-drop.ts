@@ -75,10 +75,12 @@ export function entityBoardOrdered(sort?: EntitySortState | null) {
 /**
  * The place a drop between a board's top-level cards asks the server for,
  * from `place`, the cards drawn directly above (`after`) and below
- * (`before`) it. Under the descending Manual sort the card drawn above holds
- * the higher key, so the two swap. Under any other sort the cards are not
- * drawn in key order and no place would show, so there is none. A card's
- * children are always drawn in ascending key order and take no part in this.
+ * (`before`) it. The descending Manual sort draws the server's order exactly
+ * reversed (see compareEntityObjects), so the card drawn above comes after
+ * the one below in that order, and the two swap. Under any other sort the
+ * cards are not drawn in key order and no place would show, so there is none.
+ * A card's children are always drawn in ascending key order and take no part
+ * in this.
  */
 export function entityBoardPlace(
   place: EntityPlace | undefined,
@@ -90,6 +92,31 @@ export function entityBoardPlace(
   if (place.before) swapped.after = place.before
   if (place.after) swapped.before = place.after
   return swapped
+}
+
+/**
+ * The place a drop just above (`before`) or below (`after`) the row `target`
+ * asks for, among `rows`, the ids of the rows drawn in the target's list from
+ * top to bottom: the rows drawn either side of the drop, past the dragged
+ * row's own, swapped under the sort as entityBoardPlace swaps them. Undefined
+ * for a target not among them, or under a sort other than Manual.
+ */
+export function entityListPlace(
+  rows: readonly string[],
+  dragged: string,
+  target: string,
+  position: 'before' | 'after',
+  sort?: EntitySortState | null
+): EntityPlace | undefined {
+  const others = rows.filter((id) => id !== dragged)
+  const index = others.indexOf(target)
+  if (index < 0) return undefined
+  const above = position === 'before' ? others[index - 1] : target
+  const below = position === 'before' ? target : others[index + 1]
+  const place: EntityPlace = {}
+  if (above) place.after = above
+  if (below) place.before = below
+  return entityBoardPlace(place, sort)
 }
 
 /** The 1-based place among the cards of a children list, and its neighbours. */
@@ -206,7 +233,11 @@ function under(
  * `sort` (see entityBoardPlace). `columns` are the values the board draws a
  * column for: a drop between top-level cards in the column for no value
  * clears a value that is one of them, which would otherwise draw the card in
- * its own column still. Null when the drop is not allowed.
+ * its own column still. `lanes` are likewise the values of `rowField` the
+ * board draws a swimlane for, and a card whose value is none of them is drawn
+ * in the lane for no value: a drop in the lane the card is drawn in names no
+ * lane, since writing that lane's value would clear one no lane is drawn for.
+ * Null when the drop is not allowed.
  */
 export function entityBoardDropAction(
   dragged: EntityObject,
@@ -216,7 +247,9 @@ export function entityBoardDropAction(
   column: string,
   drop: EntityBoardDrop,
   sort?: EntitySortState | null,
-  columns: readonly string[] = []
+  columns: readonly string[] = [],
+  rowField = '',
+  lanes: readonly string[] = []
 ): EntityBoardDropAction | null {
   const allows = (parentClass: string) =>
     (design.hierarchy[dragged.class] || []).includes(parentClass)
@@ -252,12 +285,14 @@ export function entityBoardDropAction(
     return null
   const own = dragged.values[statusField] || ''
   const clear = !column && !!statusField && !!own && columns.includes(own)
+  const lane = (rowField && dragged.values[rowField]) || ''
+  const drawn = lanes.includes(lane) ? lane : ''
   return {
     kind: 'move',
     value: column,
     ...(clear ? { clear: true } : {}),
     place: entityBoardPlace(drop.place, sort),
-    row: drop.row,
+    row: drop.row === drawn ? undefined : drop.row,
     ...(child ? { promote: true } : {}),
   }
 }

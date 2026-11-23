@@ -233,8 +233,135 @@ describe('EntityTreeView', () => {
     Object.defineProperty(over, 'clientY', { value: 2 })
     fireEvent(target, over)
     fireEvent.dragEnd(row('a'), { dataTransfer })
-    // Above b, below c: drawn in reverse, that is a key after b's.
-    expect(onReorder).toHaveBeenCalledWith('a', { after: 'b' })
+    // Above b, below c: drawn in reverse, that is a key after b's and
+    // before c's.
+    expect(onReorder).toHaveBeenCalledWith('a', { after: 'b', before: 'c' })
+  })
+
+  /** Drags `dragged` over the top (or bottom) edge of row `target` and drops it. */
+  function drop(dragged: string, target: string, edge: 'top' | 'bottom' = 'top') {
+    const el = row(target)
+    el.getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) })
+    fireEvent.dragStart(row(dragged), { dataTransfer })
+    const over = createEvent.dragOver(el, { dataTransfer })
+    Object.defineProperty(over, 'clientY', { value: edge === 'top' ? 2 : 38 })
+    fireEvent(el, over)
+    fireEvent.dragEnd(row(dragged), { dataTransfer })
+  }
+
+  it('names both siblings either side of a drop, not a child drawn between them', async () => {
+    // p1 is open, so its child k1 is drawn between it and p2.
+    setItem(stored, JSON.stringify(['p1']))
+    const onReorder = vi.fn()
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='opened'
+        storagePrefix='tests'
+        objects={[
+          ...family(),
+          createMockEntityObject({ id: 'p3', rank: 'E', values: { title: 'Parent three' } }),
+        ]}
+        peopleMap={{}}
+        viewFields='title'
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Child one')
+    expect([...rows()].map((r) => r.getAttribute('data-card-id'))).toEqual(['p1', 'k1', 'p2', 'p3'])
+    drop('p3', 'p2')
+    expect(onReorder).toHaveBeenCalledWith('p3', { after: 'p1', before: 'p2' })
+    drop('p1', 'p2', 'bottom')
+    expect(onReorder).toHaveBeenLastCalledWith('p1', { after: 'p2', before: 'p3' })
+  })
+
+  it('names the rows of a grouped section either side of a drop, whatever their parents', async () => {
+    const objects = [
+      createMockEntityObject({ id: 'p1', rank: 'A', values: { title: 'Parent', status: 'todo' } }),
+      createMockEntityObject({ id: 'c1', parent: 'p1', rank: 'B', values: { title: 'First', status: 'done' } }),
+      createMockEntityObject({ id: 'x', rank: 'C', values: { title: 'Loose', status: 'done' } }),
+      createMockEntityObject({ id: 'c3', parent: 'p1', rank: 'D', values: { title: 'Third', status: 'done' } }),
+      createMockEntityObject({ id: 'c2', parent: 'p1', rank: 'E', values: { title: 'Second', status: 'done' } }),
+    ]
+    const onReorder = vi.fn()
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        statusField='status'
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Second')
+    drop('c2', 'c3')
+    expect(onReorder).toHaveBeenCalledWith('c2', { after: 'x', before: 'c3' })
+  })
+
+  it('takes a row of another section of a grouped list as a parent across its whole height, never as a place beside it', async () => {
+    // a and b in To Do; d in Done, with a key between theirs.
+    const objects = [
+      createMockEntityObject({ id: 'a', rank: 'A', values: { title: 'Alpha', status: 'todo' } }),
+      createMockEntityObject({ id: 'd', rank: 'B', values: { title: 'Delta', status: 'done' } }),
+      createMockEntityObject({ id: 'b', rank: 'C', values: { title: 'Beta', status: 'todo' } }),
+    ]
+    const onReorder = vi.fn()
+    const onReparent = vi.fn()
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign({ hierarchy: { task: ['', 'task'] } })}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        statusField='status'
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+        onReparent={onReparent}
+      />
+    )
+    await screen.findByText('Delta')
+    drop('a', 'd')
+    expect(onReorder).not.toHaveBeenCalled()
+    expect(onReparent).toHaveBeenCalledWith('a', 'd')
+    // Beside a row of its own section it is still a reorder.
+    drop('a', 'b')
+    expect(onReorder).toHaveBeenCalledWith('a', { before: 'b' })
+  })
+
+  it('draws rows sharing a key in the reverse of the server’s order under the descending Manual sort, and names them either side of a drop', async () => {
+    // p and q share a key, p the newer: the server lists p then q.
+    const objects = [
+      createMockEntityObject({ id: 'p', rank: 'B', created: 2000, values: { title: 'Newer' } }),
+      createMockEntityObject({ id: 'q', rank: 'B', created: 1000, values: { title: 'Older' } }),
+      createMockEntityObject({ id: 'r', rank: 'C', created: 3000, values: { title: 'Top' } }),
+      createMockEntityObject({ id: 's', rank: 'A', created: 4000, values: { title: 'Bottom' } }),
+    ]
+    const onReorder = vi.fn()
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        sort={{ field: 'rank', direction: 'desc' }}
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Newer')
+    expect([...rows()].map((r) => r.getAttribute('data-card-id'))).toEqual(['r', 'q', 'p', 's'])
+    // Between q and p: after p in the server's order and before q.
+    drop('s', 'p')
+    expect(onReorder).toHaveBeenCalledWith('s', { after: 'p', before: 'q' })
   })
 
   it('assumes no class when the design has none, rather than a task class', () => {

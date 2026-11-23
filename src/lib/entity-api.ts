@@ -141,7 +141,10 @@ export interface EntityMoveObjectRequest {
   clear?: string
   /** The object it was dropped directly after, as the list showed them */
   after?: string
-  /** The object it was dropped directly before, when none was above it */
+  /**
+   * The object it was dropped directly before, as the list showed them: the
+   * server places it there when `after` is gone or in another column or parent
+   */
   before?: string
   /** Swimlane move: the row field and the value the card lands in */
   row?: { field: string; value?: string }
@@ -152,6 +155,11 @@ export interface EntityMoveObjectRequest {
    * into another parent's children beside one of them
    */
   parent?: string
+  /**
+   * The parent whose children a reorder moves among, "" for the top level: the
+   * server takes `after` and `before` only from those children
+   */
+  scope?: string
 }
 
 export interface EntityCreateObjectRequest {

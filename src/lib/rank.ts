@@ -149,23 +149,33 @@ interface Ranked {
 }
 
 /**
- * The keys a move writes when `moved` is dropped directly after (or before)
- * `anchor`, as the server writes them: objects sharing the anchor's key each
- * take one of their own first, spread through the gap around it in the order
- * lists show them (newest first, then the greater id), and the moved object
- * takes a key between the anchor's and the next key any object in `objects`
- * holds, so it is no other object's. Object id to new key.
+ * The keys a move writes when `moved` is dropped between `place.after` and
+ * `place.before`, as the server writes them: beside the one after when it is
+ * among `objects` and `accepts` takes it (the server takes a neighbour only
+ * from the column or parent moved into), else beside the one before, and none
+ * when neither will do. Objects sharing that neighbour's key each take one of
+ * their own first, spread through the gap around it in the server's order
+ * (newest first, then the greater id), and the moved object takes a key
+ * between the neighbour's and the next key any object in `objects` holds, so
+ * it is no other object's. Object id to new key.
  */
-export function rankPlace(
-  objects: Ranked[],
+export function rankPlace<TRanked extends Ranked>(
+  objects: TRanked[],
   moved: string,
-  anchor: string,
-  after: boolean
+  place: { after?: string; before?: string },
+  accepts: (object: TRanked) => boolean = () => true
 ): Record<string, string> {
   const others = objects.filter((o) => o.id !== moved)
   const ranks: Record<string, string> = {}
-  const target = others.find((o) => o.id === anchor)
+  const neighbour = (id?: string) => {
+    const found = id ? others.find((o) => o.id === id) : undefined
+    return found && accepts(found) ? found : undefined
+  }
+  const previous = neighbour(place.after)
+  const target = previous ?? neighbour(place.before)
   if (!target) return ranks
+  const after = previous !== undefined
+  const anchor = target.id
   // The nearest key above (or below) k that any object holds.
   const next = (k: string, up: boolean) =>
     others.reduce<string | null>((m, o) => {

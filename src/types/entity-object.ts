@@ -72,9 +72,9 @@ export interface EntityObject {
 }
 
 /**
- * Where a drop puts an object: directly after the object `after`, or, with
- * nothing above it, directly before `before`, as the list showed them. Neither
- * is the end of a list with nothing in it.
+ * Where a drop puts an object: between the objects `after` and `before`, its
+ * neighbours as the list showed them. One is missing at either end of a list,
+ * and neither in a list with nothing in it.
  */
 export interface EntityPlace {
   after?: string

@@ -31,7 +31,7 @@ describe('rankPlace', () => {
       object('c', 'a2'),
       object('m', 'a5'),
     ]
-    const ranks = rankPlace(objects, 'm', 'a', true)
+    const ranks = rankPlace(objects, 'm', { after: 'a' })
     expect(Object.keys(ranks)).toEqual(['m'])
     expect(ranks.m > 'a0' && ranks.m < 'a1').toBe(true)
     expect(order(objects, ranks)).toEqual(['a', 'm', 'b', 'c'])
@@ -48,7 +48,7 @@ describe('rankPlace', () => {
       object('openid', 'b3jV'),
       object('performance', 'b4Q'),
     ]
-    const ranks = rankPlace(objects, 'openid', 'air', false)
+    const ranks = rankPlace(objects, 'openid', { before: 'air' })
     // The two that shared a key each have their own, in the order the list
     // showed them (the newer first), and the moved card is above both.
     expect(ranks.air).not.toBe(ranks.carrier)
@@ -69,7 +69,7 @@ describe('rankPlace', () => {
       object('q', 'a1', 1),
       object('m', 'a3'),
     ]
-    const ranks = rankPlace(objects, 'm', 'p', true)
+    const ranks = rankPlace(objects, 'm', { after: 'p' })
     expect(order(objects, ranks)).toEqual(['x', 'p', 'm', 'q'])
   })
 
@@ -82,7 +82,7 @@ describe('rankPlace', () => {
       object('p2', 'a1', 5),
       object('m', 'a3'),
     ]
-    const ranks = rankPlace(objects, 'm', 'p2', true)
+    const ranks = rankPlace(objects, 'm', { after: 'p2' })
     expect(order(objects, ranks)).toEqual(['x', 'p2', 'm', 'p1'])
   })
 
@@ -96,7 +96,7 @@ describe('rankPlace', () => {
       object('hi', 'a2'),
       object('m', 'a5'),
     ]
-    const ranks = rankPlace(objects, 'm', 't500', true)
+    const ranks = rankPlace(objects, 'm', { after: 't500' })
     const newest = [...tied].reverse().map((o) => o.id)
     // Each tied object has a key of its own, in the list's order (newest
     // first), all between the neighbours either side of the tie.
@@ -119,7 +119,7 @@ describe('rankPlace', () => {
     ]
     // Nothing below the tie: its keys step down from the one above it.
     const top = [...tie, object('hi', 'a5'), object('m', 'a9')]
-    expect(order(top, rankPlace(top, 'm', 'q', false))).toEqual([
+    expect(order(top, rankPlace(top, 'm', { before: 'q' }))).toEqual([
       'p',
       'm',
       'q',
@@ -128,7 +128,7 @@ describe('rankPlace', () => {
     ])
     // Nothing above it: they step up from the one below it.
     const bottom = [object('m', 'a0'), object('lo', 'a1'), ...tie]
-    expect(order(bottom, rankPlace(bottom, 'm', 'q', true))).toEqual([
+    expect(order(bottom, rankPlace(bottom, 'm', { after: 'q' }))).toEqual([
       'lo',
       'p',
       'q',
@@ -137,7 +137,7 @@ describe('rankPlace', () => {
     ])
     // Nothing either side.
     const alone = [...tie, object('m', 'a9')]
-    expect(order(alone, rankPlace(alone, 'm', 'p', true))).toEqual([
+    expect(order(alone, rankPlace(alone, 'm', { after: 'p' }))).toEqual([
       'p',
       'm',
       'q',
@@ -146,6 +146,43 @@ describe('rankPlace', () => {
   })
 
   it('writes nothing for an anchor that is not among the objects', () => {
-    expect(rankPlace([object('a', 'a0')], 'a', 'gone', true)).toEqual({})
+    expect(rankPlace([object('a', 'a0')], 'a', { after: 'gone' })).toEqual({})
+  })
+
+  describe('with both neighbours named', () => {
+    // x and y in To Do, with z and w of Done holding keys between them.
+    const card = (id: string, rank: string, column: string) => ({
+      ...object(id, rank),
+      column,
+    })
+    const objects = [
+      card('x', 'a0', 'todo'),
+      card('z', 'a1', 'done'),
+      card('w', 'a1V', 'done'),
+      card('y', 'a2', 'todo'),
+      card('m', 'a5', 'todo'),
+    ]
+    const todo = (o: { column: string }) => o.column === 'todo'
+
+    it('places the object directly after the one after', () => {
+      const ranks = rankPlace(objects, 'm', { after: 'z', before: 'y' })
+      expect(order(objects, ranks)).toEqual(['x', 'z', 'm', 'w', 'y'])
+    })
+
+    it('places it directly before the one before when the one after is gone', () => {
+      const ranks = rankPlace(objects, 'm', { after: 'gone', before: 'y' })
+      expect(order(objects, ranks)).toEqual(['x', 'z', 'w', 'm', 'y'])
+    })
+
+    it('places it directly before the one before when the one after is in another column', () => {
+      const ranks = rankPlace(objects, 'm', { after: 'z', before: 'y' }, todo)
+      expect(order(objects, ranks)).toEqual(['x', 'z', 'w', 'm', 'y'])
+    })
+
+    it('writes nothing when neither will do', () => {
+      expect(
+        rankPlace(objects, 'm', { after: 'gone', before: 'w' }, todo)
+      ).toEqual({})
+    })
   })
 })

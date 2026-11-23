@@ -27,6 +27,7 @@ import { treeTableMinWidth } from '../tree-table-width'
 import { useShellStorage } from '../../hooks/use-shell-storage'
 import { useProgressive } from '../../hooks/use-progressive'
 import { sortEntityObjects, compareEntityObjects } from '../../lib/entity-sort'
+import { entityListPlace } from './entity-board-drop'
 import type {
   EntityDesign,
   EntityFieldOption,
@@ -59,7 +60,7 @@ export interface EntityTreeViewProps<TObject extends EntityObject> {
   sort?: EntitySortState | null
   onCardClick: (object: TObject) => void
   onReparent?: (objectId: string, newParentId: string | null) => void
-  /** Move an object among its siblings, beside the one it was dropped next to. */
+  /** Move an object among its siblings, between the rows it was dropped between. */
   onReorder?: (objectId: string, place: EntityPlace) => void
   /** Move object to the end of another status section. */
   onMoveObject?: (
@@ -415,6 +416,16 @@ export function EntityTreeView<TObject extends EntityObject>({
     [objects, groupField, groupOptions, design]
   )
 
+  // The section a row is drawn in while the list is grouped, one for each
+  // value of the field and one for none; the same for every row when it is
+  // not. A row is reordered only beside another of its own section: beside
+  // one in another, the drop would show it there while it keeps its value.
+  const grouped = statusGroups.length > 0
+  const sectionOf = useCallback(
+    (object: EntityObject) => (grouped ? object.values[groupField] || '' : ''),
+    [grouped, groupField]
+  )
+
   const tableColSpan =
     1 + (showClass ? 1 : 0) + (showId ? 1 : 0) + rowFields.length
 
@@ -580,8 +591,9 @@ export function EntityTreeView<TObject extends EntityObject>({
         const draggedObj = objectMap[draggedId]
         const targetObj = objectMap[objectId]
         if (!draggedObj || !targetObj) return
-        // Only allow reordering within same parent level
+        // Only allow reordering within same parent level and section
         if (draggedObj.parent !== targetObj.parent) return
+        if (sectionOf(draggedObj) !== sectionOf(targetObj)) return
       }
 
       dragTargetRef.current.overId = objectId
@@ -591,7 +603,7 @@ export function EntityTreeView<TObject extends EntityObject>({
       setDragOverId(objectId)
       setDropPosition(position)
     },
-    [draggedId, isReparentAllowed, canReorder, objectMap]
+    [draggedId, isReparentAllowed, canReorder, objectMap, sectionOf]
   )
 
   const handleSectionDragOver = useCallback(
@@ -723,20 +735,32 @@ export function EntityTreeView<TObject extends EntityObject>({
         onReorder &&
         canReorder
       ) {
-        // Reorder within same parent, beside the sibling dropped on. Rows
-        // are drawn in their keys' order, reversed under the descending
-        // Manual sort, where the row drawn above holds the higher key: a
-        // drop above it asks for a key after its own.
+        // Reorder within same parent and section, between the rows drawn
+        // either side of the drop: the row dropped beside and the next of
+        // its siblings, or of its section's rows when the list is grouped,
+        // in the order they are drawn (see entityListPlace).
         const targetObj = objectMap[over]
         const draggedObj = objectMap[dragged]
-        if (targetObj && draggedObj && targetObj.parent === draggedObj.parent) {
-          const descending = sort?.direction === 'desc'
-          onReorder(
-            dragged,
-            (position === 'before') !== descending
-              ? { before: over }
-              : { after: over }
-          )
+        if (
+          targetObj &&
+          draggedObj &&
+          targetObj.parent === draggedObj.parent &&
+          sectionOf(targetObj) === sectionOf(draggedObj)
+        ) {
+          // The list a row is drawn in: its section, or the children of its
+          // parent, the top level for one whose parent is not shown.
+          const home = (object: TObject) =>
+            grouped
+              ? sectionOf(object)
+              : object.parent && objectMap[object.parent]
+                ? object.parent
+                : ''
+          const rows = sortEntityObjects(
+            objects.filter((object) => home(object) === home(targetObj)),
+            sort
+          ).map((object) => object.id)
+          const place = entityListPlace(rows, dragged, over, position, sort)
+          if (place) onReorder(dragged, place)
         }
       }
     }
@@ -748,7 +772,10 @@ export function EntityTreeView<TObject extends EntityObject>({
     moveToSection,
     isReparentAllowed,
     canReorder,
+    objects,
     objectMap,
+    grouped,
+    sectionOf,
     sort,
     expanded,
     setExpandedList,
@@ -823,6 +850,7 @@ export function EntityTreeView<TObject extends EntityObject>({
         canReorder &&
         draggedObj &&
         draggedObj.parent === node.object.parent &&
+        sectionOf(draggedObj) === sectionOf(node.object) &&
         draggedId !== node.object.id
 
       return (

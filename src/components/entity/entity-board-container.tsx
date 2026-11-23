@@ -529,7 +529,9 @@ export function EntityBoardContainer<TObject extends EntityObject>({
             columnId,
             drop,
             sort,
-            columns
+            columns,
+            rowField,
+            rowOptions.map((option) => option.id)
           )
           if (!action) return
           if (action.kind === 'reparent') {
@@ -539,7 +541,8 @@ export function EntityBoardContainer<TObject extends EntityObject>({
           // A card dropped back in the column and row it is drawn in with no
           // place, as any drop between cards is under a sort other than
           // Manual, stays where it is: there is nothing to write. A value no
-          // column is drawn for is drawn in the column for no value.
+          // column is drawn for is drawn in the column for no value, and a
+          // drop in the row it is drawn in names no row.
           const own = draggedObj.values[statusField] || ''
           if (
             !action.place?.after &&
@@ -547,8 +550,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
             !action.parent &&
             !action.promote &&
             action.value === (columns.includes(own) ? own : '') &&
-            (action.row === undefined ||
-              action.row === (draggedObj.values[rowField || ''] || ''))
+            action.row === undefined
           )
             return
           onMoveObject?.(

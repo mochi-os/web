@@ -282,8 +282,11 @@ export function EntityBoardColumn<TObject extends EntityObject>({
         const draggedObjData = om[draggedId]
         if (draggedObjData) {
           const sourceStatus = draggedObjData.values[statusField || ''] || ''
-          const sourceRow = rowField
-            ? draggedObjData.values[rowField] || ''
+          // The row the card is drawn in: its own, or the one for no value
+          // when no row is drawn for its value.
+          const lane = rowField ? draggedObjData.values[rowField] || '' : ''
+          const sourceRow = rowsRef.current?.some((row) => row.id === lane)
+            ? lane
             : ''
           // Measure card height from the DOM
           const cardEl =

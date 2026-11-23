@@ -15,6 +15,7 @@ import {
   entityBoardTopAllowed,
   entityCascade,
   entityCascadeAccepts,
+  entityListPlace,
   entityParentValues,
 } from './entity-board-drop'
 
@@ -270,6 +271,33 @@ describe('entityBoardDropAction', () => {
     ).toEqual({ kind: 'move', value: '', place: { after: 'b1' }, parent: 't2' })
   })
 
+  describe('on a board with swimlanes', () => {
+    const columns = ['todo', 'done']
+    const lanes = ['high', 'low']
+    const card = (id: string, lane?: string) => object(id, 'ticket', '', { status: 'todo', ...(lane === undefined ? {} : { priority: lane }) })
+    const drop = (dragged: EntityObject, row: string) =>
+      entityBoardDropAction(dragged, { ...objects, [dragged.id]: dragged }, design, 'status', 'todo', { place: { after: 't1' }, row }, undefined, columns, 'priority', lanes)
+
+    it('names no lane for a drop in the lane the card is drawn in', () => {
+      expect(drop(card('h', 'high'), 'high')).toMatchObject({ row: undefined })
+      expect(drop(card('n'), '')).toMatchObject({ row: undefined })
+    })
+
+    it('keeps a value no lane is drawn for on a card reordered in the lane for no value, where it is drawn', () => {
+      expect(drop(card('s', 'gone'), '')).toMatchObject({ row: undefined })
+    })
+
+    it('names the lane a card is dropped in from another', () => {
+      expect(drop(card('h', 'high'), 'low')).toMatchObject({ row: 'low' })
+      expect(drop(card('s', 'gone'), 'high')).toMatchObject({ row: 'high' })
+      expect(drop(card('n'), 'low')).toMatchObject({ row: 'low' })
+    })
+
+    it('clears the lane of a card dropped in the lane for no value from a lane drawn for its value', () => {
+      expect(drop(card('h', 'high'), '')).toMatchObject({ row: '' })
+    })
+  })
+
   describe('on the column for no value', () => {
     const columns = ['todo', 'done']
     const unset = object('u1', 'ticket')
@@ -332,6 +360,31 @@ describe('entityBoardPlace', () => {
     for (const field of ['created', 'updated', 'number', 'field:title']) {
       expect(entityBoardPlace({ after: 'a', before: 'b' }, { field, direction: 'asc' })).toBeUndefined()
     }
+  })
+})
+
+describe('entityListPlace', () => {
+  // Rows drawn a, b, c from the top; d is dragged.
+  const rows = ['a', 'b', 'd', 'c']
+
+  it('names the rows drawn either side of a drop above or below a row, past the dragged row', () => {
+    expect(entityListPlace(rows, 'd', 'b', 'before')).toEqual({ after: 'a', before: 'b' })
+    expect(entityListPlace(rows, 'd', 'b', 'after')).toEqual({ after: 'b', before: 'c' })
+    expect(entityListPlace(rows, 'd', 'c', 'before')).toEqual({ after: 'b', before: 'c' })
+  })
+
+  it('names one neighbour at either end', () => {
+    expect(entityListPlace(rows, 'd', 'a', 'before')).toEqual({ before: 'a' })
+    expect(entityListPlace(rows, 'd', 'c', 'after')).toEqual({ after: 'c' })
+  })
+
+  it('swaps them under the descending Manual sort, and names none under another sort', () => {
+    expect(entityListPlace(rows, 'd', 'b', 'before', { field: 'rank', direction: 'desc' })).toEqual({ after: 'b', before: 'a' })
+    expect(entityListPlace(rows, 'd', 'b', 'before', { field: 'created', direction: 'asc' })).toBeUndefined()
+  })
+
+  it('names nothing for a row not in the list', () => {
+    expect(entityListPlace(rows, 'd', 'x', 'before')).toBeUndefined()
   })
 })
 

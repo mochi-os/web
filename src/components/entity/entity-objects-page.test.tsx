@@ -852,14 +852,59 @@ describe('EntityObjectsPage cascades', () => {
     )
     fireEvent.click(await screen.findByText('act'))
     await waitFor(() => expect(api.moveObject).toHaveBeenCalled())
+    // The board's column field goes with no value, so the server takes the
+    // neighbours only from the card's own column and writes nothing.
     expect(api.moveObject).toHaveBeenCalledWith(
       'c1',
       'parent',
-      expect.objectContaining({ field: '', value: '', clear: undefined })
+      expect.objectContaining({ field: 'status', value: '', clear: undefined })
     )
     expect(screen.getByTestId('parent')).toHaveTextContent('todo')
     expect(screen.getByTestId('task')).toHaveTextContent('todo')
   })
+
+  it.each([
+    ['a child among its siblings', 'task', 'note', 'parent'],
+    ['a top-level row among the others', 'other', 'parent', ''],
+  ])(
+    'names the parent a list reorder of %s moves within',
+    async (_, moved, after, scope) => {
+      const api = pending()
+      const listed = {
+        ...design,
+        views: [
+          createMockEntityView({
+            id: 'list',
+            viewtype: 'list',
+            columns: 'status',
+          }),
+        ],
+      }
+      renderPage(
+        {
+          api,
+          design: listed,
+          renderTree: function Tree(
+            slot: EntityObjectsTreeSlotProps<EntityObject>
+          ) {
+            return (
+              <button onClick={() => slot.onReorder?.(moved, { after })}>
+                act
+              </button>
+            )
+          },
+        },
+        objects
+      )
+      fireEvent.click(await screen.findByText('act'))
+      await waitFor(() => expect(api.moveObject).toHaveBeenCalled())
+      expect(api.moveObject).toHaveBeenCalledWith(
+        'c1',
+        moved,
+        expect.objectContaining({ field: '', after, scope })
+      )
+    }
+  )
 
   it('clears a row dragged to the list’s group for no value', async () => {
     const api = pending()
@@ -1052,5 +1097,153 @@ describe('EntityObjectsPage moves', () => {
     expect(column('')).toEqual(['u', 'v'])
     fireEvent.click(button)
     await waitFor(() => expect(column('')).toEqual(['u', 'v', 'x']))
+  })
+
+  // Every card in the order the keys put them, whatever its column.
+  const everything = () =>
+    screen.getAllByTestId(/^card-/).map((el) => el.textContent)
+
+  it('sends both neighbours of a drop', async () => {
+    const objects = [
+      card('a', 'a0', 1000, 'todo'),
+      card('b', 'a1', 2000, 'todo'),
+      card('x', 'a2', 3000, 'done'),
+    ]
+    const api = pending(objects)
+    renderPage(
+      {
+        api,
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('x', 'todo', { after: 'a', before: 'b' })
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() => expect(api.moveObject).toHaveBeenCalled())
+    expect(api.moveObject).toHaveBeenCalledWith(
+      'c1',
+      'x',
+      expect.objectContaining({ after: 'a', before: 'b' })
+    )
+  })
+
+  it('lands a card directly above the one below when the one above has gone', async () => {
+    const objects = [
+      card('c', 'a0', 1000, 'todo'),
+      card('b', 'a5', 2000, 'todo'),
+      card('x', 'a9', 3000, 'done'),
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('x', 'todo', { after: 'gone', before: 'b' })
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() => expect(column('todo')).toEqual(['c', 'x', 'b']))
+  })
+
+  it('lands a card directly above the one below when the one above is now in another column', async () => {
+    // z was above b when the drop was made, and has since moved to Done,
+    // beside w.
+    const objects = [
+      card('c', 'a0', 1000, 'todo'),
+      card('z', 'a3', 2000, 'done'),
+      card('w', 'a4', 3000, 'done'),
+      card('b', 'a5', 4000, 'todo'),
+      card('x', 'a9', 5000, 'done'),
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('x', 'todo', { after: 'z', before: 'b' })
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() => expect(column('todo')).toEqual(['c', 'x', 'b']))
+    // Beside b, not beside z.
+    expect(everything()).toEqual(['c', 'z', 'w', 'x', 'b'])
+  })
+
+  it('lands a card among a parent’s children directly above the one below when the one above has another parent', async () => {
+    // k was above j among p's children when the drop was made, and has
+    // since moved under q, keeping its key.
+    const objects = [
+      card('p', 'a0', 1000, 'todo'),
+      card('q', 'a1', 2000, 'todo'),
+      { ...card('k', 'a3', 3000, 'todo'), parent: 'q' },
+      { ...card('w', 'a4', 4000, 'todo'), parent: 'q' },
+      { ...card('j', 'a5', 5000, 'todo'), parent: 'p' },
+      { ...card('x', 'a9', 6000, 'todo'), parent: 'q' },
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.(
+            'x',
+            '',
+            { after: 'k', before: 'j' },
+            undefined,
+            undefined,
+            'p'
+          )
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    // Beside j, not beside k.
+    await waitFor(() =>
+      expect(everything()).toEqual(['p', 'q', 'k', 'w', 'x', 'j'])
+    )
+  })
+
+  it('lands a card between two that share a key where the descending Manual sort drew it', async () => {
+    const descending = {
+      ...design,
+      views: [
+        createMockEntityView({
+          id: 'board',
+          viewtype: 'board',
+          columns: 'status',
+          sort: 'rank',
+          direction: 'desc',
+        }),
+      ],
+    }
+    // p and q share a key, p the newer: the server lists p then q, and the
+    // descending sort draws the exact reverse.
+    const objects = [
+      card('p', 'a0', 2000, 'todo'),
+      card('q', 'a0', 1000, 'todo'),
+      card('x', 'a2', 3000, 'done'),
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design: descending,
+        // A drop drawn between q and p, as the board sends it.
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('x', 'todo', { after: 'p', before: 'q' })
+        ),
+      },
+      objects
+    )
+    const button = await screen.findByText('act')
+    expect(column('todo')).toEqual(['q', 'p'])
+    fireEvent.click(button)
+    await waitFor(() => expect(column('todo')).toEqual(['q', 'x', 'p']))
   })
 })

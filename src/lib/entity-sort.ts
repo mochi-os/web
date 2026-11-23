@@ -45,9 +45,16 @@ export function compareEntityObjects<TObject extends EntityObject>(
   }
   // Rank keys are opaque fractional-index strings — compare BINARY (rankCompare),
   // never naturalCompare (case/accent-insensitive + numeric-aware reorders them
-  // and lands dragged cards at the wrong slot, #53).
+  // and lands dragged cards at the wrong slot, #53). Objects sharing a key
+  // are in the server's order, newest first and then the greater id, which a
+  // move unties them in; descending reverses the whole order, ties and all,
+  // so a drop between two tied cards lands where it was drawn.
   if (sortField === 'rank') {
-    return rankCompare(String(aVal), String(bVal)) * multiplier
+    return (
+      (rankCompare(String(aVal), String(bVal)) ||
+        (b.created || 0) - (a.created || 0) ||
+        rankCompare(b.id, a.id)) * multiplier
+    )
   }
   return naturalCompare(String(aVal), String(bVal)) * multiplier
 }

@@ -150,6 +150,7 @@ export interface EntityObjectsPageApi<TObject extends EntityObject> {
       row?: { field: string; value?: string }
       promote?: string
       parent?: string
+      scope?: string
     }
   ) => Promise<unknown>
   updateObject: (
@@ -612,6 +613,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue,
       promote,
       parent,
+      scope,
     }: {
       objectId: string
       field: string
@@ -622,16 +624,21 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue?: string
       promote?: boolean
       parent?: string
+      scope?: string
     }) => {
       return api.moveObject(containerId, objectId, {
         field,
         value,
         clear: clear ? 'true' : undefined,
+        // Both neighbours the drop showed: the server places the object
+        // beside the one after while it is still in the column or parent
+        // moved into, and beside the one before when it is not.
         after: place?.after,
-        before: place?.after ? undefined : place?.before,
+        before: place?.before,
         row: rf ? { field: rf, value: rowValue } : undefined,
         promote: promote ? 'true' : undefined,
         parent,
+        scope,
       })
     },
     onMutate: async ({
@@ -644,6 +651,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue,
       promote,
       parent,
+      scope,
     }) => {
       // Await, as the reparent mutation below does: an in-flight objects fetch
       // that resolves after the optimistic write would overwrite it and snap the
@@ -662,20 +670,32 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         (old) => {
           if (!old) return old
 
-          // The keys the server will write: beside the neighbour the drop
-          // named, with any object sharing that neighbour's key untied first,
-          // or after every object's for a move to another column alone.
+          // The keys the server will write: beside the first neighbour the
+          // drop named that is in the column or parent moved into, with any
+          // object sharing that neighbour's key untied first, or after every
+          // object's for a move to another column with neither.
           const moved = old.objects.find((o) => o.id === objectId)
           // The value written: the one sent, or none for a clear.
           const target = clear ? '' : value
           const current = (field && moved?.values[field]) || ''
           const changed =
             !!field && (clear ? current !== '' : !!value && value !== current)
-          const anchor = place?.after || place?.before
-          let ranks: Record<string, string> = {}
-          if (anchor) {
-            ranks = rankPlace(old.objects, objectId, anchor, !!place?.after)
-          } else if (changed) {
+          // The column the object ends in, which its own value keeps when
+          // the move sends none.
+          const into = clear ? '' : value || current
+          // A neighbour counts as the server counts it: in the column moved
+          // into when the move names a field, and among the children of the
+          // parent moved into or reordered within when it names one.
+          const within = parent !== undefined ? parent : scope
+          let ranks = rankPlace(
+            old.objects,
+            objectId,
+            place ?? {},
+            (o) =>
+              (within === undefined || (o.parent || '') === within) &&
+              (!field || (o.values[field] || '') === into)
+          )
+          if (!ranks[objectId] && changed) {
             const last = old.objects.reduce<string | null>(
               (m, o) =>
                 o.id !== objectId && (m === null || rankCompare(o.rank, m) > 0)
@@ -1156,7 +1176,11 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   ) => {
     moveMutation.mutate({
       objectId,
-      field: newValue || clear ? columnField : '',
+      // The column field on every board move, so the server takes the drop's
+      // neighbours only from the column the card lands in; with no value it
+      // keeps the card's own. A move into another parent's children names it
+      // only to change it, those children being placed among themselves.
+      field: newValue || clear || parent === undefined ? columnField || '' : '',
       value: newValue,
       clear,
       place,
@@ -1189,9 +1213,12 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     reparentMutation.mutate({ objectId, parentId: newParentId })
   }
 
-  // Reorder among the object's siblings, beside the one it was dropped next to.
+  // Reorder among the object's siblings, between the two it was dropped
+  // between, naming their parent so the server takes those two only from them.
   const handleReorder = (objectId: string, place: EntityPlace) => {
-    moveMutation.mutate({ objectId, field: '', value: '', place })
+    const scope =
+      objectsData?.find((object) => object.id === objectId)?.parent || ''
+    moveMutation.mutate({ objectId, field: '', value: '', place, scope })
   }
 
   const handleDeleteColumn = async (
