@@ -17,20 +17,24 @@ import {
 import { useLingui } from '@lingui/react/macro'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { rankCompare } from '../../lib/rank'
 import { sortEntityObjects } from '../../lib/entity-sort'
 import {
   EntityBoardColumn,
   type EntityBoardCollapseLabels,
   type EntityBoardColumnRow,
 } from './entity-board-column'
-import { entityBoardDropAction } from './entity-board-drop'
+import {
+  entityBoardDropAction,
+  entityBoardOrdered,
+  type EntityBoardDrop,
+} from './entity-board-drop'
 import type {
   EntityClass,
   EntityDesign,
   EntityFieldOption,
   EntityObject,
   EntityDragPreview,
+  EntityPlace,
   EntitySortState,
 } from '../../types/entity-object'
 
@@ -51,14 +55,18 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
   onCardClick?: (object: TObject) => void
   onCardDoubleClick?: (object: TObject) => void
   onCreateClick?: (statusId: string, rowId?: string) => void
+  /**
+   * A drop that moves `objectId`. An empty `newStatus` keeps its column, and
+   * `clear` empties it: a drop on the column for no value.
+   */
   onMoveObject?: (
     objectId: string,
     newStatus: string,
-    newRank?: number,
+    place?: EntityPlace,
     newRow?: string,
-    scopeParent?: string,
     promote?: boolean,
-    parent?: string
+    parent?: string,
+    clear?: boolean
   ) => void
   onReparentObject?: (objectId: string, newParentId: string | null) => void
   onRenameColumn?: (
@@ -437,7 +445,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
       if (!dragPreview || dragPreview.mode === 'on') return list
       if (dragPreview.childReorder)
         return list.filter((o) => o.id !== dragPreview.draggedId)
-      // Same-column: keep the card in the list so it stays in the DOM for calculateDropIndex to skip
+      // Same-column: keep the card in the list so it stays in the DOM for entityBoardSlot to skip
       if (dragPreview.sourceColumn === dragPreview.targetColumn) return list
       // Cross-column: remove from source
       return list.filter((o) => o.id !== dragPreview.draggedId)
@@ -445,9 +453,21 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     [dragPreview]
   )
 
+  // Only the Manual sort draws top-level cards in their keys' order. Under
+  // any other a drop between two of them could not land there, so no gap is
+  // drawn for one and the move names no neighbour (entityBoardPlace).
+  const ordered = entityBoardOrdered(sort)
+
   // Handle drag preview updates from columns
   const handleDragPreview = useCallback(
-    (preview: EntityDragPreview | null) => {
+    (offered: EntityDragPreview | null) => {
+      const preview =
+        offered &&
+        !ordered &&
+        offered.mode === 'between' &&
+        !offered.childReorder
+          ? null
+          : offered
       if (!preview) {
         dragPreviewRef.current = null
         setDragPreview(null)
@@ -472,7 +492,7 @@ export function EntityBoardContainer<TObject extends EntityObject>({
       dragPreviewRef.current = preview
       setDragPreview(preview)
     },
-    [capturePositions]
+    [capturePositions, ordered]
   )
 
   // Tear the preview down when the moved row's data lands, not on dragend: the
@@ -492,99 +512,53 @@ export function EntityBoardContainer<TObject extends EntityObject>({
     prevObjectsRef.current = objects
   }, [objects, handleDragPreview])
 
-  // Count descendants of a card that have the same status value (the server
-  // includes these in its scope but the board only shows top-level cards)
-  const countDescendantsInStatus = useCallback(
-    (parentId: string, statusValue: string): number => {
-      const children = childrenByParent[parentId] || []
-      let count = 0
-      for (const child of children) {
-        if ((child.values[statusField] || '') === statusValue) count++
-        count += countDescendantsInStatus(child.id, statusValue)
-      }
-      return count
-    },
-    [childrenByParent, statusField]
-  )
-
-  // A place among a column's top-level cards as the rank the server expects.
-  // The server renumbers ALL objects with the matching status, including the
-  // children the board nests inside parent cards, whose ranks can fall
-  // anywhere in the flat list - so count preceding non-top-level objects.
-  const topRank = (
-    objectId: string,
-    columnId: string,
-    newRank?: number
-  ): number | undefined => {
-    if (!newRank) return newRank
-    const topLevel = (objectsByStatus[columnId] || []).filter(
-      (o) => o.id !== objectId
-    )
-    // Build flat list of all objects in scope (same status), sorted by rank
-    const allInScope = objects
-      .filter(
-        (o) =>
-          o.id !== objectId && (o.values[statusField] || '') === columnId
-      )
-      .sort((a, b) => rankCompare(a.rank, b.rank))
-    const topLevelIds = new Set(topLevel.map((o) => o.id))
-    // Walk the flat list until we reach the newRank-th top-level card,
-    // then insert just before it. flatPos counts items we've passed.
-    let topCount = 0
-    let flatPos = 0
-    for (const obj of allInScope) {
-      if (topLevelIds.has(obj.id)) {
-        topCount++
-        if (topCount >= newRank) break
-      }
-      flatPos++
-    }
-    return flatPos + 1
-  }
-
-  // Handle drop events: into a card's children at a place, onto a card, or
-  // between top-level cards. entityBoardDropAction decides; this dispatches.
+  // Handle drop events: into a card's children beside one of them, onto a
+  // card, or between top-level cards beside one of them.
+  // entityBoardDropAction decides; this dispatches.
   const handleDrop =
     onMoveObject || onReparentObject
-      ? (
-          objectId: string,
-          columnId: string,
-          newRank?: number,
-          rowId?: string,
-          dropOnCardId?: string,
-          reorderParentId?: string,
-          reorderRank?: number
-        ) => {
+      ? (objectId: string, columnId: string, drop: EntityBoardDrop) => {
           const draggedObj = objectMap[objectId]
           if (!draggedObj) return
+          const columns = statusOptions.map((option) => option.id)
           const action = entityBoardDropAction(
             draggedObj,
             objectMap,
             design,
             statusField,
-            {
-              column: columnId,
-              rank: newRank,
-              row: rowId,
-              on: dropOnCardId,
-              parent: reorderParentId,
-              place: reorderRank,
-            },
-            (rank) => topRank(objectId, columnId, rank)
+            columnId,
+            drop,
+            sort,
+            columns
           )
           if (!action) return
           if (action.kind === 'reparent') {
             onReparentObject?.(objectId, action.parent)
             return
           }
+          // A card dropped back in the column and row it is drawn in with no
+          // place, as any drop between cards is under a sort other than
+          // Manual, stays where it is: there is nothing to write. A value no
+          // column is drawn for is drawn in the column for no value.
+          const own = draggedObj.values[statusField] || ''
+          if (
+            !action.place?.after &&
+            !action.place?.before &&
+            !action.parent &&
+            !action.promote &&
+            action.value === (columns.includes(own) ? own : '') &&
+            (action.row === undefined ||
+              action.row === (draggedObj.values[rowField || ''] || ''))
+          )
+            return
           onMoveObject?.(
             objectId,
             action.value,
-            action.rank,
+            action.place,
             action.row,
-            action.scope,
             action.promote,
-            action.parent
+            action.parent,
+            action.clear
           )
         }
       : undefined

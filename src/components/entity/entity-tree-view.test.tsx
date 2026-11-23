@@ -189,9 +189,52 @@ describe('EntityTreeView', () => {
     Object.defineProperty(over, 'clientY', { value: 2 })
     fireEvent(target, over)
     fireEvent.dragEnd(row('c3'), { dataTransfer })
-    // Slot 1 of the parent's children; the flattened section list would have
-    // put the parent first and answered 2.
-    expect(onReorder).toHaveBeenCalledWith('c3', 1)
+    // Above the parent's first child; in the flattened section list the row
+    // above it is the parent itself.
+    expect(onReorder).toHaveBeenCalledWith('c3', { before: 'c1' })
+  })
+
+  it('asks for a key past the row drawn below a drop when the Manual sort is descending', async () => {
+    const objects = [
+      createMockEntityObject({ id: 'a', rank: 'A', values: { title: 'Alpha' } }),
+      createMockEntityObject({ id: 'b', rank: 'B', values: { title: 'Beta' } }),
+      createMockEntityObject({ id: 'c', rank: 'C', values: { title: 'Gamma' } }),
+    ]
+    const onReorder = vi.fn()
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        sort={{ field: 'rank', direction: 'desc' }}
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Alpha')
+    expect([...rows()].map((r) => r.getAttribute('data-card-id'))).toEqual(['c', 'b', 'a'])
+    const target = row('b')
+    target.getBoundingClientRect = () => ({
+      top: 0,
+      height: 40,
+      bottom: 40,
+      left: 0,
+      right: 0,
+      width: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    fireEvent.dragStart(row('a'), { dataTransfer })
+    const over = createEvent.dragOver(target, { dataTransfer })
+    Object.defineProperty(over, 'clientY', { value: 2 })
+    fireEvent(target, over)
+    fireEvent.dragEnd(row('a'), { dataTransfer })
+    // Above b, below c: drawn in reverse, that is a key after b's.
+    expect(onReorder).toHaveBeenCalledWith('a', { after: 'b' })
   })
 
   it('assumes no class when the design has none, rather than a task class', () => {

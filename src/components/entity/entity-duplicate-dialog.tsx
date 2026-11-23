@@ -66,6 +66,8 @@ export interface EntityDuplicateLabels {
   everything: string
   designOnly: string
   allowSearch: string
+  /** The switch that lets anyone view the copy. */
+  readable: string
   cancel: string
   confirm: string
   duplicating: string
@@ -103,8 +105,13 @@ export interface EntityDuplicateDialogProps {
   sourceId: string
   sourceName: string
   api: EntityDuplicateApi
-  /** Creates the empty copy and returns the id the import routes take. */
-  create: (name: string, privacy: 'public' | 'private') => Promise<string>
+  /** Creates the empty copy and returns the id the import routes take.
+   *  privacy is the directory listing alone; readable lets anyone view it. */
+  create: (
+    name: string,
+    privacy: 'public' | 'private',
+    readable: boolean
+  ) => Promise<string>
   /** Removes a copy whose import failed, so no half-made one is left. */
   remove: (entityId: string) => Promise<unknown>
   /** Called with the new copy's id once it is complete. */
@@ -135,6 +142,8 @@ export function EntityDuplicateDialog({
   // Off: the page does not know whether the original is searchable, and a copy
   // of customer data should never become searchable by surprise.
   const [allowSearch, setAllowSearch] = useState(false)
+  // Off for the same reason: members only unless the user says otherwise.
+  const [readable, setReadable] = useState(false)
   const [pending, setPending] = useState(false)
   const { progress: uploadProgress, upload } = useUploadProgress()
   // The download half has no hook of its own; one bar shows whichever half
@@ -152,6 +161,7 @@ export function EntityDuplicateDialog({
     setName(defaultNameRef.current(sourceName))
     setKind('everything')
     setAllowSearch(false)
+    setReadable(false)
   }, [open, sourceName])
 
   const run = async (running: Running): Promise<string> => {
@@ -178,7 +188,11 @@ export function EntityDuplicateDialog({
     }
     signal.throwIfAborted()
 
-    const copyId = await create(name.trim(), allowSearch ? 'public' : 'private')
+    const copyId = await create(
+      name.trim(),
+      allowSearch ? 'public' : 'private',
+      readable
+    )
     const discard = async () => {
       try {
         await remove(copyId)
@@ -359,6 +373,20 @@ export function EntityDuplicateDialog({
               id='duplicate-allow-search'
               checked={allowSearch}
               onCheckedChange={setAllowSearch}
+              disabled={pending}
+            />
+          </div>
+          <div className='flex items-center justify-between rounded-lg border px-4 py-3'>
+            <Label
+              htmlFor='duplicate-readable'
+              className='cursor-pointer text-sm font-medium'
+            >
+              {labels.readable}
+            </Label>
+            <Switch
+              id='duplicate-readable'
+              checked={readable}
+              onCheckedChange={setReadable}
               disabled={pending}
             />
           </div>

@@ -10,6 +10,8 @@ import type {
 import {
   entityBoardDropAction,
   entityBoardDropTarget,
+  entityBoardPlace,
+  entityBoardSlot,
   entityBoardTopAllowed,
   entityCascade,
   entityCascadeAccepts,
@@ -57,6 +59,23 @@ function ticket() {
   return { root, header, list, first, second }
 }
 
+describe('entityBoardSlot', () => {
+  // Three top-level cards a column shows, at 0-40, 50-90 and 100-140.
+  const cards = () => [card('c1', 0, 40), card('c2', 50, 40), card('c3', 100, 40)]
+
+  it('names the cards either side of the slot the pointer is in', () => {
+    expect(entityBoardSlot(cards(), 10, 'x')).toEqual({ index: 0, place: { before: 'c1' } })
+    expect(entityBoardSlot(cards(), 75, 'x')).toEqual({ index: 2, place: { after: 'c2', before: 'c3' } })
+    expect(entityBoardSlot(cards(), 135, 'x')).toEqual({ index: 3, place: { after: 'c3' } })
+    expect(entityBoardSlot([], 10, 'x')).toEqual({ index: 0, place: {} })
+  })
+
+  it('never names the dragged card, so its own gap is not a neighbour', () => {
+    expect(entityBoardSlot(cards(), 75, 'c2')).toEqual({ index: 1, place: { after: 'c1', before: 'c3' } })
+    expect(entityBoardSlot(cards(), 10, 'c1')).toEqual({ index: 0, place: { before: 'c2' } })
+  })
+})
+
 describe('entityBoardDropTarget', () => {
   // A task may sit under a ticket but not under another task.
   const tickets = (id: string) => id === 't1' || id === 't2'
@@ -68,11 +87,13 @@ describe('entityBoardDropTarget', () => {
       kind: 'sibling',
       parent: 't2',
       rank: 2,
+      place: { after: 'b1', before: 'b2' },
     })
     expect(entityBoardDropTarget(first, 168, 'a1', 't1', tickets)).toEqual({
       kind: 'sibling',
       parent: 't2',
       rank: 1,
+      place: { before: 'b1' },
     })
   })
 
@@ -82,11 +103,13 @@ describe('entityBoardDropTarget', () => {
       kind: 'sibling',
       parent: 't2',
       rank: 2,
+      place: { after: 'b1', before: 'b2' },
     })
     expect(entityBoardDropTarget(list, 232, 'a1', 't1', tickets)).toEqual({
       kind: 'sibling',
       parent: 't2',
       rank: 3,
+      place: { after: 'b2' },
     })
   })
 
@@ -117,6 +140,7 @@ describe('entityBoardDropTarget', () => {
       kind: 'sibling',
       parent: 't2',
       rank: 2,
+      place: { after: 'b1' },
     })
   })
 
@@ -135,11 +159,13 @@ describe('entityBoardDropTarget', () => {
       kind: 'sibling',
       parent: 't2',
       rank: 1,
+      place: { before: 'b2' },
     })
     expect(entityBoardDropTarget(list, 232, 'b1', 't2', () => false)).toEqual({
       kind: 'sibling',
       parent: 't2',
       rank: 2,
+      place: { after: 'b2' },
     })
   })
 })
@@ -167,65 +193,145 @@ describe('entityBoardDropAction', () => {
     a1: object('a1', 'task', 't1'),
     b1: object('b1', 'task', 't2'),
   }
-  const topRank = (rank?: number) => (rank === undefined ? rank : rank + 10)
-
-  it('moves a task into another ticket at the place shown, in one move', () => {
+  it('moves a task into another ticket beside the task shown, in one move', () => {
     expect(
-      entityBoardDropAction(objects.a1, objects, design, 'status', { column: 'done', parent: 't2', place: 1 }, topRank)
-    ).toEqual({ kind: 'move', value: '', rank: 1, scope: 't2', parent: 't2' })
+      entityBoardDropAction(objects.a1, objects, design, 'status', 'done', { parent: 't2', place: { before: 'b1' } })
+    ).toEqual({ kind: 'move', value: '', place: { before: 'b1' }, parent: 't2' })
   })
 
   it('reorders a task within its own ticket without naming a parent', () => {
     expect(
-      entityBoardDropAction(objects.b1, objects, design, 'status', { column: 'done', parent: 't2', place: 2 }, topRank)
-    ).toEqual({ kind: 'move', value: '', rank: 2, scope: 't2' })
+      entityBoardDropAction(objects.b1, objects, design, 'status', 'done', { parent: 't2', place: {} })
+    ).toEqual({ kind: 'move', value: '', place: {} })
   })
 
   it('refuses a parent the hierarchy does not allow, or one under the dragged object', () => {
     expect(
-      entityBoardDropAction(objects.a1, objects, design, 'status', { column: 'todo', parent: 'b1', place: 1 }, topRank)
+      entityBoardDropAction(objects.a1, objects, design, 'status', 'todo', { parent: 'b1', place: {} })
     ).toBeNull()
     expect(
-      entityBoardDropAction(objects.t1, objects, { ...design, hierarchy: { ...design.hierarchy, ticket: ['', 'task'] } }, 'status', { column: 'todo', parent: 'a1', place: 1 }, topRank)
+      entityBoardDropAction(objects.t1, objects, { ...design, hierarchy: { ...design.hierarchy, ticket: ['', 'task'] } }, 'status', 'todo', { parent: 'a1', place: {} })
     ).toBeNull()
   })
 
   it('makes a task the child of a card dropped onto', () => {
     expect(
-      entityBoardDropAction(objects.a1, objects, design, 'status', { column: 'done', on: 't2' }, topRank)
+      entityBoardDropAction(objects.a1, objects, design, 'status', 'done', { on: 't2' })
     ).toEqual({ kind: 'reparent', parent: 't2' })
   })
 
   it('does nothing with a task dropped between top-level cards when tasks may not be top level', () => {
     expect(
-      entityBoardDropAction(objects.a1, objects, design, 'status', { column: 'todo', rank: 1 }, topRank)
+      entityBoardDropAction(objects.a1, objects, design, 'status', 'todo', { place: { before: 't1' } })
     ).toBeNull()
   })
 
   it('does nothing with a task dropped into a column when tasks have no column field', () => {
     const loose = { ...design, hierarchy: { ...design.hierarchy, task: ['', 'ticket'] } }
     expect(
-      entityBoardDropAction(objects.a1, objects, loose, 'status', { column: 'todo', rank: 1 }, topRank)
+      entityBoardDropAction(objects.a1, objects, loose, 'status', 'todo', { place: { before: 't1' } })
     ).toBeNull()
     expect(
-      entityBoardDropAction(objects.a1, objects, loose, 'status', { column: '', rank: 1 }, topRank)
-    ).toEqual({ kind: 'move', value: '', rank: 11, row: undefined, promote: true })
+      entityBoardDropAction(objects.a1, objects, loose, 'status', '', { place: {} })
+    ).toEqual({ kind: 'move', value: '', place: {}, row: undefined, promote: true })
   })
 
-  it('promotes a child dropped between top-level cards where it may go, at the place shown', () => {
+  it('promotes a child dropped between top-level cards where it may go, beside the card shown', () => {
     const loose: Pick<EntityDesign, 'fields' | 'hierarchy'> = {
       fields: { ...design.fields, task: [{ id: 'status' } as EntityDesign['fields'][string][number]] },
       hierarchy: { ...design.hierarchy, task: ['', 'ticket'] },
     }
     expect(
-      entityBoardDropAction(objects.a1, objects, loose, 'status', { column: 'todo', rank: 2, row: 'r' }, topRank)
-    ).toEqual({ kind: 'move', value: 'todo', rank: 12, row: 'r', promote: true })
+      entityBoardDropAction(objects.a1, objects, loose, 'status', 'todo', { place: { after: 't1' }, row: 'r' })
+    ).toEqual({ kind: 'move', value: 'todo', place: { after: 't1' }, row: 'r', promote: true })
   })
 
-  it('moves a top-level card between top-level cards', () => {
+  it('moves a top-level card beside the card it was dropped next to', () => {
     expect(
-      entityBoardDropAction(objects.t1, objects, design, 'status', { column: 'done', rank: 1 }, topRank)
-    ).toEqual({ kind: 'move', value: 'done', rank: 11, row: undefined })
+      entityBoardDropAction(objects.t1, objects, design, 'status', 'done', { place: { before: 't2' } })
+    ).toEqual({ kind: 'move', value: 'done', place: { before: 't2' }, row: undefined })
+  })
+
+  it('asks for a key past the card drawn above when the Manual sort is descending', () => {
+    expect(
+      entityBoardDropAction(objects.t1, objects, design, 'status', 'done', { place: { after: 't2' } }, { field: 'rank', direction: 'desc' })
+    ).toEqual({ kind: 'move', value: 'done', place: { before: 't2' }, row: undefined })
+  })
+
+  it('names no neighbour for a drop between top-level cards under another sort', () => {
+    expect(
+      entityBoardDropAction(objects.t1, objects, design, 'status', 'done', { place: { after: 't2' } }, { field: 'created', direction: 'asc' })
+    ).toEqual({ kind: 'move', value: 'done', place: undefined, row: undefined })
+  })
+
+  it('keeps the place among a card’s children, which are drawn in key order under any sort', () => {
+    expect(
+      entityBoardDropAction(objects.a1, objects, design, 'status', 'done', { parent: 't2', place: { after: 'b1' } }, { field: 'rank', direction: 'desc' })
+    ).toEqual({ kind: 'move', value: '', place: { after: 'b1' }, parent: 't2' })
+  })
+
+  describe('on the column for no value', () => {
+    const columns = ['todo', 'done']
+    const unset = object('u1', 'ticket')
+    const stale = object('s1', 'ticket', '', { status: 'gone' })
+    const all = { ...objects, u1: unset, s1: stale }
+
+    it('clears the value of a card from another column, since an empty value keeps it', () => {
+      expect(
+        entityBoardDropAction(objects.t1, all, design, 'status', '', { place: { after: 'u1' } }, undefined, columns)
+      ).toEqual({ kind: 'move', value: '', clear: true, place: { after: 'u1' }, row: undefined })
+    })
+
+    it('clears a child’s value as it promotes it there', () => {
+      const loose: Pick<EntityDesign, 'fields' | 'hierarchy'> = {
+        fields: { ...design.fields, task: [{ id: 'status' } as EntityDesign['fields'][string][number]] },
+        hierarchy: { ...design.hierarchy, task: ['', 'ticket'] },
+      }
+      const child = object('c1', 'task', 't1', { status: 'todo' })
+      expect(
+        entityBoardDropAction(child, { ...all, c1: child }, loose, 'status', '', { place: {} }, undefined, columns)
+      ).toEqual({ kind: 'move', value: '', clear: true, place: {}, row: undefined, promote: true })
+    })
+
+    it('reorders a card already there without clearing anything', () => {
+      expect(
+        entityBoardDropAction(unset, all, design, 'status', '', { place: { before: 's1' } }, undefined, columns)
+      ).toEqual({ kind: 'move', value: '', place: { before: 's1' }, row: undefined })
+    })
+
+    it('reorders there a card whose value no column is drawn for without clearing it', () => {
+      expect(
+        entityBoardDropAction(stale, all, design, 'status', '', { place: { after: 'u1' } }, undefined, columns)
+      ).toEqual({ kind: 'move', value: '', place: { after: 'u1' }, row: undefined })
+    })
+
+    it('clears nothing for a reorder among a card’s children', () => {
+      const valued = object('v1', 'task', 't2', { status: 'done' })
+      expect(
+        entityBoardDropAction(valued, { ...all, v1: valued }, design, 'status', '', { parent: 't2', place: { after: 'b1' } }, undefined, columns)
+      ).toEqual({ kind: 'move', value: '', place: { after: 'b1' } })
+    })
+  })
+})
+
+describe('entityBoardPlace', () => {
+  it('keeps the place under the ascending Manual sort, or no sort', () => {
+    const place = { after: 'a', before: 'b' }
+    expect(entityBoardPlace(place, { field: 'rank', direction: 'asc' })).toEqual(place)
+    expect(entityBoardPlace(place, null)).toEqual(place)
+  })
+
+  it('swaps the neighbours under the descending Manual sort', () => {
+    expect(entityBoardPlace({ after: 'a', before: 'b' }, { field: 'rank', direction: 'desc' })).toEqual({ after: 'b', before: 'a' })
+    // The last card of a list drawn in reverse holds the lowest key: a drop
+    // at its end goes below it.
+    expect(entityBoardPlace({ after: 'z' }, { field: 'rank', direction: 'desc' })).toEqual({ before: 'z' })
+  })
+
+  it('names no place under a sort other than Manual', () => {
+    for (const field of ['created', 'updated', 'number', 'field:title']) {
+      expect(entityBoardPlace({ after: 'a', before: 'b' }, { field, direction: 'asc' })).toBeUndefined()
+    }
   })
 })
 

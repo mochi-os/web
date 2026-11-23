@@ -10,6 +10,7 @@ import {
   createMockEntityDesign,
   createMockEntityField,
   createMockEntityObject,
+  createMockEntityOption,
 } from './entity-test-utils'
 import { EntityBoardContainer } from './entity-board-container'
 
@@ -202,8 +203,201 @@ describe('EntityBoardContainer', () => {
       fireEvent.drop(strip, { dataTransfer })
 
       expect(onMoveObject).toHaveBeenCalled()
-      const [objectId, column, , row] = onMoveObject.mock.calls[0]
-      expect([objectId, column, row]).toEqual(['a', 'done', 'high'])
+      const [objectId, column, place, row] = onMoveObject.mock.calls[0]
+      // After "b", the last card of its row there.
+      expect([objectId, column, place, row]).toEqual(['a', 'done', { after: 'b' }, 'high'])
+    })
+
+    // Card a in To Do, and two cards in Done, drawn b then c.
+    const flat = [
+      createMockEntityObject({ id: 'a', rank: 'a0', values: { title: 'First', status: 'todo' } }),
+      createMockEntityObject({ id: 'b', rank: 'a1', values: { title: 'Second', status: 'done' } }),
+      createMockEntityObject({ id: 'c', rank: 'a2', values: { title: 'Third', status: 'done' } }),
+    ]
+    async function dropOnStrip(extra: Record<string, unknown> = {}) {
+      const onMoveObject = vi.fn()
+      renderBoard({ objects: flat, collapsedColumns: ['done'], onMoveObject, ...extra })
+      const strip = (await screen.findByRole('button', { name: 'Expand Done' }))
+        .parentElement as HTMLElement
+      dragAt('dragOver', strip, 10, 'a', 'task')
+      dragAt('drop', strip, 10, 'a', 'task')
+      return onMoveObject
+    }
+
+    it('drops a card on a collapsed column after its last card', async () => {
+      const onMoveObject = await dropOnStrip()
+      expect(onMoveObject).toHaveBeenCalledWith('a', 'done', { after: 'c' }, undefined, undefined, undefined, undefined)
+    })
+
+    it('drops a card on a collapsed column below its last card when the Manual sort is descending', async () => {
+      // Drawn c then b: b, the last, holds the lowest key.
+      const onMoveObject = await dropOnStrip({ sort: { field: 'rank', direction: 'desc' } })
+      expect(onMoveObject).toHaveBeenCalledWith('a', 'done', { before: 'b' }, undefined, undefined, undefined, undefined)
+    })
+  })
+
+  describe('dropping between cards under the sort shown', () => {
+    // Three cards in To Do and one in Done, which is dragged.
+    const objects = [
+      createMockEntityObject({ id: 'a', rank: 'a0', values: { title: 'First', status: 'todo' } }),
+      createMockEntityObject({ id: 'b', rank: 'a1', values: { title: 'Second', status: 'todo' } }),
+      createMockEntityObject({ id: 'c', rank: 'a2', values: { title: 'Third', status: 'todo' } }),
+      createMockEntityObject({ id: 'x', rank: 'a3', values: { title: 'Moving', status: 'done' } }),
+    ]
+
+    async function board(sort?: { field: string; direction: 'asc' | 'desc' }) {
+      const onMoveObject = vi.fn()
+      const { container } = render(
+        <EntityBoardContainer
+          design={createMockEntityDesign()}
+          containerId='c1'
+          fallbackTitle={(object) => object.id}
+          objects={objects}
+          statusField='status'
+          sort={sort}
+          onMoveObject={onMoveObject}
+        />
+      )
+      // Cards show their fallback title, the object id, in this fixture.
+      await screen.findByText('x')
+      const card = (id: string) => container.querySelector(`[data-card-id="${id}"]`)!
+      // The cards are laid out in the order they are drawn, 40px apart.
+      const drawn = [...(card('a').parentElement as HTMLElement).children].filter((el) => el.hasAttribute('data-card-id'))
+      drawn.forEach((el, index) => place(el, index * 50, 40))
+      const gap = () => container.querySelector('.border-dashed')
+      return { onMoveObject, card, drawn, gap, list: card('a').parentElement as HTMLElement }
+    }
+
+    it('lands a card in the gap below the top card when the Manual sort is descending', async () => {
+      const { onMoveObject, drawn, list } = await board({ field: 'rank', direction: 'desc' })
+      expect(drawn.map((el) => el.getAttribute('data-card-id'))).toEqual(['c', 'b', 'a'])
+      // Below c's middle, above b's.
+      dragAt('dragOver', list, 45, 'x', 'task')
+      dragAt('drop', list, 45, 'x', 'task')
+      // A key between b's and c's, which the reversed list draws below c.
+      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', { after: 'b', before: 'c' }, undefined, undefined, undefined, undefined)
+    })
+
+    it('draws a gap between cards under the Manual sort', async () => {
+      const { gap, list } = await board()
+      dragAt('dragOver', list, 45, 'x', 'task')
+      expect(gap()).not.toBeNull()
+    })
+
+    it('draws no gap under another sort, and sends a card dropped in another column to its end', async () => {
+      const { onMoveObject, gap, list } = await board({ field: 'created', direction: 'asc' })
+      dragAt('dragOver', list, 45, 'x', 'task')
+      expect(gap()).toBeNull()
+      dragAt('drop', list, 45, 'x', 'task')
+      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', undefined, undefined, undefined, undefined, undefined)
+    })
+
+    it('writes nothing for a card dropped back in its own column under another sort', async () => {
+      const { onMoveObject, list } = await board({ field: 'created', direction: 'asc' })
+      dragAt('dragOver', list, 45, 'a', 'task')
+      dragAt('drop', list, 45, 'a', 'task')
+      expect(onMoveObject).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('dropping on the column for no value', () => {
+    // A card in To Do; in the column for no value, one with none and one
+    // whose value no column is drawn for, drawn u then s.
+    const objects = [
+      createMockEntityObject({ id: 'a', rank: 'a0', values: { title: 'Valued', status: 'todo' } }),
+      createMockEntityObject({ id: 'u', rank: 'a1', values: { title: 'Unset' } }),
+      createMockEntityObject({ id: 's', rank: 'a2', values: { title: 'Stale', status: 'gone' } }),
+    ]
+
+    async function board(sort?: { field: string; direction: 'asc' | 'desc' }) {
+      const onMoveObject = vi.fn()
+      const { container } = render(
+        <EntityBoardContainer
+          design={createMockEntityDesign()}
+          containerId='c1'
+          fallbackTitle={(object) => object.id}
+          objects={objects}
+          statusField='status'
+          sort={sort}
+          onMoveObject={onMoveObject}
+        />
+      )
+      await screen.findByText('u')
+      const card = (id: string) => container.querySelector(`[data-card-id="${id}"]`)!
+      const list = card('u').parentElement as HTMLElement
+      place(card('u'), 0, 40)
+      place(card('s'), 50, 40)
+      return { onMoveObject, list }
+    }
+
+    it('clears the column of a card dropped there from another column', async () => {
+      const { onMoveObject, list } = await board()
+      dragAt('dragOver', list, 95, 'a', 'task')
+      dragAt('drop', list, 95, 'a', 'task')
+      expect(onMoveObject).toHaveBeenCalledWith('a', '', { after: 's' }, undefined, undefined, undefined, true)
+    })
+
+    it('reorders a card already drawn there without clearing it', async () => {
+      const { onMoveObject, list } = await board()
+      dragAt('dragOver', list, 10, 's', 'task')
+      dragAt('drop', list, 10, 's', 'task')
+      expect(onMoveObject).toHaveBeenCalledWith('s', '', { before: 'u' }, undefined, undefined, undefined, undefined)
+    })
+
+    it('writes nothing for a card drawn there whose value no column is drawn for, dropped back under another sort', async () => {
+      const { onMoveObject, list } = await board({ field: 'created', direction: 'asc' })
+      dragAt('dragOver', list, 95, 's', 'task')
+      dragAt('drop', list, 95, 's', 'task')
+      expect(onMoveObject).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('aiming a drag on a swimlane column', () => {
+    const objects = [
+      createMockEntityObject({ id: 'a', rank: 'a0', values: { title: 'First', status: 'todo', priority: 'high' } }),
+      createMockEntityObject({ id: 'b', rank: 'a1', values: { title: 'Second', status: 'todo', priority: 'high' } }),
+      createMockEntityObject({ id: 'c', rank: 'a0', values: { title: 'Third', status: 'done', priority: 'low' } }),
+    ]
+
+    it('aims at the top of the first row over the header, and carries no aim into the next drag', async () => {
+      const onMoveObject = vi.fn()
+      const { container } = render(
+        <EntityBoardContainer
+          design={createMockEntityDesign()}
+          containerId='c1'
+          fallbackTitle={(object) => object.id}
+          objects={objects}
+          statusField='status'
+          rowField='priority'
+          onMoveObject={onMoveObject}
+        />
+      )
+      await screen.findByText('c')
+      const card = (id: string) => container.querySelector(`[data-card-id="${id}"]`)!
+      const column = card('a').closest('[data-row-id]')!.parentElement as HTMLElement
+      const header = column.firstElementChild as HTMLElement
+      // The header, then the high, medium and low rows, 100px each.
+      place(header, 0, 40)
+      column.querySelectorAll('[data-row-id]').forEach((row, index) => place(row, 100 + index * 100, 100))
+      place(card('a'), 110, 30)
+      place(card('b'), 150, 30)
+      const high = card('a').closest('[data-row-id]') as HTMLElement
+
+      // Between a and b in the high row.
+      dragAt('dragOver', high, 145, 'c', 'task')
+      dragAt('drop', high, 145, 'c', 'task')
+      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', { after: 'a', before: 'b' }, 'high', undefined, undefined, undefined)
+
+      // Over the header: above a, at the top of the high row.
+      dragAt('dragOver', header, 10, 'c', 'task')
+      dragAt('drop', header, 10, 'c', 'task')
+      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', { before: 'a' }, 'high', undefined, undefined, undefined)
+
+      // Below every row nothing is aimed at: no neighbour, and the card
+      // keeps its own row.
+      dragAt('dragOver', column, 1000, 'c', 'task')
+      dragAt('drop', column, 1000, 'c', 'task')
+      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', {}, undefined, undefined, undefined, undefined)
     })
   })
 
@@ -301,10 +495,10 @@ describe('EntityBoardContainer', () => {
       fireEvent.drop(cell, { dataTransfer })
 
       expect(onMoveObject).toHaveBeenCalled()
-      const [objectId, column, rank, row] = onMoveObject.mock.calls[0]
+      const [objectId, column, place, row] = onMoveObject.mock.calls[0]
       expect([objectId, column, row]).toEqual(['c', 'todo', 'high'])
       // After "a", the one card the folded cell holds.
-      expect(rank).toBe(2)
+      expect(place).toEqual({ after: 'a' })
     })
   })
 
@@ -353,7 +547,62 @@ describe('EntityBoardContainer', () => {
     dragAt('dragOver', card('b1'), 182, 'a1', 'task')
     dragAt('drop', card('b1'), 182, 'a1', 'task')
     expect(onReparentObject).not.toHaveBeenCalled()
-    expect(onMoveObject).toHaveBeenCalledWith('a1', '', 2, undefined, 't2', undefined, 't2')
+    expect(onMoveObject).toHaveBeenCalledWith('a1', '', { after: 'b1', before: 'b2' }, undefined, undefined, 't2', undefined)
+  })
+
+  it('names the card a drop lands above, whatever nested cards in the column hold lower keys', async () => {
+    const design = createMockEntityDesign({
+      classes: [
+        createMockEntityClass({ id: 'ticket', name: 'Ticket' }),
+        createMockEntityClass({ id: 'task', name: 'Task' }),
+      ],
+      fields: {
+        ticket: [
+          createMockEntityField({ id: 'title', name: 'Title', fieldtype: 'text' }),
+          createMockEntityField({ id: 'status', name: 'Status', fieldtype: 'enumerated' }),
+        ],
+        task: [
+          createMockEntityField({ id: 'title', name: 'Title', fieldtype: 'text' }),
+          createMockEntityField({ id: 'status', name: 'Status', fieldtype: 'enumerated' }),
+        ],
+      },
+      options: {
+        ticket: { status: [createMockEntityOption({ id: 'todo', name: 'Version 2' })] },
+        task: { status: [createMockEntityOption({ id: 'todo', name: 'Version 2' })] },
+      },
+      hierarchy: { ticket: [''], task: ['ticket'] },
+    })
+    // Two tasks of the lower ticket sort above everything, and the top card
+    // shares its key with its own task.
+    const objects = [
+      createMockEntityObject({ id: 'prefetch', class: 'task', parent: 'performance', rank: 'aH', values: { title: 'Prefetch', status: 'todo' } }),
+      createMockEntityObject({ id: 'library', class: 'task', parent: 'performance', rank: 'aI', values: { title: 'Library', status: 'todo' } }),
+      createMockEntityObject({ id: 'air', class: 'ticket', rank: 'b3j', values: { title: 'Air', status: 'todo' } }),
+      createMockEntityObject({ id: 'carrier', class: 'task', parent: 'air', rank: 'b3j', values: { title: 'Carrier', status: 'todo' } }),
+      createMockEntityObject({ id: 'openid', class: 'ticket', rank: 'b3jV', values: { title: 'OpenID', status: 'todo' } }),
+      createMockEntityObject({ id: 'performance', class: 'ticket', rank: 'b4Q', values: { title: 'Performance', status: 'todo' } }),
+    ]
+    const onMoveObject = vi.fn()
+    const { container } = render(
+      <EntityBoardContainer
+        design={design}
+        containerId='c1'
+        fallbackTitle={(object) => object.id}
+        objects={objects}
+        statusField='status'
+        onMoveObject={onMoveObject}
+        onReparentObject={vi.fn()}
+      />
+    )
+    await screen.findByText('Version 2')
+    const card = (id: string) => container.querySelector(`[data-card-id="${id}"]`)!
+    place(card('air'), 0, 100)
+    place(card('openid'), 110, 40)
+    place(card('performance'), 160, 100)
+    // The top edge of the top card: above it.
+    dragAt('dragOver', card('air'), 2, 'openid', 'ticket')
+    dragAt('drop', card('air'), 2, 'openid', 'ticket')
+    expect(onMoveObject).toHaveBeenCalledWith('openid', 'todo', { before: 'air' }, undefined, undefined, undefined, undefined)
   })
 
   it('takes the gap down and refuses the drop where a task cannot go, between top-level cards', async () => {

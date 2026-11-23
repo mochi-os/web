@@ -45,7 +45,9 @@ import {
 import { EntityBoardCard } from './entity-board-card'
 import {
   entityBoardDropTarget,
+  entityBoardSlot,
   entityBoardTopAllowed,
+  type EntityBoardDrop,
   type EntityBoardDropTarget,
 } from './entity-board-drop'
 import type {
@@ -54,6 +56,7 @@ import type {
   EntityField,
   EntityFieldOption,
   EntityObject,
+  EntityPlace,
 } from '../../types/entity-object'
 
 export interface EntityBoardColumnRow<TObject extends EntityObject> {
@@ -88,15 +91,7 @@ export interface EntityBoardColumnProps<TObject extends EntityObject> {
   onCardDoubleClick?: (object: TObject) => void
   onCreateClick?: () => void
   onCreateInRow?: (rowId: string) => void
-  onDrop?: (
-    objectId: string,
-    columnId: string,
-    newRank?: number,
-    rowId?: string,
-    dropOnCardId?: string,
-    reorderParentId?: string,
-    reorderRank?: number
-  ) => void
+  onDrop?: (objectId: string, columnId: string, drop: EntityBoardDrop) => void
   onDragPreview?: (preview: EntityDragPreview | null) => void
   dragPreview?: EntityDragPreview | null
   onRenameColumn?: (newName: string) => Promise<void>
@@ -174,11 +169,13 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   const columnRef = useRef<HTMLDivElement>(null)
   const cardsContainerRef = useRef<HTMLDivElement>(null)
   const dropIndexRef = useRef(0)
-  const dropRowRef = useRef('')
+  const dropPlaceRef = useRef<EntityPlace>({})
+  // The swimlane row aimed at; none leaves the card in its own row.
+  const dropRowRef = useRef<string | undefined>(undefined)
   const rowsRef = useRef(rows)
   rowsRef.current = rows
-  const objectCountRef = useRef(objects.length)
-  objectCountRef.current = objects.length
+  const objectsRef = useRef(objects)
+  objectsRef.current = objects
   const collapsedRef = useRef(false)
   const collapsedRowsRef = useRef(collapsedRows)
   collapsedRowsRef.current = collapsedRows
@@ -186,9 +183,11 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const dropModeRef = useRef<'between' | 'on'>('between')
   const dropTargetCardRef = useRef<string>('')
-  const childReorderRef = useRef<{ parentId: string; rank: number } | null>(
-    null
-  )
+  const childReorderRef = useRef<{
+    parentId: string
+    rank: number
+    place: EntityPlace
+  } | null>(null)
   const objectMapRef = useRef(objectMap)
   objectMapRef.current = objectMap
   const hierarchyRef = useRef(hierarchy)
@@ -229,6 +228,11 @@ export function EntityBoardColumn<TObject extends EntityObject>({
     isDragOverRef.current = false
     dropModeRef.current = 'between'
     dropTargetCardRef.current = ''
+    // Nothing of this drag's aim may carry into the next: a drop the next
+    // drag does not aim would send this one's neighbour and row.
+    dropIndexRef.current = 0
+    dropPlaceRef.current = {}
+    dropRowRef.current = undefined
     childReorderRef.current = null
     dragSourceRef.current = null
     columnRef.current?.removeAttribute('data-drag-over')
@@ -334,18 +338,21 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             )
           : { kind: 'top' }
 
-      // Calculate drop index for top-level between mode
-      const calculateDropIndex = (cards: NodeListOf<Element>) => {
-        let index = 0
-        for (let i = 0; i < cards.length; i++) {
-          if (cards[i].getAttribute('data-card-id') === draggedId) continue
-          const cardRect = cards[i].getBoundingClientRect()
-          if (mouseY < cardRect.top + cardRect.height / 2) {
-            return index
-          }
-          index++
-        }
-        return index
+      // The slot among a list of cards: its index for the gap, and the cards
+      // either side for the move.
+      const aim = (cards: Iterable<Element>) => {
+        const slot = entityBoardSlot(cards, mouseY, draggedId)
+        dropIndexRef.current = slot.index
+        dropPlaceRef.current = slot.place
+      }
+      // A list that shows no cards to aim at takes a drop at its end, after
+      // its last card.
+      const end = (list: TObject[]) => {
+        const others = list.filter((o) => o.id !== draggedId)
+        dropIndexRef.current = list.length
+        dropPlaceRef.current = others.length
+          ? { after: others[others.length - 1].id }
+          : {}
       }
 
       if (collapsedRef.current) {
@@ -353,32 +360,32 @@ export function EntityBoardColumn<TObject extends EntityObject>({
         // at the end of the card's own row, which it keeps.
         const row = dragSourceRef.current?.row ?? ''
         dropRowRef.current = row
-        dropIndexRef.current = rowsRef.current
-          ? (rowsRef.current.find((r) => r.id === row)?.objects.length ?? 0)
-          : objectCountRef.current
+        end(
+          rowsRef.current
+            ? (rowsRef.current.find((r) => r.id === row)?.objects ?? [])
+            : objectsRef.current
+        )
       } else if (rowsRef.current && columnRef.current) {
+        // The row under the pointer: the first whose bottom is not above it,
+        // so a pointer over the column's header, above every row, aims at
+        // the top of the first.
         const sections = columnRef.current.querySelectorAll('[data-row-id]')
         for (const section of sections) {
-          const rect = section.getBoundingClientRect()
-          if (mouseY >= rect.top && mouseY <= rect.bottom) {
+          if (mouseY <= section.getBoundingClientRect().bottom) {
             const rowId = section.getAttribute('data-row-id') || ''
             dropRowRef.current = rowId
             if (collapsedRowsRef.current?.includes(rowId)) {
-              // A folded row shows no cards, so a drop lands at its end.
-              dropIndexRef.current =
-                rowsRef.current.find((r) => r.id === rowId)?.objects.length ?? 0
+              end(rowsRef.current.find((r) => r.id === rowId)?.objects ?? [])
             } else {
-              const cards = section.querySelectorAll(':scope > [data-card-id]')
-              dropIndexRef.current = calculateDropIndex(cards)
+              aim(section.querySelectorAll(':scope > [data-card-id]'))
             }
             break
           }
         }
       } else if (cardsContainerRef.current) {
-        const cards = cardsContainerRef.current.querySelectorAll(
-          ':scope > [data-card-id]'
+        aim(
+          cardsContainerRef.current.querySelectorAll(':scope > [data-card-id]')
         )
-        dropIndexRef.current = calculateDropIndex(cards)
       }
 
       // Visual feedback
@@ -406,7 +413,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             sourceColumn: source.column,
             sourceRow: source.row,
             targetColumn: id,
-            targetRow: dropRowRef.current,
+            targetRow: dropRowRef.current ?? source.row,
             targetIndex: dropIndexRef.current,
             mode: 'on',
             dropOnCardId: drop.id,
@@ -416,7 +423,11 @@ export function EntityBoardColumn<TObject extends EntityObject>({
       } else if (drop.kind === 'sibling') {
         dropModeRef.current = 'between'
         dropTargetCardRef.current = ''
-        childReorderRef.current = { parentId: drop.parent, rank: drop.rank }
+        childReorderRef.current = {
+          parentId: drop.parent,
+          rank: drop.rank,
+          place: drop.place,
+        }
 
         // Gap placeholder in BoardCard's children list provides visual feedback
         // Send preview for sibling reorder
@@ -426,7 +437,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             sourceColumn: source.column,
             sourceRow: source.row,
             targetColumn: id,
-            targetRow: dropRowRef.current,
+            targetRow: dropRowRef.current ?? source.row,
             targetIndex: dropIndexRef.current,
             mode: 'between',
             cardHeight: source.height,
@@ -444,7 +455,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
             sourceColumn: source.column,
             sourceRow: source.row,
             targetColumn: id,
-            targetRow: dropRowRef.current,
+            targetRow: dropRowRef.current ?? source.row,
             targetIndex: dropIndexRef.current,
             mode: 'between',
             cardHeight: source.height,
@@ -488,24 +499,17 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
-      const rank = dropIndexRef.current + 1
-      const rowId = rowsRef.current ? dropRowRef.current : undefined
-      const dropOnCardId =
-        dropModeRef.current === 'on' ? dropTargetCardRef.current : undefined
       const childReorder = childReorderRef.current
+      const drop: EntityBoardDrop = {
+        place: childReorder ? childReorder.place : dropPlaceRef.current,
+        row: rowsRef.current ? dropRowRef.current : undefined,
+        on:
+          dropModeRef.current === 'on' ? dropTargetCardRef.current : undefined,
+        parent: childReorder?.parentId,
+      }
       clearDragState()
       const objectId = e.dataTransfer.getData('text/plain')
-      if (objectId && onDrop) {
-        onDrop(
-          objectId,
-          id,
-          rank,
-          rowId,
-          dropOnCardId,
-          childReorder?.parentId,
-          childReorder?.rank
-        )
-      }
+      if (objectId && onDrop) onDrop(objectId, id, drop)
       // Do NOT clear the preview here: the optimistic move's data lands a render
       // later, so clearing now reveals the card in its source column for that
       // gap. board-container tears it down when the data lands, or on a cancelled
@@ -515,7 +519,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
   )
 
   // Render a gap placeholder where the dragged card will land.
-  // For same-column moves, include data-card-id so calculateDropIndex skips it.
+  // For same-column moves, include data-card-id so entityBoardSlot skips it.
   const renderGap = (height: number, cardId?: string) => (
     <div
       key={cardId || '__drag-gap__'}
@@ -575,7 +579,7 @@ export function EntityBoardColumn<TObject extends EntityObject>({
     const sameColumn = preview.sourceColumn === preview.targetColumn
     if (sameColumn) {
       // Same-column: remove card from list, insert gap with data-card-id at target.
-      // The gap has data-card-id so calculateDropIndex will skip it, keeping
+      // The gap has data-card-id so entityBoardSlot will skip it, keeping
       // index calculations consistent between the first and subsequent dragover events.
       const filtered = cardObjects.filter((o) => o.id !== preview.draggedId)
       const cards = filtered.map((obj) => renderCard(obj))

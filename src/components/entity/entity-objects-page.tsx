@@ -72,7 +72,7 @@ import { arraysEqual } from '../../lib/change-detection'
 import { canCreate, canDesign, canWrite } from '../../lib/entity-access'
 import { getErrorMessage } from '../../lib/handle-server-error'
 import { exportEntityArchive } from '../../lib/entity-export'
-import { rankBetween, rankCompare } from '../../lib/rank'
+import { rankBetween, rankCompare, rankPlace } from '../../lib/rank'
 import { shellSaveBlob } from '../../lib/shell-bridge'
 import { toastAction } from '../../lib/toast-action'
 import { toast } from '../../lib/toast-utils'
@@ -82,6 +82,7 @@ import type {
   EntityField,
   EntityObject,
   EntityObjectCopy,
+  EntityPlace,
   EntitySortState,
 } from '../../types/entity-object'
 
@@ -143,9 +144,10 @@ export interface EntityObjectsPageApi<TObject extends EntityObject> {
     data: {
       field: string
       value: string
-      rank?: number
+      clear?: string
+      after?: string
+      before?: string
       row?: { field: string; value?: string }
-      scope?: string
       promote?: string
       parent?: string
     }
@@ -597,35 +599,37 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     return false
   }
 
-  // Move object mutation
+  // Move object mutation. An empty value keeps the column, as a reorder
+  // sends; clear empties it, for a drop on the column for no value.
   const moveMutation = useMutation({
     mutationFn: async ({
       objectId,
       field,
       value,
-      rank,
+      clear,
+      place,
       rowField: rf,
       rowValue,
-      scopeParent,
       promote,
       parent,
     }: {
       objectId: string
       field: string
       value: string
-      rank?: number
+      clear?: boolean
+      place?: EntityPlace
       rowField?: string
       rowValue?: string
-      scopeParent?: string
       promote?: boolean
       parent?: string
     }) => {
       return api.moveObject(containerId, objectId, {
         field,
         value,
-        rank,
+        clear: clear ? 'true' : undefined,
+        after: place?.after,
+        before: place?.after ? undefined : place?.before,
         row: rf ? { field: rf, value: rowValue } : undefined,
-        scope: scopeParent,
         promote: promote ? 'true' : undefined,
         parent,
       })
@@ -634,10 +638,10 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       objectId,
       field,
       value,
-      rank,
+      clear,
+      place,
       rowField: rf,
       rowValue,
-      scopeParent,
       promote,
       parent,
     }) => {
@@ -658,33 +662,28 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         (old) => {
           if (!old) return old
 
-          // Compute the moved object's new fractional key between the neighbours
-          // at the 1-based target position (#53): one key change, matching the
-          // server — no whole-scope renumber. scopeParent may be "" (top-level),
-          // so test for presence, not truthiness.
-          let newRank: string | undefined
-          if (rank) {
-            let others: TObject[]
-            if (scopeParent !== undefined) {
-              others = old.objects.filter(
-                (o) => o.parent === scopeParent && o.id !== objectId
-              )
-            } else {
-              const oldVal =
-                old.objects.find((o) => o.id === objectId)?.values[field] || ''
-              const targetValue = value || oldVal
-              others = old.objects.filter(
-                (o) =>
-                  o.id !== objectId && (o.values[field] || '') === targetValue
-              )
-            }
-            others.sort((a, b) => rankCompare(a.rank, b.rank))
-            let pos = rank
-            if (pos < 1) pos = 1
-            if (pos > others.length + 1) pos = others.length + 1
-            const before = pos >= 2 ? others[pos - 2].rank : null
-            const after = pos - 1 < others.length ? others[pos - 1].rank : null
-            newRank = rankBetween(before, after)
+          // The keys the server will write: beside the neighbour the drop
+          // named, with any object sharing that neighbour's key untied first,
+          // or after every object's for a move to another column alone.
+          const moved = old.objects.find((o) => o.id === objectId)
+          // The value written: the one sent, or none for a clear.
+          const target = clear ? '' : value
+          const current = (field && moved?.values[field]) || ''
+          const changed =
+            !!field && (clear ? current !== '' : !!value && value !== current)
+          const anchor = place?.after || place?.before
+          let ranks: Record<string, string> = {}
+          if (anchor) {
+            ranks = rankPlace(old.objects, objectId, anchor, !!place?.after)
+          } else if (changed) {
+            const last = old.objects.reduce<string | null>(
+              (m, o) =>
+                o.id !== objectId && (m === null || rankCompare(o.rank, m) > 0)
+                  ? o.rank
+                  : m,
+              null
+            )
+            ranks = { [objectId]: rankBetween(last, null) }
           }
 
           // A move into another parent takes that parent's board column and
@@ -692,7 +691,6 @@ export function EntityObjectsPage<TObject extends EntityObject>({
           // The object and each descendant take only what their own class
           // accepts, and the move's own column and lane then cascade the same
           // way, a column or a lane alone as well as both.
-          const moved = old.objects.find((o) => o.id === objectId)
           const newParent =
             parent !== undefined && parent !== moved?.parent
               ? old.objects.find((o) => o.id === parent)
@@ -701,8 +699,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
             ? entityParentValues(design, newParent)
             : {}
           const cascaded: Record<string, string> = {}
-          if (field && value && value !== (moved?.values[field] || '')) {
-            cascaded[field] = value
+          if (changed) {
+            cascaded[field] = target
           }
           if (
             rf &&
@@ -714,24 +712,30 @@ export function EntityObjectsPage<TObject extends EntityObject>({
 
           return {
             ...old,
-            objects: old.objects.map((obj) => {
+            objects: old.objects.map((item) => {
+              // A neighbour that shared its key takes the one it was untied to.
+              const obj =
+                ranks[item.id] && item.id !== objectId
+                  ? { ...item, rank: ranks[item.id] }
+                  : item
               if (obj.id === objectId) {
-                // An empty value keeps the column, as the server keeps it.
+                // An empty value keeps the column, as the server keeps it,
+                // and a clear empties it.
                 const placed = entityCascade(design, obj, inherited)
                 const updatedValues = { ...placed.values }
-                if (field && value) updatedValues[field] = value
+                if (field && (clear || value)) updatedValues[field] = target
                 if (rf && rowValue !== undefined) {
                   updatedValues[rf] = rowValue
                 }
                 return {
                   ...obj,
-                  rank: newRank ?? obj.rank,
+                  rank: ranks[obj.id] ?? obj.rank,
                   values: updatedValues,
                   ...(promote ? { parent: '' } : {}),
                   ...(parent !== undefined ? { parent } : {}),
                 }
               }
-              // Cascade column and row changes to descendants (rank unchanged).
+              // Cascade column and row changes to descendants.
               if (isDescendant(obj, objectId, old.objects)) {
                 return entityCascade(
                   design,
@@ -1144,20 +1148,20 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const handleMoveObject = (
     objectId: string,
     newValue: string,
-    newRank?: number,
+    place?: EntityPlace,
     newRow?: string,
-    scopeParent?: string,
     promote?: boolean,
-    parent?: string
+    parent?: string,
+    clear?: boolean
   ) => {
     moveMutation.mutate({
       objectId,
-      field: newValue ? columnField : '',
+      field: newValue || clear ? columnField : '',
       value: newValue,
-      rank: newRank,
+      clear,
+      place,
       rowField: newRow !== undefined ? rowField : undefined,
       rowValue: newRow,
-      scopeParent,
       promote,
       parent,
     })
@@ -1167,18 +1171,15 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   // rebuilds every render while `mutate` itself stays stable.
   const { mutate: mutateMove } = moveMutation
 
+  // A row dragged to another group's heading; the group for no value clears
+  // the field, where an empty value would keep it.
   const handleListMoveObject = useCallback(
-    (
-      objectId: string,
-      statusFieldId: string,
-      newStatus: string,
-      newRank?: number
-    ) => {
+    (objectId: string, statusFieldId: string, newStatus: string) => {
       mutateMove({
         objectId,
         field: statusFieldId,
         value: newStatus,
-        rank: newRank,
+        clear: !newStatus,
       })
     },
     [mutateMove]
@@ -1188,19 +1189,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     reparentMutation.mutate({ objectId, parentId: newParentId })
   }
 
-  const handleReorder = (objectId: string, position: number) => {
-    // Reorder within the object's own parent: the move handler treats `rank` as
-    // a 1-based position and renumbers the siblings of `scopeParent` around it.
-    // Scope to the parent (which may be "" for top-level) so only its children
-    // are renumbered, not every object in the container.
-    const parent = objectsData?.find((o) => o.id === objectId)?.parent ?? ''
-    moveMutation.mutate({
-      objectId,
-      field: '',
-      value: '',
-      rank: position,
-      scopeParent: parent,
-    })
+  // Reorder among the object's siblings, beside the one it was dropped next to.
+  const handleReorder = (objectId: string, place: EntityPlace) => {
+    moveMutation.mutate({ objectId, field: '', value: '', place })
   }
 
   const handleDeleteColumn = async (

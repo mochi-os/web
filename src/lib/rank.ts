@@ -106,9 +106,87 @@ export function rankBetween(a: string | null, b: string | null): string {
 }
 
 /**
+ * n keys strictly between a and b (either null = open), in order. Between two
+ * keys they are bisected, the middle one first and each half the same way, so
+ * their length grows with the log of n, not with n; toward an open end each
+ * steps on from the last, as an append does. The server's rank_spread
+ * (Wallace's generateNKeysBetween).
+ */
+function rankSpread(a: string | null, b: string | null, n: number): string[] {
+  if (n <= 0) return []
+  if (n === 1) return [rankBetween(a, b)]
+  if (b === null) {
+    const keys = [rankBetween(a, null)]
+    for (let i = 1; i < n; i++) keys.push(rankBetween(keys[i - 1], null))
+    return keys
+  }
+  if (a === null) {
+    const keys = [rankBetween(null, b)]
+    for (let i = 1; i < n; i++) keys.push(rankBetween(null, keys[i - 1]))
+    return keys.reverse()
+  }
+  const middle = n >> 1
+  const key = rankBetween(a, b)
+  return [
+    ...rankSpread(a, key, middle),
+    key,
+    ...rankSpread(key, b, n - middle - 1),
+  ]
+}
+
+/**
  * Lexicographic compare for opaque rank keys (BINARY order). Deliberately NOT
  * naturalCompare — these are opaque ordering keys, not user-facing strings.
  */
 export function rankCompare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
+}
+
+interface Ranked {
+  id: string
+  rank: string
+  created: number
+}
+
+/**
+ * The keys a move writes when `moved` is dropped directly after (or before)
+ * `anchor`, as the server writes them: objects sharing the anchor's key each
+ * take one of their own first, spread through the gap around it in the order
+ * lists show them (newest first, then the greater id), and the moved object
+ * takes a key between the anchor's and the next key any object in `objects`
+ * holds, so it is no other object's. Object id to new key.
+ */
+export function rankPlace(
+  objects: Ranked[],
+  moved: string,
+  anchor: string,
+  after: boolean
+): Record<string, string> {
+  const others = objects.filter((o) => o.id !== moved)
+  const ranks: Record<string, string> = {}
+  const target = others.find((o) => o.id === anchor)
+  if (!target) return ranks
+  // The nearest key above (or below) k that any object holds.
+  const next = (k: string, up: boolean) =>
+    others.reduce<string | null>((m, o) => {
+      const r = ranks[o.id] ?? o.rank
+      return (up ? r > k : r < k) && (m === null || (up ? r < m : r > m))
+        ? r
+        : m
+    }, null)
+  let key = target.rank
+  const tied = others
+    .filter((o) => o.rank === key)
+    .sort((a, b) => b.created - a.created || rankCompare(b.id, a.id))
+  if (tied.length > 1) {
+    const keys = rankSpread(next(key, false), next(key, true), tied.length)
+    tied.forEach((o, i) => {
+      ranks[o.id] = keys[i]
+      if (o.id === anchor) key = keys[i]
+    })
+  }
+  ranks[moved] = after
+    ? rankBetween(key, next(key, true))
+    : rankBetween(next(key, false), key)
+  return ranks
 }

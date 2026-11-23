@@ -132,18 +132,24 @@ export interface EntityLinkListResponse {
 export interface EntityMoveObjectRequest {
   /** Column field name (e.g. "status" or "column") */
   field?: string
-  /** New column value */
+  /** New column value; empty keeps the column */
   value?: string
-  rank?: number
+  /**
+   * "true" to clear the column field, with no value: a drop on the column for
+   * no value from a column with one
+   */
+  clear?: string
+  /** The object it was dropped directly after, as the list showed them */
+  after?: string
+  /** The object it was dropped directly before, when none was above it */
+  before?: string
   /** Swimlane move: the row field and the value the card lands in */
   row?: { field: string; value?: string }
-  /** Scope rank renumbering to siblings of this parent */
-  scope?: string
   /** "true" to clear parent (promote child to top-level) */
   promote?: string
   /**
-   * New parent, set in the same move as the rank among its children: a drop
-   * into another parent's children at a position
+   * New parent, set in the same move as the place among its children: a drop
+   * into another parent's children beside one of them
    */
   parent?: string
 }

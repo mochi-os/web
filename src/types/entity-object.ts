@@ -60,15 +60,25 @@ export interface EntityObject {
   id: string
   class: string
   parent: string
-  // Fractional-index ordering key (#53): an opaque base-62 string, compared
-  // lexicographically. Not a position — the move action still sends a 1-based
-  // target index, the server computes the key.
+  // Fractional-index ordering key: an opaque base-62 string, compared
+  // lexicographically. A move names the object it was dropped beside and the
+  // server mints the key.
   rank: string
   created: number
   updated: number
   values: Record<string, string>
   number?: number
   readable?: string
+}
+
+/**
+ * Where a drop puts an object: directly after the object `after`, or, with
+ * nothing above it, directly before `before`, as the list showed them. Neither
+ * is the end of a list with nothing in it.
+ */
+export interface EntityPlace {
+  after?: string
+  before?: string
 }
 
 export interface EntityObjectLink {

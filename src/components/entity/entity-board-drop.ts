@@ -1,7 +1,12 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import type { EntityDesign, EntityObject } from '../../types/entity-object'
+import type {
+  EntityDesign,
+  EntityObject,
+  EntityPlace,
+  EntitySortState,
+} from '../../types/entity-object'
 
 /**
  * Where a board drag would land if dropped now: onto a card, becoming its
@@ -10,8 +15,20 @@ import type { EntityDesign, EntityObject } from '../../types/entity-object'
  */
 export type EntityBoardDropTarget =
   | { kind: 'on'; card: Element; id: string }
-  | { kind: 'sibling'; parent: string; rank: number }
+  | { kind: 'sibling'; parent: string; rank: number; place: EntityPlace }
   | { kind: 'top' }
+
+/**
+ * A drop as the column saw it: onto a card (`on`); into the children of
+ * `parent` at `place`; or between the column's cards, in `row` when the board
+ * has rows, at `place`.
+ */
+export interface EntityBoardDrop {
+  place?: EntityPlace
+  row?: string
+  on?: string
+  parent?: string
+}
 
 /** True when `y` is well inside `card`, clear of its top and bottom edges. */
 function inMiddle(card: Element, y: number, share: number, cap: number) {
@@ -21,19 +38,68 @@ function inMiddle(card: Element, y: number, share: number, cap: number) {
 }
 
 /**
- * The 1-based place among the cards of `list` that `y` falls before, judged on
- * each card's midpoint. The dragged card's own gap is skipped, so the place
- * does not shift as the gap moves.
+ * Where among `cards` a drop at height `y` lands, judged on each card's
+ * midpoint: the 0-based index of the slot, and the cards directly after and
+ * before it. The dragged card's own gap is skipped, so the slot does not shift
+ * as the gap moves.
  */
-function placeAmong(list: Element, y: number, dragged: string) {
+export function entityBoardSlot(
+  cards: Iterable<Element>,
+  y: number,
+  dragged: string
+): { index: number; place: EntityPlace } {
   let index = 0
-  for (const card of list.querySelectorAll(':scope > [data-card-id]')) {
-    if (card.getAttribute('data-card-id') === dragged) continue
+  const place: EntityPlace = {}
+  for (const card of cards) {
+    const id = card.getAttribute('data-card-id') || ''
+    if (id === dragged) continue
     const rect = card.getBoundingClientRect()
-    if (y < rect.top + rect.height / 2) break
+    if (y < rect.top + rect.height / 2) {
+      place.before = id
+      break
+    }
+    place.after = id
     index++
   }
-  return index + 1
+  return { index, place }
+}
+
+/**
+ * Whether a board under `sort` draws its top-level cards in their keys'
+ * order, the Manual sort, so a drop between two of them can land there.
+ */
+export function entityBoardOrdered(sort?: EntitySortState | null) {
+  return (sort?.field || 'rank') === 'rank'
+}
+
+/**
+ * The place a drop between a board's top-level cards asks the server for,
+ * from `place`, the cards drawn directly above (`after`) and below
+ * (`before`) it. Under the descending Manual sort the card drawn above holds
+ * the higher key, so the two swap. Under any other sort the cards are not
+ * drawn in key order and no place would show, so there is none. A card's
+ * children are always drawn in ascending key order and take no part in this.
+ */
+export function entityBoardPlace(
+  place: EntityPlace | undefined,
+  sort?: EntitySortState | null
+): EntityPlace | undefined {
+  if (!place || !entityBoardOrdered(sort)) return undefined
+  if (sort?.direction !== 'desc') return place
+  const swapped: EntityPlace = {}
+  if (place.before) swapped.after = place.before
+  if (place.after) swapped.before = place.after
+  return swapped
+}
+
+/** The 1-based place among the cards of a children list, and its neighbours. */
+function placeAmong(list: Element, y: number, dragged: string) {
+  const slot = entityBoardSlot(
+    list.querySelectorAll(':scope > [data-card-id]'),
+    y,
+    dragged
+  )
+  return { rank: slot.index + 1, place: slot.place }
 }
 
 /**
@@ -67,7 +133,7 @@ export function entityBoardDropTarget(
       }
     }
     if (owner === parent || accepts(owner)) {
-      return { kind: 'sibling', parent: owner, rank: placeAmong(list, y, dragged) }
+      return { kind: 'sibling', parent: owner, ...placeAmong(list, y, dragged) }
     }
     const ownerCard = list.closest('[data-card-id]')
     return ownerCard
@@ -104,14 +170,17 @@ export function entityBoardTopAllowed(
   return (design.fields[objectClass] || []).some((f) => f.id === statusField)
 }
 
-/** What a drop on the board does to the dragged object. */
+/**
+ * What a drop on the board does to the dragged object. A move's empty value
+ * keeps its column; `clear` empties it, for a drop on the column for no value.
+ */
 export type EntityBoardDropAction =
   | {
       kind: 'move'
       value: string
-      rank?: number
+      clear?: boolean
+      place?: EntityPlace
       row?: string
-      scope?: string
       promote?: boolean
       parent?: string
     }
@@ -132,33 +201,29 @@ function under(
 }
 
 /**
- * What dropping `dragged` does, from where the column says it landed: into a
- * card's children at a place (`parent` and `place`), onto a card (`on`), or
- * between the column's top-level cards (`column`, `rank` and `row`). `topRank`
- * turns a place among the column's top-level cards into the rank the server
- * expects. Null when the drop is not allowed.
+ * What dropping `dragged` in `column` does, from where the column says it
+ * landed (see EntityBoardDrop), with the board's top-level cards drawn under
+ * `sort` (see entityBoardPlace). `columns` are the values the board draws a
+ * column for: a drop between top-level cards in the column for no value
+ * clears a value that is one of them, which would otherwise draw the card in
+ * its own column still. Null when the drop is not allowed.
  */
 export function entityBoardDropAction(
   dragged: EntityObject,
   objects: Record<string, EntityObject>,
   design: Pick<EntityDesign, 'fields' | 'hierarchy'>,
   statusField: string,
-  drop: {
-    column: string
-    rank?: number
-    row?: string
-    on?: string
-    parent?: string
-    place?: number
-  },
-  topRank: (rank?: number) => number | undefined
+  column: string,
+  drop: EntityBoardDrop,
+  sort?: EntitySortState | null,
+  columns: readonly string[] = []
 ): EntityBoardDropAction | null {
   const allows = (parentClass: string) =>
     (design.hierarchy[dragged.class] || []).includes(parentClass)
 
-  if (drop.parent && drop.place !== undefined) {
+  if (drop.parent) {
     if (dragged.parent === drop.parent) {
-      return { kind: 'move', value: '', rank: drop.place, scope: drop.parent }
+      return { kind: 'move', value: '', place: drop.place }
     }
     const parent = objects[drop.parent]
     if (!parent || !allows(parent.class)) return null
@@ -169,8 +234,7 @@ export function entityBoardDropAction(
     return {
       kind: 'move',
       value: '',
-      rank: drop.place,
-      scope: drop.parent,
+      place: drop.place,
       parent: drop.parent,
     }
   }
@@ -184,14 +248,15 @@ export function entityBoardDropAction(
   }
 
   const child = !!(dragged.parent && objects[dragged.parent])
-  if (
-    !entityBoardTopAllowed(design, dragged.class, child, statusField, drop.column)
-  )
+  if (!entityBoardTopAllowed(design, dragged.class, child, statusField, column))
     return null
+  const own = dragged.values[statusField] || ''
+  const clear = !column && !!statusField && !!own && columns.includes(own)
   return {
     kind: 'move',
-    value: drop.column,
-    rank: topRank(drop.rank),
+    value: column,
+    ...(clear ? { clear: true } : {}),
+    place: entityBoardPlace(drop.place, sort),
     row: drop.row,
     ...(child ? { promote: true } : {}),
   }

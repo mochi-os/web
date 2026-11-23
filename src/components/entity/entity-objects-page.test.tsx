@@ -21,6 +21,8 @@ import {
 } from './entity-test-utils'
 import {
   EntityObjectsPage,
+  type EntityObjectsBoardSlotProps,
+  type EntityObjectsTreeSlotProps,
   type EntityObjectsPageApi,
   type EntityObjectsPageLabels,
   type EntityObjectsPageContainer,
@@ -29,6 +31,7 @@ import type { EntityObject, EntityObjectCopy } from '../../types/entity-object'
 import { FileText } from 'lucide-react'
 import { SearchProvider } from '../../context/search-provider'
 import { toast } from '../../lib/toast-utils'
+import { sortEntityObjects } from '../../lib/entity-sort'
 import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
 
 const invalidate = vi.fn()
@@ -168,6 +171,7 @@ const duplicate = {
     everything: 'Everything',
     designOnly: 'Design only',
     allowSearch: 'Allow anyone to search',
+    readable: 'Allow anyone to view',
     cancel: 'Cancel',
     confirm: 'Duplicate',
     duplicating: 'Duplicating',
@@ -219,7 +223,7 @@ describe('EntityObjectsPage', () => {
     renderPage({
       api,
       renderBoard: (slot) => (
-        <button onClick={() => slot.onMoveObject?.('obj-2', 'done', 1)}>
+        <button onClick={() => slot.onMoveObject?.('obj-2', 'done', { before: 'obj-1' })}>
           reorder
         </button>
       ),
@@ -731,11 +735,9 @@ describe('EntityObjectsPage cascades', () => {
     }),
   ]
   const board = (
-    act: (slot: Record<string, (...args: never[]) => void>) => void
+    act: (slot: EntityObjectsBoardSlotProps<EntityObject>) => void
   ) =>
-    function Board(
-      slot: { objects: EntityObject[] } & Record<string, unknown>
-    ) {
+    function Board(slot: EntityObjectsBoardSlotProps<EntityObject>) {
       return (
         <>
           {slot.objects.map((o) => (
@@ -743,7 +745,7 @@ describe('EntityObjectsPage cascades', () => {
               {o.values.status ?? 'none'}
             </span>
           ))}
-          <button onClick={() => act(slot as never)}>act</button>
+          <button onClick={() => act(slot)}>act</button>
         </>
       )
     }
@@ -765,7 +767,7 @@ describe('EntityObjectsPage cascades', () => {
         api: pending(),
         design,
         renderBoard: board((slot) =>
-          slot.onMoveObject('parent' as never, 'done' as never, 1 as never)
+          slot.onMoveObject?.('parent', 'done', undefined)
         ),
       },
       objects
@@ -787,11 +789,7 @@ describe('EntityObjectsPage cascades', () => {
         api: pending(),
         design,
         renderBoard: board((slot) =>
-          slot.onMoveObject(
-            'parent' as never,
-            'in_progress' as never,
-            1 as never
-          )
+          slot.onMoveObject?.('parent', 'in_progress', undefined)
         ),
       },
       objects
@@ -804,14 +802,119 @@ describe('EntityObjectsPage cascades', () => {
     expect(screen.getByTestId('memo')).toHaveTextContent('none')
   })
 
+  it('clears a card dropped on the column for no value, and the descendants whose class has the field', async () => {
+    const api = pending()
+    renderPage(
+      {
+        api,
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.(
+            'parent',
+            '',
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            true
+          )
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() =>
+      expect(screen.getByTestId('parent').textContent).toBe('')
+    )
+    expect(api.moveObject).toHaveBeenCalledWith(
+      'c1',
+      'parent',
+      expect.objectContaining({ field: 'status', value: '', clear: 'true' })
+    )
+    // A note's status is cleared as a task's is; a memo has none to clear.
+    expect(screen.getByTestId('task').textContent).toBe('')
+    expect(screen.getByTestId('note').textContent).toBe('')
+    expect(screen.getByTestId('grand').textContent).toBe('')
+    expect(screen.getByTestId('memo')).toHaveTextContent('none')
+  })
+
+  it('keeps the column of a card moved with an empty value and no clear, as a reorder', async () => {
+    const api = pending()
+    renderPage(
+      {
+        api,
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('parent', '', { after: 'other' })
+        ),
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() => expect(api.moveObject).toHaveBeenCalled())
+    expect(api.moveObject).toHaveBeenCalledWith(
+      'c1',
+      'parent',
+      expect.objectContaining({ field: '', value: '', clear: undefined })
+    )
+    expect(screen.getByTestId('parent')).toHaveTextContent('todo')
+    expect(screen.getByTestId('task')).toHaveTextContent('todo')
+  })
+
+  it('clears a row dragged to the list’s group for no value', async () => {
+    const api = pending()
+    const listed = {
+      ...design,
+      views: [
+        createMockEntityView({
+          id: 'list',
+          viewtype: 'list',
+          columns: 'status',
+        }),
+      ],
+    }
+    renderPage(
+      {
+        api,
+        design: listed,
+        renderTree: function Tree(
+          slot: EntityObjectsTreeSlotProps<EntityObject>
+        ) {
+          return (
+            <>
+              {slot.objects.map((o) => (
+                <span key={o.id} data-testid={o.id}>
+                  {o.values.status ?? 'none'}
+                </span>
+              ))}
+              <button
+                onClick={() => slot.onMoveObject?.('parent', 'status', '')}
+              >
+                act
+              </button>
+            </>
+          )
+        },
+      },
+      objects
+    )
+    fireEvent.click(await screen.findByText('act'))
+    await waitFor(() =>
+      expect(screen.getByTestId('parent').textContent).toBe('')
+    )
+    expect(api.moveObject).toHaveBeenCalledWith(
+      'c1',
+      'parent',
+      expect.objectContaining({ field: 'status', value: '', clear: 'true' })
+    )
+  })
+
   it('gives a reparented card and its descendants the new parent’s column each class offers', async () => {
     renderPage(
       {
         api: pending(),
         design,
-        renderBoard: board((slot) =>
-          slot.onReparentObject('task' as never, 'other' as never)
-        ),
+        renderBoard: board((slot) => slot.onReparentObject?.('task', 'other')),
       },
       objects
     )
@@ -821,5 +924,133 @@ describe('EntityObjectsPage cascades', () => {
     )
     // The note under it offers no done.
     expect(screen.getByTestId('grand')).toHaveTextContent('todo')
+  })
+})
+
+// A move's optimistic copy, as the board draws it from the cache: each
+// column's cards in the order the board sorts them.
+describe('EntityObjectsPage moves', () => {
+  const design = createMockEntityDesign({
+    classes: [createMockEntityClass({ id: 'task' })],
+    fields: {
+      task: [createMockEntityField({ id: 'status', fieldtype: 'enumerated' })],
+    },
+    options: {
+      task: {
+        status: ['todo', 'done'].map((id) =>
+          createMockEntityOption({ id, name: id })
+        ),
+      },
+    },
+    views: [
+      createMockEntityView({
+        id: 'board',
+        viewtype: 'board',
+        columns: 'status',
+      }),
+    ],
+  })
+  const card = (id: string, rank: string, created: number, status: string) =>
+    createMockEntityObject({ id, rank, created, values: { status } })
+  const board = (
+    act: (slot: EntityObjectsBoardSlotProps<EntityObject>) => void
+  ) =>
+    function Board(slot: EntityObjectsBoardSlotProps<EntityObject>) {
+      return (
+        <>
+          {sortEntityObjects(slot.objects, slot.sort).map((o) => (
+            <span key={o.id} data-testid={`card-${o.values.status}`}>
+              {o.id}
+            </span>
+          ))}
+          <button onClick={() => act(slot)}>act</button>
+        </>
+      )
+    }
+  const column = (status: string) =>
+    screen.getAllByTestId(`card-${status}`).map((el) => el.textContent)
+  // The answer never comes, so the board shows the optimistic copy.
+  const pending = (objects: EntityObject[]) => {
+    const api = makeApi(objects)
+    ;(api.moveObject as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise(() => {})
+    )
+    return api
+  }
+
+  it('lands a card between two that shared a key, the lower one untied to a key of its own', async () => {
+    // a and b share a key, drawn a then b, the newer first.
+    const objects = [
+      card('a', 'a0', 2000, 'todo'),
+      card('b', 'a0', 1000, 'todo'),
+      card('c', 'a1', 3000, 'todo'),
+      card('x', 'a2', 4000, 'todo'),
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('x', 'todo', { after: 'a', before: 'b' })
+        ),
+      },
+      objects
+    )
+    const button = await screen.findByText('act')
+    expect(column('todo')).toEqual(['a', 'b', 'c', 'x'])
+    fireEvent.click(button)
+    await waitFor(() => expect(column('todo')).toEqual(['a', 'x', 'b', 'c']))
+  })
+
+  it('puts a card moved into another column with no neighbour after every other', async () => {
+    const objects = [
+      card('x', 'a0', 1000, 'todo'),
+      card('d', 'a5', 2000, 'done'),
+      card('e', 'a9', 3000, 'done'),
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.('x', 'done', undefined)
+        ),
+      },
+      objects
+    )
+    const button = await screen.findByText('act')
+    expect(column('done')).toEqual(['d', 'e'])
+    fireEvent.click(button)
+    await waitFor(() => expect(column('done')).toEqual(['d', 'e', 'x']))
+  })
+
+  it('puts a card cleared on the column for no value with no neighbour after every other there', async () => {
+    const objects = [
+      card('x', 'a0', 1000, 'todo'),
+      card('u', 'a5', 2000, ''),
+      card('v', 'a9', 3000, ''),
+    ]
+    renderPage(
+      {
+        api: pending(objects),
+        design,
+        renderBoard: board((slot) =>
+          slot.onMoveObject?.(
+            'x',
+            '',
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            true
+          )
+        ),
+      },
+      objects
+    )
+    const button = await screen.findByText('act')
+    expect(column('')).toEqual(['u', 'v'])
+    fireEvent.click(button)
+    await waitFor(() => expect(column('')).toEqual(['u', 'v', 'x']))
   })
 })

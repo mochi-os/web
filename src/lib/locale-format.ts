@@ -306,7 +306,8 @@ function zoneOffset(seconds: number, timezone?: string): number {
  * The instant a wall-clock time falls at in the user's zone, in unix seconds.
  * The second pass is what makes the hour after a DST change land correctly:
  * the offset is read at the first guess, which can sit on the other side of
- * the transition from the answer.
+ * the transition from the answer. Minutes outside the day carry into the
+ * days either side of it.
  */
 export function timestampAt(
   day: string,
@@ -314,9 +315,7 @@ export function timestampAt(
   timezone?: string
 ): number {
   const [year, month, date] = day.split('-').map(Number)
-  const wall =
-    Date.UTC(year, month - 1, date, Math.floor(minutes / 60), minutes % 60) /
-    1000
+  const wall = Date.UTC(year, month - 1, date, 0, minutes) / 1000
   const first = wall - zoneOffset(wall, timezone)
   return wall - zoneOffset(first, timezone)
 }

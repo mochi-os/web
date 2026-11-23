@@ -15,6 +15,7 @@ const labels = {
   everything: 'Everything',
   designOnly: 'Design only',
   allowSearch: 'Allow anyone to search for CRM',
+  readable: 'Allow anyone to view CRM',
   cancel: 'Cancel',
   confirm: 'Duplicate',
   duplicating: 'Duplicating CRM...',
@@ -87,7 +88,7 @@ describe('EntityDuplicateDialog', () => {
       'src-id',
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     )
-    expect(create).toHaveBeenCalledWith('Duplicate of Sales', 'private')
+    expect(create).toHaveBeenCalledWith('Duplicate of Sales', 'private', false)
     expect(api.importData).toHaveBeenCalledWith(
       'copy-fp',
       archive,
@@ -148,7 +149,20 @@ describe('EntityDuplicateDialog', () => {
     )
     submit()
     await waitFor(() =>
-      expect(create).toHaveBeenCalledWith('Duplicate of Sales', 'public')
+      expect(create).toHaveBeenCalledWith('Duplicate of Sales', 'public', false)
+    )
+  })
+
+  it('lets anyone view the copy only when switched on, apart from search', async () => {
+    renderDialog()
+    const view = screen.getByRole('switch', {
+      name: 'Allow anyone to view CRM',
+    })
+    expect(view).not.toBeChecked()
+    fireEvent.click(view)
+    submit()
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith('Duplicate of Sales', 'private', true)
     )
   })
 

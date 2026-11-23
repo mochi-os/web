@@ -22,6 +22,7 @@ import {
   formatMonthShort,
   parseClock,
   parseDate,
+  timestampAt,
 } from './locale-format'
 
 // A date whose month abbreviation differs visibly between languages.
@@ -619,5 +620,25 @@ describe('a span of time is written as the language writes a range', () => {
     expect(formatRange('Tue 22', 'Thu 24', true)).toMatch(/^Tue 22\s–\nThu 24$/)
     load('ja')
     expect(formatRange('22日', '24日', true)).toBe('22日～\n24日')
+  })
+})
+
+describe('a wall-clock time outside its day', () => {
+  const utc = (day: number, hour: number, minute: number) =>
+    Date.UTC(2026, 2, day, hour, minute) / 1000
+
+  it('reads minutes before midnight as the evening before', () => {
+    expect(timestampAt('2026-03-14', -30, 'UTC')).toBe(utc(13, 23, 30))
+    expect(timestampAt('2026-03-14', -90, 'UTC')).toBe(utc(13, 22, 30))
+  })
+
+  it('reads minutes past midnight as the morning after', () => {
+    expect(timestampAt('2026-03-14', 1470, 'UTC')).toBe(utc(15, 0, 30))
+  })
+
+  it("carries the minutes in the zone's own wall clock", () => {
+    // 23:30 on the 13th in Tokyo is 14:30 UTC.
+    expect(timestampAt('2026-03-14', -30, 'Asia/Tokyo')).toBe(utc(13, 14, 30))
+    expect(timestampAt('2026-03-14', 750, 'Asia/Tokyo')).toBe(utc(14, 3, 30))
   })
 })
