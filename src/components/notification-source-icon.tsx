@@ -12,7 +12,8 @@ export function NotificationSourceIcon({
   sender,
   isUnread,
 }: {
-  /** The app id, which locates its icon. */
+  /** The path the app is served at, which locates its icon: not its id, which
+   *  on a server running published apps is an entity id no route serves. */
   app: string
   /** The app's display name. Without one the icon is decorative: the row's
    *  own text names the source, and an id is not a name. */

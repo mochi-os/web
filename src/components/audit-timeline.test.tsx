@@ -1,8 +1,8 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { I18nProvider } from '@lingui/react'
 import { i18n } from '@lingui/core'
 import { AuditTimeline } from './audit-timeline'
@@ -89,5 +89,108 @@ describe('AuditTimeline', () => {
     )
     expect(await screen.findByText('Bid placed')).toBeInTheDocument()
     expect(screen.queryByText(/·/)).not.toBeInTheDocument()
+  })
+
+  it('names an entry the caller has a word for its actor by that word', async () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <AuditTimeline
+          kind='order'
+          object='o1'
+          fetchAudit={async () => ({
+            audit: [
+              {
+                id: 'a1',
+                action: 'order.refunded',
+                data: '{}',
+                actor: 'staff',
+                actor_name: '',
+                actor_fingerprint: '',
+                timestamp: 1700000000,
+              },
+            ],
+          })}
+          actionLabels={{ 'order.refunded': 'Refunded' }}
+          actorLabels={{ staff: 'Staff' }}
+          formatFingerprint={(fingerprint) => fingerprint}
+        />
+      </I18nProvider>
+    )
+    expect(await screen.findByText(/· Staff$/)).toBeInTheDocument()
+  })
+
+  it('loads the next page on the cursor the last page answered', async () => {
+    const entry = (id: string, action: string) => ({
+      id,
+      action,
+      data: '{}',
+      actor: 'system',
+      actor_name: '',
+      timestamp: 1700000000,
+    })
+    const fetchAudit = vi.fn(
+      async (params: {
+        kind: string
+        object: string
+        limit: number
+        after?: string
+      }) =>
+        params.after === 'c1'
+          ? // The first page's last entry again, as a moved boundary sends it.
+            { audit: [entry('a1', 'first'), entry('a2', 'second')], next: '' }
+          : { audit: [entry('a1', 'first')], next: 'c1' }
+    )
+    render(
+      <I18nProvider i18n={i18n}>
+        <AuditTimeline
+          kind='listing'
+          object='l1'
+          fetchAudit={fetchAudit}
+          actionLabels={{ first: 'First', second: 'Second' }}
+          formatFingerprint={(fingerprint) => fingerprint}
+        />
+      </I18nProvider>
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Load more' }))
+    expect(await screen.findByText('Second')).toBeInTheDocument()
+    expect(fetchAudit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'listing', object: 'l1', after: 'c1' })
+    )
+    expect(screen.getAllByText('First')).toHaveLength(1)
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Load more' })
+      ).not.toBeInTheDocument()
+    )
+  })
+
+  it('offers no next page when the answer says nothing follows', async () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <AuditTimeline
+          kind='listing'
+          object='l1'
+          fetchAudit={async () => ({
+            audit: [
+              {
+                id: 'a1',
+                action: 'listing.created',
+                data: '{}',
+                actor: 'system',
+                actor_name: '',
+                timestamp: 1700000000,
+              },
+            ],
+            next: '',
+          })}
+          actionLabels={{ 'listing.created': 'Created' }}
+          formatFingerprint={(fingerprint) => fingerprint}
+        />
+      </I18nProvider>
+    )
+    expect(await screen.findByText('Created')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Load more' })
+    ).not.toBeInTheDocument()
   })
 })

@@ -37,6 +37,19 @@ describe('notificationsAfter', () => {
     expect(next?.[1].sender).toBe('sender-entity')
   })
 
+  // The bell finds a row's icon by the path its app is served at; the app's
+  // id is an entity id on a server running published apps.
+  it("keeps the path a new row's app is served at", () => {
+    const next = notificationsAfter(held, {
+      type: 'new',
+      web: true,
+      ...bell('b', 20),
+      app: '12254aHfG39LqrizXg8Wv7',
+      path: 'chat',
+    })
+    expect(next?.[1].path).toBe('chat')
+  })
+
   // The server lists rows by time, then by id: a row updated in the same
   // second as another arrived takes the same place in both.
   it('puts a row sharing a second with others where its id puts it', () => {

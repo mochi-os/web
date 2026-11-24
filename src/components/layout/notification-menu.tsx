@@ -17,7 +17,12 @@ import { Trans } from '@lingui/react/macro'
 /** A notification as the server sends it. */
 export interface Notification {
   id: string
+  /** The app's id: on a server running published apps an entity id, which no
+   *  route serves. */
   app: string
+  /** The path the app is served at, which locates its icon; '' for none.
+   *  Absent from a notifications app that predates it. */
+  path?: string
   topic: string
   object: string
   content: string
@@ -68,7 +73,7 @@ export function NotificationItem({
         className='flex flex-1 items-start gap-3 text-start'
       >
         <NotificationSourceIcon
-          app={notification.app}
+          app={notification.path ?? notification.app}
           sender={notification.sender}
           isUnread={isUnread}
         />

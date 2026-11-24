@@ -108,4 +108,159 @@ describe('useLoadMore', () => {
     })
     expect(fetcher.mock.calls.at(-1)?.[0].page).toBe(2)
   })
+
+  it('pages by number, sending no cursor, when the answers carry none', async () => {
+    const fetcher = vi.fn(
+      async (_args: { page: number; limit: number; after?: string }) => ({
+        items: rows(21, 20),
+        total: 45,
+      })
+    )
+    const loaderItems = rows(1, 20)
+    const { result } = renderHook(() =>
+      useLoadMore<Row>({ fetcher, initial: { items: loaderItems, total: 45 } })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(fetcher.mock.calls[0][0]).not.toHaveProperty('after')
+    expect(result.current.hasMore).toBe(true)
+  })
+})
+
+interface Versioned {
+  id: string
+  version: string
+}
+
+describe('useLoadMore merging', () => {
+  it('keeps the row it already holds when a page repeats it', async () => {
+    // A row added ahead of the first page pushes its last row onto the second.
+    const first: Versioned[] = [
+      { id: 'a', version: 'first' },
+      { id: 'b', version: 'first' },
+    ]
+    const fetcher = vi.fn(async () => ({
+      items: [
+        { id: 'b', version: 'second' },
+        { id: 'c', version: 'second' },
+      ],
+      total: 4,
+    }))
+    const { result } = renderHook(() =>
+      useLoadMore<Versioned>({ fetcher, initial: { items: first, total: 4 } })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(result.current.items.map((row) => row.id)).toEqual(['a', 'b', 'c'])
+    expect(result.current.items[1].version).toBe('first')
+  })
+})
+
+describe('useLoadMore cursors', () => {
+  it('asks for each page after the cursor the last answer carried', async () => {
+    const fetcher = vi.fn(
+      async ({ after }: { page: number; limit: number; after?: string }) =>
+        after === 'c1'
+          ? { items: rows(21, 20), total: 60, next: 'c2' }
+          : { items: rows(41, 20), total: 60, next: '' }
+    )
+    const loaderItems = rows(1, 20)
+    const { result, rerender } = renderHook(() =>
+      useLoadMore<Row>({
+        fetcher,
+        initial: { items: loaderItems, total: 60, next: 'c1' },
+      })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    rerender()
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    rerender()
+    expect(fetcher.mock.calls.map(([p]) => p.after)).toEqual(['c1', 'c2'])
+    expect(result.current.items).toHaveLength(60)
+    expect(result.current.hasMore).toBe(false)
+  })
+
+  it('ends the list when the answer says nothing follows, whatever the total', async () => {
+    const fetcher = vi.fn(async () => ({ items: rows(21, 20), total: 100 }))
+    const loaderItems = rows(1, 20)
+    const { result } = renderHook(() =>
+      useLoadMore<Row>({
+        fetcher,
+        initial: { items: loaderItems, total: 100, next: '' },
+      })
+    )
+    expect(result.current.hasMore).toBe(false)
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('ends the list when a page on a cursor adds no row', async () => {
+    // A server that answers the same rows on every cursor must not hold the
+    // list in a loop.
+    const fetcher = vi.fn(async () => ({
+      items: rows(1, 20),
+      total: 100,
+      next: 'again',
+    }))
+    const loaderItems = rows(1, 20)
+    const { result } = renderHook(() =>
+      useLoadMore<Row>({
+        fetcher,
+        initial: { items: loaderItems, total: 100, next: 'c1' },
+      })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(result.current.hasMore).toBe(false)
+  })
+
+  it('drops a page that arrives after the filter changed', async () => {
+    let release: (value: {
+      items: Row[]
+      total: number
+      next: string
+    }) => void = () => {}
+    const stale = new Promise<{ items: Row[]; total: number; next: string }>(
+      (resolve) => {
+        release = resolve
+      }
+    )
+    const fetcher = vi.fn(
+      async ({ status }: { status: string; page: number; limit: number }) =>
+        status === 'old' ? stale : { items: rows(500, 3), total: 3, next: '' }
+    )
+    const loaderItems = rows(1, 20)
+    const { result, rerender } = renderHook(
+      ({ status }: { status: string }) =>
+        useLoadMore<Row, { status: string }>({
+          fetcher,
+          initial: { items: loaderItems, total: 60, next: 'c1' },
+          params: { status },
+        }),
+      { initialProps: { status: 'old' } }
+    )
+    let pending: Promise<void> = Promise.resolve()
+    act(() => {
+      pending = result.current.loadMore()
+    })
+    rerender({ status: 'new' })
+    await waitFor(() =>
+      expect(result.current.items.map((row) => row.id)).toEqual([500, 501, 502])
+    )
+    await act(async () => {
+      release({ items: rows(21, 20), total: 60, next: 'c2' })
+      await pending
+    })
+    expect(result.current.items.map((row) => row.id)).toEqual([500, 501, 502])
+    expect(result.current.hasMore).toBe(false)
+  })
 })

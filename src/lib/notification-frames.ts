@@ -44,6 +44,7 @@ export function notificationsAfter(
       const row: Notification = {
         id: frame.id,
         app: frame.app ?? '',
+        path: frame.path,
         topic: frame.topic ?? '',
         object: frame.object ?? '',
         content: frame.content ?? '',

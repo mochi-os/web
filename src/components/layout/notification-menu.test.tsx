@@ -130,6 +130,32 @@ describe('notification link navigation', () => {
   })
 })
 
+// On a server running published apps a row's app is an entity id no route
+// serves; the list says the path the app is served at, where its icon is.
+describe('notification source icon', () => {
+  it("shows the icon at the app's path, not its id", () => {
+    const { container } = render(
+      <I18nProvider i18n={i18n}>
+        <NotificationsSection
+          onClose={() => {}}
+          notifications={[
+            {
+              ...notification('/chat/c1'),
+              app: '12254aHfG39LqrizXg8Wv7',
+              path: 'chat',
+            },
+          ]}
+          markAsRead={() => {}}
+          markAllAsRead={() => {}}
+        />
+      </I18nProvider>
+    )
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(
+      '/chat/images/icon.svg'
+    )
+  })
+})
+
 // MochiMenu decides whether a notification affordance exists at all, from
 // whether a data source was supplied. An app with no way to read notifications
 // must show nothing rather than an empty list, which would assert the user has
