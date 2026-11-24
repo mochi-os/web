@@ -302,7 +302,7 @@ export function GameChatMessageList<M extends GameChatMessage>({
                 <div className='flex items-end gap-1.5'>
                   {/* Shown on hover, and always where there is no hover. */}
                   {isSent && (
-                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-[9px]'>
+                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 text-[9px]'>
                       {formatDateTime(new Date(message.created * 1000))}
                     </span>
                   )}
@@ -319,7 +319,7 @@ export function GameChatMessageList<M extends GameChatMessage>({
                   </div>
 
                   {!isSent && (
-                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 text-[9px]'>
+                    <span className='text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 text-[9px]'>
                       {formatDateTime(new Date(message.created * 1000))}
                     </span>
                   )}

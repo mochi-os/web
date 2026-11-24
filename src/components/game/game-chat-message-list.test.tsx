@@ -96,7 +96,7 @@ describe('the day headings', () => {
 })
 
 describe('a message’s time', () => {
-  it('shows where there is no hover, and on focus', () => {
+  it('shows where there is no hover', () => {
     show([
       chat({ created: NOON, member: 'me', name: 'Me' }),
       chat({ created: NOON + 60 }),
@@ -108,7 +108,6 @@ describe('a message’s time', () => {
       expect(time).toHaveClass('opacity-0')
       expect(time).toHaveClass('group-hover:opacity-100')
       expect(time).toHaveClass('[@media(hover:none)]:opacity-100')
-      expect(time).toHaveClass('group-focus-within:opacity-100')
     }
   })
 })

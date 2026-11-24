@@ -28,6 +28,14 @@ const EXEMPT: Record<string, string> = {
   'components/tree-row.tsx': 'decoration only',
 }
 
+// Files whose hover reveals still need a touch reveal but have nothing to
+// focus: a keyboard reveal there would be a class that can never fire.
+const KEYBOARD_EXEMPT: Record<string, string> = {
+  // Message times: the row holds text only, and a screen reader reads the time
+  // whatever its opacity.
+  'components/game/game-chat-message-list.tsx': 'no control in the row',
+}
+
 interface Reveal {
   file: string
   line: number
@@ -79,7 +87,11 @@ describe('hover reveals', () => {
 
   it('also reveal on keyboard focus', () => {
     const missing = checked
-      .filter((reveal) => !KEYBOARD_REVEAL.test(reveal.classes))
+      .filter(
+        (reveal) =>
+          !KEYBOARD_REVEAL.test(reveal.classes) &&
+          !(reveal.file in KEYBOARD_EXEMPT)
+      )
       .map((reveal) => `${reveal.file}:${reveal.line}`)
     expect(missing).toEqual([])
   })
