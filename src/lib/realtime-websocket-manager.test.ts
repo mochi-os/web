@@ -7,7 +7,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChatWebsocketManager } from './realtime-websocket-manager'
-import { websocketTokenReset } from './websocket-token'
 
 class MockWebSocket {
   static CONNECTING = 0
@@ -250,17 +249,13 @@ describe('ChatWebsocketManager readiness', () => {
   })
 })
 
-// The socket URL carries the session JWT in its query string, because a browser
-// cannot set a header on a WebSocket handshake, so it needs the same
+// The handshake carries the app token in its subprotocol, so it needs the same
 // same-origin gate api-client.ts applies to the Authorization header.
 describe('ChatWebsocketManager token scoping', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     MockWebSocket.instances = []
     vi.stubGlobal('WebSocket', MockWebSocket)
-    // Page-scoped state: a fallback recorded by another test would move the
-    // token back into the URL and make these assertions measure that instead.
-    websocketTokenReset()
   })
   afterEach(() => {
     vi.unstubAllGlobals()

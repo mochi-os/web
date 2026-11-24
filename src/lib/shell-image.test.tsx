@@ -157,10 +157,23 @@ describe('images through the shell', () => {
     )
   })
 
-  it("keeps an SVG's own address, and the policy served with it", async () => {
+  // An <img> runs no script in an SVG, from an object URL as from its own
+  // address, and its own address carries the asset token into the page.
+  it('shows an SVG from its bytes, leaving the token out of the page', async () => {
+    const AssetImage = await boot()
+    const view = render(
+      <AssetImage src={THUMBNAIL + '?token=asset-token'} alt='' />
+    )
+    await answer(0, image('image/svg+xml'))
+    const element = view.container.querySelector('img')!
+    expect(element.getAttribute('src')).toBe('blob:mochi/1')
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads it itself when the answer is not an image', async () => {
     const AssetImage = await boot()
     const view = render(<AssetImage src={THUMBNAIL} alt='' />)
-    await answer(0, image('image/svg+xml'))
+    await answer(0, image('text/html'))
     expect(view.container.querySelector('img')!.getAttribute('src')).toBe(
       THUMBNAIL
     )

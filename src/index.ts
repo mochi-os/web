@@ -294,12 +294,7 @@ export {
   type EntityWebsocketListener,
   type EntityWebsocketOptions,
 } from './lib/entity-websocket-manager'
-export {
-  websocketProtocols,
-  websocketQueryToken,
-  websocketOpened,
-  websocketFailed,
-} from './lib/websocket-token'
+export { websocketProtocols } from './lib/websocket-token'
 export * from './hooks/use-pending-items'
 export * from './hooks/use-poll'
 export * from './hooks/use-merge-on-scroll-top'

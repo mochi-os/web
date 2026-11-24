@@ -10,7 +10,6 @@ import {
   entityWebsocketManager,
   type EntityWebsocketEvent,
 } from './entity-websocket-manager'
-import { websocketTokenReset } from './websocket-token'
 import { useAuthStore } from '../stores/auth-store'
 
 class MockWebSocket {
@@ -383,14 +382,12 @@ describe('entityWebsocketManager', () => {
   // access log and in any URL a viewer copies.
   describe('token presentation', () => {
     beforeEach(() => {
-      websocketTokenReset()
       useAuthStore.setState({ token: 'Bearer secret-token' })
       vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
     })
 
     afterEach(() => {
       useAuthStore.setState({ token: '' })
-      websocketTokenReset()
     })
 
     it('offers the token as a subprotocol and leaves the URL clean', () => {
@@ -400,19 +397,19 @@ describe('entityWebsocketManager', () => {
       expect(socket.url).not.toContain('token=')
     })
 
-    it('falls back to the URL for a server that ignores the subprotocol', () => {
-      entityWebsocketManager.subscribe('kFallback', () => {})
-      const [first] = socketsFor('kFallback')
-      // Closed without ever opening: the handshake was refused, which is what
-      // a core too old to read the subprotocol does.
+    it('keeps the token out of the URL when a handshake is refused', () => {
+      entityWebsocketManager.subscribe('kRefused', () => {})
+      const [first] = socketsFor('kRefused')
+      // Closed without ever opening: the server refused the handshake, as it
+      // does while it restarts or for a socket over the user's limit.
       first.finishClose()
       vi.runAllTimers()
 
-      const sockets = socketsFor('kFallback')
+      const sockets = socketsFor('kRefused')
       expect(sockets.length).toBeGreaterThan(1)
       const retry = sockets[sockets.length - 1]
-      expect(retry.protocols).toBeUndefined()
-      expect(retry.url).toContain('token=secret-token')
+      expect(retry.protocols).toEqual(['mochi.token.secret-token'])
+      expect(retry.url).not.toContain('token=')
     })
 
     it('keeps the token out of the URL when a live socket drops', () => {

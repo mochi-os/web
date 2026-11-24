@@ -345,14 +345,21 @@ describe('authenticatedUrl', () => {
   })
 
   // Load the bridge and drive it to the initialised in-shell state, which is
-  // the only state in which authenticatedUrl adds anything.
+  // the only state in which authenticatedUrl adds anything, with an app token
+  // and the asset token given.
   async function loadInShell(
-    token = 'test-token',
+    asset = 'test-token',
     init: Record<string, unknown> = {}
   ) {
     const bridge = await import('./shell-bridge')
     const ready = bridge.initShellBridge()
-    dispatchFromParent({ type: 'init', token, inShell: true, ...init })
+    dispatchFromParent({
+      type: 'init',
+      token: 'app-token',
+      asset,
+      inShell: true,
+      ...init,
+    })
     await ready
     return bridge
   }
@@ -384,28 +391,27 @@ describe('authenticatedUrl', () => {
   // A URL is copied, logged and kept, so what goes in one is the short-lived
   // read-only token, never the app token that authorizes every action for a
   // year.
-  it('prefers the asset token to the app token', async () => {
-    const { authenticatedUrl } = await loadInShell('app-token', {
-      asset: 'asset-token',
-    })
+  it('puts the asset token in the URL, not the app token', async () => {
+    const { authenticatedUrl } = await loadInShell('asset-token')
     expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=asset-token')
   })
 
-  it('falls back to the app token when an older shell sends no asset token', async () => {
-    const { authenticatedUrl } = await loadInShell('app-token')
-    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=app-token')
-  })
-
   it('takes the refreshed asset token, which expires long before the app token', async () => {
-    const { authenticatedUrl } = await loadInShell('app-token', {
-      asset: 'first-asset',
-    })
+    const { authenticatedUrl } = await loadInShell('first-asset')
     dispatchFromParent({
       type: 'token-refresh',
       token: 'app-token',
       asset: 'second-asset',
     })
     expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=second-asset')
+  })
+
+  // The shell sends an empty asset token when its mint failed; the URL keeps
+  // the one held rather than losing its token.
+  it('keeps the asset token held when a refresh carries none', async () => {
+    const { authenticatedUrl } = await loadInShell('first-asset')
+    dispatchFromParent({ type: 'token-refresh', token: 'app-token', asset: '' })
+    expect(authenticatedUrl('/chat/x')).toBe('/chat/x?token=first-asset')
   })
 
   // The shell mounts every app on one origin. A same-origin check alone
@@ -479,7 +485,7 @@ describe('authenticatedUrl', () => {
     )
   })
 
-  it('returns the URL unchanged when the shell supplied no token', async () => {
+  it('returns the URL unchanged when the shell supplied no asset token', async () => {
     const { authenticatedUrl } = await loadInShell('')
     expect(authenticatedUrl('/chat/x')).toBe('/chat/x')
   })

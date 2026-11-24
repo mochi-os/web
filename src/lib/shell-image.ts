@@ -15,7 +15,8 @@
 // author chose - a markdown image naming one of the app's own actions - runs
 // nothing as the reader. Each use is revalidated, as the address no longer
 // differs per account. Anything the shell will not carry - another app's
-// image, an older shell, an SVG, a refusal - loads as before.
+// image, an older shell, a refusal - loads as before. An SVG is carried too:
+// shown by an <img>, from an object URL or its own address, it runs no script.
 
 import { useEffect, useState } from 'react'
 import { rewritesPath } from './http'
@@ -57,9 +58,10 @@ type Entry = {
 
 const entries = new Map<string, Entry>()
 
-// Raster images only. An SVG keeps its own address: the policy the server
-// serves it under would not survive into an object URL.
-const raster = /^image\/(?!svg)[\w.+-]+/i
+// Images only, SVG among them: the policy the server serves an SVG under does
+// not survive into an object URL, but an <img> runs none of its script either
+// way, and the address the page would otherwise show carries the asset token.
+const image = /^image\/[\w.+-]+/i
 
 async function load(url: string): Promise<string | null> {
   const token = getShellInitData()?.asset
@@ -75,7 +77,7 @@ async function load(url: string): Promise<string | null> {
     reply.headers.find(
       ([name]) => name.toLowerCase() === 'content-type'
     )?.[1] ?? ''
-  if (!raster.test(type)) return null
+  if (!image.test(type)) return null
   return URL.createObjectURL(new Blob([reply.body], { type }))
 }
 

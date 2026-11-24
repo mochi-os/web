@@ -22,7 +22,7 @@ import {
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
 import { cn } from '../../lib/utils'
-import { shellDownload } from '../../lib/shell-bridge'
+import { isInShell, shellDownload } from '../../lib/shell-bridge'
 import { AssetImage } from '../asset-image'
 import { toast } from '../../lib/toast-utils'
 import { useShellStorage } from '../../hooks/use-shell-storage'
@@ -187,9 +187,11 @@ export function ImageLightbox({
     }
   }, [naturalSize, currentScale])
 
-  // Preload adjacent images for smoother navigation (skip videos)
+  // Preload adjacent images for smoother navigation (skip videos). Not in the
+  // shell's frame: its opaque origin caches nothing, so the request would buy
+  // nothing but the asset token's address in another request.
   useEffect(() => {
-    if (!open || images.length <= 1) return
+    if (!open || images.length <= 1 || isInShell()) return
 
     const preload = (index: number) => {
       const media = images[index]

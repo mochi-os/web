@@ -98,8 +98,8 @@ type ShellInitData = {
   token: string
   /**
    * The short-lived, read-only token for URL-borne use: an image or attachment
-   * source, which a browser fetches with no header of ours on it. Absent from
-   * an older shell, and authenticatedUrl then falls back to `token`.
+   * source, which a browser fetches with no header of ours on it. Without one
+   * authenticatedUrl adds no token at all.
    */
   asset?: string
   theme?: string
@@ -1120,11 +1120,11 @@ export function authenticatedUrl(url: string): string {
   // to it. Only this app's own route gets the token.
   if (!isOwnResource(url)) return url
 
-  // The asset token in preference to the app token: this one ends up in the
-  // DOM, in a copied image address and in anything that keeps a URL, so it is
-  // minted read-only and expires in half an hour rather than a year. An older
-  // shell sends none, and the app token is then all there is.
-  const token = shellInitData.asset || shellInitData.token
+  // The asset token and never the app token: this one ends up in the DOM, in a
+  // copied image address and in anything that keeps a URL, so it is minted
+  // read-only and expires in half an hour rather than a year. Without one the
+  // URL goes as it is, and its load fails where it needs a credential.
+  const token = shellInitData.asset
   if (!token) return url
 
   const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token
@@ -1202,8 +1202,11 @@ if (typeof window !== 'undefined') {
     if (data.type === 'token-refresh' && shellInitData) {
       shellInitData.token = data.token as string
       // The asset token expires far sooner than the app token, so the refresh
-      // is what keeps later image URLs working.
-      if (typeof data.asset === 'string') shellInitData.asset = data.asset
+      // is what keeps later image URLs working. A refresh whose asset mint
+      // failed carries none, and the one held stays.
+      if (typeof data.asset === 'string' && data.asset) {
+        shellInitData.asset = data.asset
+      }
     }
 
     // Handle clipboard result

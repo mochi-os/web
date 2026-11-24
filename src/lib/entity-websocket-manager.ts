@@ -6,12 +6,7 @@
 // connection status snapshots and retry telemetry for chat and games.
 
 import { useAuthStore } from '../stores/auth-store'
-import {
-  websocketFailed,
-  websocketOpened,
-  websocketProtocols,
-  websocketQueryToken,
-} from './websocket-token'
+import { websocketProtocols } from './websocket-token'
 
 // Reconnect backoff, doubling to a 30s ceiling with jitter: a flat retry has
 // every tab hammering the server in lockstep for as long as it is down.
@@ -41,15 +36,11 @@ export interface EntityWebsocketOptions {
   open?: () => void
 }
 
+// The token rides in the subprotocol, never in the URL. key is a route
+// parameter, so it is encoded: a '#' in it would truncate the URL.
 function getWebSocketUrl(key: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  // The token rides in the subprotocol, so the URL carries one only where the
-  // page has fallen back for a server that ignores it.
-  const token = websocketQueryToken(useAuthStore.getState().token)
-  const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
-  // key is a route parameter: a '#' in it truncates the URL and drops the
-  // token entirely, so the socket would connect unauthenticated.
-  return `${protocol}//${window.location.host}/_/websocket?key=${encodeURIComponent(key)}${tokenParam}`
+  return `${protocol}//${window.location.host}/_/websocket?key=${encodeURIComponent(key)}`
 }
 
 class EntityWebsocketManager {
@@ -139,13 +130,8 @@ class EntityWebsocketManager {
       const protocols = websocketProtocols(useAuthStore.getState().token)
       const ws = new WebSocket(getWebSocketUrl(key), protocols)
       this.connections.set(key, ws)
-      // A handshake that never opens is how a server that ignores the token
-      // subprotocol presents itself, and the next attempt then falls back.
-      let established = false
 
       ws.onopen = () => {
-        established = true
-        websocketOpened(protocols)
         this.connectionAttempts.set(key, false)
         // A connection that lasted is not a failure: reset so the next drop
         // retries promptly instead of inheriting an old backoff.
@@ -172,7 +158,6 @@ class EntityWebsocketManager {
       }
 
       ws.onclose = () => {
-        if (!established) websocketFailed(protocols)
         // Only the socket that owns the map entry may act here. A socket the
         // server closed keeps its handlers while CLOSING, and a subscriber
         // arriving in that window opens a replacement — which this handler
