@@ -264,3 +264,65 @@ describe('useLoadMore cursors', () => {
     expect(result.current.hasMore).toBe(false)
   })
 })
+
+describe('useLoadMore filters', () => {
+  // A route keyed on its filter: the filter and the loader's page for it
+  // arrive in the same render.
+  function routed() {
+    const fetcher = vi.fn(
+      async (_args: { status: string; page: number; limit: number }) => ({
+        items: rows(900, 1),
+        total: 1,
+        next: '',
+      })
+    )
+    const hook = renderHook(
+      ({ status, items }: { status: string; items: Row[] }) =>
+        useLoadMore<Row, { status: string }>({
+          fetcher,
+          initial: { items, total: items.length, next: '' },
+          params: { status },
+        }),
+      { initialProps: { status: 'open', items: rows(1, 3) } }
+    )
+    return { fetcher, ...hook }
+  }
+
+  it("takes a filter's first page from the loader that answered it", async () => {
+    const { fetcher, result, rerender } = routed()
+    const resolved = rows(200, 2)
+    rerender({ status: 'resolved', items: resolved })
+    await waitFor(() => expect(result.current.items).toEqual(resolved))
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('asks for a filter the loader did not answer', async () => {
+    const { fetcher, result, rerender } = routed()
+    const held = result.current.items
+    rerender({ status: 'resolved', items: held })
+    await waitFor(() =>
+      expect(result.current.items.map((row) => row.id)).toEqual([900])
+    )
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls[0][0]).toMatchObject({
+      status: 'resolved',
+      page: 1,
+    })
+  })
+
+  it('asks for a filter it returns to after the loader re-read the page', async () => {
+    const { fetcher, result, rerender } = routed()
+    // The loader re-reads the same filter (an invalidation), then the filter
+    // changes twice with no new page from it.
+    const reread = rows(200, 2)
+    rerender({ status: 'open', items: reread })
+    rerender({ status: 'resolved', items: reread })
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1))
+    rerender({ status: 'open', items: reread })
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2))
+    expect(fetcher.mock.calls[1][0]).toMatchObject({ status: 'open' })
+    await waitFor(() =>
+      expect(result.current.items.map((row) => row.id)).toEqual([900])
+    )
+  })
+})

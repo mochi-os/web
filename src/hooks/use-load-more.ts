@@ -110,6 +110,11 @@ export function useLoadMore<T, P = Record<string, unknown>>(
   const firstRun = useRef(true)
   const paramsKeyRef = useRef(paramsKey)
   const initialItemsRef = useRef(initial?.items)
+  // The params a caller's first page arrived with, in the commit that adopted
+  // it. A route keyed on its filter hands over the new filter's page in the
+  // same render as the filter, so the params effect has nothing to ask; a
+  // filter the loader does not read still changes with the page unchanged.
+  const adopted = useRef<string | undefined>(undefined)
   // The newest first page: an answer to an older one is dropped, so a filter
   // changed while a page was on its way cannot leave the old filter's rows.
   const generation = useRef(0)
@@ -134,6 +139,7 @@ export function useLoadMore<T, P = Record<string, unknown>>(
   useEffect(() => {
     if (initialItems && initialItems !== initialItemsRef.current) {
       initialItemsRef.current = initialItems
+      adopted.current = paramsKey
       generation.current += 1
       itemsRef.current = initialItems
       setItems(initialItems)
@@ -142,7 +148,7 @@ export function useLoadMore<T, P = Record<string, unknown>>(
       setPage(1)
       setIsLoading(false)
     }
-  }, [initialItems, initialTotal, initialNext])
+  }, [initialItems, initialTotal, initialNext, paramsKey])
 
   const fetchPage = useCallback(
     async (request: LoadMoreRequest, replace: boolean) => {
@@ -181,15 +187,21 @@ export function useLoadMore<T, P = Record<string, unknown>>(
     []
   )
 
-  // Refetch when params change
+  // Refetch when params change, unless the caller's loader has just answered
+  // them: asking again would send the same request twice and replace the
+  // list twice.
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false
       paramsKeyRef.current = paramsKey
+      adopted.current = undefined
       return
     }
     if (paramsKeyRef.current === paramsKey) return
     paramsKeyRef.current = paramsKey
+    const answered = adopted.current === paramsKey
+    adopted.current = undefined
+    if (answered) return
     void fetchPage({ page: 1, limit }, true)
   }, [paramsKey, limit, fetchPage])
 
