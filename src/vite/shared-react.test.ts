@@ -308,4 +308,22 @@ describe('mochiPlugin: React as shared files', () => {
     expect(existsSync(path.join(out, 'index.html'))).toBe(true)
     expect(existsSync(path.join(out, 'assets/shared'))).toBe(false)
   }, 60000)
+
+  // React is left external before the build knows whether it is there, so an
+  // app that imports it with none installed beside it has no shared files to
+  // take it from. The build says that, not that the shared files lack a name.
+  it('fails the build, naming the cause, where an app imports React that is not installed', async () => {
+    const root = temporary()
+    writeFileSync(
+      path.join(root, 'index.html'),
+      '<!doctype html><html><head><script type="module" src="/main.js"></script></head><body></body></html>'
+    )
+    writeFileSync(
+      path.join(root, 'main.js'),
+      `import { useState } from 'react'\nwindow.__state = useState\n`
+    )
+    await expect(bundle(root, path.join(root, 'dist'))).rejects.toThrow(
+      /imports react, but React is not installed where the app is/
+    )
+  }, 60000)
 })

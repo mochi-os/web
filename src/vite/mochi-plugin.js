@@ -281,7 +281,11 @@ export function mochiPlugin(options = {}) {
             for (const id of [...item.imports, ...item.dynamicImports]) {
               if (isReact(id) && !built?.names[id]) {
                 this.error(
-                  `${item.fileName} imports ${id}, which has no shared file`
+                  built
+                    ? `${item.fileName} imports ${id}, which has no shared file`
+                    : `${item.fileName} imports ${id}, but React is not installed ` +
+                        `where the app is (${root}): add react and react-dom to its ` +
+                        `package.json, or build with mochiPlugin({ shared: false })`
                 )
               }
             }
