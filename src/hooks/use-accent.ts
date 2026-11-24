@@ -29,8 +29,8 @@ function style(body: unknown): Style {
  * actions. Inside the shell it carries the read-only asset token, which core
  * honours only on the routes that serve assets (and on another app's only
  * where that route is shared, as people's style is), as an image is fetched
- * (shell-image.ts); a shell too old to hand one gives this app's own
- * resources the app token, as authenticatedUrl does, and others nothing.
+ * (shell-image.ts); with none it is fetched anonymously, as authenticatedUrl
+ * does, and the style route answers a public style.
  * Outside the shell it carries the page's session, which a GET can only spend
  * on an action marked as a read. An address on another origin, or one a URL
  * would rewrite on the way, is not fetched at all.
@@ -47,7 +47,7 @@ export async function fetchStyle(url: string): Promise<Style> {
     if (isInShell()) {
       const init = getShellInitData()
       const own = isOwnResource(absolute)
-      const token = init?.asset || (own ? init?.token : undefined)
+      const token = init?.asset
       const headers: Array<[string, string]> = token
         ? // eslint-disable-next-line lingui/no-unlocalized-strings -- an HTTP header name
           [['Authorization', `Bearer ${token}`]]

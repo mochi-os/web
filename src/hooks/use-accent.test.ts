@@ -87,12 +87,10 @@ describe('fetchStyle', () => {
     expect(fetched).toHaveLength(0)
   })
 
-  it('in a shell with no asset token, gives only its own app the app token', async () => {
+  it('in a shell with no asset token, sends no token at all, the app token least of all', async () => {
     shell.asset = undefined
     expect(await fetchStyle(STYLE)).toEqual({ accent: '#123456' })
-    expect(shell.asked[0].headers).toEqual([
-      ['Authorization', 'Bearer app-token'],
-    ])
+    expect(shell.asked[0].headers).toEqual([])
     fetched.length = 0
     expect(await fetchStyle('/people/x/-/style')).toEqual({
       accent: '#123456',
