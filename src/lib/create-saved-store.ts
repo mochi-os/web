@@ -3,9 +3,10 @@
 
 // Synchronous mirror of the saved items each app stores server-side:
 // `isSaved()` answers without awaiting, mutations apply optimistically and roll
-// back on failure. A change made while a load is in flight is replayed over
-// the list that load answers, which may have been read before the change
-// reached the server. Call `loadSaved()` once after login. Messages stay
+// back on failure. A list the server answers, to a load or to a write, may
+// have been read before a write still on its way reached the server, so the
+// changes from the oldest write unanswered when the list was asked for are
+// replayed over it. Call `loadSaved()` once after login. Messages stay
 // MessageDescriptors, resolved at mutation time so a locale switch shows in the
 // next toast.
 
@@ -41,8 +42,9 @@ export interface SavedStoreOptions<TItem, TInput> {
   /** The row to show immediately, before the server confirms it. */
   toItem: (input: TInput) => TItem
   /**
-   * The saved list an add or remove answered, or null when the answer holds
-   * none. Taken only when no other change has been made since.
+   * The saved list a write answered, or null when the answer holds none.
+   * Taken only when no other change has been made since, with the writes
+   * still on their way when it was sent replayed over it.
    */
   answered?: (result: unknown) => TItem[] | null
   messages: SavedStoreMessages
@@ -69,23 +71,73 @@ export function createSavedStore<TItem, TInput>({
   answered,
   messages,
 }: SavedStoreOptions<TItem, TInput>): SavedStore<TItem, TInput> {
-  let cache: TItem[] = []
-  let inflight: Promise<void> | null = null
-  // Changes made since the load in flight began, to replay over its answer.
-  let pending: Array<(items: TItem[]) => TItem[]> = []
-  let changes = 0
-
-  const note = (change: (items: TItem[]) => TItem[]) => {
-    changes += 1
-    if (inflight) pending.push(change)
+  type Change = (items: TItem[]) => TItem[]
+  interface Entry {
+    change: Change
+    // Made by a write the server has not answered yet.
+    open: boolean
   }
 
+  let cache: TItem[] = []
+  let inflight: Promise<void> | null = null
+  // The changes made to the mirror, oldest first, log[0] being change number
+  // `first`: kept from the oldest write still unanswered, and from where each
+  // list still asked for replays (`asks`).
+  let log: Entry[] = []
+  let first = 0
+  const asks: number[] = []
+
+  // How many changes have been made.
+  const count = () => first + log.length
+
+  // Where a list asked for now replays from: the oldest write unanswered.
+  const oldest = () => {
+    const index = log.findIndex((entry) => entry.open)
+    return first + (index === -1 ? log.length : index)
+  }
+
+  // Drop the changes no list could still need replayed.
+  const trim = () => {
+    const keep = Math.min(oldest(), ...asks) - first
+    if (keep <= 0) return
+    log = log.slice(keep)
+    first += keep
+  }
+
+  // Note a change made to the mirror, `open` while its write is unanswered.
+  const record = (change: Change, open: boolean): Entry => {
+    const entry = { change, open }
+    log.push(entry)
+    trim()
+    return entry
+  }
+
+  const settle = (entry: Entry) => {
+    entry.open = false
+    trim()
+  }
+
+  const ask = (): number => {
+    const from = oldest()
+    asks.push(from)
+    return from
+  }
+
+  const release = (from: number) => {
+    asks.splice(asks.indexOf(from), 1)
+    trim()
+  }
+
+  // A list the server answered, with the changes from `from` on replayed.
+  const replay = (items: TItem[], from: number): TItem[] =>
+    log.slice(from - first).reduce((rows, entry) => entry.change(rows), items)
+
   // Take the list a write answered, unless another change has followed it.
-  const adopt = (result: unknown, at: number) => {
-    if (!answered || changes !== at) return
+  const adopt = (result: unknown, at: number, from: number) => {
+    if (!answered || count() !== at) return
     const items = answered(result)
     if (!items) return
-    cache = items
+    cache = replay(items, from)
     emit()
   }
 
@@ -104,60 +156,71 @@ export function createSavedStore<TItem, TInput>({
   // existing mirror is left untouched.
   const loadSaved = (): Promise<void> => {
     if (inflight) return inflight
-    pending = []
+    const from = ask()
     inflight = api
       .list()
       .then((items) => {
-        cache = pending.reduce((rows, change) => change(rows), items)
+        cache = replay(items, from)
         emit()
       })
       .catch(() => {})
       .finally(() => {
         inflight = null
-        pending = []
+        release(from)
       })
     return inflight
+  }
+
+  // Make a change and send the write that makes it on the server, which may
+  // answer the saved list as it then stands; a failure makes `undo`.
+  const write = (
+    change: Change,
+    undo: Change,
+    send: () => Promise<unknown>,
+    toasts: { loading: string; success: string; failed: string }
+  ) => {
+    cache = change(cache)
+    const entry = record(change, true)
+    const at = count()
+    const from = ask()
+    emit()
+    // A send that throws rather than rejecting still settles its change.
+    const sent = new Promise<unknown>((resolve) => resolve(send()))
+    void toastAction(sent, {
+      loading: toasts.loading,
+      success: toasts.success,
+      error: (e) => getErrorMessage(e, toasts.failed),
+    })
+      .then((result) => adopt(result, at, from))
+      .catch(() => {
+        cache = undo(cache)
+        record(undo, false)
+        emit()
+      })
+      .finally(() => {
+        settle(entry)
+        release(from)
+      })
   }
 
   const addSaved = (input: TInput): void => {
     const id = inputId(input)
     if (isSaved(id)) return
-    const item = toItem(input)
-    cache = [item, ...cache]
-    note(including(item))
-    const at = changes
-    emit()
-    void toastAction(api.add(input), {
+    write(including(toItem(input)), without(id), () => api.add(input), {
       loading: i18n._(messages.saving),
       success: i18n._(messages.saved),
-      error: (e) => getErrorMessage(e, i18n._(messages.addFailed)),
+      failed: i18n._(messages.addFailed),
     })
-      .then((result) => adopt(result, at))
-      .catch(() => {
-        cache = without(id)(cache)
-        note(without(id))
-        emit()
-      })
   }
 
   const removeSaved = (id: string): void => {
     const previous = cache.find((item) => itemId(item) === id)
     if (!previous) return
-    cache = without(id)(cache)
-    note(without(id))
-    const at = changes
-    emit()
-    void toastAction(api.remove(id), {
+    write(without(id), including(previous), () => api.remove(id), {
       loading: i18n._(messages.removing),
       success: i18n._(messages.removed),
-      error: (e) => getErrorMessage(e, i18n._(messages.removeFailed)),
+      failed: i18n._(messages.removeFailed),
     })
-      .then((result) => adopt(result, at))
-      .catch(() => {
-        cache = including(previous)(cache)
-        note(including(previous))
-        emit()
-      })
   }
 
   const toggleSaved = (input: TInput): boolean => {
@@ -172,18 +235,16 @@ export function createSavedStore<TItem, TInput>({
 
   const clearSaved = (): void => {
     const previous = cache
-    cache = []
-    note(() => [])
-    emit()
-    void toastAction(api.clear(), {
-      loading: i18n._(messages.clearing),
-      success: i18n._(messages.cleared),
-      error: (e) => getErrorMessage(e, i18n._(messages.clearFailed)),
-    }).catch(() => {
-      cache = previous
-      note(() => previous)
-      emit()
-    })
+    write(
+      () => [],
+      () => previous,
+      () => api.clear(),
+      {
+        loading: i18n._(messages.clearing),
+        success: i18n._(messages.cleared),
+        failed: i18n._(messages.clearFailed),
+      }
+    )
   }
 
   const onSavedChange = (callback: () => void): (() => void) => {

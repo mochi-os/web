@@ -214,6 +214,91 @@ describe('createSavedStore', () => {
       expect(store.isSaved('b')).toBe(true)
     })
 
+    it('keeps an addition still on its way when the load began', async () => {
+      // The list is read before the addition reaches the server.
+      const { store, api } = makeStore()
+      let answerAdd: (value: unknown) => void = () => {}
+      api.add.mockReturnValueOnce(new Promise((r) => (answerAdd = r)))
+      store.addSaved({ id: 'b', name: 'Beta' })
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      answer([{ id: 'a', name: 'Alpha' }])
+      await loading
+      expect(store.isSaved('b')).toBe(true)
+
+      answerAdd({})
+      await flush()
+      expect(store.isSaved('b')).toBe(true)
+    })
+
+    it('keeps a removal still on its way when the load began', async () => {
+      const { store, api } = makeStore()
+      await store.loadSaved()
+      let answerRemove: (value: unknown) => void = () => {}
+      api.remove.mockReturnValueOnce(new Promise((r) => (answerRemove = r)))
+      store.removeSaved('a')
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      answer([{ id: 'a', name: 'Alpha' }])
+      await loading
+      expect(store.isSaved('a')).toBe(false)
+
+      answerRemove({})
+      await flush()
+      expect(store.isSaved('a')).toBe(false)
+    })
+
+    it('undoes a write on its way when the load began that the server then refused', async () => {
+      const { store, api } = makeStore()
+      let refuse: (error: Error) => void = () => {}
+      api.add.mockReturnValueOnce(new Promise((_, r) => (refuse = r)))
+      store.addSaved({ id: 'b', name: 'Beta' })
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      refuse(new Error('refused'))
+      await flush()
+      answer([{ id: 'a', name: 'Alpha' }])
+      await loading
+
+      expect(store.isSaved('b')).toBe(false)
+    })
+
+    it('replays the changes after a write on its way in the order they were made', async () => {
+      // Saved again after a removal the server has already answered.
+      const { store, api } = makeStore()
+      await store.loadSaved()
+      let answerAdd: (value: unknown) => void = () => {}
+      api.add.mockReturnValueOnce(new Promise((r) => (answerAdd = r)))
+      store.addSaved({ id: 'b', name: 'Beta' })
+      store.removeSaved('b')
+      await flush()
+      const answer = deferredList(api)
+      const loading = store.loadSaved()
+
+      answer([
+        { id: 'a', name: 'Alpha' },
+        { id: 'b', name: 'Beta' },
+      ])
+      await loading
+      expect(store.isSaved('b')).toBe(false)
+      answerAdd({})
+    })
+
+    it("takes the list's word on a write answered before it was asked for", async () => {
+      // Saved here, then removed on another device before the load.
+      const { store, api } = makeStore()
+      store.addSaved({ id: 'b', name: 'Beta' })
+      await flush()
+      api.list.mockResolvedValueOnce([{ id: 'a', name: 'Alpha' }])
+
+      await store.loadSaved()
+
+      expect(store.isSaved('b')).toBe(false)
+    })
+
     it('leaves out an addition the server refused', async () => {
       const { store, api } = makeStore()
       api.add.mockRejectedValue(new Error('refused'))
@@ -280,6 +365,28 @@ describe('createSavedStore', () => {
       await flush()
 
       expect(store.isSaved('c')).toBe(true)
+    })
+
+    it('keeps an earlier write still on its way over the list a later one answered', async () => {
+      const { store, api } = makeStore(answered)
+      await store.loadSaved()
+      let answerFirst: (value: unknown) => void = () => {}
+      api.add
+        .mockReturnValueOnce(new Promise((r) => (answerFirst = r)))
+        .mockResolvedValueOnce({
+          saved: [
+            { id: 'c', name: 'Gamma' },
+            { id: 'a', name: 'Alpha' },
+          ],
+        })
+
+      store.addSaved({ id: 'b', name: 'Beta' })
+      store.addSaved({ id: 'c', name: 'Gamma' })
+      await flush()
+
+      expect(store.isSaved('b')).toBe(true)
+      expect(store.isSaved('c')).toBe(true)
+      answerFirst({})
     })
 
     it('keeps the mirror when the answer holds no list', async () => {

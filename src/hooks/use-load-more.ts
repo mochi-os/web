@@ -81,17 +81,27 @@ function appendRows<T>(held: T[], rows: T[], id: RowId<T> | undefined): T[] {
   return fresh.length === 0 ? held : [...held, ...fresh]
 }
 
-// The cursor to ask the next page with. A page that adds no row, or answers
+// The cursor to ask the next page with, undefined to page by number, or "" for
+// the end of the list. Paged by cursor, a page that adds no row, or answers
 // the cursor it was asked with, ends the list, so a server that repeats itself
-// cannot hold a list in a loop of requests.
+// cannot hold a list in a loop of requests. Paged by number, as Android's
+// Paging has it, an empty page ends the list, and otherwise it goes on until
+// the rows received, repeats included, reach the total: rows shifted under the
+// pages held neither end it early nor keep it from ending.
 function nextCursor(
   sent: string | undefined,
   answered: string | undefined,
+  count: number,
   added: number
 ): string | undefined {
-  if (answered === undefined) return undefined
+  if (answered === undefined) return count === 0 ? '' : undefined
   if (added === 0 || answered === sent) return ''
   return answered
+}
+
+// The cursor after a list's first page, which ends a numbered list when empty.
+function opening(answered: string | undefined, count: number) {
+  return answered === undefined && count === 0 ? '' : answered
 }
 
 export function useLoadMore<T, P = Record<string, unknown>>(
@@ -102,7 +112,13 @@ export function useLoadMore<T, P = Record<string, unknown>>(
 
   const [items, setItems] = useState<T[]>(initial?.items ?? [])
   const [total, setTotal] = useState<number>(initial?.total ?? 0)
-  const [next, setNext] = useState<string | undefined>(initial?.next)
+  const [next, setNext] = useState<string | undefined>(() =>
+    initial ? opening(initial.next, initial.items.length) : undefined
+  )
+  // The rows the pages so far answered, repeats included: a numbered list
+  // goes on until they reach the total.
+  const [read, setRead] = useState<number>(initial?.items.length ?? 0)
+  const readRef = useRef(read)
   const [page, setPage] = useState<number>(1)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -142,9 +158,11 @@ export function useLoadMore<T, P = Record<string, unknown>>(
       adopted.current = paramsKey
       generation.current += 1
       itemsRef.current = initialItems
+      readRef.current = initialItems.length
       setItems(initialItems)
+      setRead(initialItems.length)
       setTotal(initialTotal ?? 0)
-      setNext(initialNext)
+      setNext(opening(initialNext, initialItems.length))
       setPage(1)
       setIsLoading(false)
     }
@@ -164,15 +182,19 @@ export function useLoadMore<T, P = Record<string, unknown>>(
         if (current !== generation.current) return
         const held = replace ? [] : itemsRef.current
         const merged = appendRows(held, result.items, idRef.current)
+        const count = result.items.length
         itemsRef.current = merged
+        readRef.current = (replace ? 0 : readRef.current) + count
         setItems(merged)
+        setRead(readRef.current)
         setTotal(result.total)
         setNext(
           replace
-            ? result.next
+            ? opening(result.next, count)
             : nextCursor(
                 request.after,
                 result.next,
+                count,
                 merged.length - held.length
               )
         )
@@ -205,7 +227,7 @@ export function useLoadMore<T, P = Record<string, unknown>>(
     void fetchPage({ page: 1, limit }, true)
   }, [paramsKey, limit, fetchPage])
 
-  const hasMore = next === undefined ? items.length < total : next !== ''
+  const hasMore = next === undefined ? read < total : next !== ''
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasMore) return

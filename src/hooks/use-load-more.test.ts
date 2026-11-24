@@ -126,6 +126,118 @@ describe('useLoadMore', () => {
     expect(fetcher.mock.calls[0][0]).not.toHaveProperty('after')
     expect(result.current.hasMore).toBe(true)
   })
+
+  // A numbered page n of a list whose rows were shifted by `added` rows put at
+  // its top after the first page was read.
+  function shiftedBy(added: number, length: number) {
+    const shifted = [...rows(-added, added), ...rows(1, length)]
+    return vi.fn(async ({ page, limit }: { page: number; limit: number }) => ({
+      items: shifted.slice((page - 1) * limit, page * limit),
+      total: shifted.length,
+    }))
+  }
+
+  it('ends a numbered list whose rows shifted once the rows read reach the total', async () => {
+    // One row added at the top: the second page repeats row 20, the new row
+    // is never read, and the rows held stay one short of the total.
+    const fetcher = shiftedBy(1, 40)
+    const loaderItems = rows(1, 20)
+    const { result, rerender } = renderHook(() =>
+      useLoadMore<Row>({ fetcher, initial: { items: loaderItems, total: 40 } })
+    )
+    for (let i = 0; i < 2; i++) {
+      await act(async () => {
+        await result.current.loadMore()
+      })
+      rerender()
+    }
+    expect(result.current.items).toHaveLength(40)
+    expect(result.current.total).toBe(41)
+    expect(fetcher.mock.calls.map(([p]) => p.page)).toEqual([2, 3])
+    expect(result.current.hasMore).toBe(false)
+
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('goes on past a numbered page of rows it already holds', async () => {
+    // A page's worth of rows added at the top: the second page repeats the
+    // first, and the rest of the list follows it.
+    const fetcher = shiftedBy(20, 60)
+    const loaderItems = rows(1, 20)
+    const { result, rerender } = renderHook(() =>
+      useLoadMore<Row>({ fetcher, initial: { items: loaderItems, total: 60 } })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    rerender()
+    expect(result.current.items).toHaveLength(20)
+    expect(result.current.hasMore).toBe(true)
+
+    for (let i = 0; i < 2; i++) {
+      await act(async () => {
+        await result.current.loadMore()
+      })
+      rerender()
+    }
+    expect(fetcher.mock.calls.map(([p]) => p.page)).toEqual([2, 3, 4])
+    expect(result.current.items.map((row) => row.id)).toEqual(
+      rows(1, 60).map((row) => row.id)
+    )
+    expect(result.current.hasMore).toBe(false)
+  })
+
+  it('ends a numbered list on an empty page, whatever the total says', async () => {
+    const fetcher = vi.fn(
+      async ({ page }: { page: number; limit: number }) => ({
+        items: page === 2 ? rows(21, 10) : [],
+        total: 100,
+      })
+    )
+    const loaderItems = rows(1, 20)
+    const { result, rerender } = renderHook(() =>
+      useLoadMore<Row>({ fetcher, initial: { items: loaderItems, total: 100 } })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    rerender()
+    expect(result.current.hasMore).toBe(true)
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    rerender()
+    expect(result.current.hasMore).toBe(false)
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('pages by number again after a reset ended the list', async () => {
+    const fetcher = vi.fn(
+      async ({ page }: { page: number; limit: number }) => ({
+        items: page === 1 ? rows(1, 20) : [],
+        total: 45,
+      })
+    )
+    const loaderItems = rows(1, 20)
+    const { result } = renderHook(() =>
+      useLoadMore<Row>({ fetcher, initial: { items: loaderItems, total: 45 } })
+    )
+    await act(async () => {
+      await result.current.loadMore()
+    })
+    expect(result.current.hasMore).toBe(false)
+    await act(async () => {
+      await result.current.reset()
+    })
+    expect(result.current.items).toHaveLength(20)
+    expect(result.current.hasMore).toBe(true)
+  })
 })
 
 interface Versioned {
