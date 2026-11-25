@@ -120,6 +120,9 @@ describe("loader: menu's copy of a shared file", () => {
     posted.filter((message) => message.type === 'fetch' && message.url === url)
 
   // Web Crypto, which jsdom lacks and a browser in a secure context has.
+  // Kept before any test: globalThis.crypto is window.crypto, so reading it
+  // after afterEach has cleared it would give undefined.
+  const WEB_CRYPTO = globalThis.crypto.subtle
   function subtle(value: unknown) {
     Object.defineProperty(window.crypto, 'subtle', {
       configurable: true,
@@ -131,7 +134,7 @@ describe("loader: menu's copy of a shared file", () => {
   })
 
   it("asks for the app's own copy 10 s after menu's has not started", async () => {
-    subtle(globalThis.crypto.subtle)
+    subtle(WEB_CRYPTO)
     vi.useFakeTimers()
     loader(MANIFEST, './assets/index-a.js', [], SHARED)
     await vi.advanceTimersByTimeAsync(0)
@@ -147,6 +150,38 @@ describe("loader: menu's copy of a shared file", () => {
     expect(posted).toContainEqual({ type: 'fetch.abort', id: menu?.id })
     expect(asked(OWN)).toHaveLength(1)
     expect(document.querySelector('script[src]')).toBeNull()
+  })
+
+  // A slow link: menu's copy starts inside 10 s and takes far longer than
+  // that to finish. Seen in Chrome at 1G, react-dom-client took 59 s.
+  it("waits for menu's copy while bytes come, past 10 s, and ends it 15 s after they stop", async () => {
+    subtle(WEB_CRYPTO)
+    vi.useFakeTimers()
+    loader(MANIFEST, './assets/index-a.js', [], SHARED)
+    await vi.advanceTimersByTimeAsync(0)
+    const menu = asked(MENU)[0]
+    expect(menu?.progress).toBe(true)
+    // As the shell delivers it: from the parent, at the page's own origin.
+    const report = () => {
+      const event = new MessageEvent('message', {
+        data: { type: 'fetch.progress', id: menu?.id, received: 1 },
+        origin: window.location.origin,
+      })
+      Object.defineProperty(event, 'source', { value: window.parent })
+      window.dispatchEvent(event)
+    }
+    await vi.advanceTimersByTimeAsync(9_000)
+    report()
+    await vi.advanceTimersByTimeAsync(14_999)
+    report()
+    await vi.advanceTimersByTimeAsync(14_999)
+    // THE POINT: 39 s in, a download still moving is not dropped at 10 s and
+    // fetched a second time from the app's own folder.
+    expect(posted).not.toContainEqual({ type: 'fetch.abort', id: menu?.id })
+    expect(asked(OWN)).toEqual([])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(posted).toContainEqual({ type: 'fetch.abort', id: menu?.id })
+    expect(asked(OWN)).toHaveLength(1)
   })
 
   it("asks only for the app's own copy where the frame has no Web Crypto", async () => {
