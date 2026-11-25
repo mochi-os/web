@@ -708,7 +708,9 @@ export function createEntityApi<TShapes extends EntityApiShapes>({
     warmExport: async (
       entityId: string,
       options?: Pick<EntityTransferOptions, 'signal'>
-    ): Promise<{ data: { attachments: number; remaining: number } }> => {
+    ): Promise<{
+      data: { attachments: number; remaining: number; failed?: number }
+    }> => {
       // A round can spend up to a minute fetching, past the 30-second default.
       return request.post(
         endpoints.dataExportWarm(entityId),

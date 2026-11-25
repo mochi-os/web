@@ -222,7 +222,7 @@ describe('EntityBoardContainer', () => {
       dragAt('drop', strip, 10, 's', 'task')
       // After "v", the last card of the row for no value, where the card is
       // drawn, and with its value kept.
-      expect(onMoveObject).toHaveBeenCalledWith('s', 'done', { after: 'v' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('s', 'done', { after: 'v' }, undefined, undefined, undefined, undefined, undefined)
     })
 
     // Card a in To Do, and two cards in Done, drawn b then c.
@@ -243,13 +243,13 @@ describe('EntityBoardContainer', () => {
 
     it('drops a card on a collapsed column after its last card', async () => {
       const onMoveObject = await dropOnStrip()
-      expect(onMoveObject).toHaveBeenCalledWith('a', 'done', { after: 'c' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('a', 'done', { after: 'c' }, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('drops a card on a collapsed column below its last card when the Manual sort is descending', async () => {
       // Drawn c then b: b, the last, holds the lowest key.
       const onMoveObject = await dropOnStrip({ sort: { field: 'rank', direction: 'desc' } })
-      expect(onMoveObject).toHaveBeenCalledWith('a', 'done', { before: 'b' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('a', 'done', { before: 'b' }, undefined, undefined, undefined, undefined, undefined)
     })
   })
 
@@ -292,7 +292,7 @@ describe('EntityBoardContainer', () => {
       dragAt('dragOver', list, 45, 'x', 'task')
       dragAt('drop', list, 45, 'x', 'task')
       // A key between b's and c's, which the reversed list draws below c.
-      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', { after: 'b', before: 'c' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', { after: 'b', before: 'c' }, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('draws a gap between cards under the Manual sort', async () => {
@@ -306,7 +306,7 @@ describe('EntityBoardContainer', () => {
       dragAt('dragOver', list, 45, 'x', 'task')
       expect(gap()).toBeNull()
       dragAt('drop', list, 45, 'x', 'task')
-      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', undefined, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', undefined, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('writes nothing for a card dropped back in its own column under another sort', async () => {
@@ -351,14 +351,14 @@ describe('EntityBoardContainer', () => {
       const { onMoveObject, list } = await board()
       dragAt('dragOver', list, 95, 'a', 'task')
       dragAt('drop', list, 95, 'a', 'task')
-      expect(onMoveObject).toHaveBeenCalledWith('a', '', { after: 's' }, undefined, undefined, undefined, true)
+      expect(onMoveObject).toHaveBeenCalledWith('a', '', { after: 's' }, undefined, undefined, undefined, true, undefined)
     })
 
     it('reorders a card already drawn there without clearing it', async () => {
       const { onMoveObject, list } = await board()
       dragAt('dragOver', list, 10, 's', 'task')
       dragAt('drop', list, 10, 's', 'task')
-      expect(onMoveObject).toHaveBeenCalledWith('s', '', { before: 'u' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('s', '', { before: 'u' }, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('writes nothing for a card drawn there whose value no column is drawn for, dropped back under another sort', async () => {
@@ -403,18 +403,18 @@ describe('EntityBoardContainer', () => {
       // Between a and b in the high row.
       dragAt('dragOver', high, 145, 'c', 'task')
       dragAt('drop', high, 145, 'c', 'task')
-      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', { after: 'a', before: 'b' }, 'high', undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', { after: 'a', before: 'b' }, 'high', undefined, undefined, undefined, undefined)
 
       // Over the header: above a, at the top of the high row.
       dragAt('dragOver', header, 10, 'c', 'task')
       dragAt('drop', header, 10, 'c', 'task')
-      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', { before: 'a' }, 'high', undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', { before: 'a' }, 'high', undefined, undefined, undefined, undefined)
 
       // Below every row nothing is aimed at: no neighbour, and the card
       // keeps its own row.
       dragAt('dragOver', column, 1000, 'c', 'task')
       dragAt('drop', column, 1000, 'c', 'task')
-      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', {}, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenLastCalledWith('c', 'todo', {}, undefined, undefined, undefined, undefined, undefined)
     })
   })
 
@@ -459,7 +459,7 @@ describe('EntityBoardContainer', () => {
       // Above u.
       dragAt('dragOver', unset, 415, 's', 'task')
       dragAt('drop', unset, 415, 's', 'task')
-      expect(onMoveObject).toHaveBeenCalledWith('s', 'todo', { before: 'u' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('s', 'todo', { before: 'u' }, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('writes nothing for such a card dropped back there under another sort', async () => {
@@ -474,7 +474,7 @@ describe('EntityBoardContainer', () => {
       // Below s.
       dragAt('dragOver', unset, 475, 'a', 'task')
       dragAt('drop', unset, 475, 'a', 'task')
-      expect(onMoveObject).toHaveBeenCalledWith('a', 'todo', { after: 's' }, '', undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('a', 'todo', { after: 's' }, '', undefined, undefined, undefined, undefined)
     })
   })
 
@@ -511,7 +511,7 @@ describe('EntityBoardContainer', () => {
       dragAt('drop', list, 45, 'x', 'task')
       // Directly after p in the server's order, which the server unties
       // first, and so directly before q: drawn between q and p.
-      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', { after: 'p', before: 'q' }, undefined, undefined, undefined, undefined)
+      expect(onMoveObject).toHaveBeenCalledWith('x', 'todo', { after: 'p', before: 'q' }, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('orders cards made in one second by their ids, the greater first, as the server does, and reverses that too', async () => {
@@ -686,7 +686,55 @@ describe('EntityBoardContainer', () => {
     dragAt('dragOver', card('b1'), 182, 'a1', 'task')
     dragAt('drop', card('b1'), 182, 'a1', 'task')
     expect(onReparentObject).not.toHaveBeenCalled()
-    expect(onMoveObject).toHaveBeenCalledWith('a1', '', { after: 'b1', before: 'b2' }, undefined, undefined, 't2', undefined)
+    expect(onMoveObject).toHaveBeenCalledWith('a1', '', { after: 'b1', before: 'b2' }, undefined, undefined, 't2', undefined, undefined)
+  })
+
+  it('reorders a task among its own ticket’s tasks, naming the ticket as where it moves within', async () => {
+    // The ticket's tasks are drawn inside it whatever their own status.
+    const design = createMockEntityDesign({
+      classes: [
+        createMockEntityClass({ id: 'ticket', name: 'Ticket' }),
+        createMockEntityClass({ id: 'task', name: 'Task' }),
+      ],
+      fields: {
+        ticket: [
+          createMockEntityField({ id: 'title', name: 'Title', fieldtype: 'text' }),
+          createMockEntityField({ id: 'status', name: 'Status', fieldtype: 'enumerated' }),
+        ],
+        task: [
+          createMockEntityField({ id: 'title', name: 'Title', fieldtype: 'text' }),
+          createMockEntityField({ id: 'status', name: 'Status', fieldtype: 'enumerated' }),
+        ],
+      },
+      hierarchy: { ticket: [''], task: ['ticket'] },
+    })
+    const objects = [
+      createMockEntityObject({ id: 't2', class: 'ticket', rank: 'B', values: { title: 'Ticket', status: 'todo' } }),
+      createMockEntityObject({ id: 'b1', class: 'task', parent: 't2', rank: 'D', values: { title: 'Upper task', status: 'done' } }),
+      createMockEntityObject({ id: 'b2', class: 'task', parent: 't2', rank: 'E', values: { title: 'Lower task', status: 'todo' } }),
+      createMockEntityObject({ id: 'b3', class: 'task', parent: 't2', rank: 'F', values: { title: 'Moving task', status: 'todo' } }),
+    ]
+    const onMoveObject = vi.fn()
+    const { container } = render(
+      <EntityBoardContainer
+        design={design}
+        containerId='c1'
+        fallbackTitle={(object) => object.id}
+        objects={objects}
+        statusField='status'
+        onMoveObject={onMoveObject}
+        onReparentObject={vi.fn()}
+      />
+    )
+    await screen.findByText('Upper task')
+    const card = (id: string) => container.querySelector(`[data-card-id="${id}"]`)!
+    place(card('t2'), 100, 200)
+    place(card('b1'), 160, 30)
+    place(card('b2'), 196, 30)
+    place(card('b3'), 232, 30)
+    dragAt('dragOver', card('b1'), 182, 'b3', 'task')
+    dragAt('drop', card('b1'), 182, 'b3', 'task')
+    expect(onMoveObject).toHaveBeenCalledWith('b3', '', { after: 'b1', before: 'b2' }, undefined, undefined, undefined, undefined, 't2')
   })
 
   it('names the card a drop lands above, whatever nested cards in the column hold lower keys', async () => {
@@ -741,7 +789,7 @@ describe('EntityBoardContainer', () => {
     // The top edge of the top card: above it.
     dragAt('dragOver', card('air'), 2, 'openid', 'ticket')
     dragAt('drop', card('air'), 2, 'openid', 'ticket')
-    expect(onMoveObject).toHaveBeenCalledWith('openid', 'todo', { before: 'air' }, undefined, undefined, undefined, undefined)
+    expect(onMoveObject).toHaveBeenCalledWith('openid', 'todo', { before: 'air' }, undefined, undefined, undefined, undefined, undefined)
   })
 
   it('takes the gap down and refuses the drop where a task cannot go, between top-level cards', async () => {

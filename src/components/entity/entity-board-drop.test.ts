@@ -200,10 +200,10 @@ describe('entityBoardDropAction', () => {
     ).toEqual({ kind: 'move', value: '', place: { before: 'b1' }, parent: 't2' })
   })
 
-  it('reorders a task within its own ticket without naming a parent', () => {
+  it('reorders a task within its own ticket without naming a parent, only the ticket it moves within', () => {
     expect(
       entityBoardDropAction(objects.b1, objects, design, 'status', 'done', { parent: 't2', place: {} })
-    ).toEqual({ kind: 'move', value: '', place: {} })
+    ).toEqual({ kind: 'move', value: '', place: {}, scope: 't2' })
   })
 
   it('refuses a parent the hierarchy does not allow, or one under the dragged object', () => {
@@ -337,7 +337,7 @@ describe('entityBoardDropAction', () => {
       const valued = object('v1', 'task', 't2', { status: 'done' })
       expect(
         entityBoardDropAction(valued, { ...all, v1: valued }, design, 'status', '', { parent: 't2', place: { after: 'b1' } }, undefined, columns)
-      ).toEqual({ kind: 'move', value: '', place: { after: 'b1' } })
+      ).toEqual({ kind: 'move', value: '', place: { after: 'b1' }, scope: 't2' })
     })
   })
 })

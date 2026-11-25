@@ -57,7 +57,8 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
   onCreateClick?: (statusId: string, rowId?: string) => void
   /**
    * A drop that moves `objectId`. An empty `newStatus` keeps its column, and
-   * `clear` empties it: a drop on the column for no value.
+   * `clear` empties it: a drop on the column for no value. `scope` is the
+   * parent whose children a reorder among them moves within.
    */
   onMoveObject?: (
     objectId: string,
@@ -66,7 +67,8 @@ export interface EntityBoardContainerProps<TObject extends EntityObject> {
     newRow?: string,
     promote?: boolean,
     parent?: string,
-    clear?: boolean
+    clear?: boolean,
+    scope?: string
   ) => void
   onReparentObject?: (objectId: string, newParentId: string | null) => void
   onRenameColumn?: (
@@ -542,14 +544,17 @@ export function EntityBoardContainer<TObject extends EntityObject>({
           // place, as any drop between cards is under a sort other than
           // Manual, stays where it is: there is nothing to write. A value no
           // column is drawn for is drawn in the column for no value, and a
-          // drop in the row it is drawn in names no row.
+          // drop in the row it is drawn in names no row. A child dropped back
+          // among its parent's children beside none of them, its only one,
+          // stays too.
           const own = draggedObj.values[statusField] || ''
           if (
             !action.place?.after &&
             !action.place?.before &&
             !action.parent &&
             !action.promote &&
-            action.value === (columns.includes(own) ? own : '') &&
+            (action.scope !== undefined ||
+              action.value === (columns.includes(own) ? own : '')) &&
             action.row === undefined
           )
             return
@@ -560,7 +565,8 @@ export function EntityBoardContainer<TObject extends EntityObject>({
             action.row,
             action.promote,
             action.parent,
-            action.clear
+            action.clear,
+            action.scope
           )
         }
       : undefined

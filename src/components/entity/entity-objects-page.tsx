@@ -54,7 +54,11 @@ import type { EntityCreateObjectDialogProps } from './entity-create-object-dialo
 import type { EntityTreeViewProps } from './entity-tree-view'
 import type { EntityViewOptionsBarProps } from './entity-view-options-bar'
 import { EntityContentScroller } from './entity-content-scroller'
-import { entityObjectsQuery, entityPeopleQuery } from './entity-queries'
+import {
+  entityObjectsFetches,
+  entityObjectsQuery,
+  entityPeopleQuery,
+} from './entity-queries'
 import { entityCascade, entityParentValues } from './entity-board-drop'
 import {
   EntityDuplicateDialog,
@@ -112,6 +116,35 @@ function csvCell(value: unknown): string {
   return /^[=+\-@\t\r]/.test(text) ? `'${escaped}` : escaped
 }
 
+/**
+ * A move or reparent of one of a container's objects still being written,
+ * drawn over the item list from the drop until a list asked for after the
+ * server answered it lands: through the wait for the writes before it, which
+ * go one at a time, and through any list fetched meanwhile, which the server
+ * answered without it. The list itself is left alone, and each write is drawn
+ * over it as those before it left it, so one refused is no longer drawn and
+ * the others stand where they were dropped. `answered` is the count of list
+ * fetches begun (entityObjectsFetches) when the server answered: a list whose
+ * fetch began later holds the write.
+ */
+interface EntityWrite<TObject extends EntityObject> {
+  container: string
+  apply: (objects: TObject[]) => TObject[]
+  answered?: number
+}
+
+/** Whether `write` is drawn over `container`'s list fetched at `fetch`. */
+function entityWriteWaiting<TObject extends EntityObject>(
+  write: EntityWrite<TObject>,
+  container: string,
+  fetch: number
+) {
+  return (
+    write.container === container &&
+    (write.answered === undefined || fetch <= write.answered)
+  )
+}
+
 /** The container fields this page reads. Both `Crm` and `Project` are this. */
 export interface EntityObjectsPageContainer {
   id: string
@@ -129,7 +162,9 @@ export interface EntityObjectsPageContainer {
  */
 export interface EntityObjectsPageApi<TObject extends EntityObject> {
   share: (id: string) => Promise<{ data: { link: string } }>
-  warmExport: (id: string) => Promise<{ data?: { remaining: number } | null }>
+  warmExport: (
+    id: string
+  ) => Promise<{ data?: { remaining: number; failed?: number } | null }>
   exportData: (id: string) => Promise<Blob>
   unsubscribe: (id: string) => Promise<unknown>
   listObjects: (
@@ -224,6 +259,9 @@ export interface EntityObjectsPageLabels {
   exportData: string
   loading: string
   downloaded: (filename: string) => string
+  /** Shown instead of `downloaded` when the backup lacks attachments that
+   *  could not be fetched. */
+  exportMissing: (count: number) => string
   exportFailed: string
   /** Share's entries. */
   share: ShareLabels
@@ -373,7 +411,10 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const handleDataExport = useCallback(async () => {
     const warming = toast.loading(labels.loading)
     try {
-      const blob = await exportEntityArchive(api, container.id)
+      const { archive: blob, missing } = await exportEntityArchive(
+        api,
+        container.id
+      )
       const today = new Date().toISOString().split('T')[0]
       const slug = container.name
         .toLowerCase()
@@ -382,10 +423,12 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       const filename = `${slug}-${backupSlug}-${today}.zip`
       // A bare anchor-click save silently no-ops in the shell's sandboxed
       // iframe; shellSaveBlob hands the blob to the parent shell to save.
-      if (await shellSaveBlob(blob, filename)) {
-        toast.success(labels.downloaded(filename))
-      } else {
+      if (!(await shellSaveBlob(blob, filename))) {
         toast.error(labels.exportFailed)
+      } else if (missing > 0) {
+        toast.warning(labels.exportMissing(missing))
+      } else {
+        toast.success(labels.downloaded(filename))
       }
     } catch (err) {
       toast.error(getErrorMessage(err, labels.exportFailed))
@@ -538,9 +581,39 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   const queryClient = useQueryClient()
 
   // Load objects
-  const { data: objectListData, isLoading: objectsLoading } = useQuery(
+  const { data: listed, isLoading: objectsLoading } = useQuery(
     entityObjectsQuery(api.listObjects, containerId)
   )
+  // The moves and reparents still being written, in the order made, drawn
+  // over the list as the server sent it (see EntityWrite).
+  const [writes, setWrites] = useState<EntityWrite<TObject>[]>([])
+  const objectListData = useMemo(() => {
+    if (!listed) return listed
+    const drawn = writes.filter((write) =>
+      entityWriteWaiting(write, containerId, listed.fetch ?? 0)
+    )
+    if (drawn.length === 0) return listed
+    return {
+      ...listed,
+      objects: drawn.reduce(
+        (objects, write) => write.apply(objects),
+        listed.objects
+      ),
+    }
+  }, [listed, writes, containerId])
+  // A write the list now holds is let go, as is one answered for another
+  // container, whose list is not drawn here.
+  useEffect(() => {
+    if (!listed) return
+    setWrites((list) => {
+      const kept = list.filter(
+        (write) =>
+          entityWriteWaiting(write, containerId, listed.fetch ?? 0) ||
+          (write.container !== containerId && write.answered === undefined)
+      )
+      return kept.length === list.length ? list : kept
+    })
+  }, [listed, containerId])
   const objectsData = objectListData?.objects
   const watchedIds = objectListData?.watched
 
@@ -600,9 +673,32 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     return false
   }
 
+  // A write drawn over the list until it holds it (see EntityWrite).
+  const draw = (apply: (objects: TObject[]) => TObject[]) => {
+    const write: EntityWrite<TObject> = { container: containerId, apply }
+    setWrites((list) => [...list, write])
+    return write
+  }
+  // A write the server answered, drawn until a list fetched after `answered`.
+  const answer = (write: EntityWrite<TObject> | undefined, answered: number) =>
+    setWrites((list) =>
+      list.map((item) => (item === write ? { ...item, answered } : item))
+    )
+  // A write the server refused, drawn no longer: the list shows what the
+  // server holds, with the writes still waiting over it.
+  const refuse = (write: EntityWrite<TObject> | undefined) =>
+    setWrites((list) => list.filter((item) => item !== write))
+  // One write of this container's objects at a time, in the order made, the
+  // moves and reparents alike: on a subscribed container each is forwarded
+  // to the owner, and two sent together could reach it the other way round.
+  // A write waiting its turn is drawn from the drop all the same, since
+  // onMutate runs at once and only the request waits.
+  const writeScope = { id: `move:${containerId}` }
+
   // Move object mutation. An empty value keeps the column, as a reorder
   // sends; clear empties it, for a drop on the column for no value.
   const moveMutation = useMutation({
+    scope: writeScope,
     mutationFn: async ({
       objectId,
       field,
@@ -626,7 +722,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       parent?: string
       scope?: string
     }) => {
-      return api.moveObject(containerId, objectId, {
+      await api.moveObject(containerId, objectId, {
         field,
         value,
         clear: clear ? 'true' : undefined,
@@ -640,8 +736,10 @@ export function EntityObjectsPage<TObject extends EntityObject>({
         parent,
         scope,
       })
+      // Read as the answer arrives, before the list is asked for again.
+      return entityObjectsFetches()
     },
-    onMutate: async ({
+    onMutate: ({
       objectId,
       field,
       value,
@@ -652,130 +750,126 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       promote,
       parent,
       scope,
-    }) => {
-      // Await, as the reparent mutation below does: an in-flight objects fetch
-      // that resolves after the optimistic write would overwrite it and snap the
-      // dragged card back to where it started.
-      await queryClient.cancelQueries({
-        queryKey: ['objects', containerId],
-      })
-
-      const previousData = queryClient.getQueryData<{
-        objects: TObject[]
-        watched?: string[]
-      }>(['objects', containerId])
-
-      queryClient.setQueryData<{ objects: TObject[]; watched?: string[] }>(
-        ['objects', containerId],
-        (old) => {
-          if (!old) return old
-
-          // The keys the server will write: beside the first neighbour the
-          // drop named that is in the column or parent moved into, with any
-          // object sharing that neighbour's key untied first, or after every
-          // object's for a move to another column with neither.
-          const moved = old.objects.find((o) => o.id === objectId)
-          // The value written: the one sent, or none for a clear.
-          const target = clear ? '' : value
-          const current = (field && moved?.values[field]) || ''
-          const changed =
-            !!field && (clear ? current !== '' : !!value && value !== current)
-          // The column the object ends in, which its own value keeps when
-          // the move sends none.
-          const into = clear ? '' : value || current
-          // A neighbour counts as the server counts it: in the column moved
-          // into when the move names a field, and among the children of the
-          // parent moved into or reordered within when it names one.
-          const within = parent !== undefined ? parent : scope
-          let ranks = rankPlace(
-            old.objects,
-            objectId,
-            place ?? {},
-            (o) =>
-              (within === undefined || (o.parent || '') === within) &&
-              (!field || (o.values[field] || '') === into)
+    }) =>
+      draw((objects) => {
+        // The keys the server will write: beside the first neighbour the
+        // drop named that is in the column, lane and parent moved into, with
+        // any object sharing that neighbour's key untied first, or after
+        // every object's for a move to another column with neither.
+        const moved = objects.find((o) => o.id === objectId)
+        // The value written: the one sent, or none for a clear.
+        const target = clear ? '' : value
+        const current = (field && moved?.values[field]) || ''
+        const changed =
+          !!field && (clear ? current !== '' : !!value && value !== current)
+        // The column the object ends in, which its own value keeps when
+        // the move sends none.
+        const into = clear ? '' : value || current
+        // The lane it ends in, when the move names one.
+        const lane = rf && rowValue !== undefined ? rowValue : undefined
+        // A neighbour counts as the server counts it: in the column moved
+        // into when the move names a field, in the lane moved into when it
+        // names one, and among the children of the parent moved into or
+        // reordered within when it names one.
+        const within = parent !== undefined ? parent : scope
+        // Whether `o` is in the column or lane holding `value` of `fieldId`.
+        // The one for no value also holds, as boards draw them there, the
+        // objects whose value no option of the field has for the moved
+        // object's class, when the class enumerates it: a deleted option's,
+        // or another class's.
+        const holds = (o: TObject, fieldId: string, value: string) => {
+          const held = o.values[fieldId] || ''
+          if (held === value) return true
+          if (value || !moved) return false
+          const declared = (design.fields[moved.class] || []).find(
+            (f) => f.id === fieldId
           )
-          if (!ranks[objectId] && changed) {
-            const last = old.objects.reduce<string | null>(
-              (m, o) =>
-                o.id !== objectId && (m === null || rankCompare(o.rank, m) > 0)
-                  ? o.rank
-                  : m,
-              null
+          return (
+            declared?.fieldtype === 'enumerated' &&
+            !(design.options[moved.class]?.[fieldId] || []).some(
+              (option) => option.id === held
             )
-            ranks = { [objectId]: rankBetween(last, null) }
-          }
-
-          // A move into another parent takes that parent's board column and
-          // row, as the server copies them, so the card shows inside it at once.
-          // The object and each descendant take only what their own class
-          // accepts, and the move's own column and lane then cascade the same
-          // way, a column or a lane alone as well as both.
-          const newParent =
-            parent !== undefined && parent !== moved?.parent
-              ? old.objects.find((o) => o.id === parent)
-              : undefined
-          const inherited = newParent
-            ? entityParentValues(design, newParent)
-            : {}
-          const cascaded: Record<string, string> = {}
-          if (changed) {
-            cascaded[field] = target
-          }
-          if (
-            rf &&
-            rowValue !== undefined &&
-            rowValue !== (moved?.values[rf] || '')
-          ) {
-            cascaded[rf] = rowValue
-          }
-
-          return {
-            ...old,
-            objects: old.objects.map((item) => {
-              // A neighbour that shared its key takes the one it was untied to.
-              const obj =
-                ranks[item.id] && item.id !== objectId
-                  ? { ...item, rank: ranks[item.id] }
-                  : item
-              if (obj.id === objectId) {
-                // An empty value keeps the column, as the server keeps it,
-                // and a clear empties it.
-                const placed = entityCascade(design, obj, inherited)
-                const updatedValues = { ...placed.values }
-                if (field && (clear || value)) updatedValues[field] = target
-                if (rf && rowValue !== undefined) {
-                  updatedValues[rf] = rowValue
-                }
-                return {
-                  ...obj,
-                  rank: ranks[obj.id] ?? obj.rank,
-                  values: updatedValues,
-                  ...(promote ? { parent: '' } : {}),
-                  ...(parent !== undefined ? { parent } : {}),
-                }
-              }
-              // Cascade column and row changes to descendants.
-              if (isDescendant(obj, objectId, old.objects)) {
-                return entityCascade(
-                  design,
-                  entityCascade(design, obj, inherited),
-                  cascaded
-                )
-              }
-              return obj
-            }),
-          }
+          )
         }
-      )
+        let ranks = rankPlace(
+          objects,
+          objectId,
+          place ?? {},
+          (o) =>
+            (within === undefined || (o.parent || '') === within) &&
+            (!field || holds(o, field, into)) &&
+            (lane === undefined || holds(o, rf || '', lane))
+        )
+        if (!ranks[objectId] && changed) {
+          const last = objects.reduce<string | null>(
+            (m, o) =>
+              o.id !== objectId && (m === null || rankCompare(o.rank, m) > 0)
+                ? o.rank
+                : m,
+            null
+          )
+          ranks = { [objectId]: rankBetween(last, null) }
+        }
 
-      return { previousData }
-    },
-    onError: (err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        queryClient.setQueryData(['objects', containerId], context.previousData)
-      }
+        // A move into another parent takes that parent's board column and
+        // row, as the server copies them, so the card shows inside it at
+        // once. The object and each descendant take only what their own
+        // class accepts, and the move's own column and lane then cascade the
+        // same way, a column or a lane alone as well as both.
+        const newParent =
+          parent !== undefined && parent !== moved?.parent
+            ? objects.find((o) => o.id === parent)
+            : undefined
+        const inherited = newParent ? entityParentValues(design, newParent) : {}
+        const cascaded: Record<string, string> = {}
+        if (changed) {
+          cascaded[field] = target
+        }
+        if (
+          rf &&
+          rowValue !== undefined &&
+          rowValue !== (moved?.values[rf] || '')
+        ) {
+          cascaded[rf] = rowValue
+        }
+
+        return objects.map((item) => {
+          // A neighbour that shared its key takes the one it was untied to.
+          const obj =
+            ranks[item.id] && item.id !== objectId
+              ? { ...item, rank: ranks[item.id] }
+              : item
+          if (obj.id === objectId) {
+            // An empty value keeps the column, as the server keeps it, and a
+            // clear empties it.
+            const placed = entityCascade(design, obj, inherited)
+            const updatedValues = { ...placed.values }
+            if (field && (clear || value)) updatedValues[field] = target
+            if (rf && rowValue !== undefined) {
+              updatedValues[rf] = rowValue
+            }
+            return {
+              ...obj,
+              rank: ranks[obj.id] ?? obj.rank,
+              values: updatedValues,
+              ...(promote ? { parent: '' } : {}),
+              ...(parent !== undefined ? { parent } : {}),
+            }
+          }
+          // Cascade column and row changes to descendants.
+          if (isDescendant(obj, objectId, objects)) {
+            return entityCascade(
+              design,
+              entityCascade(design, obj, inherited),
+              cascaded
+            )
+          }
+          return obj
+        })
+      }),
+    onSuccess: (answered, _variables, write) => answer(write, answered),
+    onError: (err, _variables, write) => {
+      refuse(write)
       toast.error(getErrorMessage(err, labels.moveFailed))
     },
     onSettled: () => {
@@ -785,8 +879,9 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     },
   })
 
-  // Reparent object mutation
+  // Reparent object mutation, in turn with the moves.
   const reparentMutation = useMutation({
+    scope: writeScope,
     mutationFn: async ({
       objectId,
       parentId,
@@ -794,59 +889,38 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       objectId: string
       parentId: string | null
     }) => {
-      return api.updateObject(containerId, objectId, {
+      await api.updateObject(containerId, objectId, {
         parent: parentId || '',
       })
+      return entityObjectsFetches()
     },
-    onMutate: async ({ objectId, parentId }) => {
-      await queryClient.cancelQueries({
-        queryKey: ['objects', containerId],
-      })
-
-      const previousData = queryClient.getQueryData<{
-        objects: TObject[]
-        watched?: string[]
-      }>(['objects', containerId])
-
-      queryClient.setQueryData<{ objects: TObject[]; watched?: string[] }>(
-        ['objects', containerId],
-        (old) => {
-          if (!old) return old
-          // The object and its descendants take the new parent's board
-          // columns and rows, each what its own class accepts, as the server
-          // gives them.
-          const moved = old.objects.find((o) => o.id === objectId)
-          const newParent =
-            parentId && parentId !== moved?.parent
-              ? old.objects.find((o) => o.id === parentId)
-              : undefined
-          const inherited = newParent
-            ? entityParentValues(design, newParent)
-            : {}
-          return {
-            ...old,
-            objects: old.objects.map((obj) => {
-              if (obj.id === objectId) {
-                return {
-                  ...entityCascade(design, obj, inherited),
-                  parent: parentId || '',
-                }
-              }
-              if (isDescendant(obj, objectId, old.objects)) {
-                return entityCascade(design, obj, inherited)
-              }
-              return obj
-            }),
+    onMutate: ({ objectId, parentId }) =>
+      draw((objects) => {
+        // The object and its descendants take the new parent's board
+        // columns and rows, each what its own class accepts, as the server
+        // gives them.
+        const moved = objects.find((o) => o.id === objectId)
+        const newParent =
+          parentId && parentId !== moved?.parent
+            ? objects.find((o) => o.id === parentId)
+            : undefined
+        const inherited = newParent ? entityParentValues(design, newParent) : {}
+        return objects.map((obj) => {
+          if (obj.id === objectId) {
+            return {
+              ...entityCascade(design, obj, inherited),
+              parent: parentId || '',
+            }
           }
-        }
-      )
-
-      return { previousData }
-    },
-    onError: (err, _variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(['objects', containerId], context.previousData)
-      }
+          if (isDescendant(obj, objectId, objects)) {
+            return entityCascade(design, obj, inherited)
+          }
+          return obj
+        })
+      }),
+    onSuccess: (answered, _variables, write) => answer(write, answered),
+    onError: (err, _variables, write) => {
+      refuse(write)
       toast.error(getErrorMessage(err, labels.moveFailed))
     },
     onSettled: () => {
@@ -1172,15 +1246,19 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     newRow?: string,
     promote?: boolean,
     parent?: string,
-    clear?: boolean
+    clear?: boolean,
+    scope?: string
   ) => {
     moveMutation.mutate({
       objectId,
-      // The column field on every board move, so the server takes the drop's
-      // neighbours only from the column the card lands in; with no value it
-      // keeps the card's own. A move into another parent's children names it
-      // only to change it, those children being placed among themselves.
-      field: newValue || clear || parent === undefined ? columnField || '' : '',
+      // The column field only for a drop in a column drawn for a value, or a
+      // clear, so the server takes the drop's neighbours from the cards
+      // holding exactly that value. The column for no value also draws the
+      // cards whose value no column is drawn for, and a card's children are
+      // drawn whatever their own: naming the field there would refuse the
+      // neighbours whose value is not the card's, and a class without the
+      // field would be refused outright.
+      field: newValue || clear ? columnField || '' : '',
       value: newValue,
       clear,
       place,
@@ -1188,6 +1266,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       rowValue: newRow,
       promote,
       parent,
+      scope,
     })
   }
 
@@ -1214,10 +1293,13 @@ export function EntityObjectsPage<TObject extends EntityObject>({
   }
 
   // Reorder among the object's siblings, between the two it was dropped
-  // between, naming their parent so the server takes those two only from them.
-  const handleReorder = (objectId: string, place: EntityPlace) => {
-    const scope =
-      objectsData?.find((object) => object.id === objectId)?.parent || ''
+  // between, naming their parent, when the list drew only its children
+  // there, so the server takes those two only from them.
+  const handleReorder = (
+    objectId: string,
+    place: EntityPlace,
+    scope?: string
+  ) => {
     moveMutation.mutate({ objectId, field: '', value: '', place, scope })
   }
 

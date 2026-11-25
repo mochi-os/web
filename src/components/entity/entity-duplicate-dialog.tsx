@@ -40,6 +40,8 @@ interface Running {
   /** The whole file has reached the server, which is now importing it. */
   uploaded: boolean
   cancelled: boolean
+  /** Attachments the export could not fetch, which the copy therefore lacks. */
+  missing: number
   /** The "copying" toast, dismissed as soon as the user cancels. */
   toastId?: string | number
 }
@@ -72,6 +74,9 @@ export interface EntityDuplicateLabels {
   confirm: string
   duplicating: string
   duplicated: string
+  /** Shown instead of `duplicated` when the copy lacks attachments the
+   *  original's server could not fetch. */
+  missing: (count: number) => string
   failed: string
   /** The name the copy starts with, from the original's. */
   defaultName: (sourceName: string) => string
@@ -171,7 +176,7 @@ export function EntityDuplicateDialog({
     let design: Record<string, unknown> | null = null
     if (kind === 'everything' && !empty) {
       try {
-        archive = await exportEntityArchive(api, sourceId, {
+        const exported = await exportEntityArchive(api, sourceId, {
           signal,
           onProgress: (event) =>
             setDownloadProgress({
@@ -180,6 +185,8 @@ export function EntityDuplicateDialog({
               phase: 'uploading',
             }),
         })
+        archive = exported.archive
+        running.missing = exported.missing
       } finally {
         setDownloadProgress(null)
       }
@@ -228,10 +235,9 @@ export function EntityDuplicateDialog({
       signal.throwIfAborted()
     } catch (err) {
       if (running.uploaded && importMayStillRun(err)) {
-        // The server may still be writing, and the import is not one
-        // transaction, so deleting the copy now would leave what it writes
-        // next with no CRM or project. The copy is kept and opened instead,
-        // for the user to check.
+        // The server may still be writing, so deleting the copy now would
+        // race the import that is filling it. The copy is kept and opened
+        // instead, for the user to check.
         if (!running.cancelled) {
           toast.error(labels.incomplete)
           onOpenChange(false)
@@ -261,6 +267,7 @@ export function EntityDuplicateDialog({
       controller: new AbortController(),
       uploaded: false,
       cancelled: false,
+      missing: 0,
     }
     runningRef.current = running
     setPending(true)
@@ -269,7 +276,11 @@ export function EntityDuplicateDialog({
     try {
       const copyId = await run(running)
       toast.dismiss(working)
-      toast.success(labels.duplicated)
+      if (running.missing > 0) {
+        toast.warning(labels.missing(running.missing))
+      } else {
+        toast.success(labels.duplicated)
+      }
       onOpenChange(false)
       onDuplicated(copyId)
     } catch (err) {

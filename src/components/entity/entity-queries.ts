@@ -16,13 +16,28 @@ import type { EntityAttachment, EntityComment } from '../../types/entity-object'
 /** How long an item list or people list counts as fresh, in milliseconds. */
 export const ENTITY_LIST_FRESH = 60_000
 
+// How many item-list fetches have begun, for every container alike.
+let fetches = 0
+
+/**
+ * The count of item-list fetches begun so far. Each list carries the count
+ * its own fetch began at as `fetch`, so a list whose count is greater than
+ * the one a write was answered at was asked for after it, and holds it.
+ */
+export function entityObjectsFetches() {
+  return fetches
+}
+
 export function entityObjectsQuery<TList extends { objects: unknown[] }>(
   listObjects: (containerId: string) => Promise<{ data: TList }>,
   containerId: string
 ) {
   return queryOptions({
     queryKey: ['objects', containerId],
-    queryFn: async () => (await listObjects(containerId)).data,
+    queryFn: async (): Promise<TList & { fetch: number }> => {
+      const number = ++fetches
+      return { ...(await listObjects(containerId)).data, fetch: number }
+    },
     staleTime: ENTITY_LIST_FRESH,
   })
 }

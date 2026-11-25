@@ -24,6 +24,7 @@ const labels = {
   defaultName: (name: string) => `Duplicate of ${name}`,
   leftBehind: 'The unfinished copy could not be removed',
   incomplete: 'The copy may be incomplete',
+  missing: (count: number) => `Copied without ${count} attachments`,
 }
 
 const archive = new Blob(['zip'])
@@ -98,6 +99,30 @@ describe('EntityDuplicateDialog', () => {
     )
     expect(api.importDesign).not.toHaveBeenCalled()
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('says the copy lacks the attachments the original could not fetch', async () => {
+    vi.mocked(api.warmExport)
+      .mockReset()
+      .mockResolvedValue({ data: { remaining: 0, failed: 2 } })
+    const success = vi.spyOn(toast, 'success')
+    const warning = vi.spyOn(toast, 'warning')
+    renderDialog()
+    submit()
+
+    await waitFor(() => expect(onDuplicated).toHaveBeenCalledWith('copy-fp'))
+    expect(warning).toHaveBeenCalledWith('Copied without 2 attachments')
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('reports a whole copy as duplicated', async () => {
+    const success = vi.spyOn(toast, 'success')
+    const warning = vi.spyOn(toast, 'warning')
+    renderDialog()
+    submit()
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith('CRM duplicated'))
+    expect(warning).not.toHaveBeenCalled()
   })
 
   it('copies the design alone when asked', async () => {

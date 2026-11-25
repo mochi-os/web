@@ -60,8 +60,12 @@ export interface EntityTreeViewProps<TObject extends EntityObject> {
   sort?: EntitySortState | null
   onCardClick: (object: TObject) => void
   onReparent?: (objectId: string, newParentId: string | null) => void
-  /** Move an object among its siblings, between the rows it was dropped between. */
-  onReorder?: (objectId: string, place: EntityPlace) => void
+  /**
+   * Move an object among its siblings, between the rows it was dropped
+   * between. `scope` is the parent whose children those rows are, "" for the
+   * top level, and none when the rows drawn there have more than one parent.
+   */
+  onReorder?: (objectId: string, place: EntityPlace, scope?: string) => void
   /** Move object to the end of another status section. */
   onMoveObject?: (
     objectId: string,
@@ -755,12 +759,22 @@ export function EntityTreeView<TObject extends EntityObject>({
               : object.parent && objectMap[object.parent]
                 ? object.parent
                 : ''
-          const rows = sortEntityObjects(
-            objects.filter((object) => home(object) === home(targetObj)),
-            sort
-          ).map((object) => object.id)
+          const level = objects.filter(
+            (object) => home(object) === home(targetObj)
+          )
+          const rows = sortEntityObjects(level, sort).map((object) => object.id)
           const place = entityListPlace(rows, dragged, over, position, sort)
-          if (place) onReorder(dragged, place)
+          // The parent the server takes the neighbours from, only when every
+          // row drawn there is its child: a section, or the top level holding
+          // rows whose parents are not shown, mixes parents, and naming one
+          // would refuse the neighbours of another.
+          const parent = draggedObj.parent || ''
+          const scope = level.every(
+            (object) => (object.parent || '') === parent
+          )
+            ? parent
+            : undefined
+          if (place) onReorder(dragged, place, scope)
         }
       }
     }

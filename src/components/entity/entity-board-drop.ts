@@ -200,6 +200,9 @@ export function entityBoardTopAllowed(
 /**
  * What a drop on the board does to the dragged object. A move's empty value
  * keeps its column; `clear` empties it, for a drop on the column for no value.
+ * `scope` is the parent whose children a reorder among them moves within: a
+ * card's children are drawn whatever their own column, so their neighbours
+ * are taken from that parent's children, not from a column.
  */
 export type EntityBoardDropAction =
   | {
@@ -210,6 +213,7 @@ export type EntityBoardDropAction =
       row?: string
       promote?: boolean
       parent?: string
+      scope?: string
     }
   | { kind: 'reparent'; parent: string }
 
@@ -256,7 +260,7 @@ export function entityBoardDropAction(
 
   if (drop.parent) {
     if (dragged.parent === drop.parent) {
-      return { kind: 'move', value: '', place: drop.place }
+      return { kind: 'move', value: '', place: drop.place, scope: drop.parent }
     }
     const parent = objects[drop.parent]
     if (!parent || !allows(parent.class)) return null

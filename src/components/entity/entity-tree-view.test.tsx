@@ -190,8 +190,9 @@ describe('EntityTreeView', () => {
     fireEvent(target, over)
     fireEvent.dragEnd(row('c3'), { dataTransfer })
     // Above the parent's first child; in the flattened section list the row
-    // above it is the parent itself.
-    expect(onReorder).toHaveBeenCalledWith('c3', { before: 'c1' })
+    // above it is the parent itself. Every row of the section is p1's child,
+    // so the server takes the neighbours from p1's children.
+    expect(onReorder).toHaveBeenCalledWith('c3', { before: 'c1' }, 'p1')
   })
 
   it('asks for a key past the row drawn below a drop when the Manual sort is descending', async () => {
@@ -235,7 +236,7 @@ describe('EntityTreeView', () => {
     fireEvent.dragEnd(row('a'), { dataTransfer })
     // Above b, below c: drawn in reverse, that is a key after b's and
     // before c's.
-    expect(onReorder).toHaveBeenCalledWith('a', { after: 'b', before: 'c' })
+    expect(onReorder).toHaveBeenCalledWith('a', { after: 'b', before: 'c' }, '')
   })
 
   /** Drags `dragged` over the top (or bottom) edge of row `target` and drops it. */
@@ -271,9 +272,9 @@ describe('EntityTreeView', () => {
     await screen.findByText('Child one')
     expect([...rows()].map((r) => r.getAttribute('data-card-id'))).toEqual(['p1', 'k1', 'p2', 'p3'])
     drop('p3', 'p2')
-    expect(onReorder).toHaveBeenCalledWith('p3', { after: 'p1', before: 'p2' })
+    expect(onReorder).toHaveBeenCalledWith('p3', { after: 'p1', before: 'p2' }, '')
     drop('p1', 'p2', 'bottom')
-    expect(onReorder).toHaveBeenLastCalledWith('p1', { after: 'p2', before: 'p3' })
+    expect(onReorder).toHaveBeenLastCalledWith('p1', { after: 'p2', before: 'p3' }, '')
   })
 
   it('names the rows of a grouped section either side of a drop, whatever their parents', async () => {
@@ -300,7 +301,80 @@ describe('EntityTreeView', () => {
     )
     await screen.findByText('Second')
     drop('c2', 'c3')
-    expect(onReorder).toHaveBeenCalledWith('c2', { after: 'x', before: 'c3' })
+    // The section holds a top-level row among p1's children, so no parent is
+    // named: the server would refuse x as a neighbour among p1's children.
+    expect(onReorder).toHaveBeenCalledWith('c2', { after: 'x', before: 'c3' }, undefined)
+  })
+
+  it('names no parent for a reorder among stories of two epics grouped by status', async () => {
+    // An agile backlog showing stories only, grouped by status: S1 and S3
+    // are E1's, S2 is E2's, and neither epic is shown.
+    const objects = [
+      createMockEntityObject({ id: 's1', parent: 'e1', rank: 'A', values: { title: 'Story one', status: 'todo' } }),
+      createMockEntityObject({ id: 's2', parent: 'e2', rank: 'B', values: { title: 'Story two', status: 'todo' } }),
+      createMockEntityObject({ id: 's3', parent: 'e1', rank: 'C', values: { title: 'Story three', status: 'todo' } }),
+      createMockEntityObject({ id: 's4', parent: 'e2', rank: 'D', values: { title: 'Story four', status: 'todo' } }),
+    ]
+    const onReorder = vi.fn()
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={objects}
+        peopleMap={{}}
+        viewFields='title'
+        statusField='status'
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Story four')
+    drop('s1', 's3', 'bottom')
+    expect(onReorder).toHaveBeenCalledWith('s1', { after: 's3', before: 's4' }, undefined)
+  })
+
+  it('names no parent for a reorder at the top level among rows whose parents are not shown, and names it when they share one', async () => {
+    // t is top level; a and b are children of a parent not in the list, so
+    // all three are drawn at the top level.
+    const mixed = [
+      createMockEntityObject({ id: 't', rank: 'A', values: { title: 'Top' } }),
+      createMockEntityObject({ id: 'a', parent: 'hidden', rank: 'B', values: { title: 'Alpha' } }),
+      createMockEntityObject({ id: 'b', parent: 'hidden', rank: 'C', values: { title: 'Beta' } }),
+    ]
+    const onReorder = vi.fn()
+    const { unmount } = render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={mixed}
+        peopleMap={{}}
+        viewFields='title'
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Beta')
+    drop('b', 'a')
+    expect(onReorder).toHaveBeenLastCalledWith('b', { after: 't', before: 'a' }, undefined)
+    unmount()
+    // Without t, every row drawn there is a child of the hidden parent.
+    render(
+      <EntityTreeView
+        design={createMockEntityDesign()}
+        containerId='c1'
+        storagePrefix='tests'
+        objects={mixed.slice(1)}
+        peopleMap={{}}
+        viewFields='title'
+        onCardClick={vi.fn()}
+        onReorder={onReorder}
+      />
+    )
+    await screen.findByText('Beta')
+    drop('b', 'a')
+    expect(onReorder).toHaveBeenLastCalledWith('b', { before: 'a' }, 'hidden')
   })
 
   it('takes a row of another section of a grouped list as a parent across its whole height, never as a place beside it', async () => {
@@ -332,7 +406,7 @@ describe('EntityTreeView', () => {
     expect(onReparent).toHaveBeenCalledWith('a', 'd')
     // Beside a row of its own section it is still a reorder.
     drop('a', 'b')
-    expect(onReorder).toHaveBeenCalledWith('a', { before: 'b' })
+    expect(onReorder).toHaveBeenCalledWith('a', { before: 'b' }, '')
   })
 
   it('draws rows sharing a key in the reverse of the server’s order under the descending Manual sort, and names them either side of a drop', async () => {
@@ -361,7 +435,7 @@ describe('EntityTreeView', () => {
     expect([...rows()].map((r) => r.getAttribute('data-card-id'))).toEqual(['r', 'q', 'p', 's'])
     // Between q and p: after p in the server's order and before q.
     drop('s', 'p')
-    expect(onReorder).toHaveBeenCalledWith('s', { after: 'p', before: 'q' })
+    expect(onReorder).toHaveBeenCalledWith('s', { after: 'p', before: 'q' }, '')
   })
 
   it('assumes no class when the design has none, rather than a task class', () => {
