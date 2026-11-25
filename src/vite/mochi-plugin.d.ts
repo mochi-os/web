@@ -49,7 +49,7 @@ export function loaderScript(
     names: Record<string, string>
     files: Record<string, string>
     menu: string
-  }
+  } | null
 ): Promise<string>
 
 /**

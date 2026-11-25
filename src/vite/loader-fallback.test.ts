@@ -184,6 +184,29 @@ describe("loader: menu's copy of a shared file", () => {
     expect(asked(OWN)).toHaveLength(1)
   })
 
+  // The shell's fetch threw: the network dropped, or the server closed the
+  // connection.
+  it("asks for the app's own copy at once when menu's fails", async () => {
+    subtle(WEB_CRYPTO)
+    vi.useFakeTimers()
+    loader(MANIFEST, './assets/index-a.js', [], SHARED)
+    await vi.advanceTimersByTimeAsync(0)
+    const menu = asked(MENU)[0]
+    expect(asked(OWN)).toEqual([])
+    // As the shell answers it: from the parent, at the page's own origin.
+    const event = new MessageEvent('message', {
+      data: { type: 'fetch.result', id: menu?.id, failed: true },
+      origin: window.location.origin,
+    })
+    Object.defineProperty(event, 'source', { value: window.parent })
+    window.dispatchEvent(event)
+    await vi.advanceTimersByTimeAsync(0)
+    // THE POINT: a failure is an answer, so the page does not wait out the
+    // 10 s first, and there is nothing left in the shell to end.
+    expect(asked(OWN)).toHaveLength(1)
+    expect(posted).not.toContainEqual({ type: 'fetch.abort', id: menu?.id })
+  })
+
   it("asks only for the app's own copy where the frame has no Web Crypto", async () => {
     subtle(undefined)
     vi.useFakeTimers()
