@@ -4,7 +4,12 @@
 # CI for this package itself; the workflow beside this one is `workflow_call`
 # only, invoked by the app repos for their own directories. Unlike those callers
 # this needs no synthesised workspace root - the package declares everything it
-# uses, so a plain install works from a bare checkout.
+# uses, so it installs from its own pnpm-lock.yaml in a bare checkout. Inside
+# the umbrella pnpm reads the workspace's lockfile and never this one, so after
+# changing package.json, regenerate it in this directory, in the build sandbox:
+# `pnpm install --lockfile-only --ignore-workspace --ignore-scripts`. It keeps
+# every resolution it already has and resolves only the changed specifiers; the
+# frozen install below fails until it is done.
 
 name: Library Checks
 
@@ -30,21 +35,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           version: 10
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: pnpm
 
+      # The committed lockfile, so CI tests the versions it names rather than
+      # whatever the ranges resolve to that day, and no install scripts: esbuild,
+      # swc and oxide ship platform binaries as optional dependencies, so the
+      # checks need no postinstall.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile=false
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Ordered cheapest-signal-first: types, then the suite, then style.
       - name: Typecheck
@@ -59,9 +68,9 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-  # Audits THIS library's graph, not the whole workspace: the canonical lockfile
-  # is the umbrella's and the umbrella has no CI, so a full-graph scan runs only
-  # locally, via `make audit` at the umbrella root.
+  # Audits THIS library's graph, its own lockfile, not the whole workspace: the
+  # canonical lockfile is the umbrella's and the umbrella has no CI, so a
+  # full-graph scan runs only locally, via `make audit` at the umbrella root.
   audit:
     # Scheduled and manual only. Advisories arrive on their own schedule, and a
     # new one appearing would otherwise fail an unrelated pull request.
@@ -70,15 +79,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           version: 10
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
 
