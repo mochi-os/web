@@ -1711,6 +1711,46 @@ describe('EntityObjectsPage moves', () => {
     error.mockRestore()
   })
 
+  it('drops a refused move’s card as the neighbour of a later move dropped beside it, drawing and sending that one beside its other neighbour', async () => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => 'toast')
+    const initial = [
+      card('a', 'a0', 1000, 'todo'),
+      card('b', 'a5', 2000, 'todo'),
+      card('c', 'a9', 3000, 'todo'),
+      card('y', 'aB', 4000, 'done'),
+    ]
+    const api = makeApi(initial)
+    const move = answered()
+    api.moveObject = move.fn as never
+    renderPage(
+      {
+        api,
+        design,
+        renderBoard: buttons({
+          // a from the top of To Do to its end, then y dropped just after it
+          // there.
+          first: (slot) => slot.onMoveObject?.('a', '', { after: 'c' }),
+          second: (slot) => slot.onMoveObject?.('y', 'todo', { after: 'a' }),
+        }),
+      },
+      initial
+    )
+    fireEvent.click(await screen.findByText('first'))
+    fireEvent.click(screen.getByText('second'))
+    await waitFor(() => expect(shown('todo')).toEqual(['b', 'c', 'a', 'y']))
+    move.calls[0].reject(new Error('refused'))
+    // a is back at the top, and y stays at the end, where it was dropped,
+    // not beside a.
+    await waitFor(() => expect(shown('todo')).toEqual(['a', 'b', 'c', 'y']))
+    await waitFor(() => expect(move.fn).toHaveBeenCalledTimes(2))
+    expect(move.fn).toHaveBeenLastCalledWith(
+      'c1',
+      'y',
+      expect.objectContaining({ after: undefined, before: undefined })
+    )
+    error.mockRestore()
+  })
+
   it('draws an answered move until a list asked for after the answer lands, then shows the server’s', async () => {
     const initial = [
       card('a', 'a0', 1000, 'todo'),

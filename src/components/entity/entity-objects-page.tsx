@@ -131,6 +131,10 @@ interface EntityWrite<TObject extends EntityObject> {
   container: string
   apply: (objects: TObject[]) => TObject[]
   answered?: number
+  // For a move: the object moved and the place it is drawn and sent to,
+  // which a refused move before it can change (see unanchor).
+  object?: string
+  place?: EntityPlace
 }
 
 /** Whether `write` is drawn over `container`'s list fetched at `fetch`. */
@@ -673,11 +677,43 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     return false
   }
 
+  // The moves not yet settled, in the order made. A refusal reads them at
+  // once, before the next move's request is built, where `writes` holds them
+  // only as of the last render.
+  const moves = useRef<EntityWrite<TObject>[]>([])
   // A write drawn over the list until it holds it (see EntityWrite).
   const draw = (apply: (objects: TObject[]) => TObject[]) => {
     const write: EntityWrite<TObject> = { container: containerId, apply }
     setWrites((list) => [...list, write])
     return write
+  }
+  // A move's write, with the object moved and the place it is drawn and sent
+  // to, which a refused move before it can change (unanchor).
+  const drawMove = (
+    object: string,
+    place: EntityPlace | undefined,
+    apply: (objects: TObject[]) => TObject[]
+  ) => {
+    const write = draw(apply)
+    write.object = object
+    write.place = place
+    moves.current.push(write)
+    return write
+  }
+  // A move waiting behind `refused` that was dropped beside its object, while
+  // that was drawn where `refused` put it, keeps only its other neighbour:
+  // beside the object it would land where the object still is, not where it
+  // was dropped. A later move of the object draws it again, and drops after
+  // that were made beside it there.
+  const unanchor = (refused: EntityWrite<TObject> | undefined) => {
+    const index = refused ? moves.current.indexOf(refused) : -1
+    if (index < 0 || !refused?.object) return
+    for (const later of moves.current.slice(index + 1)) {
+      if (later.object === refused.object) break
+      if (!later.place) continue
+      if (later.place.after === refused.object) later.place.after = undefined
+      if (later.place.before === refused.object) later.place.before = undefined
+    }
   }
   // A write the server answered, drawn until a list fetched after `answered`.
   const answer = (write: EntityWrite<TObject> | undefined, answered: number) =>
@@ -751,7 +787,7 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       parent,
       scope,
     }) =>
-      draw((objects) => {
+      drawMove(objectId, place, (objects) => {
         // The keys the server will write: beside the first neighbour the
         // drop named that is in the column, lane and parent moved into, with
         // any object sharing that neighbour's key untied first, or after
@@ -869,10 +905,12 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       }),
     onSuccess: (answered, _variables, write) => answer(write, answered),
     onError: (err, _variables, write) => {
+      unanchor(write)
       refuse(write)
       toast.error(getErrorMessage(err, labels.moveFailed))
     },
-    onSettled: () => {
+    onSettled: (_answered, _err, _variables, write) => {
+      moves.current = moves.current.filter((item) => item !== write)
       queryClient.invalidateQueries({
         queryKey: ['objects', containerId],
       })
@@ -1261,7 +1299,8 @@ export function EntityObjectsPage<TObject extends EntityObject>({
       field: newValue || clear ? columnField || '' : '',
       value: newValue,
       clear,
-      place,
+      // A place of the move's own: a refused move before it may change it.
+      place: place && { ...place },
       rowField: newRow !== undefined ? rowField : undefined,
       rowValue: newRow,
       promote,
@@ -1300,7 +1339,13 @@ export function EntityObjectsPage<TObject extends EntityObject>({
     place: EntityPlace,
     scope?: string
   ) => {
-    moveMutation.mutate({ objectId, field: '', value: '', place, scope })
+    moveMutation.mutate({
+      objectId,
+      field: '',
+      value: '',
+      place: { ...place },
+      scope,
+    })
   }
 
   const handleDeleteColumn = async (
