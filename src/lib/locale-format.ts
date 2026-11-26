@@ -992,6 +992,21 @@ export function formatSystemTimestamp(
   return `${y}-${m}-${d} ${hh}:${mm}:${ss}`
 }
 
+// The interface languages the runtime's list formatter has no data for, which
+// it answers in English: what separates their items, and the word before the
+// last for "and" and for "or", as the catalogues translate them.
+const listWords: Record<
+  string,
+  { separator: string; conjunction: string; disjunction: string }
+> = {
+  ay: { separator: ', ', conjunction: 'ukat', disjunction: 'jan ukax' },
+  bho: { separator: ', ', conjunction: 'आ', disjunction: 'या' },
+  ckb: { separator: '، ', conjunction: 'و', disjunction: 'یان' },
+  gn: { separator: ', ', conjunction: 'ha', disjunction: 'térã' },
+  ht: { separator: ', ', conjunction: 'ak', disjunction: 'oswa' },
+  om: { separator: ', ', conjunction: 'fi', disjunction: 'ykn' },
+}
+
 // Joins a list the way the language does - "a, b, or c", "a、b、c", "a ou b" -
 // so no sentence is assembled from a translated fragment and a separator.
 // Where the runtime has no list formatter the items are joined plainly.
@@ -1000,6 +1015,11 @@ export function formatList(
   language: string,
   type: 'conjunction' | 'disjunction' = 'conjunction'
 ): string {
+  const words = listWords[language.toLowerCase().split('-')[0]]
+  if (words) {
+    if (items.length < 2) return items.join('')
+    return `${items.slice(0, -1).join(words.separator)} ${words[type]} ${items[items.length - 1]}`
+  }
   // The apps compile against an ES2020 library, which has no ListFormat type;
   // the runtime has had it since 2019, so it is looked up structurally.
   const ListFormat = (

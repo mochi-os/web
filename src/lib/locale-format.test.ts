@@ -14,6 +14,7 @@ import {
   formatTime,
   formatRange,
   formatDateTime,
+  formatList,
   formatRelativeTime,
   formatUserTimestamp,
   formatWeekdayDay,
@@ -682,5 +683,24 @@ describe('a wall-clock time outside its day', () => {
     // 23:30 on the 13th in Tokyo is 14:30 UTC.
     expect(timestampAt('2026-03-14', -30, 'Asia/Tokyo')).toBe(utc(13, 14, 30))
     expect(timestampAt('2026-03-14', 750, 'Asia/Tokyo')).toBe(utc(14, 3, 30))
+  })
+})
+
+describe('a list in a language the runtime has no list data for', () => {
+  it('is joined with that language’s own words, not English', () => {
+    expect(formatList(['A', 'B', 'C'], 'ht')).toBe('A, B ak C')
+    expect(formatList(['A', 'B', 'C'], 'ht', 'disjunction')).toBe('A, B oswa C')
+    expect(formatList(['A', 'B'], 'gn')).toBe('A ha B')
+    expect(formatList(['A', 'B', 'C'], 'ckb')).toBe('A، B و C')
+    expect(formatList(['A', 'B'], 'om', 'disjunction')).toBe('A ykn B')
+    expect(formatList(['A', 'B'], 'bho')).toBe('A आ B')
+    expect(formatList(['A', 'B'], 'ay', 'disjunction')).toBe('A jan ukax B')
+    expect(formatList(['A'], 'ay')).toBe('A')
+    expect(formatList([], 'ay')).toBe('')
+  })
+
+  it('leaves the languages the runtime knows to it', () => {
+    expect(formatList(['A', 'B', 'C'], 'fr')).toBe('A, B et C')
+    expect(formatList(['A', 'B', 'C'], 'en')).toBe('A, B, and C')
   })
 })
