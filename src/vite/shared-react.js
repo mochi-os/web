@@ -5,7 +5,7 @@
 //
 // Every app bundles its own React into its entry chunk, so each release of an
 // app renames that chunk and browsers download React again with it. Built on
-// its own, from four fixed entries, React comes out byte for byte the same
+// its own, from fixed entries, React comes out byte for byte the same
 // whichever app builds it and whenever, so its files keep their names from
 // one release to the next, and every app names the same files.
 //
@@ -24,12 +24,16 @@ const ENTRIES = {
   'react-dom': 'react-dom',
   'react-dom-client': 'react-dom/client',
   'react-jsx-runtime': 'react/jsx-runtime',
+  // What a package built with the React Compiler imports.
+  'react-compiler-runtime': 'react/compiler-runtime',
 }
 
 const PREFIX = 'mochi-shared-react:'
 
 // Each entry's export names, from React's production build, or null where
-// React is not installed where the app is.
+// React is not installed where the app is. A React that is there but cannot
+// load (react-dom missing beside it, a package it requires missing) is an
+// error, reported as Node reports it.
 //
 // Its development build exports two more (act, captureOwnerStack), and which
 // one a require in this process gets depends on NODE_ENV and on what loaded
@@ -40,15 +44,16 @@ const PREFIX = 'mochi-shared-react:'
 function exportNames(root) {
   const script = `
 const load = require('node:module').createRequire(process.argv[1])
-const names = {}
 try {
-  for (const specifier of JSON.parse(process.argv[2])) {
-    names[specifier] = Object.keys(load(specifier))
-  }
+  load.resolve('react')
 } catch (error) {
   if (error.code !== 'MODULE_NOT_FOUND') throw error
   process.stdout.write('null')
   process.exit(0)
+}
+const names = {}
+for (const specifier of JSON.parse(process.argv[2])) {
+  names[specifier] = Object.keys(load(specifier))
 }
 process.stdout.write(JSON.stringify(names))`
   const env = { ...process.env, NODE_ENV: 'production' }

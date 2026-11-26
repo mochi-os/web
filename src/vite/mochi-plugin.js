@@ -62,6 +62,23 @@ export function manifest(bundle, entry, shared) {
   return [files, result]
 }
 
+// Rollup's external: React, and whatever the app leaves out itself, as
+// Rollup reads an id, a pattern or a list of either, or a function.
+function externals(theirs) {
+  if (theirs === undefined || theirs === null) return isReact
+  const listed =
+    typeof theirs === 'function'
+      ? theirs
+      : (id) =>
+          [theirs]
+            .flat()
+            .some((item) =>
+              item instanceof RegExp ? item.test(id) : item === id
+            )
+  return (id, parent, resolved) =>
+    isReact(id) || Boolean(listed(id, parent, resolved))
+}
+
 // Where every app looks for the shared files first: menu's own copy, which
 // the shell carries to any app's frame (shell.js), so the browser keeps them
 // once for every app. Exported for menu's tests, which hold it, the folder
@@ -231,13 +248,17 @@ export function mochiPlugin(options = {}) {
           // rather than styles each chunk injects as it executes: a page
           // painted unstyled until its code had loaded.
           cssCodeSplit: false,
-          rollupOptions: {
-            output: { format: 'system' },
-            // React comes from the shared files, as each chunk imports it.
-            ...(shared ? { external: isReact } : {}),
-          },
+          rollupOptions: { output: { format: 'system' } },
         },
       }
+    },
+    // React comes from the shared files, as each chunk imports it. Set on
+    // Rollup's own options, where the app's external is already in place to
+    // keep: config() would have Vite replace an app's function with this one,
+    // or put it in an app's list, where Rollup takes a function for an id.
+    options(rollup) {
+      if (!building || !shared) return null
+      return { ...rollup, external: externals(rollup.external) }
     },
     configResolved(config) {
       root = config.root

@@ -132,6 +132,7 @@ describe('mochiPlugin: React as shared files', () => {
       'react-dom',
       'react-dom-client',
       'react-jsx-runtime',
+      'react-compiler-runtime',
     ]) {
       const named = new RegExp('^' + entry + '-[\\w-]{8}\\.js$')
       expect(names.filter((name) => named.test(name))).toHaveLength(1)
@@ -169,9 +170,11 @@ describe('mochiPlugin: React as shared files', () => {
     // Each entry also exports the package's module.exports as its default, as
     // a CommonJS package that requires React reads it.
     const entries = shared(framed).filter(([name]) =>
-      /\/react(-dom|-dom-client|-jsx-runtime)?-[\w-]{8}\.js$/.test(name)
+      /\/react(-dom|-dom-client|-jsx-runtime|-compiler-runtime)?-[\w-]{8}\.js$/.test(
+        name
+      )
     )
-    expect(entries).toHaveLength(4)
+    expect(entries).toHaveLength(5)
     for (const [, bytes] of entries) {
       expect(bytes.toString('utf8')).toMatch(/\(\s*["']default["']\s*,/)
     }
@@ -233,6 +236,52 @@ describe('mochiPlugin: React as shared files', () => {
       /imports react-dom\/server, which has no shared file/
     )
   }, 60000)
+
+  // A package built with the React Compiler imports its runtime.
+  it('takes react/compiler-runtime from the shared files', async () => {
+    const root = app(
+      `import { c } from 'react/compiler-runtime'\nwindow.__cache = c\n`
+    )
+    const out = await bundle(root, path.join(root, 'dist'))
+    expect(readFileSync(path.join(out, 'index.html'), 'utf8')).toMatch(
+      /"react\/compiler-runtime":"shared\/react-compiler-runtime-[\w-]{8}\.js"/
+    )
+  }, 60000)
+
+  // An app that leaves packages out of its bundle itself keeps doing so, and
+  // React still comes from the shared files: as a list, Rollup took the
+  // plugin's function for an id and bundled React; as a function, the
+  // plugin's replaced the app's.
+  it.each([
+    ['a list', ['left-out']],
+    ['a function', (id: string) => id === 'left-out'],
+  ])(
+    "keeps an app's own external given as %s",
+    async (_name, external) => {
+      const root = app(
+        `import { useState } from 'react'\nimport left from 'left-out'\nwindow.__kept = [useState, left]\n`
+      )
+      const out = path.join(root, 'dist')
+      await build({
+        root,
+        configFile: false,
+        logLevel: 'silent',
+        base: './',
+        plugins: [mochiPlugin()],
+        build: {
+          outDir: out,
+          emptyOutDir: true,
+          rollupOptions: { external },
+        },
+      })
+      const own = [...files(out)].filter(
+        ([name]) => name.endsWith('.js') && !name.startsWith('assets/shared/')
+      )
+      expect(own.some(([, data]) => data.includes(MARKER))).toBe(false)
+      expect(own.some(([, data]) => data.includes('"left-out"'))).toBe(true)
+    },
+    60000
+  )
 
   it('gives the same files, byte for byte, from a different app', async () => {
     const root = app(OTHER)
@@ -307,6 +356,29 @@ describe('mochiPlugin: React as shared files', () => {
     const out = await bundle(root, path.join(root, 'dist'))
     expect(existsSync(path.join(out, 'index.html'))).toBe(true)
     expect(existsSync(path.join(out, 'assets/shared'))).toBe(false)
+  }, 60000)
+
+  // React there without react-dom: the build says what is missing, not that
+  // React is not installed.
+  it('fails the build naming what is missing where React is only half there', async () => {
+    const root = temporary()
+    writeFileSync(
+      path.join(root, 'index.html'),
+      '<!doctype html><html><head><script type="module" src="/main.js"></script></head><body></body></html>'
+    )
+    writeFileSync(
+      path.join(root, 'main.js'),
+      `import { useState } from 'react'\nwindow.__state = useState\n`
+    )
+    mkdirSync(path.join(root, 'node_modules'))
+    symlinkSync(
+      path.join(MODULES, 'react'),
+      path.join(root, 'node_modules', 'react'),
+      'dir'
+    )
+    const built = bundle(root, path.join(root, 'dist'))
+    await expect(built).rejects.toThrow(/Cannot find module 'react-dom'/)
+    await expect(built).rejects.not.toThrow(/React is not installed/)
   }, 60000)
 
   // React is left external before the build knows whether it is there, so an
