@@ -24,13 +24,14 @@ export default function configuration({
   directory,
   base = './',
   frame = true,
+  shared,
   router = true,
   plugins = [],
 }) {
   return {
     base,
     plugins: [
-      mochiPlugin({ frame }),
+      mochiPlugin({ frame, shared }),
       ...(router
         ? [tanstackRouter({ target: 'react', autoCodeSplitting: true })]
         : []),

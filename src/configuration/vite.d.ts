@@ -10,6 +10,12 @@ export interface Options {
   base?: string
   /** Whether the pages load in the shell's frame (default true). */
   frame?: boolean
+  /**
+   * Whether the build emits React's shared files (default: true in the frame,
+   * where the app takes React from them; false outside it, true only for the
+   * page that hosts them for every app, menu).
+   */
+  shared?: boolean
   /** Whether the app routes with TanStack Router file routes (default true). */
   router?: boolean
   /** The app's own plugins, after the shared ones. */
