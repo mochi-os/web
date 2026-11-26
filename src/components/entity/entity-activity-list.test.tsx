@@ -88,6 +88,100 @@ describe('EntityActivityList', () => {
     expect(screen.queryByText('Changed')).toBeNull()
   })
 
+  // The server names what an entry refers to; the list formats the rest by the
+  // field's type and never shows an id.
+  it('shows what the server named, and formats the rest by type', async () => {
+    const entry = (
+      id: string,
+      action: string,
+      field: string,
+      oldvalue: string,
+      newvalue: string,
+      display: Record<string, string>
+    ) => ({
+      id,
+      user: 'u1',
+      name: '',
+      action,
+      field,
+      oldvalue,
+      newvalue,
+      created: 1,
+      display,
+    })
+    const person = 'p'.repeat(50)
+    render(
+      <EntityActivityList
+        containerId='c1'
+        objectId='o1'
+        listActivity={vi.fn(async () => ({
+          data: {
+            activities: [
+              entry('a1', 'updated', 'stage', 'lead', 'won', {
+                field: 'Stage',
+                type: 'enumerated',
+                old: 'Lead',
+                new: 'Won',
+              }),
+              entry('a2', 'updated', 'owner', '', person, {
+                field: 'Owner',
+                type: 'user',
+                new: 'Ada Lovelace',
+              }),
+              entry('a3', 'moved', 'parent', '', 'obj9', { new: 'Launch' }),
+              entry('a4', 'updated', 'class', 'task', 'bug', {
+                old: 'Task',
+                new: 'Bug',
+              }),
+              entry('a5', 'linked', 'blocks', '', 'obj8', { new: 'Deploy' }),
+              entry('a6', 'updated', 'done', '0', '1', {
+                field: 'Done',
+                type: 'checkbox',
+              }),
+              entry('a7', 'updated', 'points', '', '1500', {
+                field: 'Points',
+                type: 'number',
+              }),
+              entry('a8', 'moved', 'parent', 'obj7', '', {}),
+            ],
+          },
+        }))}
+      />
+    )
+    expect(await screen.findByText('Won')).toBeInTheDocument()
+    expect(screen.getByText('Lead')).toBeInTheDocument()
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
+    expect(screen.getByText('Launch')).toBeInTheDocument()
+    expect(screen.getByText(/^Changed class/)).toBeInTheDocument()
+    expect(screen.getByText('Task')).toBeInTheDocument()
+    expect(screen.getByText('Bug')).toBeInTheDocument()
+    expect(screen.getByText(/^Blocks/)).toBeInTheDocument()
+    expect(screen.getByText('Deploy')).toBeInTheDocument()
+    expect(screen.getByText('No')).toBeInTheDocument()
+    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.getByText('1,500')).toBeInTheDocument()
+    // A parent that no longer exists reads as unknown, the top level by name.
+    expect(
+      screen.getByText('Unknown', { selector: '.line-through' })
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Top level')).toHaveLength(2)
+    // No stored id is ever shown: not an option's, a person's, an object's or a class's.
+    for (const raw of [
+      'lead',
+      'won',
+      person,
+      'obj9',
+      'obj8',
+      'obj7',
+      'task',
+      'bug',
+    ]) {
+      expect(screen.queryByText(raw)).toBeNull()
+    }
+    // A person the server could not name reads as unknown, not as their id.
+    expect(screen.queryByText('u1')).toBeNull()
+  })
+
   it('says the load failed rather than that there is no activity', async () => {
     render(
       <EntityActivityList

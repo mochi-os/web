@@ -51,6 +51,56 @@ describe('TreeRow', () => {
     expect(screen.queryByText('usr_3')).not.toBeInTheDocument()
   })
 
+  // As the board card shows them: a tick for a ticked box and nothing for an
+  // unticked one, never the stored 1 or 0, and a number in the reader's format.
+  it('shows a checkbox as a tick and a number formatted, never as stored', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nProvider i18n={i18n}>
+          <table>
+            <tbody>
+              <TreeRow
+                object={{
+                  id: 'o1',
+                  class: 'c',
+                  values: { ticked: '1', unticked: '0', amount: '1234567.50' },
+                }}
+                depth={0}
+                hasChildren={false}
+                isExpanded={false}
+                anySiblingHasChildren={false}
+                fields={[
+                  { id: 'ticked', name: 'Ticked', fieldtype: 'checkbox' },
+                  { id: 'unticked', name: 'Unticked', fieldtype: 'checkbox' },
+                  { id: 'amount', name: 'Amount', fieldtype: 'number' },
+                ]}
+                options={{}}
+                peopleMap={{}}
+                classMap={{ c: 'Class' }}
+                showId={false}
+                isDragOver={false}
+                isDragBefore={false}
+                isDragAfter={false}
+                canReorder={false}
+                canReparent={false}
+                onToggleExpand={() => {}}
+                onClick={() => {}}
+                onDragStart={() => {}}
+                onDragOver={() => {}}
+                onDragEnd={() => {}}
+              />
+            </tbody>
+          </table>
+        </I18nProvider>
+      </QueryClientProvider>
+    )
+    expect(screen.getByRole('img', { name: 'Ticked' })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: 'Unticked' })).toBeNull()
+    expect(screen.queryByText('1')).toBeNull()
+    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.getByText('1,234,567.50')).toBeInTheDocument()
+  })
+
   // Matches the header: the handle and the first content column stay put, and
   // everything after them scrolls.
   it('pins the handle and first content cells', () => {

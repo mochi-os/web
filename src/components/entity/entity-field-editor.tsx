@@ -23,6 +23,7 @@ import { PersonPicker, type Person } from '../person-picker'
 import { useFormat } from '../../hooks/use-format'
 import { decimalPlaces } from '../../lib/locale-format'
 import { textUnchanged } from '../../lib/change-detection'
+import { checklistItems } from './checklist'
 import type {
   EntityField,
   EntityFieldOption,
@@ -220,19 +221,9 @@ export function EntityFieldEditor({
           </div>
         )
       case 'checklist': {
-        // Array.isArray, not just the try: JSON.parse("5") returns 5, whose
-        // .length is undefined, so the === 0 guard below passes it through and
-        // .filter throws during render. Field values reach crm and projects
-        // from remote peers over values/update.
-        const items: EntityChecklistItem[] = (() => {
-          if (!value) return []
-          try {
-            const parsed = JSON.parse(value)
-            return Array.isArray(parsed) ? parsed : []
-          } catch {
-            return []
-          }
-        })()
+        // Field values reach crm and projects from remote peers over
+        // values/update, so the reader takes anything.
+        const items = checklistItems(value)
         if (items.length === 0)
           return <span className='text-sm text-muted-foreground'>—</span>
         const doneCount = items.filter((i) => i.done).length
@@ -496,18 +487,9 @@ function ChecklistEditor({
   const [newItemText, setNewItemText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Parse checklist items from JSON string. Array.isArray for the same reason
-  // as the read-only branch above: a non-array parse survives the length check
-  // and throws on .filter.
-  const items: EntityChecklistItem[] = (() => {
-    if (!value) return []
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  })()
+  // Read again on every render: a repaired item's id comes from its place in
+  // the list, so it is the same on each read and a toggle finds that one item.
+  const items = checklistItems(value)
 
   const doneCount = items.filter((item) => item.done).length
   const totalCount = items.length

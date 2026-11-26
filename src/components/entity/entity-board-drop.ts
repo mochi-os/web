@@ -196,3 +196,90 @@ export function entityBoardDropAction(
     ...(child ? { promote: true } : {}),
   }
 }
+
+/**
+ * Whether an object of `objectClass` takes `value` for `fieldId` when a move or
+ * a reparent cascades it from an ancestor, as the server decides: the class
+ * has the field and the value is one the field accepts. Fields are per class,
+ * so a child of another class may lack the field, or not offer the option, its
+ * ancestor's move names. An empty value clears the field and always passes.
+ */
+export function entityCascadeAccepts(
+  design: Pick<EntityDesign, 'fields' | 'options'>,
+  objectClass: string,
+  fieldId: string,
+  value: string
+) {
+  const field = (design.fields[objectClass] || []).find((f) => f.id === fieldId)
+  if (!field) return false
+  if (!value) return true
+  const number = (bound?: string) =>
+    bound && /^-?\d+(\.\d+)?$/.test(bound) ? Number(bound) : undefined
+  switch (field.fieldtype) {
+    case 'enumerated':
+      return (design.options[objectClass]?.[fieldId] || []).some(
+        (o) => o.id === value
+      )
+    case 'checkbox':
+      return ['0', '1', 'true', 'false'].includes(value)
+    case 'number': {
+      if (!/^-?\d+(\.\d+)?$/.test(value)) return false
+      const minimum = number(field.min)
+      const maximum = number(field.max)
+      return (
+        (minimum === undefined || Number(value) >= minimum) &&
+        (maximum === undefined || Number(value) <= maximum)
+      )
+    }
+    case 'date':
+      return (
+        /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+        (!field.min || value >= field.min) &&
+        (!field.max || value <= field.max)
+      )
+    case 'text':
+      return (
+        (!field.minlength || value.length >= field.minlength) &&
+        (!field.maxlength || value.length <= field.maxlength)
+      )
+    case 'user':
+      return /^\w{49,51}$/.test(value)
+    default:
+      return true
+  }
+}
+
+/**
+ * `object` with those of `values` (field id to value) its class accepts
+ * (entityCascadeAccepts), or the object itself when it takes none.
+ */
+export function entityCascade<TObject extends EntityObject>(
+  design: Pick<EntityDesign, 'fields' | 'options'>,
+  object: TObject,
+  values: Record<string, string>
+): TObject {
+  let taken: Record<string, string> | undefined
+  for (const [fieldId, value] of Object.entries(values)) {
+    if ((object.values[fieldId] || '') === value) continue
+    if (!entityCascadeAccepts(design, object.class, fieldId, value)) continue
+    taken = { ...(taken ?? object.values), [fieldId]: value }
+  }
+  return taken ? { ...object, values: taken } : object
+}
+
+/**
+ * The board column and row values a reparent copies from the new parent, for
+ * every view's column and row field, as the server copies them; a field the
+ * parent has no value for is cleared.
+ */
+export function entityParentValues(
+  design: Pick<EntityDesign, 'views'>,
+  parent: EntityObject
+) {
+  const values: Record<string, string> = {}
+  for (const view of design.views) {
+    if (view.columns) values[view.columns] = parent.values[view.columns] || ''
+    if (view.rows) values[view.rows] = parent.values[view.rows] || ''
+  }
+  return values
+}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useRef } from 'react'
-import { Plural } from '@lingui/react/macro'
+import { Plural, useLingui } from '@lingui/react/macro'
 import { Check, CheckSquare } from 'lucide-react'
 import { Card } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
@@ -11,8 +11,8 @@ import { cn } from '../../lib/utils'
 import { useFormat } from '../../hooks/use-format'
 import { decimalPlaces } from '../../lib/locale-format'
 import { entityAddress, entityAssets } from '../../lib/entity-endpoints'
+import { checklistItems } from './checklist'
 import type {
-  EntityChecklistItem,
   EntityClass,
   EntityDragPreview,
   EntityField,
@@ -95,6 +95,7 @@ export function EntityBoardCard<TObject extends EntityObject>({
   dragPreview,
 }: EntityBoardCardProps<TObject>) {
   const { formatDate, formatNumber } = useFormat()
+  const { t } = useLingui()
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isNested = depth > 0
@@ -165,29 +166,26 @@ export function EntityBoardCard<TObject extends EntityObject>({
           </span>
         )
 
-      case 'checklist':
-        try {
-          const items: EntityChecklistItem[] = JSON.parse(value)
-          if (items.length === 0) return null
-          const doneCount = items.filter((item) => item.done).length
-          const allDone = doneCount === items.length
-          return (
-            <span
-              key={field.id}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
-                allDone
-                  ? 'bg-success/10 text-success ring-success/30'
-                  : 'bg-surface-2 text-muted-foreground ring-border'
-              )}
-            >
-              <CheckSquare className='h-3 w-3' />
-              {doneCount}/{items.length}
-            </span>
-          )
-        } catch {
-          return null
-        }
+      case 'checklist': {
+        const items = checklistItems(value)
+        if (items.length === 0) return null
+        const doneCount = items.filter((item) => item.done).length
+        const allDone = doneCount === items.length
+        return (
+          <span
+            key={field.id}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
+              allDone
+                ? 'bg-success/10 text-success ring-success/30'
+                : 'bg-surface-2 text-muted-foreground ring-border'
+            )}
+          >
+            <CheckSquare className='h-3 w-3' />
+            {doneCount}/{items.length}
+          </span>
+        )
+      }
 
       case 'date':
         return (
@@ -197,10 +195,16 @@ export function EntityBoardCard<TObject extends EntityObject>({
         )
 
       case 'user': {
-        // The people list may not have synced yet on a fresh subscribe. Never
-        // fall back to the raw entity ID - show the avatar with a skeleton in
-        // place of the name until it resolves.
-        const name = peopleMap?.[value]
+        // The people list may not have loaded yet. Never fall back to the raw
+        // entity ID - show the avatar with a skeleton in place of the name
+        // until it resolves. A loaded list always holds the reader, so one
+        // that is empty is still loading; a person a loaded list lacks reads
+        // as unknown rather than loading for ever.
+        const name =
+          peopleMap?.[value] ??
+          (peopleMap && Object.keys(peopleMap).length > 0
+            ? t`Unknown`
+            : undefined)
         const assets = containerId
           ? entityAddress(() => entityAssets.user(containerId, value))
           : undefined

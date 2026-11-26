@@ -30,6 +30,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   Object.defineProperty(window, 'parent', {
     configurable: true,
     get() {
@@ -133,6 +134,43 @@ describe('shell-storage getItem', () => {
       value: 'wrong-type',
     })
     expect(await settledValue(pending)).toBe('PENDING')
+  })
+
+  it('tells a read the shell did not answer in time from nothing stored, and getItem still reads it as nothing', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const { getItem, readItem } = await import('./shell-storage')
+    const unanswered = readItem('key')
+    const plain = getItem('key')
+    await vi.advanceTimersByTimeAsync(2000)
+    vi.useRealTimers()
+    expect(await unanswered).toBeUndefined()
+    expect(await plain).toBeNull()
+
+    // Asked again, it reads the shell's reply, and the late reply to the read
+    // that timed out is not taken for it.
+    const again = readItem('key')
+    const [late, , next] = parentPostMessage.mock.calls.map((call) => call[0])
+    expect(next.type).toBe('storage.get')
+    dispatchFrom(window.parent, {
+      type: 'storage.result',
+      id: late.id,
+      value: 'late',
+    })
+    expect(await settledValue(again)).toBe('PENDING')
+    dispatchFrom(window.parent, {
+      type: 'storage.result',
+      id: next.id,
+      value: 'genuine',
+    })
+    expect(await again).toBe('genuine')
+
+    const absent = readItem('key')
+    dispatchFrom(window.parent, {
+      type: 'storage.result',
+      id: parentPostMessage.mock.calls[3][0].id,
+      value: null,
+    })
+    expect(await absent).toBeNull()
   })
 })
 

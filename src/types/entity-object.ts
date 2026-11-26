@@ -17,6 +17,8 @@ export interface EntityField {
   card: number
   position: string
   rows: number
+  min?: string
+  max?: string
   pattern?: string
   minlength?: number
   maxlength?: number
@@ -116,6 +118,21 @@ export interface EntityChecklistItem {
   done: boolean
 }
 
+/**
+ * What an activity entry names, as the server resolved it: the name and type
+ * of the field it changed in the object's class, and readable old and new
+ * values - an option's or a person's name, an object's title (a move's
+ * parents, a link's target) or a class's name (a change of class). A side is
+ * absent where the value is formatted by its field's type, or names nothing
+ * that still exists.
+ */
+export interface EntityActivityDisplay {
+  field?: string
+  type?: string
+  old?: string
+  new?: string
+}
+
 export interface EntityActivity {
   id: string
   user: string
@@ -125,6 +142,7 @@ export interface EntityActivity {
   oldvalue: string
   newvalue: string
   created: number
+  display?: EntityActivityDisplay
 }
 
 export interface EntityWatcher {

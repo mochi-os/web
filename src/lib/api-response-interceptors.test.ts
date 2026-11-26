@@ -51,6 +51,99 @@ describe('response interceptors', () => {
     expect(logout).toHaveBeenCalledWith('Session expired')
   })
 
+  // A 401 that is not core's word on the session is an app's answer, possibly
+  // relaying another server's, and only core can say the session has ended.
+  describe('a 401 signs out only when it is about this session', () => {
+    // Answers the request with [status] and [body], and core's identity
+    // check with [identity] (a status, or a dropped connection).
+    function network(status: number, body: unknown, identity: number | 'lost') {
+      return fakeNetwork((request) => {
+        if (request.url === '/_/identity') {
+          if (identity === 'lost') {
+            return Promise.reject(new TypeError('Failed to fetch'))
+          }
+          return { status: identity, body: {} }
+        }
+        return { status, body }
+      })
+    }
+    const client = () =>
+      createHttpClient({ handlers: createApiResponseHandlers() })
+
+    it("signs out on core's own refusal without asking again", async () => {
+      const { sent } = network(
+        401,
+        {
+          error: 'authentication_required',
+          message: 'Authentication required',
+        },
+        200
+      )
+      await client()
+        .get('/_/shell')
+        .catch(() => {})
+      expect(logout).toHaveBeenCalledWith('Session expired')
+      expect(sent.map((request) => request.url)).not.toContain('/_/identity')
+    })
+
+    it("does not take core's words from an app, which may be relaying a peer", async () => {
+      const { sent } = network(
+        401,
+        {
+          error: 'authentication_required',
+          message: 'Authentication required',
+        },
+        200
+      )
+      await client()
+        .get('/forums/x/-/posts')
+        .catch(() => {})
+      expect(logout).not.toHaveBeenCalled()
+      expect(sent.map((request) => request.url)).toContain('/_/identity')
+    })
+
+    it('keeps the session when an app answers 401 and core still knows it', async () => {
+      const { sent } = network(401, { error: 'Access denied' }, 200)
+      const failure = await client()
+        .get('/forums/x/-/posts')
+        .catch((e: unknown) => e)
+      expect(logout).not.toHaveBeenCalled()
+      expect(useAuthStore.getState().token).toBe('session-token')
+      expect((failure as HttpError).response?.status).toBe(401)
+      const check = sent.find((request) => request.url === '/_/identity')
+      expect(check?.method).toBe('GET')
+      expect(check?.headers.authorization).toBe('Bearer session-token')
+    })
+
+    it('signs out when core says the session has ended too', async () => {
+      network(401, { error: 'Access denied' }, 401)
+      await client()
+        .get('/forums/x/-/posts')
+        .catch(() => {})
+      expect(logout).toHaveBeenCalledWith('Session expired')
+    })
+
+    it('keeps the session when core cannot be asked', async () => {
+      network(401, { error: 'Access denied' }, 'lost')
+      await client()
+        .get('/forums/x/-/posts')
+        .catch(() => {})
+      expect(logout).not.toHaveBeenCalled()
+    })
+
+    it('asks core once for 401s that arrive together', async () => {
+      const { sent } = network(401, { error: 'Access denied' }, 200)
+      const answers = client()
+      await Promise.all([
+        answers.get('/forums/x/-/posts').catch(() => {}),
+        answers.get('/feeds/y/-/posts').catch(() => {}),
+      ])
+      expect(
+        sent.filter((request) => request.url === '/_/identity')
+      ).toHaveLength(1)
+    })
+  })
+
   it('a 401 on the login flow itself is the flow answering, not an expired session', async () => {
     await clientAnswering(401, {})
       .post('/_/auth/login')
