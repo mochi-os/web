@@ -4,5 +4,10 @@
 export function loader(
   manifest: [string[], Array<[number, number[]]>],
   entry: string,
-  styles?: string[]
+  styles?: string[],
+  shared?: {
+    names: Record<string, string>
+    files: Record<string, string>
+    menu: string
+  } | null
 ): void

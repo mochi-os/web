@@ -2,10 +2,18 @@
 // Copyright © 2026 Mochisoft OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  mkdtempSync,
+  rmSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { manifest, mochiPlugin } from './mochi-plugin.js'
@@ -174,17 +182,18 @@ function server(dist: string, frame?: string, sheets = false, fonts = false) {
       }
       if (frame && !pathname.startsWith('/app/assets/')) {
         body = Buffer.from(
-          body
-            .toString('utf8')
-            .replace(
-              '<head>',
-              `<head><script>window.name = ${JSON.stringify(frame)}` +
-                (sheets
-                  ? ";Object.defineProperty(document, 'adoptedStyleSheets', { value: [], writable: true })"
-                  : '') +
-                (fonts ? ';' + FONTS : '') +
-                '</script>'
-            )
+          body.toString('utf8').replace(
+            '<head>',
+            `<head><script>window.name = ${JSON.stringify(frame)}` +
+              (sheets
+                ? ";Object.defineProperty(document, 'adoptedStyleSheets', { value: [], writable: true })"
+                : '') +
+              (fonts ? ';' + FONTS : '') +
+              // Web Crypto, which jsdom lacks and a browser has: the shell
+              // page's, where the test gave it one (framed).
+              ";if (parent.__subtle) Object.defineProperty(crypto, 'subtle', { value: parent.__subtle })" +
+              '</script>'
+          )
         )
       }
       const promise = Promise.resolve(body) as Promise<Buffer> & {
@@ -219,16 +228,28 @@ type Result = {
   error?: string
 }
 
+// Where the shell carries React's shared files from, for any app's frame.
+const MENU_SHARED = '/menu/assets/shared/'
+
 // The page in a frame of a shell page that carries fetches, as shell.js's
 // handleFetch does: GETs under the frame's own app, answered with the bytes.
+// dist is the build to serve, this file's own app unless another is named.
+// menu is how the shell answers for menu's shared files: refused, as a shell
+// without that case does, unless it is named - carried, the same bytes the
+// app holds; missing, a 404; page, not a script; tampered, other bytes under
+// the same name.
 function framed(
   name: string,
   answer: 'script' | 'refuse' | 'page' = 'script',
   sheets = false,
-  fonts: boolean | 'refused' = false
+  fonts: boolean | 'refused' = false,
+  dist = output,
+  menu?: 'carried' | 'missing' | 'page' | 'tampered' | 'redirect' | 'partial',
+  subtle: boolean | 'rejects' = true
 ) {
-  const site = server(output, name, sheets, fonts !== false)
+  const site = server(dist, name, sheets, fonts !== false)
   const carried: string[] = []
+  const asks: string[] = [] // every URL the frame asked the shell for
   const dom = new JSDOM(
     `<!doctype html><html><body><iframe name="${name}" src="${ORIGIN}/app/?_shell=1"></iframe></body></html>`,
     {
@@ -237,6 +258,11 @@ function framed(
       resources: site.loader,
       beforeParse(window: Window) {
         window.TextDecoder = TextDecoder
+        if (subtle === 'rejects') {
+          window.__subtle = {
+            digest: () => Promise.reject(new Error('digest failed')),
+          }
+        } else if (subtle) window.__subtle = globalThis.crypto.subtle
       },
     }
   )
@@ -266,6 +292,46 @@ function framed(
       )
     }
     const url = new URL(String(data.url))
+    asks.push(url.href)
+    if (url.pathname.startsWith(MENU_SHARED) && menu && answer !== 'refuse') {
+      carried.push(url.href)
+      // partial: menu has every file but react-dom/client's, as a menu built
+      // with one file other than the app's would.
+      if (
+        menu === 'missing' ||
+        (menu === 'partial' && url.pathname.includes('/react-dom-client-'))
+      ) {
+        reply({ status: 404, headers: [], body: new ArrayBuffer(0) })
+        return
+      }
+      if (menu === 'redirect') {
+        reply({ redirect: true })
+        return
+      }
+      let bytes = readFileSync(
+        path.join(dist, 'assets/shared', url.pathname.slice(MENU_SHARED.length))
+      )
+      if (menu === 'tampered') {
+        bytes = Buffer.concat([
+          Buffer.from('window.__tampered = true\n'),
+          bytes,
+        ])
+      }
+      reply({
+        status: 200,
+        headers: [
+          [
+            'content-type',
+            menu === 'page' ? 'text/html' : 'text/javascript; charset=utf-8',
+          ],
+        ],
+        body: bytes.buffer.slice(
+          bytes.byteOffset,
+          bytes.byteOffset + bytes.length
+        ),
+      })
+      return
+    }
     if (
       answer === 'refuse' ||
       !url.pathname.startsWith('/app/') ||
@@ -276,7 +342,7 @@ function framed(
     }
     carried.push(url.href)
     const bytes = readFileSync(
-      path.join(output, url.pathname.replace(/^\/app\//, ''))
+      path.join(dist, url.pathname.replace(/^\/app\//, ''))
     )
     reply({
       status: 200,
@@ -304,7 +370,7 @@ function framed(
   const frame = () =>
     (dom.window.document.querySelector('iframe') as HTMLIFrameElement)
       .contentWindow as unknown as Window
-  return { dom, frame, asked: site.asked, carried }
+  return { dom, frame, asked: site.asked, carried, asks }
 }
 
 async function result(window: () => Window): Promise<Result> {
@@ -726,6 +792,318 @@ describe('mochiPlugin: the built page loads its System.register bundle', () => {
       expectApp(await result(shell.frame))
       expect(shell.carried).toEqual([])
       expect(scripts(shell.asked).length).toBeGreaterThanOrEqual(4)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+})
+
+// An app that takes React from the shared files: hooks, react-dom's flushSync,
+// a dynamic chunk with hooks of its own, and a CommonJS package that requires
+// React and calls a hook, as use-sync-external-store does.
+const REACT_APP: Record<string, string> = {
+  'index.html': `<!doctype html>
+<html><head><meta charset="UTF-8" />
+<script type="module" src="/src/main.js"></script>
+</head><body><div id="root"></div></body></html>`,
+  'src/main.js': `
+import { useEffect, useState } from 'react'
+import * as Namespace from 'react'
+import { jsx } from 'react/jsx-runtime'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
+import common from 'common-react'
+
+function App({ Lazy }) {
+  const [n, setN] = useState(0)
+  const seven = common.useSeven()
+  useEffect(() => {
+    if (n === 0) setN(1)
+    else
+      window.__result = {
+        text: document.getElementById('out').textContent,
+        lazy: document.getElementById('lazy').textContent,
+        // One React: the package's require and the app's import meet.
+        same: common.React.useState === useState && Namespace.useState === useState,
+      }
+  }, [n])
+  return jsx('div', {
+    children: [jsx('p', { id: 'out', children: 'n=' + n + ' seven=' + seven }), jsx(Lazy, {})],
+  })
+}
+
+import('./lazy.js').then(
+  ({ Lazy }) => {
+    const root = createRoot(document.getElementById('root'))
+    flushSync(() => root.render(jsx(App, { Lazy })))
+  },
+  (error) => { window.__result = { error: String(error) } }
+)
+`,
+  'src/lazy.js': `import { useState } from 'react'
+import { jsx } from 'react/jsx-runtime'
+export function Lazy() {
+  const [text] = useState('lazy')
+  return jsx('span', { id: 'lazy', children: text })
+}
+`,
+  'node_modules/common-react/package.json': `{ "name": "common-react", "version": "1.0.0", "main": "index.js" }`,
+  'node_modules/common-react/index.js': `var React = require('react')
+exports.React = React
+exports.useSeven = function () { return React.useState(7)[0] }
+`,
+}
+
+// lib/web's own node_modules, where React is installed.
+const MODULES = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../node_modules'
+)
+
+type Rendered = { text?: string; lazy?: string; same?: boolean; error?: string }
+
+function expectRendered(app: Rendered) {
+  expect(app.error).toBeUndefined()
+  expect(app.text).toBe('n=1 seven=7')
+  expect(app.lazy).toBe('lazy')
+  // THE POINT: one React, so hooks from the package and the app share it.
+  expect(app.same).toBe(true)
+}
+
+describe('mochiPlugin: React comes from the shared files', () => {
+  let app = ''
+  let dist = ''
+  const shared = (urls: string[]) =>
+    urls.filter((url) => url.includes('/app/assets/shared/'))
+
+  beforeAll(async () => {
+    app = mkdtempSync(path.join(tmpdir(), 'mochi-loader-react-'))
+    for (const [name, text] of Object.entries(REACT_APP)) {
+      mkdirSync(path.dirname(path.join(app, name)), { recursive: true })
+      writeFileSync(path.join(app, name), text)
+    }
+    for (const name of ['react', 'react-dom']) {
+      symlinkSync(
+        path.join(MODULES, name),
+        path.join(app, 'node_modules', name),
+        'dir'
+      )
+    }
+    dist = path.join(app, 'dist')
+    await build({
+      root: app,
+      configFile: false,
+      logLevel: 'silent',
+      base: './',
+      plugins: [mochiPlugin()],
+      build: { outDir: dist, emptyOutDir: true },
+    })
+  }, 60000)
+
+  // Its node_modules holds links, which removing the folder leaves alone.
+  afterAll(() => {
+    if (app) rmSync(app, { recursive: true, force: true })
+  })
+
+  it('renders with one React as a top-level page', async () => {
+    const site = server(dist)
+    const dom = new JSDOM(readFileSync(path.join(dist, 'index.html'), 'utf8'), {
+      url: ORIGIN + '/app/',
+      runScripts: 'dangerously',
+      resources: site.loader,
+    })
+    try {
+      await until(() => dom.window.__result, 'the app to render')
+      expectRendered(dom.window.__result as Rendered)
+      // From the app's own folder, each file once.
+      const files = shared(scripts(site.asked))
+      expect(files.length).toBeGreaterThanOrEqual(4)
+      expect(new Set(files).size).toBe(files.length)
+    } finally {
+      dom.window.close()
+    }
+  })
+
+  it('renders with one React in a frame, the shell carrying the shared files', async () => {
+    const shell = framed('mochi:bridge', 'script', false, false, dist)
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      expect(scripts(shell.asked)).toEqual([])
+      const files = shared(shell.carried)
+      expect(files.length).toBeGreaterThanOrEqual(4)
+      expect(new Set(files).size).toBe(files.length)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('asks for the shared files with the entry, not after it has been read', async () => {
+    const shell = framed('mochi:bridge', 'script', false, false, dist)
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      const entry = shell.asks.findIndex((url) =>
+        /\/app\/assets\/index-[\w-]+\.js$/.test(url)
+      )
+      // The first ask for each shared file, menu's copy or the app's own.
+      const first = new Map<string, number>()
+      shell.asks.forEach((url, at) => {
+        const match = /\/(?:app\/assets|menu\/assets)\/shared\/([^/]+)$/.exec(
+          url
+        )
+        if (match && !first.has(match[1])) first.set(match[1], at)
+      })
+      expect(entry).toBeGreaterThanOrEqual(0)
+      expect(first.size).toBeGreaterThanOrEqual(4)
+      // THE POINT: the loader asks for what the entry imports as it asks for
+      // the entry, so every shared file is asked for before the entry's text
+      // has come back and been read.
+      expect([...first.values()].every((at) => at < entry)).toBe(true)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("takes menu's copy of each shared file, and never asks for the app's own", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'carried'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      const menu = shell.carried.filter((url) => url.includes(MENU_SHARED))
+      expect(menu.length).toBeGreaterThanOrEqual(4)
+      expect(new Set(menu).size).toBe(menu.length)
+      // THE POINT: the app's own copy is neither carried nor fetched.
+      expect(shared(shell.asks)).toEqual([])
+      expect(scripts(shell.asked)).toEqual([])
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it.each([
+    ['refuses them, as a shell without that case does', undefined],
+    ['answers 404', 'missing'],
+    ['answers with a page', 'page'],
+    ['answers with a redirect', 'redirect'],
+  ] as const)(
+    "uses the app's own copy when the shell %s for menu's",
+    async (_name, menu) => {
+      const shell = framed('mochi:bridge', 'script', false, false, dist, menu)
+      try {
+        await until(() => shell.frame()?.__result, 'the app to render')
+        expectRendered(shell.frame().__result as Rendered)
+        // Each shared file asked of menu first, then carried from the app.
+        expect(
+          shell.asks.filter((url) => url.includes(MENU_SHARED)).length
+        ).toBeGreaterThanOrEqual(4)
+        expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+      } finally {
+        shell.dom.window.close()
+      }
+    }
+  )
+
+  it("takes the files menu has from menu, and the one it lacks from the app's own", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'partial'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      // THE POINT: one page, React's files from two places, one React.
+      expectRendered(shell.frame().__result as Rendered)
+      const own = shared(shell.carried)
+      expect(own).toHaveLength(1)
+      expect(own[0]).toMatch(/\/react-dom-client-[\w-]{8}\.js$/)
+      const menu = shell.carried.filter(
+        (url) =>
+          url.includes(MENU_SHARED) && !url.includes('/react-dom-client-')
+      )
+      expect(menu.length).toBeGreaterThanOrEqual(3)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("never runs bytes from menu that are not the app's own", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'tampered'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      // THE POINT: menu answered other bytes under each file's name, and
+      // none of them ran.
+      expect(shell.frame().__tampered).toBeUndefined()
+      expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("uses the app's own copy when the digest of menu's fails", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'carried',
+      'rejects'
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it("uses the app's own copy where the frame has no Web Crypto to check menu's", async () => {
+    const shell = framed(
+      'mochi:bridge',
+      'script',
+      false,
+      false,
+      dist,
+      'carried',
+      false
+    )
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      // THE POINT: menu's copy, which could not be checked, is never asked
+      // for, so it is not downloaded only to be thrown away.
+      expect(shell.asks.filter((url) => url.includes(MENU_SHARED))).toEqual([])
+      expect(shared(shell.carried).length).toBeGreaterThanOrEqual(4)
+    } finally {
+      shell.dom.window.close()
+    }
+  })
+
+  it('renders with one React when the shell refuses, loading the shared files itself', async () => {
+    const shell = framed('mochi:bridge', 'refuse', false, false, dist)
+    try {
+      await until(() => shell.frame()?.__result, 'the app to render')
+      expectRendered(shell.frame().__result as Rendered)
+      expect(shared(scripts(shell.asked)).length).toBeGreaterThanOrEqual(4)
     } finally {
       shell.dom.window.close()
     }
