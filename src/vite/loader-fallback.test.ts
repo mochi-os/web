@@ -41,8 +41,6 @@ describe('loader: a request the shell never answers', () => {
     await vi.advanceTimersByTimeAsync(0)
     const request = posted.find((message) => message.type === 'fetch')
     expect(request?.url).toBe(window.location.origin + '/app/assets/index-a.js')
-    // Named as the shell tells this page from the next in the frame.
-    expect(request?.page).toBe(performance.timeOrigin)
     expect(document.querySelector('script[src]')).toBeNull()
 
     await vi.advanceTimersByTimeAsync(60_000)
@@ -100,6 +98,50 @@ describe('loader: a request the shell never answers', () => {
     await Promise.resolve()
     const script = document.querySelector('script[src]') as HTMLScriptElement
     expect(script.crossOrigin).toBe('anonymous')
+  })
+})
+
+// A page asks for its scripts as it parses, and its frame's load comes after:
+// a shell that ends the frame's requests at that load names the ones it ended.
+describe('loader: requests the shell ended at the frame’s load', () => {
+  function ended(ids: unknown[]) {
+    const event = new MessageEvent('message', {
+      data: { type: 'fetch.ended', ids },
+      origin: window.location.origin,
+    })
+    Object.defineProperty(event, 'source', { value: window.parent })
+    window.dispatchEvent(event)
+  }
+
+  it('asks again for its own, and only those', async () => {
+    vi.useFakeTimers()
+    loader([[], []], './assets/index-a.js', [])
+    await vi.advanceTimersByTimeAsync(0)
+    const first = posted.filter((message) => message.type === 'fetch')
+    expect(first).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    ended([first[0].id, 'another-page'])
+    const asked = posted.filter((message) => message.type === 'fetch')
+    // THE POINT: asked again at once, rather than waiting out the minute
+    // and loading it natively.
+    expect(asked).toHaveLength(2)
+    expect(asked[1]).toEqual(first[0])
+
+    // Its wait starts again from the new ask.
+    await vi.advanceTimersByTimeAsync(59_000)
+    expect(document.querySelector('script[src]')).toBeNull()
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(document.querySelector('script[src]')).not.toBeNull()
+  })
+
+  it('asks again for nothing once its request is over', async () => {
+    vi.useFakeTimers()
+    loader([[], []], './assets/index-a.js', [])
+    await vi.advanceTimersByTimeAsync(60_000)
+    const first = posted.filter((message) => message.type === 'fetch')
+    ended([first[0].id])
+    expect(posted.filter((message) => message.type === 'fetch')).toHaveLength(1)
   })
 })
 

@@ -121,15 +121,7 @@ function listen() {
 // for a body that cannot be cloned.
 function send(message: Record<string, unknown>) {
   if (getShellInitData()?.port !== true) {
-    // A request is named with this document's start, as the page's loader
-    // names its own: through the frame's window, the shell tells one page
-    // from the next by it (a channel goes with its page, so needs no name).
-    window.parent.postMessage(
-      message.type === 'fetch'
-        ? { ...message, page: performance.timeOrigin }
-        : message,
-      shellOrigin()
-    )
+    window.parent.postMessage(message, shellOrigin())
     return
   }
   if (!channel) {

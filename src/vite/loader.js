@@ -69,11 +69,23 @@ export function loader(manifest, entry, styles, shared) {
   var waiting = Object.create(null)
   var moving = Object.create(null) // request id -> renews its wait
   var carrying = Object.create(null) // URL -> Promise of its text, or null
+  var asking = Object.create(null) // request id -> asks for it again
   if (bridged) {
     window.addEventListener('message', function (event) {
       if (event.source !== window.parent || event.origin !== origin) return
       var data = event.data
-      if (!data || typeof data.id !== 'string') return
+      if (!data) return
+      // The shell ended the frame's requests at its load, which comes after
+      // this page asked for its scripts: those of this page's are asked for
+      // again.
+      if (data.type === 'fetch.ended') {
+        if (!Array.isArray(data.ids)) return
+        data.ids.forEach(function (id) {
+          if (typeof id === 'string' && asking[id]) asking[id]()
+        })
+        return
+      }
+      if (typeof data.id !== 'string') return
       if (data.type === 'fetch.progress') {
         if (moving[data.id]) moving[data.id]()
         return
@@ -177,6 +189,7 @@ export function loader(manifest, entry, styles, shared) {
         timer = setTimeout(function () {
           delete waiting[id]
           delete moving[id]
+          delete asking[id]
           try {
             window.parent.postMessage({ type: 'fetch.abort', id: id }, origin)
           } catch (error) {
@@ -185,13 +198,31 @@ export function loader(manifest, entry, styles, shared) {
           resolve(null)
         }, time)
       }
+      // A shell that does not report progress passes over the ask.
+      var message = {
+        type: 'fetch',
+        id: id,
+        url: url,
+        method: 'GET',
+        headers: [],
+        progress: true,
+      }
       wait(patience || 60000)
       moving[id] = function () {
         wait(15000)
       }
+      asking[id] = function () {
+        wait(patience || 60000)
+        try {
+          window.parent.postMessage(message, origin)
+        } catch (error) {
+          // The timer ends it.
+        }
+      }
       waiting[id] = function (reply) {
         clearTimeout(timer)
         delete moving[id]
+        delete asking[id]
         var type = ''
         var headers = Array.isArray(reply.headers) ? reply.headers : []
         for (var i = 0; i < headers.length; i++) {
@@ -208,25 +239,12 @@ export function loader(manifest, entry, styles, shared) {
         )
       }
       try {
-        // A shell that does not report progress passes over the ask.
-        window.parent.postMessage(
-          {
-            type: 'fetch',
-            id: id,
-            url: url,
-            method: 'GET',
-            headers: [],
-            progress: true,
-            // The page, as the shell tells one page in the frame from the
-            // next: this document's start, which its other scripts name too.
-            page: performance.timeOrigin,
-          },
-          origin
-        )
+        window.parent.postMessage(message, origin)
       } catch (error) {
         clearTimeout(timer)
         delete waiting[id]
         delete moving[id]
+        delete asking[id]
         resolve(null)
       }
     })
