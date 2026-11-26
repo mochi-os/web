@@ -217,6 +217,9 @@ export function loader(manifest, entry, styles, shared) {
             method: 'GET',
             headers: [],
             progress: true,
+            // The page, as the shell tells one page in the frame from the
+            // next: this document's start, which its other scripts name too.
+            page: performance.timeOrigin,
           },
           origin
         )

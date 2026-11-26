@@ -130,6 +130,8 @@ describe('requests through the shell', () => {
     expect(await result).toEqual({ data: { items: [1, 2] } })
     const request = requests()[0]
     expect(request.url).toBe(`${window.location.origin}/feeds/list?page=2`)
+    // Named as the shell tells this page from the next in the frame.
+    expect(request.page).toBe(performance.timeOrigin)
     expect(request.method).toBe('GET')
     expect(header(request, 'Authorization')).toBe('Bearer app-token')
     // No body, no type, as a direct request sends it.

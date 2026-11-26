@@ -41,6 +41,8 @@ describe('loader: a request the shell never answers', () => {
     await vi.advanceTimersByTimeAsync(0)
     const request = posted.find((message) => message.type === 'fetch')
     expect(request?.url).toBe(window.location.origin + '/app/assets/index-a.js')
+    // Named as the shell tells this page from the next in the frame.
+    expect(request?.page).toBe(performance.timeOrigin)
     expect(document.querySelector('script[src]')).toBeNull()
 
     await vi.advanceTimersByTimeAsync(60_000)
