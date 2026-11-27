@@ -217,6 +217,25 @@ export function fromShell(event: MessageEvent): boolean {
   return origin === '*' || event.origin === origin
 }
 
+/**
+ * Ask the shell for what only the page its frame was made for may ask: the
+ * app's storage, the clipboard, downloads, passkeys, the microphone, the
+ * camera, a grant and push. On the page's own channel, which core's frame
+ * shim offers the shell (menu's iframe-shim.js); the shell refuses these
+ * through the frame's window. A shell from before the channel provides no
+ * way to it, and hears them through the window as it did.
+ */
+export function shellRequest(message: Record<string, unknown>): void {
+  const send = (
+    window as unknown as { __mochi_send?: (message: unknown) => void }
+  ).__mochi_send
+  if (typeof send === 'function') {
+    send(message)
+    return
+  }
+  window.parent.postMessage(message, shellOrigin())
+}
+
 /** Initialize the shell bridge. Sends 'ready' and waits for 'init' from shell. */
 export function initShellBridge(): Promise<ShellInitData> {
   if (shellInitPromise) return shellInitPromise
@@ -517,10 +536,7 @@ export function shellClipboardWrite(text: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage(
-      { type: 'clipboard.write', text, id },
-      shellOrigin()
-    )
+    shellRequest({ type: 'clipboard.write', text, id })
   })
 }
 
@@ -585,10 +601,7 @@ export function shellDownload(url: string, name: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage(
-      { type: 'download', url: absolute, name, id },
-      shellOrigin()
-    )
+    shellRequest({ type: 'download', url: absolute, name, id })
   })
 }
 
@@ -615,10 +628,7 @@ export function shellSaveBlob(blob: Blob, name: string): Promise<boolean> {
       clearTimeout(timer)
       resolve(ok)
     })
-    window.parent.postMessage(
-      { type: 'download.content', blob, name, id },
-      shellOrigin()
-    )
+    shellRequest({ type: 'download.content', blob, name, id })
   })
 }
 
@@ -734,14 +744,11 @@ function webauthnThroughShell(
       }
       resolve(result.credential)
     })
-    window.parent.postMessage(
-      {
-        type: create ? 'webauthn.create' : 'webauthn.get',
-        requestId: id,
-        optionsJSON,
-      },
-      shellOrigin()
-    )
+    shellRequest({
+      type: create ? 'webauthn.create' : 'webauthn.get',
+      requestId: id,
+      optionsJSON,
+    })
   })
 }
 
@@ -856,7 +863,7 @@ export function shellMicProbe(): Promise<boolean> {
     }, SHELL_MIC_PROBE_TIMEOUT_MS)
 
     micProbeCallbacks.set(requestId, { resolve, timer })
-    window.parent.postMessage({ type: 'mic.probe', requestId }, shellOrigin())
+    shellRequest({ type: 'mic.probe', requestId })
   })
 }
 
@@ -872,15 +879,12 @@ export function shellMicStart(): Promise<number> {
       micStartCallbacks.delete(requestId)
       // Best-effort cancel so the shell discards a still-pending permission
       // request. Do not await shellMicCancel() — that adds another timeout.
-      window.parent.postMessage(
-        { type: 'mic.cancel', requestId },
-        shellOrigin()
-      )
+      shellRequest({ type: 'mic.cancel', requestId })
       reject(shellMicFailure('TimeoutError'))
     }, SHELL_MIC_START_TIMEOUT_MS)
 
     micStartCallbacks.set(requestId, { resolve, reject, timer })
-    window.parent.postMessage({ type: 'mic.start', requestId }, shellOrigin())
+    shellRequest({ type: 'mic.start', requestId })
   })
 }
 
@@ -897,7 +901,7 @@ export function shellMicStop(requestId: number): Promise<ShellMicResult> {
     }, SHELL_MIC_STOP_TIMEOUT_MS)
 
     micStopCallbacks.set(requestId, { resolve, reject, timer })
-    window.parent.postMessage({ type: 'mic.stop', requestId }, shellOrigin())
+    shellRequest({ type: 'mic.stop', requestId })
   })
 }
 
@@ -916,10 +920,7 @@ export function shellMicCancel(requestId?: number): Promise<void> {
     }, SHELL_MIC_CANCEL_TIMEOUT_MS)
 
     callbacks.set(id, { resolve, reject, timer })
-    window.parent.postMessage(
-      { type: 'mic.cancel', requestId: requestId ?? null },
-      shellOrigin()
-    )
+    shellRequest({ type: 'mic.cancel', requestId: requestId ?? null })
   })
 }
 
@@ -1182,10 +1183,7 @@ export function shellRequestPermission(
     // app from __mochi_shell.appId and looks `restricted` up on the server. It
     // must never be the caller that names which app is being granted, and a
     // parameter the receiver discards implies otherwise.
-    window.parent.postMessage(
-      { type: 'request-permission', id, permission },
-      shellOrigin()
-    )
+    shellRequest({ type: 'request-permission', id, permission })
   })
 }
 

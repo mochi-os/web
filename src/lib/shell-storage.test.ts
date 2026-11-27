@@ -84,6 +84,29 @@ describe('shell-storage getItem', () => {
     expect(await pending).toBe('genuine')
   })
 
+  // In a shell frame, core's frame shim provides the page's own channel
+  // (__mochi_send), and the shell takes storage requests on it alone.
+  it('asks on the page’s own channel where the shim provides one', async () => {
+    const send = vi.fn()
+    Object.defineProperty(window, '__mochi_send', {
+      configurable: true,
+      value: send,
+    })
+    try {
+      const { getItem, setItem } = await import('./shell-storage')
+      void getItem('key')
+      setItem('key', 'value')
+      expect(send.mock.calls.map(([message]) => message.type)).toEqual([
+        'storage.get',
+        'storage.set',
+      ])
+      // THE POINT: none through the frame's window.
+      expect(parentPostMessage).not.toHaveBeenCalled()
+    } finally {
+      delete (window as unknown as { __mochi_send?: unknown }).__mochi_send
+    }
+  })
+
   it('ignores a reply forged by another window', async () => {
     const { getItem } = await import('./shell-storage')
     const pending = getItem('key')

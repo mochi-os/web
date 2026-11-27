@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import * as push from '../lib/push'
-import { shellOrigin, fromShell } from '../lib/shell-bridge'
+import { fromShell, shellRequest } from '../lib/shell-bridge'
 
 // Push registration is shell-only. Apps run in sandboxed iframes with opaque
 // origins where the Notification/PushManager APIs don't work, so we proxy
@@ -52,7 +52,7 @@ function shellPushRequest<T>(
       else reject(new Error(data.reason || failure))
     }
     window.addEventListener('message', onMessage)
-    window.parent.postMessage({ type: request, id }, shellOrigin())
+    shellRequest({ type: request, id })
   })
 }
 

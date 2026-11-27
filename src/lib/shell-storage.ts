@@ -6,7 +6,7 @@
 // via postMessage to the shell which namespaces keys by app ID.
 // When not in shell, uses real localStorage directly.
 
-import { fromShell, isInShell, shellOrigin } from './shell-bridge'
+import { fromShell, isInShell, shellRequest } from './shell-bridge'
 import { getAppPath } from './app-path'
 
 // The shell namespaces every key as `app:<name>:` (shell.js storagePrefix), so
@@ -49,7 +49,9 @@ export async function getItem(key: string): Promise<string | null> {
  * nothing stored. For useShellStorage, which must not write over a value it
  * could not read.
  */
-export async function readItem(key: string): Promise<string | null | undefined> {
+export async function readItem(
+  key: string
+): Promise<string | null | undefined> {
   if (!isInShell()) {
     try {
       return localStorage.getItem(namespaced(key))
@@ -61,7 +63,7 @@ export async function readItem(key: string): Promise<string | null | undefined> 
   return new Promise((resolve) => {
     const id = ++requestId
     pendingRequests.set(id, resolve)
-    window.parent.postMessage({ type: 'storage.get', id, key }, shellOrigin())
+    shellRequest({ type: 'storage.get', id, key })
 
     setTimeout(() => {
       if (pendingRequests.has(id)) {
@@ -82,7 +84,7 @@ export function setItem(key: string, value: string): void {
     }
     return
   }
-  window.parent.postMessage({ type: 'storage.set', key, value }, shellOrigin())
+  shellRequest({ type: 'storage.set', key, value })
 }
 
 /** Remove an item from storage */
@@ -95,5 +97,5 @@ export function removeItem(key: string): void {
     }
     return
   }
-  window.parent.postMessage({ type: 'storage.remove', key }, shellOrigin())
+  shellRequest({ type: 'storage.remove', key })
 }

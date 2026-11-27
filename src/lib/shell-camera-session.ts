@@ -8,7 +8,7 @@
  * getUserMedia. Every delivered frame is the receiver's to close().
  */
 
-import { fromShell, isInShell, shellOrigin } from './shell-bridge'
+import { fromShell, isInShell, shellRequest } from './shell-bridge'
 import { shellErrorMessage } from './shell-errors'
 
 // name is DOMException-style for callers that branch on it; message is the
@@ -76,10 +76,7 @@ function shellOpen(
       retire()
       // Tell the shell too: a consent prompt answered after this point would
       // otherwise start a camera that nothing owns or ever stops.
-      window.parent.postMessage(
-        { type: 'camera.stop', requestId },
-        shellOrigin()
-      )
+      shellRequest({ type: 'camera.stop', requestId })
       finish({ ok: false, error: cameraFailure('TimeoutError') })
     }, 30000)
     // The listener outlives the session by a moment: a frame already in
@@ -92,10 +89,7 @@ function shellOpen(
       if (!live) return
       live = false
       retire()
-      window.parent.postMessage(
-        { type: 'camera.stop', requestId },
-        shellOrigin()
-      )
+      shellRequest({ type: 'camera.stop', requestId })
     }
     function onMessage(event: MessageEvent) {
       // Only the shell (our direct parent) may drive the session — the same
@@ -147,10 +141,11 @@ function shellOpen(
       }
     }
     window.addEventListener('message', onMessage)
-    window.parent.postMessage(
-      { type: 'camera.start', requestId, device: options.device ?? '' },
-      shellOrigin()
-    )
+    shellRequest({
+      type: 'camera.start',
+      requestId,
+      device: options.device ?? '',
+    })
   })
 }
 
