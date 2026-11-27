@@ -1044,12 +1044,13 @@ export function installShellNavigationSync(): void {
   // and pushing for both turns every URL canonicalization and filter
   // replaceState into a back-stack entry that buries the app's own home.
   const notifyShell = (location: URL | Location, replace: boolean) => {
-    // Shed the shell's private _shell marker: the relayed path re-enters the
+    // Shed the shell's private _shell and _frame markers: the relayed path re-enters the
     // iframe src from the top history, where re-tagging plus the router's
     // search serialization nests duplicate keys. Shed page-load-recovery's
     // _reload too: a page opened from an address carrying it gets no reload.
     const params = new URLSearchParams(location.search)
     params.delete('_shell')
+    params.delete('_frame')
     params.delete(RELOAD_PARAM)
     const query = params.toString()
     const path = location.pathname + (query ? `?${query}` : '') + location.hash

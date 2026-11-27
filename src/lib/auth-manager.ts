@@ -31,7 +31,12 @@ export function logoutRedirectTarget(
   }
 
   if (reason) {
-    return `${loginUrl}?reauth=1&redirect=${encodeURIComponent(window.location.href)}`
+    // Without the shell's markers: _frame is the secret only the page its
+    // frame was made for may hold.
+    const here = new URL(window.location.href)
+    here.searchParams.delete('_shell')
+    here.searchParams.delete('_frame')
+    return `${loginUrl}?reauth=1&redirect=${encodeURIComponent(here.href)}`
   }
 
   return loginUrl

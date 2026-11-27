@@ -40,6 +40,7 @@ export function networkSetupPath(network: string, back: string): string {
 export function pagePath(): string {
   const params = new URLSearchParams(window.location.search)
   params.delete('_shell')
+  params.delete('_frame')
   params.delete(RELOAD_PARAM)
   const query = params.toString()
   return window.location.pathname + (query ? `?${query}` : '')
